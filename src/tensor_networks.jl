@@ -184,19 +184,22 @@ function project_boundary(tn::Matrix{ITensor}, state=1)
   return tn
 end
 
-function split_links(H::Union{MPS,MPO}, split_tags)
+function split_links(H::Union{MPS,MPO}; split_tags=("" => ""), split_plevs=(0 => 1))
   left_tags, right_tags = split_tags
+  left_plev, right_plev = split_plevs
   N = length(H)
   l = linkinds(H)
   Hsplit = copy(H)
   for n in 1:(N - 1)
-    Hsplit[n] = addtags(Hsplit[n], left_tags; inds=l[n])
-    Hsplit[n + 1] = addtags(Hsplit[n + 1], right_tags; inds=l[n])
+    left_l_n = setprime(addtags(l[n], left_tags), left_plev)
+    right_l_n = setprime(addtags(l[n], right_tags), right_plev)
+    Hsplit[n] = replaceind(Hsplit[n], l[n] => left_l_n)
+    Hsplit[n + 1] = replaceind(Hsplit[n + 1], l[n] => right_l_n)
   end
   return Hsplit
 end
 
-split_links(H::Vector{ITensor}, args...) = data(split_links(MPS(H), args...))
+split_links(H::Vector{ITensor}, args...; kwargs...) = data(split_links(MPS(H), args...; kwargs...))
 
 function insert_projectors(H, psi, projs)
   N = length(H)
@@ -211,7 +214,7 @@ end
 
 # Compute the truncation projectors for the network,
 # contracting from top to bottom
-function truncation_projectors(tn::Matrix{ITensor}; maxdim=maxdim_arg(tn), cutoff=1e-8, split_tags)
+function truncation_projectors(tn::Matrix{ITensor}; maxdim=maxdim_arg(tn), cutoff=1e-8, split_tags=("" => ""), split_plevs=(0 => 1))
   nrows, ncols = size(tn)
   U = Matrix{ITensor}(undef, nrows - 3, ncols - 1)
   Ud = copy(U)
@@ -220,22 +223,22 @@ function truncation_projectors(tn::Matrix{ITensor}; maxdim=maxdim_arg(tn), cutof
     return tn_split, U, Ud
   end
   psi = tn[1, :]
-  psi_split = split_links(psi, split_tags)
+  psi_split = split_links(psi; split_tags=split_tags, split_plevs=split_plevs)
   tn_split[1, :] .= psi_split
   for n in 1:(nrows - 3)
     H = tn[n + 1, :]
-    projs = truncation_projectors(H, psi; split_tags=split_tags, cutoff=cutoff)
+    projs = truncation_projectors(H, psi; split_tags=split_tags, split_plevs=split_plevs, cutoff=cutoff)
     U[n, :] = first.(projs)
     Ud[n, :] = last.(projs)
     if n < size(U, 1)
       for m in 1:size(U, 2)
-        U[n, m], Ud[n, m] = split_links([U[n, m], Ud[n, m]], split_tags)
+        U[n, m], Ud[n, m] = split_links([U[n, m], Ud[n, m]]; split_tags=split_tags, split_plevs=split_plevs)
       end
     end
-    H_split = split_links(H, split_tags)
+    H_split = split_links(H; split_tags=split_tags, split_plevs=split_plevs)
     tn_split[n + 1, :] .= H_split
     psi = insert_projectors(H_split, psi_split, projs)
-    psi_split = split_links(psi, split_tags)
+    psi_split = split_links(psi; split_tags=split_tags, split_plevs=split_plevs)
   end
   return tn_split, U, Ud
 end

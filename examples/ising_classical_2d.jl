@@ -26,12 +26,13 @@ tn = project_boundary(tn, state)
 
 cutoff = 1e-15
 _maxdim = 100
-split_tags = "U" => "Ud"
 
-tn_split, U, Ud = truncation_projectors(tn; cutoff=cutoff, maxdim=_maxdim, split_tags=split_tags)
+tn_split, U, Ud = truncation_projectors(tn; cutoff=cutoff, maxdim=_maxdim)
 
 tn_projected = [tn_split, U, Ud]
 tn_projected_flat = vcat(vec.(tn_projected)...)
+
+@show noncommoninds(tn_projected_flat...)
 
 @disable_warn_order begin
   @show contract(tn_projected_flat)[] / contract(vec(tn))[]
