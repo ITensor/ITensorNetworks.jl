@@ -1,5 +1,6 @@
 using ITensors
 using ITensorNetworks
+using ITensorsVisualization
 
 using ITensorNetworks: inds_network, project_boundary, truncation_projectors
 using ITensorNetworks: Models
@@ -34,7 +35,10 @@ tn_projected_flat = vcat(vec.(tn_projected)...)
 
 @show noncommoninds(tn_projected_flat...)
 
+Z_approx = @visualize contract(tn_projected_flat...)
+Z_exact = contract(vec(tn)...)
+
 @disable_warn_order begin
-  @show contract(tn_projected_flat)[] / contract(vec(tn))[]
+  @show Z_approx[] / Z_exact[]
 end
 
