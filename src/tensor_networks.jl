@@ -263,13 +263,13 @@ function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary
                          dir::BoundaryMPSDir"top_to_bottom"; cutoff, maxdim)
   println("In contract_approx with tn of size $(size(tn)), alg $alg, and dir $dir.")
   nrows, ncols = size(tn)
-  boundary_mps = Vector{MPS}(undef, nrows)
-  x = MPS(tn[nrow, :])
+  boundary_mps = Vector{MPS}(undef, nrows - 1)
+  x = MPS(tn[1, :])
   boundary_mps[1] = orthogonalize(x, ncols)
-  for nrow in 1:(nrows - 1)
-    x = MPS(tn[nrow, :])
-    A = MPS(tn[nrow + 1, :])
-    Ax = contract(A, x; cutoff=cutoff, maxdim=maxdim)
+  for nrow in 2:(nrows - 1)
+    A = MPO(tn[nrow, :])
+    x = contract(A, x; cutoff=cutoff, maxdim=maxdim)
+    boundary_mps[nrow] = orthogonalize(x, ncols)
   end
   return boundary_mps
 end
