@@ -285,3 +285,74 @@ function contract_approx(tn::Matrix{ITensor}; alg, dir, cutoff=1e-8, maxdim=maxd
   return contract_approx(tn, ContractionAlgorithm(alg); dir=dir, cutoff=cutoff, maxdim=maxdim)
 end
 
+function insert_projectors(tn::Matrix{ITensor}, boundary_mps::Vector{MPS}; dir, center)
+  return insert_projectors(tn, boundary_mps, BoundaryMPSDir(dir); center=center)
+end
+
+# From an MPS, create a 1-site projector onto the MPS basis
+function projector(x::MPS, center)
+  # Gauge the boundary MPS towards the center column
+  x = orthogonalize(x, center)
+
+  l = commonind(x[center - 1], x[center])
+  r = commonind(x[center + 1], x[center])
+
+  uₗ = x[1:(center - 1)]
+  uᵣ = reverse(x[(center + 1):end])
+  nₗ = length(uₗ)
+  nᵣ = length(uᵣ)
+
+  uₗᴴ = dag.(uₗ)
+  uᵣᴴ = dag.(uᵣ)
+
+  uₗ′ = reverse(prime.(uₗ))
+  uᵣ′ = reverse(prime.(uᵣ))
+
+  uₗ′[1] = replaceinds(uₗ′[1], l' => l)
+  uᵣ′[1] = replaceinds(uᵣ′[1], r' => r)
+
+  Pₗ = vcat(uₗᴴ, uₗ′)
+  Pᵣ = vcat(uᵣᴴ, uᵣ′)
+  return Pₗ, Pᵣ
+end
+
+function split_network(tn::Matrix{ITensor}; center)
+  tn_split = copy(tn)
+  nrows, ncols = size(tn)
+  @assert length(center) == 2
+  @assert center[1] == Colon()
+  center_cols = center[2]
+  for ncol in 1:ncols
+    if ncol ∉ center_cols
+      tn_split[:, ncol] = split_links(tn_split[:, ncol])
+    end
+  end
+  return tn_split
+end
+
+function insert_projectors(tn::Matrix{ITensor}, boundary_mps::Vector{MPS},
+                           dir::BoundaryMPSDir"top_to_bottom"; center)
+  println("In insert_projectors")
+  @show dir
+  @show size(tn)
+  @show length(boundary_mps)
+  @show center
+
+  nrows, ncols = size(tn)
+
+  @assert length(boundary_mps) == nrows - 1
+  @assert all(x -> length(x) == ncols, boundary_mps)
+
+  @assert length(center) == 2
+  @assert center[1] == Colon()
+
+  center_cols = center[2]
+  @show center_cols
+
+  projectors = [projector(x, center_cols) for x in boundary_mps]
+  projectors_left = first.(projectors)
+  projectors_right = last.(projectors)
+  tn_split = split_network(tn; center=center)
+  return tn_split, projectors_left, projectors_right
+end
+
