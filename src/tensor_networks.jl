@@ -243,3 +243,45 @@ function truncation_projectors(tn::Matrix{ITensor}; maxdim=maxdim_arg(tn), cutof
   return tn_split, U, Ud
 end
 
+struct ContractionAlgorithm{algorithm} end
+
+ContractionAlgorithm(s::AbstractString) = ContractionAlgorithm{Symbol(s)}()
+
+macro ContractionAlgorithm_str(s)
+  :(ContractionAlgorithm{$(Expr(:quote, Symbol(s)))})
+end
+
+struct BoundaryMPSDir{dir} end
+
+BoundaryMPSDir(s::AbstractString) = BoundaryMPSDir{Symbol(s)}()
+
+macro BoundaryMPSDir_str(s)
+  :(BoundaryMPSDir{$(Expr(:quote, Symbol(s)))})
+end
+
+function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps",
+                         dir::BoundaryMPSDir"top_to_bottom"; cutoff, maxdim)
+  println("In contract_approx with tn of size $(size(tn)), alg $alg, and dir $dir.")
+  nrows, ncols = size(tn)
+  boundary_mps = Vector{MPS}(undef, nrows)
+  x = MPS(tn[nrow, :])
+  boundary_mps[1] = orthogonalize(x, ncols)
+  for nrow in 1:(nrows - 1)
+    x = MPS(tn[nrow, :])
+    A = MPS(tn[nrow + 1, :])
+    Ax = contract(A, x; cutoff=cutoff, maxdim=maxdim)
+  end
+  return boundary_mps
+end
+
+function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps";
+                              dir, cutoff, maxdim)
+  return contract_approx(tn, alg, BoundaryMPSDir(dir); cutoff=cutoff, maxdim=maxdim)
+end
+
+# Compute the truncation projectors for the network,
+# contracting from top to bottom
+function contract_approx(tn::Matrix{ITensor}; alg, dir, cutoff=1e-8, maxdim=maxdim_arg(tn))
+  return contract_approx(tn, ContractionAlgorithm(alg); dir=dir, cutoff=cutoff, maxdim=maxdim)
+end
+
