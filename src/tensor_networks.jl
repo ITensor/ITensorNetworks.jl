@@ -261,7 +261,6 @@ end
 
 function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps",
                          dir::BoundaryMPSDir"top_to_bottom"; cutoff, maxdim)
-  println("In contract_approx with tn of size $(size(tn)), alg $alg, and dir $dir.")
   nrows, ncols = size(tn)
   boundary_mps = Vector{MPS}(undef, nrows - 1)
   x = MPS(tn[1, :])
@@ -272,6 +271,13 @@ function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary
     boundary_mps[nrow] = orthogonalize(x, ncols)
   end
   return boundary_mps
+end
+
+function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps",
+                         dir::BoundaryMPSDir"bottom_to_top"; cutoff, maxdim)
+  tn = rot180(tn)
+  tn = reverse(tn; dims=2)
+  return reverse(contract_approx(tn, alg, BoundaryMPSDir"top_to_bottom"(); cutoff=cutoff, maxdim=maxdim))
 end
 
 function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps";
@@ -285,22 +291,22 @@ function contract_approx(tn::Matrix{ITensor}; alg, dir, cutoff=1e-8, maxdim=maxd
   return contract_approx(tn, ContractionAlgorithm(alg); dir=dir, cutoff=cutoff, maxdim=maxdim)
 end
 
-function insert_projectors(tn::Matrix{ITensor}, boundary_mps::Vector{MPS}; dir, center)
-  return insert_projectors(tn, boundary_mps, BoundaryMPSDir(dir); center=center)
+function insert_projectors(tn::Matrix{ITensor}, boundary_mps::Vector{MPS}; dir, projector_center)
+  return insert_projectors(tn, boundary_mps, BoundaryMPSDir(dir); projector_center=projector_center)
 end
 
 get_itensor(x::MPS, n::Int) = n in 1:length(x) ? x[n] : ITensor()
 
 # From an MPS, create a 1-site projector onto the MPS basis
-function projector(x::MPS, center)
-  # Gauge the boundary MPS towards the center column
-  x = orthogonalize(x, center)
+function projector(x::MPS, projector_center)
+  # Gauge the boundary MPS towards the projector_center column
+  x = orthogonalize(x, projector_center)
 
-  l = commoninds(get_itensor(x, center - 1), x[center])
-  r = commoninds(get_itensor(x, center + 1), x[center])
+  l = commoninds(get_itensor(x, projector_center - 1), x[projector_center])
+  r = commoninds(get_itensor(x, projector_center + 1), x[projector_center])
 
-  uₗ = x[1:(center - 1)]
-  uᵣ = reverse(x[(center + 1):end])
+  uₗ = x[1:(projector_center - 1)]
+  uᵣ = reverse(x[(projector_center + 1):end])
   nₗ = length(uₗ)
   nᵣ = length(uᵣ)
 
@@ -322,14 +328,14 @@ function projector(x::MPS, center)
   return Pₗ, Pᵣ
 end
 
-function split_network(tn::Matrix{ITensor}; center)
+function split_network(tn::Matrix{ITensor}; projector_center)
   tn_split = copy(tn)
   nrows, ncols = size(tn)
-  @assert length(center) == 2
-  @assert center[1] == Colon()
-  center_cols = center[2]
+  @assert length(projector_center) == 2
+  @assert projector_center[1] == Colon()
+  projector_center_cols = projector_center[2]
   for ncol in 1:ncols
-    if ncol ∉ center_cols
+    if ncol ∉ projector_center_cols
       tn_split[:, ncol] = split_links(tn_split[:, ncol])
     end
   end
@@ -337,28 +343,37 @@ function split_network(tn::Matrix{ITensor}; center)
 end
 
 function insert_projectors(tn::Matrix{ITensor}, boundary_mps::Vector{MPS},
-                           dir::BoundaryMPSDir"top_to_bottom"; center)
-  println("In insert_projectors")
-  @show dir
-  @show size(tn)
-  @show length(boundary_mps)
-  @show center
-
+                           dir::BoundaryMPSDir"top_to_bottom"; projector_center)
   nrows, ncols = size(tn)
-
   @assert length(boundary_mps) == nrows - 1
   @assert all(x -> length(x) == ncols, boundary_mps)
-
-  @assert length(center) == 2
-  @assert center[1] == Colon()
-
-  center_cols = center[2]
-  @show center_cols
-
-  projectors = [projector(x, center_cols) for x in boundary_mps]
+  @assert length(projector_center) == 2
+  @assert (projector_center[1] == :)
+  projector_center_cols = projector_center[2]
+  projectors = [projector(x, projector_center_cols) for x in boundary_mps]
   projectors_left = first.(projectors)
   projectors_right = last.(projectors)
-  tn_split = split_network(tn; center=center)
+  tn_split = split_network(tn; projector_center=projector_center)
   return tn_split, projectors_left, projectors_right
+end
+
+function insert_projectors(tn; center, projector_center=nothing, maxdim, cutoff)
+  # For now, only support contracting from top-to-bottom
+  # and bottom-to-top down to a specified row of the network
+  @assert (center[2] == :)
+  center_row = center[1]
+
+  if isnothing(projector_center)
+    projector_center = (:, (size(tn, 2) + 1) ÷ 2)
+  end
+  @assert (projector_center[1] == :)
+
+  # Approximately contract the tensor network.
+  # Outputs a Vector of boundary MPS.
+  boundary_mps_top = contract_approx(tn; alg="boundary_mps", dir="top_to_bottom", cutoff=cutoff, maxdim=maxdim)
+  boundary_mps_bottom = contract_approx(tn; alg="boundary_mps", dir="bottom_to_top", cutoff=cutoff, maxdim=maxdim)
+  # Insert approximate projectors into rows of the network
+  boundary_mps = vcat(boundary_mps_top[1:(center_row - 1)], dag.(boundary_mps_bottom[center_row:end]))
+  return insert_projectors(tn, boundary_mps; dir="top_to_bottom", projector_center=projector_center)
 end
 
