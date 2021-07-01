@@ -39,6 +39,7 @@ state = 1
 ψᴴ = dag.(ψ)
 ψ′ = prime(linkinds, ψ)
 tn = ψ′ .* ψᴴ
+# Output the link combiners as `combiner_guage`
 tn = combine_linkinds(tn)
 
 _cutoff = 1e-15
