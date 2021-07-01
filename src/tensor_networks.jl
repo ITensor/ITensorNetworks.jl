@@ -251,6 +251,13 @@ macro ContractionAlgorithm_str(s)
   :(ContractionAlgorithm{$(Expr(:quote, Symbol(s)))})
 end
 
+Base.@kwdef struct BoundaryMPS
+  top::Vector{MPS}=MPS[]
+  bottom::Vector{MPS}=MPS[]
+  left::Vector{MPS}=MPS[]
+  right::Vector{MPS}=MPS[]
+end
+
 struct BoundaryMPSDir{dir} end
 
 BoundaryMPSDir(s::AbstractString) = BoundaryMPSDir{Symbol(s)}()
@@ -260,7 +267,7 @@ macro BoundaryMPSDir_str(s)
 end
 
 function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps",
-                         dir::BoundaryMPSDir"top_to_bottom"; cutoff, maxdim)
+                         dirs::BoundaryMPSDir"top_to_bottom"; cutoff, maxdim)
   nrows, ncols = size(tn)
   boundary_mps = Vector{MPS}(undef, nrows - 1)
   x = MPS(tn[1, :])
@@ -270,29 +277,54 @@ function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary
     x = contract(A, x; cutoff=cutoff, maxdim=maxdim)
     boundary_mps[nrow] = orthogonalize(x, ncols)
   end
-  return boundary_mps
+  return BoundaryMPS(top=boundary_mps)
 end
 
 function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps",
-                         dir::BoundaryMPSDir"bottom_to_top"; cutoff, maxdim)
+                         dirs::BoundaryMPSDir"bottom_to_top"; cutoff, maxdim)
   tn = rot180(tn)
   tn = reverse(tn; dims=2)
-  return reverse(contract_approx(tn, alg, BoundaryMPSDir"top_to_bottom"(); cutoff=cutoff, maxdim=maxdim))
+  boundary_mps_top = contract_approx(tn, alg, BoundaryMPSDir"top_to_bottom"(); cutoff=cutoff, maxdim=maxdim)
+  return BoundaryMPS(bottom=reverse(boundary_mps_top.top))
+end
+
+function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps",
+                         dirs::BoundaryMPSDir"left_to_right"; cutoff, maxdim)
+  tn = rotr90(tn)
+  boundary_mps = contract_approx(tn, alg, BoundaryMPSDir"top_to_bottom"(); cutoff=cutoff, maxdim=maxdim)
+  return BoundaryMPS(left=boundary_mps.top)
+end
+
+function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps",
+                         dirs::BoundaryMPSDir"right_to_left"; cutoff, maxdim)
+  tn = rotr90(tn)
+  boundary_mps = contract_approx(tn, alg, BoundaryMPSDir"bottom_to_top"(); cutoff=cutoff, maxdim=maxdim)
+  return BoundaryMPS(right=boundary_mps.bottom)
+end
+
+function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps",
+                         dirs::BoundaryMPSDir"all"; cutoff, maxdim)
+  mps_top = contract_approx(tn, alg, BoundaryMPSDir"top_to_bottom"(); cutoff=cutoff, maxdim=maxdim)
+  mps_bottom = contract_approx(tn, alg, BoundaryMPSDir"bottom_to_top"(); cutoff=cutoff, maxdim=maxdim)
+  mps_left = contract_approx(tn, alg, BoundaryMPSDir"left_to_right"(); cutoff=cutoff, maxdim=maxdim)
+  mps_right = contract_approx(tn, alg, BoundaryMPSDir"right_to_left"(); cutoff=cutoff, maxdim=maxdim)
+  return BoundaryMPS(top=mps_top.top, bottom=mps_bottom.bottom, left=mps_left.left, right=mps_right.right)
 end
 
 function contract_approx(tn::Matrix{ITensor}, alg::ContractionAlgorithm"boundary_mps";
-                              dir, cutoff, maxdim)
-  return contract_approx(tn, alg, BoundaryMPSDir(dir); cutoff=cutoff, maxdim=maxdim)
+                         dirs, cutoff, maxdim)
+  return contract_approx(tn, alg, BoundaryMPSDir(dirs); cutoff=cutoff, maxdim=maxdim)
 end
 
 # Compute the truncation projectors for the network,
 # contracting from top to bottom
-function contract_approx(tn::Matrix{ITensor}; alg, dir, cutoff=1e-8, maxdim=maxdim_arg(tn))
-  return contract_approx(tn, ContractionAlgorithm(alg); dir=dir, cutoff=cutoff, maxdim=maxdim)
+function contract_approx(tn::Matrix{ITensor}; alg="boundary_mps",
+                         dirs="all", cutoff=1e-8, maxdim=maxdim_arg(tn))
+  return contract_approx(tn, ContractionAlgorithm(alg); dirs=dirs, cutoff=cutoff, maxdim=maxdim)
 end
 
-function insert_projectors(tn::Matrix{ITensor}, boundary_mps::Vector{MPS}; dir, projector_center)
-  return insert_projectors(tn, boundary_mps, BoundaryMPSDir(dir); projector_center=projector_center)
+function insert_projectors(tn::Matrix{ITensor}, boundary_mps::Vector{MPS}; dirs, projector_center)
+  return insert_projectors(tn, boundary_mps, BoundaryMPSDir(dirs); projector_center=projector_center)
 end
 
 get_itensor(x::MPS, n::Int) = n in 1:length(x) ? x[n] : ITensor()
@@ -343,7 +375,7 @@ function split_network(tn::Matrix{ITensor}; projector_center)
 end
 
 function insert_projectors(tn::Matrix{ITensor}, boundary_mps::Vector{MPS},
-                           dir::BoundaryMPSDir"top_to_bottom"; projector_center)
+                           dirs::BoundaryMPSDir"top_to_bottom"; projector_center)
   nrows, ncols = size(tn)
   @assert length(boundary_mps) == nrows - 1
   @assert all(x -> length(x) == ncols, boundary_mps)
@@ -357,9 +389,14 @@ function insert_projectors(tn::Matrix{ITensor}, boundary_mps::Vector{MPS},
   return tn_split, projectors_left, projectors_right
 end
 
-function insert_projectors(tn; center, projector_center=nothing, maxdim, cutoff)
-  # For now, only support contracting from top-to-bottom
-  # and bottom-to-top down to a specified row of the network
+function insert_projectors(tn, boundary_mps::BoundaryMPS; center, projector_center=nothing)
+  top_bottom = true
+  if (center[1] == :)
+    center = reverse(center)
+    tn = rotr90(tn)
+    top_bottom = false
+  end
+
   @assert (center[2] == :)
   center_row = center[1]
 
@@ -370,10 +407,54 @@ function insert_projectors(tn; center, projector_center=nothing, maxdim, cutoff)
 
   # Approximately contract the tensor network.
   # Outputs a Vector of boundary MPS.
-  boundary_mps_top = contract_approx(tn; alg="boundary_mps", dir="top_to_bottom", cutoff=cutoff, maxdim=maxdim)
-  boundary_mps_bottom = contract_approx(tn; alg="boundary_mps", dir="bottom_to_top", cutoff=cutoff, maxdim=maxdim)
+  #boundary_mps_top = contract_approx(tn; alg="boundary_mps", dirs="top_to_bottom", cutoff=cutoff, maxdim=maxdim)
+  #boundary_mps_bottom = contract_approx(tn; alg="boundary_mps", dirs="bottom_to_top", cutoff=cutoff, maxdim=maxdim)
+
+  boundary_mps_top = top_bottom ? boundary_mps.top : boundary_mps.left
+  boundary_mps_bottom = top_bottom ? boundary_mps.bottom : boundary_mps.right
+
+  # Insert approximate projectors into rows of the network
+  boundary_mps_tot = vcat(boundary_mps_top[1:(center_row - 1)], dag.(boundary_mps_bottom[center_row:end]))
+  tn_split, projectors_left, projectors_right = insert_projectors(tn, boundary_mps_tot; dirs="top_to_bottom", projector_center=projector_center)
+
+  if !top_bottom
+    tn_split = rotl90(tn_split)
+  end
+  return tn_split, projectors_left, projectors_right
+end
+
+# TODO: Delete this. Better to call contract_approx seperately
+# and cache the results so they can be reused in different
+# calls to `insert_projectors` that have different values of `center`
+function insert_projectors(tn; center, projector_center=nothing, maxdim, cutoff)
+  # For now, only support contracting from top-to-bottom
+  # and bottom-to-top down to a specified row of the network
+  top_bottom = true
+  if (center[1] == :)
+    center = reverse(center)
+    tn = rotr90(tn)
+    top_bottom = false
+  end
+
+  @assert (center[2] == :)
+  center_row = center[1]
+
+  if isnothing(projector_center)
+    projector_center = (:, (size(tn, 2) + 1) ÷ 2)
+  end
+  @assert (projector_center[1] == :)
+
+  # Approximately contract the tensor network.
+  # Outputs a Vector of boundary MPS.
+  boundary_mps_top = contract_approx(tn; alg="boundary_mps", dirs="top_to_bottom", cutoff=cutoff, maxdim=maxdim)
+  boundary_mps_bottom = contract_approx(tn; alg="boundary_mps", dirs="bottom_to_top", cutoff=cutoff, maxdim=maxdim)
   # Insert approximate projectors into rows of the network
   boundary_mps = vcat(boundary_mps_top[1:(center_row - 1)], dag.(boundary_mps_bottom[center_row:end]))
-  return insert_projectors(tn, boundary_mps; dir="top_to_bottom", projector_center=projector_center)
+  tn_split, projectors_left, projectors_right = insert_projectors(tn, boundary_mps; dirs="top_to_bottom", projector_center=projector_center)
+
+  if !top_bottom
+    tn_split = rotl90(tn_split)
+  end
+  return tn_split, projectors_left, projectors_right
 end
 
