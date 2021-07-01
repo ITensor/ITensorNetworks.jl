@@ -30,11 +30,11 @@ _maxdim = 100
 dir = "top_to_bottom"
 
 # Approximately contract the tensor network.
-# Outputs a matrix of boundary MPS.
+# Outputs a Vector of boundary MPS.
 boundary_mps_top = contract_approx(tn; alg="boundary_mps", dir=dir, cutoff=cutoff, maxdim=_maxdim)
 
 # Insert approximate projectors into rows of the network
-tn_projected = insert_projectors(tn, boundary_mps_top; dir=dir, center=(:, 2))
+tn_projected = insert_projectors(tn, boundary_mps_top; dir=dir, center=(:, 1))
 
 # Outputs a tuple of the original tensor network
 # and the tensors making up the projectors
@@ -45,10 +45,10 @@ Pr_flat = reduce(vcat, Pr)
 tn_projected_flat = mapreduce(vec, vcat, (tn_split, Pl_flat, Pr_flat))
 
 @show noncommoninds(tn_projected_flat...)
-#@visualize *(tn_projected_flat...) contract=false
-@visualize *(tn_split...) contract=false
+@visualize *(tn_projected_flat...) contract=false
+#@visualize *(tn_split...) contract=false
 
-#@disable_warn_order begin
-#  @show contract(tn_projected_flat)[] / contract(vec(tn))[]
-#end
+@disable_warn_order begin
+  @show contract(tn_projected_flat)[] / contract(vec(tn))[]
+end
 

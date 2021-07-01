@@ -289,13 +289,15 @@ function insert_projectors(tn::Matrix{ITensor}, boundary_mps::Vector{MPS}; dir, 
   return insert_projectors(tn, boundary_mps, BoundaryMPSDir(dir); center=center)
 end
 
+get_itensor(x::MPS, n::Int) = n in 1:length(x) ? x[n] : ITensor()
+
 # From an MPS, create a 1-site projector onto the MPS basis
 function projector(x::MPS, center)
   # Gauge the boundary MPS towards the center column
   x = orthogonalize(x, center)
 
-  l = commonind(x[center - 1], x[center])
-  r = commonind(x[center + 1], x[center])
+  l = commoninds(get_itensor(x, center - 1), x[center])
+  r = commoninds(get_itensor(x, center + 1), x[center])
 
   uₗ = x[1:(center - 1)]
   uᵣ = reverse(x[(center + 1):end])
@@ -308,8 +310,12 @@ function projector(x::MPS, center)
   uₗ′ = reverse(prime.(uₗ))
   uᵣ′ = reverse(prime.(uᵣ))
 
-  uₗ′[1] = replaceinds(uₗ′[1], l' => l)
-  uᵣ′[1] = replaceinds(uᵣ′[1], r' => r)
+  if !isempty(uₗ′)
+    uₗ′[1] = replaceinds(uₗ′[1], l' => l)
+  end
+  if !isempty(uᵣ′)
+    uᵣ′[1] = replaceinds(uᵣ′[1], r' => r)
+  end
 
   Pₗ = vcat(uₗᴴ, uₗ′)
   Pᵣ = vcat(uᵣᴴ, uᵣ′)
