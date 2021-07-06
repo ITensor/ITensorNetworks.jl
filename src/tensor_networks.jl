@@ -1,4 +1,31 @@
 
+#
+# ITensors.jl extensions
+#
+
+# Generalize siteind to n-dimensional lattice
+function ITensors.siteind(st::SiteType, N1::Integer, N2::Integer, Ns::Integer...; kwargs...)
+  s = siteind(st; kwargs...)
+  if !isnothing(s)
+    ts = "n1=$N1,n2=$N2"
+    for i in eachindex(Ns)
+      ts *= ",n$(i + 2)=$(Ns[i])"
+    end
+    return addtags(s, ts)
+  end
+  isnothing(s) && error(space_error_message(st))
+end
+
+# Generalize siteinds to n-dimensional lattice
+function ITensors.siteinds(str::AbstractString, N1::Integer, N2::Integer, Ns::Integer...; kwargs...)
+  st = SiteType(str)
+  return [siteind(st, ns...) for ns in Base.product(1:N1, 1:N2, UnitRange.(1, Ns)...)]
+end
+
+#
+# HyperCubic lattice
+#
+
 # An N-dimensional hypercubic lattice with periodic
 # boundary conditions
 struct HyperCubic{N}
@@ -75,14 +102,33 @@ function get_link_ind(linkinds_dict::Dict, edge::Edge, site::Tuple)
   return is_in_edge(site, edge) ? dag(l) : l
 end
 
+# A network of link indices for a HyperCubic lattice, with
+# no site indices.
 function inds_network(dims::Int...; linkdims, addtags=ts"")
-  N = length(dims)
+  #inds = Array{Vector{Index{typeof(linkdims)}},N}(undef, dims)
+  site_inds = fill(Index{typeof(linkdims)}[], dims)
+  return inds_network(site_inds; linkdims=linkdims, addtags=addtags)
+  ## inds = Array{Vector{Index{typeof(linkdims)}},N}(undef, dims)
+  ## N = length(dims)
+  ## lattice = HyperCubic(dims)
+  ## linkinds_dict = linkinds(lattice; linkdims, addtags)
+  ## for n in sites(lattice)
+  ##   inds_n = [get_link_ind(linkinds_dict, edge_n, n) for edge_n in incident_edges(lattice, n)]
+  ##   inds[n...] = inds_n
+  ## end
+  ## return inds
+end
+
+# A network of link indices for a HyperCubic lattice, with
+# site indices specified.
+function inds_network(site_inds::Array{<:Index,N}; linkdims, addtags=ts"") where {N}
+  dims = size(site_inds)
   lattice = HyperCubic(dims)
   linkinds_dict = linkinds(lattice; linkdims, addtags)
   inds = Array{Vector{Index{typeof(linkdims)}},N}(undef, dims)
   for n in sites(lattice)
     inds_n = [get_link_ind(linkinds_dict, edge_n, n) for edge_n in incident_edges(lattice, n)]
-    inds[n...] = inds_n
+    inds[n...] = push!(inds_n, site_inds[n...])
   end
   return inds
 end
