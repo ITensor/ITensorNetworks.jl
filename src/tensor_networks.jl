@@ -329,6 +329,8 @@ end
 
 get_itensor(x::MPS, n::Int) = n in 1:length(x) ? x[n] : ITensor()
 
+Base.reverse(x::MPS) = MPS(reverse(x.data))
+
 # From an MPS, create a 1-site projector onto the MPS basis
 function projector(x::MPS, projector_center)
   # Gauge the boundary MPS towards the projector_center column

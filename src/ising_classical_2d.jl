@@ -2,6 +2,8 @@ module Models
 
   using ITensors
 
+  export Model, critical_point, local_boltzmann_weight
+
   struct Model{model} end
   Model(s::AbstractString) = Model{Symbol(s)}()
   macro Model_str(s)
