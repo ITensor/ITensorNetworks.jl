@@ -36,16 +36,56 @@ A = peps_tensor(; linkdim=link_dim, sitedim=site_dim)
 state = 1
 ψ = project_boundary(ψ, state)
 
-# TODO: complete implementation
-function neighbors(tn, n)
+function filterneighbors(f, tn, n)
+  neighbors_tn = keytype(tn)[]
   tnₙ = tn[n]
   for m in keys(tn)
-    if hascommoninds(tnₙ, tn[m])
+    if f(n, m) && hascommoninds(tnₙ, tn[m])
+      push!(neighbors_tn, m)
     end
   end
+  return neighbors_tn
 end
+neighbors(tn, n) = filterneighbors(≠, tn, n)
+inneighbors(tn, n) = filterneighbors(>, tn, n)
+outneighbors(tn, n) = filterneighbors(<, tn, n)
 
 function ITensors.prime(::typeof(linkinds), tn)
+  tn′ = copy(tn)
+  for n in keys(tn)
+    for nn in neighbors(tn, n)
+      commonindsₙ = commoninds(tn[n], tn[nn])
+      tn′[n] = replaceinds(tn′[n], commonindsₙ => prime(commonindsₙ))
+    end
+  end
+  return tn′
+end
+
+# Return a dictionary from an edge to a combiner
+function combiners(::typeof(linkinds), tn)
+  tn′ = copy(tn)
+  for n in keys(tn)
+    for nn in inneighbors(tn, n)
+      commonindsₙ = commoninds(tn[n], tn[nn])
+      C = combiner(commonindsₙ)
+      tn′[n] = tn′[n] * C
+      tn′[nn] = tn′[nn] * C
+    end
+  end
+  return tn′
+end
+
+function combineinds(::typeof(linkinds), tn)
+  tn′ = copy(tn)
+  for n in keys(tn)
+    for nn in inneighbors(tn, n)
+      commonindsₙ = commoninds(tn[n], tn[nn])
+      C = combiner(commonindsₙ)
+      tn′[n] = tn′[n] * C
+      tn′[nn] = tn′[nn] * C
+    end
+  end
+  return tn′
 end
 
 # Square the tensor network
@@ -53,7 +93,7 @@ end
 ψ′ = prime(linkinds, ψ)
 tn = ψ′ .* ψᴴ
 # Output the link combiners as `combiner_guage`
-tn = combineinds(linkinds, tn)
+tnᶜ = combineinds(linkinds, tn)
 
 ## _cutoff = 1e-15
 ## _maxdim = 100
