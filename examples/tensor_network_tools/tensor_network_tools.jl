@@ -10,7 +10,7 @@ end
 
 struct ITensorNetwork{T,L}
   data::Dict{T,ITensor} # Map tensor labels to tensors
-  tags::Dict{T,TagSet} # Map tensor labels to tags that categorize the tensors
+  tags::Dict{T,TagSet} # Map tensor labels to tags that categorize the tensors, such as boundary
   lattice::L
   out_boundary::Dict{T,T} # Represent links across boundaries
   in_boundary::Dict{T,T} # Represent links across boundaries

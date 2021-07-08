@@ -104,31 +104,25 @@ end
 
 # A network of link indices for a HyperCubic lattice, with
 # no site indices.
-function inds_network(dims::Int...; linkdims, addtags=ts"")
-  #inds = Array{Vector{Index{typeof(linkdims)}},N}(undef, dims)
+function inds_network(dims::Int...; linkdims, kwargs...)
   site_inds = fill(Index{typeof(linkdims)}[], dims)
-  return inds_network(site_inds; linkdims=linkdims, addtags=addtags)
-  ## inds = Array{Vector{Index{typeof(linkdims)}},N}(undef, dims)
-  ## N = length(dims)
-  ## lattice = HyperCubic(dims)
-  ## linkinds_dict = linkinds(lattice; linkdims, addtags)
-  ## for n in sites(lattice)
-  ##   inds_n = [get_link_ind(linkinds_dict, edge_n, n) for edge_n in incident_edges(lattice, n)]
-  ##   inds[n...] = inds_n
-  ## end
-  ## return inds
+  return inds_network(site_inds; linkdims=linkdims, kwargs...)
+end
+
+function inds_network(site_inds::Array{<:Index,N}; kwargs...) where {N}
+  return inds_network(map(x -> [x], site_inds); kwargs...)
 end
 
 # A network of link indices for a HyperCubic lattice, with
 # site indices specified.
-function inds_network(site_inds::Array{<:Index,N}; linkdims, addtags=ts"") where {N}
+function inds_network(site_inds::Array{<:Vector{<:Index},N}; linkdims, addtags=ts"") where {N}
   dims = size(site_inds)
   lattice = HyperCubic(dims)
   linkinds_dict = linkinds(lattice; linkdims, addtags)
   inds = Array{Vector{Index{typeof(linkdims)}},N}(undef, dims)
   for n in sites(lattice)
     inds_n = [get_link_ind(linkinds_dict, edge_n, n) for edge_n in incident_edges(lattice, n)]
-    inds[n...] = push!(inds_n, site_inds[n...])
+    inds[n...] = append!(inds_n, site_inds[n...])
   end
   return inds
 end
@@ -230,17 +224,45 @@ function project_boundary(tn::Matrix{ITensor}, state=1)
   return tn
 end
 
+Base.keytype(m::MPS) = keytype(data(m))
+
+indtype(i::Index) = typeof(i)
+indtype(T::Type{<:Index}) = T
+indtype(is::Tuple{Vararg{<:Index}}) = eltype(is)
+indtype(is::Vector{<:Index}) = eltype(is)
+indtype(A::ITensor...) = indtype(inds.(A))
+
+indtype(tn1, tn2) = promote_type(indtype(tn1), indtype(tn2))
+indtype(tn) = mapreduce(indtype, promote_type, tn)
+
+function filter_alllinkinds(f, tn)
+  linkinds = Dict{Tuple{keytype(tn),keytype(tn)},Vector{indtype(tn)}}()
+  for n in keys(tn), m in keys(tn)
+   if f(n, m)
+     is = commoninds(tn[n], tn[m])
+     if !isempty(is)
+       linkinds[(n, m)] = is
+     end
+   end
+ end
+ return linkinds
+end
+alllinkinds(tn) = filter_alllinkinds(≠, tn)
+inlinkinds(tn) = filter_alllinkinds(>, tn)
+outlinkinds(tn) = filter_alllinkinds(<, tn)
+
 function split_links(H::Union{MPS,MPO}; split_tags=("" => ""), split_plevs=(0 => 1))
   left_tags, right_tags = split_tags
   left_plev, right_plev = split_plevs
-  N = length(H)
-  l = linkinds(H)
+  l = outlinkinds(H)
   Hsplit = copy(H)
-  for n in 1:(N - 1)
-    left_l_n = setprime(addtags(l[n], left_tags), left_plev)
-    right_l_n = setprime(addtags(l[n], right_tags), right_plev)
-    Hsplit[n] = replaceind(Hsplit[n], l[n] => left_l_n)
-    Hsplit[n + 1] = replaceind(Hsplit[n + 1], l[n] => right_l_n)
+  for bond in keys(l)
+    n1, n2 = bond
+    lₙ = l[bond]
+    left_l_n = setprime(addtags(lₙ, left_tags), left_plev)
+    right_l_n = setprime(addtags(lₙ, right_tags), right_plev)
+    Hsplit[n1] = replaceinds(Hsplit[n1], lₙ => left_l_n)
+    Hsplit[n2] = replaceinds(Hsplit[n2], lₙ => right_l_n)
   end
   return Hsplit
 end
@@ -408,7 +430,10 @@ function projector(x::MPS, projector_center)
   return Pₗ, Pᵣ
 end
 
-function split_network(tn::Matrix{ITensor}; projector_center)
+default_projector_center(tn::Matrix) = (:, (size(tn, 2) + 1) ÷ 2)
+
+function split_network(tn::Matrix{ITensor}; projector_center=default_projector_center(tn))
+  @assert (projector_center[1] == :)
   tn_split = copy(tn)
   nrows, ncols = size(tn)
   @assert length(projector_center) == 2
@@ -449,7 +474,7 @@ function insert_projectors(tn, boundary_mps::BoundaryMPS; center, projector_cent
   center_row = center[1]
 
   if isnothing(projector_center)
-    projector_center = (:, (size(tn, 2) + 1) ÷ 2)
+    projector_center = default_projector_center(tn)
   end
   @assert (projector_center[1] == :)
 
@@ -504,5 +529,187 @@ function insert_projectors(tn; center, projector_center=nothing, maxdim, cutoff)
     tn_split = rotl90(tn_split)
   end
   return tn_split, projectors_left, projectors_right
+end
+
+function filterneighbors(f, tn, n)
+  neighbors_tn = keytype(tn)[]
+  tnₙ = tn[n]
+  for m in keys(tn)
+    if f(n, m) && hascommoninds(tnₙ, tn[m])
+      push!(neighbors_tn, m)
+    end
+  end
+  return neighbors_tn
+end
+neighbors(tn, n) = filterneighbors(≠, tn, n)
+inneighbors(tn, n) = filterneighbors(>, tn, n)
+outneighbors(tn, n) = filterneighbors(<, tn, n)
+
+function mapinds(f, ::typeof(linkinds), tn)
+  tn′ = copy(tn)
+  for n in keys(tn)
+    for nn in neighbors(tn, n)
+      commonindsₙ = commoninds(tn[n], tn[nn])
+      tn′[n] = replaceinds(tn′[n], commonindsₙ => f(commonindsₙ))
+    end
+  end
+  return tn′
+end
+
+ITensors.prime(::typeof(linkinds), tn, args...) = mapinds(x -> prime(x, args...), linkinds, tn)
+ITensors.addtags(::typeof(linkinds), tn, args...) = mapinds(x -> addtags(x, args...), linkinds, tn)
+
+# Return a dictionary from a site to a combiner
+function combiners(::typeof(linkinds), tn)
+  Cs = Dict(keys(tn) .=> (ITensor[] for _ in keys(tn)))
+  for n in keys(tn)
+    for nn in inneighbors(tn, n)
+      commonindsₙ = commoninds(tn[n], tn[nn])
+      C = combiner(commonindsₙ)
+      push!(Cs[n], C)
+      push!(Cs[nn], dag(C))
+    end
+  end
+  return Cs
+end
+
+function contraction_cache_top(tn, boundary_mps::Vector{MPS}, n)
+  tn_cache = fill(ITensor(1.0), size(tn))
+  for nrow in 1:size(tn, 1)
+    if nrow == n
+      tn_cache[nrow, :] .= boundary_mps[nrow]
+    elseif nrow > n
+      tn_cache[nrow, :] = tn[nrow, :]
+    end
+  end
+  return tn_cache
+end
+
+function contraction_cache_top(tn, boundary_mps::Vector{MPS})
+  tn_cache_top = Vector{typeof(tn)}(undef, length(boundary_mps))
+  for n in 1:length(boundary_mps)
+    tn_cache_top[n] = contraction_cache_top(tn, boundary_mps, n)
+  end
+  return tn_cache_top
+end
+
+function contraction_cache_bottom(tn, boundary_mps::Vector{MPS})
+  tn_top = rot180(tn)
+  tn_top = reverse(tn_top; dims=2)
+  boundary_mps_top = reverse(boundary_mps)
+  tn_cache_top = contraction_cache_top(tn_top, boundary_mps_top)
+  tn_cache = reverse.(tn_cache_top; dims=2)
+  tn_cache = rot180.(tn_cache)
+  return tn_cache
+end
+
+function contraction_cache_left(tn, boundary_mps::Vector{MPS})
+  tn_top = rotr90(tn)
+  tn_cache_top = contraction_cache_top(tn_top, boundary_mps)
+  tn_cache = rotl90.(tn_cache_top)
+  return tn_cache
+end
+
+function contraction_cache_right(tn, boundary_mps::Vector{MPS})
+  tn_bottom = rotr90(tn)
+  tn_cache_bottom = contraction_cache_bottom(tn_bottom, boundary_mps)
+  tn_cache = rotl90.(tn_cache_bottom)
+  return tn_cache
+end
+
+function contraction_cache(tn, boundary_mps)
+  cache_top = contraction_cache_top(tn, boundary_mps.top)
+  cache_bottom = contraction_cache_bottom(tn, boundary_mps.bottom)
+  cache_left = contraction_cache_left(tn, boundary_mps.left)
+  cache_right = contraction_cache_right(tn, boundary_mps.right)
+  return (top=cache_top, bottom=cache_bottom, left=cache_left, right=cache_right)
+end
+
+function insert_gauge(tn::NamedTuple, gauge)
+  return map(x -> insert_gauge.(x, (gauge,)), tn)
+end
+
+function insert_gauge(tn, gauge)
+  tn′ = copy(tn)
+  for n in keys(gauge)
+    for g in gauge[n]
+      if hascommoninds(tn′[n], g)
+        tn′[n] *= g
+      end
+    end
+  end
+  return tn′
+end
+
+function boundary_mps_top(tn)
+  return [MPS(tn[n][n, :]) for n in 1:length(tn)]
+end
+
+function boundary_mps_bottom(tn)
+  tn_top = rot180.(tn)
+  tn_top = reverse.(tn_top; dims=2)
+  boundary_mps = boundary_mps_top(tn_top)
+  return reverse(boundary_mps)
+end
+
+function boundary_mps_left(tn)
+  tn_top = rotr90.(tn)
+  return boundary_mps_top(tn_top)
+end
+
+function boundary_mps_right(tn)
+  tn_bottom = rotr90.(tn)
+  return boundary_mps_bottom(tn_bottom)
+end
+
+function boundary_mps(tn::NamedTuple)
+  _boundary_mps_top = boundary_mps_top(tn.top)
+  _boundary_mps_bottom = boundary_mps_bottom(tn.bottom)
+  _boundary_mps_left = boundary_mps_left(tn.left)
+  _boundary_mps_right = boundary_mps_right(tn.right)
+  return BoundaryMPS(top=_boundary_mps_top, bottom=_boundary_mps_bottom, left=_boundary_mps_left, right=_boundary_mps_right)
+end
+
+# Return a network that when contracted equals the
+# squared norm of the input network
+function sqnorm(ψ::Matrix{ITensor})
+  # Square the tensor network
+  ψᴴ = addtags(linkinds, dag.(ψ), "bra")
+  ψ′ = addtags(linkinds, ψ, "ket")
+  return mapreduce(vec, vcat, (ψᴴ, ψ′))
+end
+
+# Return a network that approximates the squared norm of the
+# input network
+function sqnorm_approx(ψ::Matrix{ITensor}; center, cutoff, maxdim)
+  # Square the tensor network
+  ψᴴ = addtags(linkinds, dag.(ψ), "bra")
+  ψ′ = addtags(linkinds, ψ, "ket")
+  # TODO: implement contract(commoninds, ψ′, ψᴴ)
+  tn = ψ′ .* ψᴴ
+
+  # Contract in every direction
+  combiner_gauge = combiners(linkinds, tn)
+  tnᶜ = insert_gauge(tn, combiner_gauge)
+  boundary_mpsᶜ = contract_approx(tnᶜ; maxdim=maxdim, cutoff=cutoff)
+
+  tn_cacheᶜ = contraction_cache(tnᶜ, boundary_mpsᶜ)
+  tn_cache = insert_gauge(tn_cacheᶜ, combiner_gauge)
+  _boundary_mps = boundary_mps(tn_cache)
+
+  #
+  # Insert projectors horizontally (to measure e.g. properties
+  # in a row of the network)
+  #
+
+  tn_projected = insert_projectors(tn, _boundary_mps; center=center)
+  tn_split, Pl, Pr = tn_projected
+
+  ψᴴ_split = split_network(ψᴴ)
+  ψ′_split = split_network(ψ′)
+
+  Pl_flat = reduce(vcat, Pl)
+  Pr_flat = reduce(vcat, Pr)
+  return mapreduce(vec, vcat, (ψᴴ_split, ψ′_split, Pl_flat, Pr_flat))
 end
 
