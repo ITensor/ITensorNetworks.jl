@@ -105,7 +105,6 @@ end
 # A network of link indices for a HyperCubic lattice, with
 # no site indices.
 function inds_network(dims::Int...; linkdims, kwargs...)
-  #site_inds = Array{Index{typeof(linkdims)},length(dims)}(undef, dims)
   site_inds = fill(Index{typeof(linkdims)}[], dims)
   return inds_network(site_inds; linkdims=linkdims, kwargs...)
 end
