@@ -2,8 +2,7 @@ using ITensors
 using ITensorNetworks
 using Test
 
-using ITensorNetworks: inds_network, project_boundary, contract_approx, insert_projectors
-using ITensorNetworks: Models
+using ITensorNetworks: Models, inds_network, project_boundary, contract_approx, insert_projectors, sqnorm, sqnorm_approx
 
 @testset "ITensorNetworks.jl" begin
   model = Models.Model"ising"()
@@ -13,8 +12,7 @@ using ITensorNetworks: Models
   N = (3, 4)
   ndims = length(N)
 
-  space = [QN(0) => 2]
-  #space = 2
+  space = 2
   tn_inds = inds_network(N...; linkdims=space, addtags="S=1/2")
   A = Models.local_boltzmann_weight("ising", Val(ndims); β)
 
@@ -69,6 +67,41 @@ using ITensorNetworks: Models
 
   @disable_warn_order begin
     @test contract(tn_projected_flat)[] ≈ contract(vec(tn))[]
+  end
+end
+
+function peps_tensor(; linkdim, sitedim)
+  # left, right, top, bottom, site
+  return randn(linkdim, linkdim, linkdim, linkdim, sitedim)
+end
+
+@testset "PEPS norm approx" begin
+  N = (3, 3)
+  ndims = length(N)
+
+  site_inds = siteinds("S=1/2", N...)
+  link_space = 2
+  inds_net = inds_network(site_inds; linkdims=link_space)
+
+  A = peps_tensor(; linkdim=link_space, sitedim=dim(first(site_inds)))
+  ψ = itensor.((A,), inds_net)
+
+  # Project periodic boundary indices
+  # onto the 1 state
+  state = 1
+  ψ = project_boundary(ψ, state)
+
+  row = 2
+  center = (row, :)
+  cutoff_ = 1e-15
+  maxdim_ = 100
+
+  sqnormψ = sqnorm(ψ)
+  sqnormψ_approx = sqnorm_approx(ψ; center=center, cutoff=cutoff_, maxdim=maxdim_)
+  @test isempty(noncommoninds(sqnormψ_approx...))
+
+  @disable_warn_order begin
+    @test contract(sqnormψ_approx)[] / contract(sqnormψ)[] ≈ 1.0
   end
 end
 

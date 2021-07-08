@@ -104,31 +104,26 @@ end
 
 # A network of link indices for a HyperCubic lattice, with
 # no site indices.
-function inds_network(dims::Int...; linkdims, addtags=ts"")
-  #inds = Array{Vector{Index{typeof(linkdims)}},N}(undef, dims)
+function inds_network(dims::Int...; linkdims, kwargs...)
+  #site_inds = Array{Index{typeof(linkdims)},length(dims)}(undef, dims)
   site_inds = fill(Index{typeof(linkdims)}[], dims)
-  return inds_network(site_inds; linkdims=linkdims, addtags=addtags)
-  ## inds = Array{Vector{Index{typeof(linkdims)}},N}(undef, dims)
-  ## N = length(dims)
-  ## lattice = HyperCubic(dims)
-  ## linkinds_dict = linkinds(lattice; linkdims, addtags)
-  ## for n in sites(lattice)
-  ##   inds_n = [get_link_ind(linkinds_dict, edge_n, n) for edge_n in incident_edges(lattice, n)]
-  ##   inds[n...] = inds_n
-  ## end
-  ## return inds
+  return inds_network(site_inds; linkdims=linkdims, kwargs...)
+end
+
+function inds_network(site_inds::Array{<:Index,N}; kwargs...) where {N}
+  return inds_network(map(x -> [x], site_inds); kwargs...)
 end
 
 # A network of link indices for a HyperCubic lattice, with
 # site indices specified.
-function inds_network(site_inds::Array{<:Index,N}; linkdims, addtags=ts"") where {N}
+function inds_network(site_inds::Array{<:Vector{<:Index},N}; linkdims, addtags=ts"") where {N}
   dims = size(site_inds)
   lattice = HyperCubic(dims)
   linkinds_dict = linkinds(lattice; linkdims, addtags)
   inds = Array{Vector{Index{typeof(linkdims)}},N}(undef, dims)
   for n in sites(lattice)
     inds_n = [get_link_ind(linkinds_dict, edge_n, n) for edge_n in incident_edges(lattice, n)]
-    inds[n...] = push!(inds_n, site_inds[n...])
+    inds[n...] = append!(inds_n, site_inds[n...])
   end
   return inds
 end
@@ -436,7 +431,10 @@ function projector(x::MPS, projector_center)
   return Pₗ, Pᵣ
 end
 
-function split_network(tn::Matrix{ITensor}; projector_center)
+default_projector_center(tn::Matrix) = (:, (size(tn, 2) + 1) ÷ 2)
+
+function split_network(tn::Matrix{ITensor}; projector_center=default_projector_center(tn))
+  @assert (projector_center[1] == :)
   tn_split = copy(tn)
   nrows, ncols = size(tn)
   @assert length(projector_center) == 2
@@ -477,7 +475,7 @@ function insert_projectors(tn, boundary_mps::BoundaryMPS; center, projector_cent
   center_row = center[1]
 
   if isnothing(projector_center)
-    projector_center = (:, (size(tn, 2) + 1) ÷ 2)
+    projector_center = default_projector_center(tn)
   end
   @assert (projector_center[1] == :)
 
@@ -673,4 +671,46 @@ function boundary_mps(tn::NamedTuple)
   return BoundaryMPS(top=_boundary_mps_top, bottom=_boundary_mps_bottom, left=_boundary_mps_left, right=_boundary_mps_right)
 end
 
+# Return a network that when contracted equals the
+# squared norm of the input network
+function sqnorm(ψ::Matrix{ITensor})
+  # Square the tensor network
+  ψᴴ = addtags(linkinds, dag.(ψ), "bra")
+  ψ′ = addtags(linkinds, ψ, "ket")
+  return mapreduce(vec, vcat, (ψᴴ, ψ′))
+end
+
+# Return a network that approximates the squared norm of the
+# input network
+function sqnorm_approx(ψ::Matrix{ITensor}; center, cutoff, maxdim)
+  # Square the tensor network
+  ψᴴ = addtags(linkinds, dag.(ψ), "bra")
+  ψ′ = addtags(linkinds, ψ, "ket")
+  # TODO: implement contract(commoninds, ψ′, ψᴴ)
+  tn = ψ′ .* ψᴴ
+
+  # Contract in every direction
+  combiner_gauge = combiners(linkinds, tn)
+  tnᶜ = insert_gauge(tn, combiner_gauge)
+  boundary_mpsᶜ = contract_approx(tnᶜ; maxdim=maxdim, cutoff=cutoff)
+
+  tn_cacheᶜ = contraction_cache(tnᶜ, boundary_mpsᶜ)
+  tn_cache = insert_gauge(tn_cacheᶜ, combiner_gauge)
+  _boundary_mps = boundary_mps(tn_cache)
+
+  #
+  # Insert projectors horizontally (to measure e.g. properties
+  # in a row of the network)
+  #
+
+  tn_projected = insert_projectors(tn, _boundary_mps; center=center)
+  tn_split, Pl, Pr = tn_projected
+
+  ψᴴ_split = split_network(ψᴴ)
+  ψ′_split = split_network(ψ′)
+
+  Pl_flat = reduce(vcat, Pl)
+  Pr_flat = reduce(vcat, Pr)
+  return mapreduce(vec, vcat, (ψᴴ_split, ψ′_split, Pl_flat, Pr_flat))
+end
 
