@@ -3,6 +3,7 @@ using ITensorNetworks
 using ITensorsVisualization
 
 using ITensorNetworks: inds_network, project_boundary, contract_approx, insert_projectors
+using ITensorNetworks: BoundaryMPS
 using ITensorNetworks: Models
 
 #model = Models.Model"ising"()
@@ -50,16 +51,30 @@ neighbors(tn, n) = filterneighbors(≠, tn, n)
 inneighbors(tn, n) = filterneighbors(>, tn, n)
 outneighbors(tn, n) = filterneighbors(<, tn, n)
 
-function ITensors.prime(::typeof(linkinds), tn)
+function mapinds(f, ::typeof(linkinds), tn)
   tn′ = copy(tn)
   for n in keys(tn)
     for nn in neighbors(tn, n)
       commonindsₙ = commoninds(tn[n], tn[nn])
-      tn′[n] = replaceinds(tn′[n], commonindsₙ => prime(commonindsₙ))
+      tn′[n] = replaceinds(tn′[n], commonindsₙ => f(commonindsₙ))
     end
   end
   return tn′
 end
+
+ITensors.prime(::typeof(linkinds), tn, args...) = mapinds(x -> prime(x, args...), linkinds, tn)
+ITensors.addtags(::typeof(linkinds), tn, args...) = mapinds(x -> addtags(x, args...), linkinds, tn)
+
+## function ITensors.addtags(::typeof(linkinds), tn, args...)
+##   tn′ = copy(tn)
+##   for n in keys(tn)
+##     for nn in neighbors(tn, n)
+##       commonindsₙ = commoninds(tn[n], tn[nn])
+##       tn′[n] = replaceinds(tn′[n], commonindsₙ => prime(commonindsₙ))
+##     end
+##   end
+##   return tn′
+## end
 
 # Return a dictionary from a site to a combiner
 function combiners(::typeof(linkinds), tn)
@@ -74,31 +89,6 @@ function combiners(::typeof(linkinds), tn)
   end
   return Cs
 end
-
-function insert_gauge(tn, gauge)
-  tn′ = copy(tn)
-  for n in keys(gauge)
-    for g in gauge[n]
-      if hascommoninds(tn′[n], g)
-        tn′[n] *= g
-      end
-    end
-  end
-  return tn′
-end
-
-# Square the tensor network
-ψᴴ = dag.(ψ)
-ψ′ = prime(linkinds, ψ)
-tn = ψ′ .* ψᴴ
-
-_cutoff = 1e-15
-_maxdim = 100
-
-# Contract in every direction
-combiner_gauge = combiners(linkinds, tn)
-tnᶜ = insert_gauge(tn, combiner_gauge)
-boundary_mpsᶜ = contract_approx(tnᶜ; maxdim=_maxdim, cutoff=_cutoff)
 
 function contraction_cache_top(tn, boundary_mps::Vector{MPS}, n)
   tn_cache = fill(ITensor(1.0), size(tn))
@@ -145,36 +135,78 @@ function contraction_cache_right(tn, boundary_mps::Vector{MPS})
 end
 
 function contraction_cache(tn, boundary_mps)
-  cache_top = contraction_cache_top(tnᶜ, boundary_mpsᶜ.top)
-  cache_bottom = contraction_cache_bottom(tnᶜ, boundary_mpsᶜ.bottom)
-  cache_left = contraction_cache_left(tnᶜ, boundary_mpsᶜ.left)
-  cache_right = contraction_cache_right(tnᶜ, boundary_mpsᶜ.right)
+  cache_top = contraction_cache_top(tn, boundary_mps.top)
+  cache_bottom = contraction_cache_bottom(tn, boundary_mps.bottom)
+  cache_left = contraction_cache_left(tn, boundary_mps.left)
+  cache_right = contraction_cache_right(tn, boundary_mps.right)
   return (top=cache_top, bottom=cache_bottom, left=cache_left, right=cache_right)
 end
 
+function insert_gauge(tn::NamedTuple, gauge)
+  return map(x -> insert_gauge.(x, (gauge,)), tn)
+end
+
+function insert_gauge(tn, gauge)
+  tn′ = copy(tn)
+  for n in keys(gauge)
+    for g in gauge[n]
+      if hascommoninds(tn′[n], g)
+        tn′[n] *= g
+      end
+    end
+  end
+  return tn′
+end
+
+function boundary_mps_top(tn)
+  @show length(tn)
+  @show inds.(MPS(tn[1][1, :]))
+  @show inds.(MPS(tn[2][2, :]))
+  return [MPS(tn[n][n, :]) for n in 1:length(tn)]
+end
+
+function boundary_mps_bottom(tn)
+  tn_top = rot180.(tn)
+  tn_top = reverse.(tn_top; dims=2)
+  boundary_mps = boundary_mps_top(tn_top)
+  return boundary_mps
+end
+
+function boundary_mps_left(tn)
+  tn_top = rotr90.(tn)
+  return boundary_mps_top(tn_top)
+end
+
+function boundary_mps_right(tn)
+  tn_bottom = rotr90.(tn)
+  return boundary_mps_bottom(tn_bottom)
+end
+
+function boundary_mps(tn::NamedTuple)
+  _boundary_mps_top = boundary_mps_top(tn.top)
+  _boundary_mps_bottom = boundary_mps_bottom(tn.bottom)
+  _boundary_mps_left = boundary_mps_left(tn.left)
+  _boundary_mps_right = boundary_mps_right(tn.right)
+  return BoundaryMPS(top=_boundary_mps_top, bottom=_boundary_mps_bottom, left=_boundary_mps_left, right=_boundary_mps_right)
+end
+
+# Square the tensor network
+ψᴴ = addtags(linkinds, dag.(ψ), "ket")
+#ψ′ = prime(linkinds, ψ)
+ψ′ = addtags(linkinds, ψ, "bra")
+tn = ψ′ .* ψᴴ
+
+_cutoff = 1e-15
+_maxdim = 100
+
+# Contract in every direction
+combiner_gauge = combiners(linkinds, tn)
+tnᶜ = insert_gauge(tn, combiner_gauge)
+boundary_mpsᶜ = contract_approx(tnᶜ; maxdim=_maxdim, cutoff=_cutoff)
 
 tn_cacheᶜ = contraction_cache(tnᶜ, boundary_mpsᶜ)
-tn_cache_top_2 = insert_gauge(tn_cacheᶜ.top[2], combiner_gauge)
-
-## function insert_gauge_top_bottom(boundary_mps::ITensorNetworks.BoundaryMPS, gauge)
-##   for n in keys(gauge)
-##     n1, n2 = Tuple(n)
-##     @show n
-##     mps_top_n1 = get(boundary_mps.top, n1, nothing)
-##     mps_bottom_n1 = get(boundary_mps.bottom, n1, nothing)
-##     for g in gauge[n]
-##       if !isnothing(mps_top_n1)
-##         @show commoninds(mps_top_n1[n2], g)
-##       end
-##       if !isnothing(mps_bottom_n1)
-##         @show commoninds(mps_bottom_n1[n2], g)
-##       end
-##     end
-##   end
-##   return nothing
-## end
-
-#boundary_mps = insert_gauge_top_bottom(boundary_mpsᶜ, combiner_gauge)
+tn_cache = insert_gauge(tn_cacheᶜ, combiner_gauge)
+_boundary_mps = boundary_mps(tn_cache)
 
 #
 # Insert projectors horizontally (to measure e.g. properties
@@ -183,7 +215,7 @@ tn_cache_top_2 = insert_gauge(tn_cacheᶜ.top[2], combiner_gauge)
 
 row = 2
 center = (row, :)
-tn_projected = insert_projectors(tn, boundary_mps; center=center)
+tn_projected = insert_projectors(tn, _boundary_mps; center=center)
 tn_split, Pl, Pr = tn_projected
 
 Pl_flat = reduce(vcat, Pl)

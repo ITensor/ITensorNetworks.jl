@@ -230,17 +230,46 @@ function project_boundary(tn::Matrix{ITensor}, state=1)
   return tn
 end
 
+Base.keytype(m::MPS) = keytype(data(m))
+
+indtype(i::Index) = typeof(i)
+indtype(T::Type{<:Index}) = T
+indtype(is::Tuple{Vararg{<:Index}}) = eltype(is)
+indtype(is::Vector{<:Index}) = eltype(is)
+indtype(A::ITensor...) = indtype(inds.(A))
+
+indtype(tn1, tn2) = promote_type(indtype(tn1), indtype(tn2))
+indtype(tn) = mapreduce(indtype, promote_type, tn)
+
+function filter_alllinkinds(f, tn)
+  linkinds = Dict{Tuple{keytype(tn),keytype(tn)},Vector{indtype(tn)}}()
+  for n in keys(tn), m in keys(tn)
+   if f(n, m)
+     is = commoninds(tn[n], tn[m])
+     if !isempty(is)
+       linkinds[(n, m)] = is
+     end
+   end
+ end
+ return linkinds
+end
+alllinkinds(tn) = filter_alllinkinds(≠, tn)
+inlinkinds(tn) = filter_alllinkinds(>, tn)
+outlinkinds(tn) = filter_alllinkinds(<, tn)
+
 function split_links(H::Union{MPS,MPO}; split_tags=("" => ""), split_plevs=(0 => 1))
   left_tags, right_tags = split_tags
   left_plev, right_plev = split_plevs
-  N = length(H)
-  l = linkinds(H)
+  #N = length(H)
+  l = outlinkinds(H)
   Hsplit = copy(H)
-  for n in 1:(N - 1)
-    left_l_n = setprime(addtags(l[n], left_tags), left_plev)
-    right_l_n = setprime(addtags(l[n], right_tags), right_plev)
-    Hsplit[n] = replaceind(Hsplit[n], l[n] => left_l_n)
-    Hsplit[n + 1] = replaceind(Hsplit[n + 1], l[n] => right_l_n)
+  for bond in keys(l)
+    n1, n2 = bond
+    lₙ = l[bond]
+    left_l_n = setprime(addtags(lₙ, left_tags), left_plev)
+    right_l_n = setprime(addtags(lₙ, right_tags), right_plev)
+    Hsplit[n1] = replaceinds(Hsplit[n1], lₙ => left_l_n)
+    Hsplit[n2] = replaceinds(Hsplit[n2], lₙ => right_l_n)
   end
   return Hsplit
 end
