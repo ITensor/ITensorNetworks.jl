@@ -1,10 +1,16 @@
-  
+module CustomVertexGraphs
   using Dictionaries
   using Graphs
-  include("AbstractBijections.jl")
-  include("SubIndexing.jl")
 
-  #export CustomVertexGraph, CustomVertexDiGraph, CustomVertexEdge
+  include(joinpath("..", "..", "SubIndexing", "src", "SubIndexing.jl"))
+  using .SubIndexing
+
+  export Sub
+
+  include(joinpath("..", "..", "AbstractBijections", "src", "AbstractBijections.jl"))
+  using .AbstractBijections
+
+  export set_vertices
 
   import Graphs: src, dst, nv, vertices, has_vertex, ne, edges, has_edge, neighbors, outneighbors, inneighbors, all_neighbors, is_directed, add_edge!, add_vertex!, add_vertices!, induced_subgraph, adjacency_matrix, blockdiag, edgetype
 
@@ -12,7 +18,7 @@
 
   struct CustomVertexGraph{V,G<:AbstractGraph,B<:AbstractBijection} <: AbstractGraph{V}
     parent_graph::G
-    vertex_to_parent_vertex::B # Maps from the vertices to the parent vertices and back
+    vertex_to_parent_vertex::B # Invertible map from the vertices to the parent vertices
     function CustomVertexGraph(parent_graph::G, vertex_to_parent_vertex::B) where {G<:AbstractGraph,B<:AbstractBijection}
       @assert issetequal(vertices(parent_graph), image(vertex_to_parent_vertex))
       V = domain_eltype(vertex_to_parent_vertex)
@@ -220,3 +226,4 @@
   end
 
   show(io::IO, graph::CustomVertexGraph) = show(io, MIME"text/plain"(), graph)
+end # module CustomVertexGraphs

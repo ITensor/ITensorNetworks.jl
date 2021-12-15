@@ -3,7 +3,7 @@ module AbstractBijections
 
   import Base: insert!, getindex, inv, length, show
 
-  export Bijection, bijection, domain, image
+  export Bijection, AbstractBijection, bijection, domain, image, domain_eltype, image_eltype
 
   abstract type AbstractBijection{D,I} end
 

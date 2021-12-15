@@ -1,7 +1,7 @@
 module SubIndexing
   import Base: getindex, show, issubset
 
-  export Sub
+  export Sub, SubIndex
 
   struct Sub{T}
     sub::T
