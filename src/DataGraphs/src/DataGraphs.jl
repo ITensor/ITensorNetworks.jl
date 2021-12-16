@@ -9,7 +9,9 @@ module DataGraphs
 
   using Graphs
 
-  import Graphs: edgetype, ne, nv, vertices, edges, has_edge, has_vertex
+  import Graphs: edgetype, ne, nv, vertices, edges, has_edge, has_vertex, neighbors
+
+  export DataGraph
 
   abstract type AbstractDataGraph{VD,ED,V,E} <: AbstractGraph{V} end
 
@@ -19,7 +21,7 @@ module DataGraphs
   edge_data(graph::AbstractDataGraph) = getfield(graph, :edge_data)
 
   # Graphs overloads
-  for f in [:edgetype, :nv, :ne, :vertices, :edges, :eltype, :has_edge, :has_vertex]
+  for f in [:edgetype, :nv, :ne, :vertices, :edges, :eltype, :has_edge, :has_vertex, :neighbors]
     @eval begin
       $f(graph::AbstractDataGraph, args...) = $f(parent_graph(graph), args...)
     end

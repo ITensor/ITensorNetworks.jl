@@ -10,11 +10,11 @@ module CustomVertexGraphs
   include(joinpath("..", "..", "AbstractBijections", "src", "AbstractBijections.jl"))
   using .AbstractBijections
 
-  export set_vertices
+  export set_vertices, CustomVertexEdge
 
   import Graphs: src, dst, nv, vertices, has_vertex, ne, edges, has_edge, neighbors, outneighbors, inneighbors, all_neighbors, is_directed, add_edge!, add_vertex!, add_vertices!, induced_subgraph, adjacency_matrix, blockdiag, edgetype
 
-  import Base: show
+  import Base: show, eltype
 
   struct CustomVertexGraph{V,G<:AbstractGraph,B<:AbstractBijection} <: AbstractGraph{V}
     parent_graph::G
@@ -26,6 +26,8 @@ module CustomVertexGraphs
     end
   end
   vertex_to_parent_vertex(graph::CustomVertexGraph) = graph.vertex_to_parent_vertex
+
+  eltype(g::CustomVertexGraph{V}) where {V} = V
 
   # Convenient constructor
   set_vertices(graph::AbstractGraph, vertices) = CustomVertexGraph(graph, vertices)
@@ -56,6 +58,8 @@ module CustomVertexGraphs
     dst::V
   end
 
+  CustomVertexEdge{T}(e::CustomVertexEdge{T}) where {T} = e
+
   CustomVertexEdge(t::Tuple) = CustomVertexEdge(t[1], t[2])
   CustomVertexEdge(p::Pair) = CustomVertexEdge(p.first, p.second)
   CustomVertexEdge{T}(p::Pair) where {T} = CustomVertexEdge(T(p.first), T(p.second))
@@ -63,12 +67,17 @@ module CustomVertexGraphs
 
   eltype(::Type{<:ET}) where ET<:AbstractCustomVertexEdge{T} where T = T
 
-  # Accessors
   src(e::AbstractCustomVertexEdge) = e.src
   dst(e::AbstractCustomVertexEdge) = e.dst
 
-  # I/O
-  show(io::IO, e::AbstractCustomVertexEdge) = print(io, "Edge $(e.src) => $(e.dst)")
+  function show(io::IO, mime::MIME"text/plain", e::AbstractCustomVertexEdge)
+    show(io, src(e))
+    print(io, " => ")
+    show(io, dst(e))
+    return nothing
+  end
+
+  show(io::IO, edge::AbstractCustomVertexEdge) = show(io, MIME"text/plain"(), edge)
 
   # Conversions
   Pair(e::AbstractCustomVertexEdge) = Pair(src(e), dst(e))
@@ -203,15 +212,6 @@ module CustomVertexGraphs
       $f(graph::CustomVertexGraph, args...) = $f(parent_graph(graph), args...)
     end
   end
-
-  function show(io::IO, mime::MIME"text/plain", e::AbstractCustomVertexEdge)
-    show(io, src(e))
-    print(io, " => ")
-    show(io, dst(e))
-    return nothing
-  end
-
-  show(io::IO, edge::AbstractCustomVertexEdge) = show(io, MIME"text/plain"(), edge)
 
   function show(io::IO, mime::MIME"text/plain", graph::CustomVertexGraph)
     println(io, "CustomVertexGraph with $(nv(graph)) vertices:")
