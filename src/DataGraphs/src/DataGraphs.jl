@@ -2,7 +2,6 @@ module DataGraphs
 
   import Base: get, getindex, setindex!, convert, show, isassigned, eltype
 
-  #include(joinpath("..", "..", "SubIndexing", "src", "SubIndexing.jl"))
   using ..SubIndexing
 
   using Dictionaries
