@@ -2,15 +2,14 @@ module CustomVertexGraphs
   using Dictionaries
   using Graphs
 
-  include(joinpath("..", "..", "SubIndexing", "src", "SubIndexing.jl"))
-  using .SubIndexing
+  using ..SubIndexing
 
   export Sub
 
   include(joinpath("..", "..", "AbstractBijections", "src", "AbstractBijections.jl"))
   using .AbstractBijections
 
-  export set_vertices, CustomVertexEdge
+  export set_vertices
 
   import Graphs: src, dst, nv, vertices, has_vertex, ne, edges, has_edge, neighbors, outneighbors, inneighbors, all_neighbors, is_directed, add_edge!, add_vertex!, add_vertices!, induced_subgraph, adjacency_matrix, blockdiag, edgetype
 

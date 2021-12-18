@@ -2,6 +2,9 @@ module DataGraphs
 
   import Base: get, getindex, setindex!, convert, show, isassigned, eltype
 
+  #include(joinpath("..", "..", "SubIndexing", "src", "SubIndexing.jl"))
+  using ..SubIndexing
+
   using Dictionaries
 
   # Dictionaries.jl patch
@@ -9,9 +12,9 @@ module DataGraphs
 
   using Graphs
 
-  import Graphs: edgetype, ne, nv, vertices, edges, has_edge, has_vertex, neighbors
+  import Graphs: edgetype, ne, nv, vertices, edges, has_edge, has_vertex, neighbors, induced_subgraph
 
-  export DataGraph
+  export DataGraph, AbstractDataGraph
 
   abstract type AbstractDataGraph{VD,ED,V,E} <: AbstractGraph{V} end
 
@@ -32,26 +35,46 @@ module DataGraphs
   struct IsVertex <: VertexOrEdge end
   struct IsEdge <: VertexOrEdge end
 
-  is_vertex_or_edge(graph::AbstractGraph, args...) = error("$args don't represent a vertex or an edge for graph:\n$graph.")
+  # TODO: To allow the syntax `g[1, 1]` as a shorthand for the index `g[(1, 1)]`,
+  # define `is_vertex_or_edge(graph::AbstractGraph, args...) = is_vertex_or_edge(graph::AbstractGraph, args)`.
+  is_vertex_or_edge(graph::AbstractGraph, args...) = error("$args doesn't represent a vertex or an edge for graph:\n$graph.")
   is_vertex_or_edge(graph::AbstractGraph{V}, I::V) where {V} = IsVertex()
   is_vertex_or_edge(graph::AbstractGraph, I::AbstractEdge) = IsEdge()
   is_vertex_or_edge(graph::AbstractGraph{V}, I::Pair{V,V}) where {V} = IsEdge()
-  is_vertex_or_edge(graph::AbstractGraph{V}, I::Tuple{V,V}) where {V} = IsEdge()
 
   data(::IsVertex, graph::AbstractDataGraph) = vertex_data(graph)
   data(::IsEdge, graph::AbstractDataGraph) = edge_data(graph)
   index_type(::IsVertex, graph::AbstractDataGraph, args...) = eltype(graph)(args...)
   index_type(::IsEdge, graph::AbstractDataGraph, args...) = edgetype(graph)(args...)
 
-  for f in [:getindex, :isassigned]
-    @eval begin
-      $f(ve::VertexOrEdge, graph::AbstractDataGraph, args...) = $f(data(ve, graph), index_type(ve, graph, args...))
-      $f(graph::AbstractDataGraph, args...) = $f(is_vertex_or_edge(graph, args...), graph, args...)
-    end
-  end
+  # Data access
+  getindex(ve::VertexOrEdge, graph::AbstractDataGraph, args...) = getindex(data(ve, graph), index_type(ve, graph, args...))
+  getindex(graph::AbstractDataGraph, args...) = getindex(is_vertex_or_edge(graph, args...), graph, args...)
 
   setindex!(graph::AbstractDataGraph, x, args...) = setindex!(is_vertex_or_edge(graph, args...), graph, x, args...)
-  setindex!(ve::VertexOrEdge, graph::AbstractDataGraph, x, args...) = setindex!(data(ve, graph), x, index_type(ve, graph, args...))
+  function setindex!(ve::IsVertex, graph::AbstractDataGraph, x, args...)
+    setindex!(data(ve, graph), x, index_type(ve, graph, args...))
+    return graph
+  end
+
+  # Induced subgraph
+  getindex(g::AbstractDataGraph, sub_vertices::Union{Sub,SubIndex,Vector}) = induced_subgraph(g, sub_vertices)[1]
+
+  function induced_subgraph(graph::AbstractDataGraph, args...)
+    parent_induced_subgraph = induced_subgraph(parent_graph(graph), args...)
+  end
+
+  # Overload this to have custom behavior for the data in different directions,
+  # such as complex conjugation.
+  reverse_direction(x) = x
+  function setindex!(ve::IsEdge, graph::AbstractDataGraph, x, args...)
+    i = index_type(ve, graph, args...)
+    # Handles edges in both directions. Assumes data is the same, potentially
+    # up to `reverse_direction(x)`.
+    setindex!(data(ve, graph), x, i)
+    setindex!(data(ve, graph), reverse_direction(x), reverse(i))
+    return graph
+  end
 
   #
   # Helper functions for constructing AbstractDataGraph
@@ -65,6 +88,21 @@ module DataGraphs
     ::Nothing
   )
     return similar(Indices(indices_function(parent_graph)), data_type)
+  end
+
+  # XXX: Assumes `is_directed(parent_graph)`.
+  function default_data(
+    index_type::Type{<:AbstractEdge},
+    data_type::Type,
+    indices_function::Function,
+    parent_graph::AbstractGraph,
+    ::Nothing
+  )
+    out_indices = indices_function(parent_graph)
+    in_indices = reverse.(out_indices)
+    # Interleave the indices.
+    indices = collect(Iterators.flatten(zip(out_indices, in_indices)))
+    return similar(Indices(indices), data_type)
   end
 
   # Custom dictionary-like constructor that only accepts Pair lists
@@ -116,6 +154,18 @@ module DataGraphs
     )
   end
 
+  function set_data!(data::Dictionary, x, i)
+    setindex!(data, x, i)
+    return data
+  end
+
+  # XXX: Assumes `is_directed(parent_graph)`.
+  function set_data!(data::Dictionary{<:AbstractEdge}, x, i)
+    setindex!(data, x, i)
+    setindex!(data, reverse_direction(x), reverse(i))
+    return data
+  end
+
   function default_data(
     index_type::Type,
     data_type::Type,
@@ -130,9 +180,12 @@ module DataGraphs
       parent_graph,
       nothing
     )
+    # TODO: Use `merge`, once issues with `undef`
+    # are worked out in `Dictionaries.jl`.
     for i in eachindex(init_data)
       if isassigned(init_data, i)
-        data[i] = init_data[i]
+        #data[i] = init_data[i]
+        set_data!(data, init_data[i], i)
       end
     end
     return data
