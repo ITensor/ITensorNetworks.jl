@@ -1,7 +1,12 @@
 module ITensorNetworks
 
+  # Special struct indicating a constructor is internal
+  struct InternalConstructor end
+
   # General functions
   _not_implemented() = error("Not implemented")
+
+  import Base: convert
 
   using Dictionaries
   using ITensors
@@ -34,7 +39,7 @@ module ITensorNetworks
   export DataGraph
 
   # ITensorNetworks
-  export IndsNetwork, ITensorNetwork
+  export IndsNetwork, ITensorNetwork, itensors
 
   function Graph(itensors::Vector{ITensor})
     nv_graph = length(itensors)
@@ -45,6 +50,15 @@ module ITensorNetworks
       end
     end
     return graph
+  end
+
+  # Helper functions
+  function vertex_tag(v::Tuple)
+    return "$(v[1])×$(v[2])"
+  end
+
+  function edge_tag(e)
+    return "$(vertex_tag(src(e)))↔$(vertex_tag(dst(e)))"
   end
 
   #
@@ -67,13 +81,30 @@ module ITensorNetworks
   # IndsNetwork
   #
 
+  const UniformDataGraph{D,V} = DataGraph{D,D,V,CustomVertexEdge{V},CustomVertexGraph{V,Graphs.Graph{Int},Bijection{V,Int}}}
+
   struct IndsNetwork{I,V} <: AbstractIndsNetwork{I,V}
-    parent_graph::DataGraph{Vector{I},Vector{I},V,CustomVertexEdge{V},CustomVertexGraph{V,Graphs.Graph{Int},Bijection{V,Int}}}
+    parent_graph::UniformDataGraph{Vector{I},V}
   end
 
-  function IndsNetwork(g::AbstractGraph; linkspace=nothing, sitespace=nothing)
-    g = DataGraph{Vector{Index},Vector{Index}}(g)
-    return IndsNetwork(g)
+  function IndsNetwork(g::CustomVertexGraph, link_space::Nothing, site_space::Nothing)
+    dg = DataGraph{Vector{Index},Vector{Index}}(g)
+    return IndsNetwork(dg)
+  end
+
+  function IndsNetwork(g::CustomVertexGraph, link_space, site_space)
+    is = IndsNetwork(g, nothing, nothing)
+    for e in edges(is)
+      is[e] = [Index(link_space, edge_tag(e))]
+    end
+    for v in vertices(is)
+      is[v] = [Index(site_space, vertex_tag(v))]
+    end
+    return is
+  end
+
+  function IndsNetwork(g::CustomVertexGraph; link_space=nothing, site_space=nothing)
+    return IndsNetwork(g, link_space, site_space)
   end
 
   #
@@ -97,12 +128,29 @@ module ITensorNetworks
   #
 
   struct ITensorNetwork{V} <: AbstractITensorNetwork{V}
-    parent_graph::DataGraph{ITensor,ITensor,V,CustomVertexEdge{V},CustomVertexGraph{V,Graph{Int},Bijection{V,Int}}}
+    parent_graph::UniformDataGraph{ITensor,V}
   end
 
-  ## function IndsNetwork(g::AbstractGraph; linkspace=nothing, sitespace=nothing)
-  ##   g = DataGraph{Vector{Index},Vector{Index}}(g)
-  ##   return IndsNetwork(g)
-  ## end
+  # TODO: Add sitespace, linkspace
+  function ITensorNetwork(g::CustomVertexGraph)
+    dg = DataGraph{ITensor,ITensor}(g)
+    return ITensorNetwork(dg)
+  end
+
+  function ITensorNetwork(is::IndsNetwork)
+    g = parent_graph(parent_graph(is))
+    tn = ITensorNetwork(g)
+    for v in vertices(tn)
+      siteinds = is[v]
+      linkinds = [is[v => nv] for nv in neighbors(is, v)]
+      tn[v] = ITensor(siteinds, linkinds...)
+    end
+    return tn
+  end
+
+  # Convert to a collection of ITensors (`Vector{ITensor}`).
+  function itensors(tn::ITensorNetwork)
+    return collect(vertex_data(tn))
+  end
 
 end
