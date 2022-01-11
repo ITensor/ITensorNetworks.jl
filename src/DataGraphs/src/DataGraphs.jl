@@ -1,5 +1,8 @@
 module DataGraphs
 
+  # General functions
+  _not_implemented() = error("Not implemented")
+
   import Base: get, getindex, setindex!, convert, show, isassigned, eltype, copy
 
   using ..SubIndexing
@@ -18,14 +21,14 @@ module DataGraphs
   abstract type AbstractDataGraph{VD,ED,V,E} <: AbstractGraph{V} end
 
   # Field access
-  parent_graph(graph::AbstractDataGraph) = getfield(graph, :parent_graph)
-  vertex_data(graph::AbstractDataGraph) = getfield(graph, :vertex_data)
-  edge_data(graph::AbstractDataGraph) = getfield(graph, :edge_data)
+  underlying_graph(graph::AbstractDataGraph) = _not_implemented() #getfield(graph, :underlying_graph)
+  vertex_data(graph::AbstractDataGraph) = _not_implemented() #getfield(graph, :vertex_data)
+  edge_data(graph::AbstractDataGraph) = _not_implemented() #getfield(graph, :edge_data)
 
   # Graphs overloads
   for f in [:edgetype, :nv, :ne, :vertices, :edges, :eltype, :has_edge, :has_vertex, :neighbors]
     @eval begin
-      $f(graph::AbstractDataGraph, args...) = $f(parent_graph(graph), args...)
+      $f(graph::AbstractDataGraph, args...) = $f(underlying_graph(graph), args...)
     end
   end
 
@@ -63,7 +66,7 @@ module DataGraphs
   getindex(g::AbstractDataGraph, sub_vertices::Union{Sub,SubIndex,Vector}) = induced_subgraph(g, sub_vertices)[1]
 
   function induced_subgraph(graph::AbstractDataGraph, args...)
-    parent_induced_subgraph = induced_subgraph(parent_graph(graph), args...)
+    parent_induced_subgraph = induced_subgraph(underyling_graph(graph), args...)
   end
 
   # Overload this to have custom behavior for the data in different directions,
@@ -86,21 +89,21 @@ module DataGraphs
     index_type::Type,
     data_type::Type,
     indices_function::Function,
-    parent_graph::AbstractGraph,
+    underlying_graph::AbstractGraph,
     ::Nothing
   )
-    return similar(Indices(indices_function(parent_graph)), data_type)
+    return similar(Indices(indices_function(underlying_graph)), data_type)
   end
 
-  # XXX: Assumes `is_directed(parent_graph)`.
+  # XXX: Assumes `is_directed(underlying_graph)`.
   function default_data(
     index_type::Type{<:AbstractEdge},
     data_type::Type,
     indices_function::Function,
-    parent_graph::AbstractGraph,
+    underlying_graph::AbstractGraph,
     ::Nothing
   )
-    out_indices = indices_function(parent_graph)
+    out_indices = indices_function(underlying_graph)
     in_indices = reverse.(out_indices)
     # Interleave the indices.
     indices = collect(Iterators.flatten(zip(out_indices, in_indices)))
@@ -112,7 +115,7 @@ module DataGraphs
     index_type::Type,
     data_type::Type,
     indices_function::Function,
-    parent_graph::AbstractGraph,
+    underlying_graph::AbstractGraph,
     data::Vector{<:Pair}
   )
     indices = index_type.(first.(data))
@@ -125,10 +128,10 @@ module DataGraphs
     index_type::Type,
     data_type::Type,
     indices_function::Function,
-    parent_graph::AbstractGraph,
+    underlying_graph::AbstractGraph,
     data::Vector
   )
-    indices = indices_function(parent_graph)
+    indices = indices_function(underlying_graph)
     values = convert(Vector{data_type}, data)
     return Dictionary{index_type,data_type}(indices, values)
   end
@@ -137,21 +140,21 @@ module DataGraphs
     index_type::Type,
     data_type::Type,
     indices_function::Function,
-    parent_graph::AbstractGraph,
+    underlying_graph::AbstractGraph,
     init_data
   )
     data = data_dict(
       index_type,
       data_type,
       indices_function,
-      parent_graph,
+      underlying_graph,
       init_data
     )
     return default_data(
       index_type,
       data_type,
       indices_function,
-      parent_graph,
+      underlying_graph,
       data
     )
   end
@@ -161,7 +164,7 @@ module DataGraphs
     return data
   end
 
-  # XXX: Assumes `is_directed(parent_graph)`.
+  # XXX: Assumes `is_directed(underlying_graph)`.
   function set_data!(data::Dictionary{<:AbstractEdge}, x, i)
     setindex!(data, x, i)
     setindex!(data, reverse_direction(x), reverse(i))
@@ -172,14 +175,14 @@ module DataGraphs
     index_type::Type,
     data_type::Type,
     indices_function::Function,
-    parent_graph::AbstractGraph,
+    underlying_graph::AbstractGraph,
     init_data::Dictionary
   )
     data = default_data(
       index_type,
       data_type,
       indices_function,
-      parent_graph,
+      underlying_graph,
       nothing
     )
     # TODO: Use `merge`, once issues with `undef`
@@ -239,55 +242,58 @@ module DataGraphs
   show(io::IO, graph::AbstractDataGraph) = show(io, MIME"text/plain"(), graph)
 
   #
-  # DataGraph
+  # DataGraph concrete type
   #
 
   struct DataGraph{VD,ED,V,E,G<:AbstractGraph} <: AbstractDataGraph{VD,ED,V,E}
-    parent_graph::G
+    underlying_graph::G
     vertex_data::Dictionary{V,VD}
     edge_data::Dictionary{E,ED}
   end
+  underlying_graph(graph::DataGraph) = getfield(graph, :underlying_graph)
+  vertex_data(graph::DataGraph) = getfield(graph, :vertex_data)
+  edge_data(graph::DataGraph) = getfield(graph, :edge_data)
 
   function DataGraph{VD,ED}(
-    parent_graph::G,
+    underlying_graph::G,
     vertex_data,
     edge_data
   ) where {VD,ED,G<:AbstractGraph}
-    V = eltype(parent_graph)
-    E = edgetype(parent_graph)
-    vertex_data = default_data(V, VD, vertices, parent_graph, vertex_data)
-    edge_data = default_data(E, ED, edges, parent_graph, edge_data)
-    return DataGraph{VD,ED,V,E,G}(parent_graph, vertex_data, edge_data)
+    V = eltype(underlying_graph)
+    E = edgetype(underlying_graph)
+    vertex_data = default_data(V, VD, vertices, underlying_graph, vertex_data)
+    edge_data = default_data(E, ED, edges, underlying_graph, edge_data)
+    return DataGraph{VD,ED,V,E,G}(underlying_graph, vertex_data, edge_data)
   end
 
-  copy(graph::DataGraph) = DataGraph(copy(parent_graph(graph)), copy(vertex_data(graph)), copy(edge_data(graph)))
+  copy(graph::DataGraph) = DataGraph(copy(underlying_graph(graph)), copy(vertex_data(graph)), copy(edge_data(graph)))
 
   function DataGraph{VD}(
-    parent_graph::AbstractGraph,
+    underlying_graph::AbstractGraph,
     vertex_data,
     edge_data
   ) where {VD}
     ED = data_type(edge_data)
-    return DataGraph{VD,ED}(parent_graph, vertex_data, edge_data)
+    return DataGraph{VD,ED}(underlying_graph, vertex_data, edge_data)
   end
 
   function (DataGraph{VD,ED} where {VD})(
-    parent_graph::AbstractGraph,
+    underlying_graph::AbstractGraph,
     vertex_data,
     edge_data
   ) where {ED}
     VD = data_type(vertex_data)
-    return DataGraph{VD,ED}(parent_graph, vertex_data, edge_data)
+    return DataGraph{VD,ED}(underlying_graph, vertex_data, edge_data)
   end
 
   function DataGraph(
-    parent_graph::AbstractGraph,
+    underlying_graph::AbstractGraph,
     vertex_data,
     edge_data
   )
     VD = data_type(vertex_data)
     ED = data_type(edge_data)
-    return DataGraph{VD,ED}(parent_graph, vertex_data, edge_data)
+    return DataGraph{VD,ED}(underlying_graph, vertex_data, edge_data)
   end
 
   #
@@ -295,35 +301,35 @@ module DataGraphs
   #
 
   function DataGraph{VD,ED}(
-    parent_graph::AbstractGraph;
+    underlying_graph::AbstractGraph;
     vertex_data=nothing,
     edge_data=nothing
   ) where {VD,ED}
-    return DataGraph{VD,ED}(parent_graph, vertex_data, edge_data)
+    return DataGraph{VD,ED}(underlying_graph, vertex_data, edge_data)
   end
 
   function DataGraph{VD}(
-    parent_graph::AbstractGraph;
+    underlying_graph::AbstractGraph;
     vertex_data=nothing,
     edge_data=nothing
   ) where {VD}
-    return DataGraph{VD}(parent_graph, vertex_data, edge_data)
+    return DataGraph{VD}(underlying_graph, vertex_data, edge_data)
   end
 
   function (DataGraph{VD,ED} where {VD})(
-    parent_graph::AbstractGraph;
+    underlying_graph::AbstractGraph;
     vertex_data=nothing,
     edge_data=nothing
   ) where {ED}
-    return (DataGraph{VD,ED} where {VD})(parent_graph, vertex_data, edge_data)
+    return (DataGraph{VD,ED} where {VD})(underlying_graph, vertex_data, edge_data)
   end
 
   function DataGraph(
-    parent_graph::AbstractGraph;
+    underlying_graph::AbstractGraph;
     vertex_data=nothing,
     edge_data=nothing
   )
-    return DataGraph(parent_graph, vertex_data, edge_data)
+    return DataGraph(underlying_graph, vertex_data, edge_data)
   end
 
 end # module DataGraphs

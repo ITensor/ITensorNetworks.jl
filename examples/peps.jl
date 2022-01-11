@@ -42,4 +42,7 @@ s = siteinds("S=1/2", g)
 ψt = itensors(ψ)
 @visualize ψt
 
+# TODO: Implement priming, tagging, etc.
+ψ′ = prime(ψ)
+
 nothing
