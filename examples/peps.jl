@@ -40,9 +40,15 @@ s = siteinds("S=1/2", g)
 ψ = ITensorNetwork(s; link_space=χ)
 
 ψt = itensors(ψ)
-@visualize ψt
+@visualize ψt edge_labels = (; plevs=true)
 
 # TODO: Implement priming, tagging, etc.
 ψ′ = prime(ψ)
+
+ψ′t = itensors(ψ′)
+@visualize ψ′t edge_labels = (; plevs=true)
+
+@show siteinds(ψ)
+@show linkinds(ψ)
 
 nothing

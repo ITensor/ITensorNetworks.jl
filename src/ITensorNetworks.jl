@@ -31,7 +31,7 @@ module ITensorNetworks
   export grid, edges, vertices, ne, nv, src, dst, neighbors, has_edge, has_vertex
 
   # ITensors
-  import ITensors: siteinds, linkinds, uniqueinds, commoninds, prime
+  import ITensors: siteinds, linkinds, uniqueinds, commoninds, prime, replaceinds
 
   # CustomVertexGraphs
   export set_vertices
@@ -156,6 +156,12 @@ module ITensorNetworks
     return ITensorNetwork(dg)
   end
 
+  # TODO: Make a version of `setindex!` that doesn't preserve the graph (recomputes the `underlying_graph` as needed).
+  function setindex_preserve_graph!(tn::ITensorNetwork, edge_or_vertex, data)
+    setindex!(data_graph(tn), edge_or_vertex, data)
+    return tn
+  end
+
   # Assigns indices with space `link_space` to unassigned
   # edges of the network.
   function _ITensorNetwork(is::IndsNetwork, link_space)
@@ -192,10 +198,26 @@ module ITensorNetworks
   function IndsNetwork(tn::ITensorNetwork)
     is = IndsNetwork(underlying_graph(tn))
     for v in vertices(tn)
-      is[v] = siteinds(tn, v)
-      for e in incident_edges(tn, v)
-        append!(is[v], linkinds(tn, e))
-      end
+      is[v] = uniqueinds(tn, v)
+    end
+    for e in edges(tn)
+      is[e] = commoninds(tn, e)
+    end
+    return is
+  end
+
+  function siteinds(tn::ITensorNetwork)
+    is = IndsNetwork(underlying_graph(tn))
+    for v in vertices(tn)
+      is[v] = uniqueinds(tn, v)
+    end
+    return is
+  end
+
+  function linkinds(tn::ITensorNetwork)
+    is = IndsNetwork(underlying_graph(tn))
+    for e in edges(tn)
+      is[e] = commoninds(tn, e)
     end
     return is
   end
@@ -204,12 +226,12 @@ module ITensorNetworks
   # Index access
   #
 
+  function neighbor_itensors(tn::ITensorNetwork{V}, v::V) where {V}
+    return [tn[vn] for vn in neighbors(tn, v)]
+  end
+
   function uniqueinds(tn::ITensorNetwork{V}, v::V) where {V}
-    is = Index[]
-    for vn in neighbors(tn, v)
-      append!(is, uniqueinds(tn[v], tn[vn]))
-    end
-    return is
+    return uniqueinds(tn[v], neighbor_itensors(tn, v)...)
   end
 
   function siteinds(tn::ITensorNetwork{V}, v::V) where {V}
@@ -233,19 +255,28 @@ module ITensorNetworks
       setindex_preserve_graph!(tn, replaceinds(tn[v], is[v] => is′[v]), v)
     end
     for e in edges(is)
-      setindex_preserve_graph!(tn, replaceinds(tn[v], is[e] => is′[e]), e)
+      for v in (src(e), dst(e))
+        setindex_preserve_graph!(tn, replaceinds(tn[v], is[e] => is′[e]), v)
+      end
     end
     return tn
   end
 
-  function prime(tn::IndsNetwork)
-    _not_implemented()
+  function prime(is::IndsNetwork)
+    is′ = copy(is)
+    for v in vertices(is)
+      is′[v] = prime(is[v])
+    end
+    for e in edges(is)
+      is′[e] = prime(is[e])
+    end
+    return is′
   end
 
   function prime(tn::ITensorNetwork)
     is = IndsNetwork(tn)
     is′ = prime(is)
-    return replaceinds(tn, is, is′)
+    return replaceinds(tn, is => is′)
   end
 
 end
