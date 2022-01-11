@@ -1,5 +1,6 @@
-
-include(joinpath("..", "src", "DataGraphs.jl"))
+using Graphs
+using ITensorNetworks
+using Dictionaries
 
 g = grid((4,))
 dg = DataGraph{String,Symbol}(g)
@@ -34,7 +35,7 @@ dg[4] = "V4"
 dg[1 => 2] = :E12
 dg[2 => 3] = :E23
 dg[Edge(3, 4)] = :E34
-@show isassigned(dg, (1, 2))
+#@show isassigned(dg, (1, 2))
 @show isassigned(dg, Edge(2, 3))
 @show isassigned(dg, 3 => 4)
 @show dg[Edge(1, 2)] == :E12

@@ -6,8 +6,8 @@ println(
 )
 
 using Graphs
-include(joinpath("..", "src", "CustomVertexGraphs.jl"))
-using .CustomVertexGraphs
+using ITensorNetworks
+using ITensorNetworks.SubIndexing
 
 g = set_vertices(grid((4,)), ["A", "B", "C", "D"])
 @show g
