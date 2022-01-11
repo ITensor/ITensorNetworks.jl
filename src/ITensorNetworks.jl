@@ -31,7 +31,7 @@ module ITensorNetworks
   export grid, edges, vertices, ne, nv, src, dst, neighbors, has_edge, has_vertex
 
   # ITensors
-  import ITensors: prime
+  import ITensors: siteinds, linkinds, uniqueinds, commoninds, prime
 
   # CustomVertexGraphs
   export set_vertices
@@ -184,9 +184,44 @@ module ITensorNetworks
     return collect(vertex_data(tn))
   end
 
+  function incident_edges(g::AbstractGraph{V}, v::V) where {V}
+    return [edgetype(g)(v, vn) for vn in neighbors(g, v)]
+  end
+
   # Convert to an IndsNetwork
   function IndsNetwork(tn::ITensorNetwork)
-    _not_implemented()
+    is = IndsNetwork(underlying_graph(tn))
+    for v in vertices(tn)
+      is[v] = siteinds(tn, v)
+      for e in incident_edges(tn, v)
+        append!(is[v], linkinds(tn, e))
+      end
+    end
+    return is
+  end
+
+  #
+  # Index access
+  #
+
+  function uniqueinds(tn::ITensorNetwork{V}, v::V) where {V}
+    is = Index[]
+    for vn in neighbors(tn, v)
+      append!(is, uniqueinds(tn[v], tn[vn]))
+    end
+    return is
+  end
+
+  function siteinds(tn::ITensorNetwork{V}, v::V) where {V}
+    return uniqueinds(tn, v)
+  end
+
+  function commoninds(tn::ITensorNetwork{V}, e::CustomVertexEdge{V}) where {V}
+    return commoninds(tn[src(e)], tn[dst(e)])
+  end
+
+  function linkinds(tn::ITensorNetwork{V}, e::CustomVertexEdge{V}) where {V}
+    return commoninds(tn, e)
   end
 
   # Priming and tagging (changing Index identifiers)
@@ -201,6 +236,10 @@ module ITensorNetworks
       setindex_preserve_graph!(tn, replaceinds(tn[v], is[e] => is′[e]), e)
     end
     return tn
+  end
+
+  function prime(tn::IndsNetwork)
+    _not_implemented()
   end
 
   function prime(tn::ITensorNetwork)
