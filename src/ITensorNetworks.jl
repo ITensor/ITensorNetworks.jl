@@ -6,7 +6,7 @@ module ITensorNetworks
   # General functions
   _not_implemented() = error("Not implemented")
 
-  import Base: convert
+  import Base: convert, copy
 
   using Dictionaries
   using ITensors
@@ -23,6 +23,7 @@ module ITensorNetworks
   include("DataGraphs/src/DataGraphs.jl")
   using .DataGraphs
   import .DataGraphs: parent_graph, vertex_data, edge_data
+  using .DataGraphs: assign_data
 
   # When setting an edge with collections of `Index`, set the reverse direction
   # edge with the `dag`.
@@ -61,6 +62,14 @@ module ITensorNetworks
     return "$(vertex_tag(src(e)))↔$(vertex_tag(dst(e)))"
   end
 
+  function vertex_index(v, vertex_space)
+    return Index(vertex_space; tags=vertex_tag(v))
+  end
+
+  function edge_index(e, edge_space)
+    return Index(edge_space; tags=edge_tag(e))
+  end
+
   #
   # AbstractIndsNetwork
   #
@@ -68,6 +77,7 @@ module ITensorNetworks
   abstract type AbstractIndsNetwork{I,V} <: AbstractDataGraph{Vector{I},Vector{I},V,CustomVertexEdge{V}} end
 
   # Field access
+  # TODO: Only define for concrete type `IndsNetwork`.
   parent_graph(graph::AbstractIndsNetwork) = getfield(graph, :parent_graph)
 
   # AbstractDataGraphs overloads
@@ -107,6 +117,8 @@ module ITensorNetworks
     return IndsNetwork(g, link_space, site_space)
   end
 
+  copy(is::IndsNetwork) = IndsNetwork(copy(parent_graph(is)))
+
   #
   # AbstractITensorNetwork
   #
@@ -114,6 +126,7 @@ module ITensorNetworks
   abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{ITensor,ITensor,V,CustomVertexEdge{V}} end
 
   # Field access
+  # TODO: Only define for concrete type `ITensorNetwork`.
   parent_graph(graph::AbstractITensorNetwork) = getfield(graph, :parent_graph)
 
   # AbstractDataGraphs overloads
@@ -131,13 +144,23 @@ module ITensorNetworks
     parent_graph::UniformDataGraph{ITensor,V}
   end
 
+  copy(is::ITensorNetwork) = ITensorNetwork(copy(parent_graph(is)))
+
   # TODO: Add sitespace, linkspace
   function ITensorNetwork(g::CustomVertexGraph)
     dg = DataGraph{ITensor,ITensor}(g)
     return ITensorNetwork(dg)
   end
 
-  function ITensorNetwork(is::IndsNetwork)
+  # Assigns indices with space `link_space` to unassigned
+  # edges of the network.
+  function _ITensorNetwork(is::IndsNetwork, link_space)
+    edge_data(e) = [edge_index(e, link_space)]
+    is_assigned = assign_data(is; edge_data)
+    return _ITensorNetwork(is_assigned, nothing)
+  end
+
+  function _ITensorNetwork(is::IndsNetwork, link_space::Nothing)
     g = parent_graph(parent_graph(is))
     tn = ITensorNetwork(g)
     for v in vertices(tn)
@@ -146,6 +169,10 @@ module ITensorNetworks
       tn[v] = ITensor(siteinds, linkinds...)
     end
     return tn
+  end
+
+  function ITensorNetwork(is::IndsNetwork; link_space=nothing)
+    return _ITensorNetwork(is, link_space)
   end
 
   # Convert to a collection of ITensors (`Vector{ITensor}`).

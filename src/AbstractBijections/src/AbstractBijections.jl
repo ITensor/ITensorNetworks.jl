@@ -1,7 +1,7 @@
 module AbstractBijections
   using Dictionaries
 
-  import Base: insert!, getindex, inv, length, show
+  import Base: insert!, getindex, inv, length, show, copy
 
   export Bijection, AbstractBijection, bijection, domain, image, domain_eltype, image_eltype
 
@@ -40,6 +40,8 @@ module AbstractBijections
     f::Dictionary{D,I}
     finv::Dictionary{I,D}
   end
+
+  copy(f::Bijection) = Bijection(copy(f.f), copy(f.finv))
 
   function Bijection(domain, image)
     f = Dictionary(domain, image)

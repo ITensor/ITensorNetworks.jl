@@ -13,7 +13,7 @@ module CustomVertexGraphs
 
   import Graphs: src, dst, nv, vertices, has_vertex, ne, edges, has_edge, neighbors, outneighbors, inneighbors, all_neighbors, is_directed, add_edge!, add_vertex!, add_vertices!, induced_subgraph, adjacency_matrix, blockdiag, edgetype
 
-  import Base: show, eltype
+  import Base: show, eltype, copy
 
   struct CustomVertexGraph{V,G<:AbstractGraph,B<:AbstractBijection} <: AbstractGraph{V}
     parent_graph::G
@@ -24,7 +24,10 @@ module CustomVertexGraphs
       return new{V,G,B}(parent_graph, vertex_to_parent_vertex)
     end
   end
+  parent_graph(graph::CustomVertexGraph) = graph.parent_graph
   vertex_to_parent_vertex(graph::CustomVertexGraph) = graph.vertex_to_parent_vertex
+
+  copy(graph::CustomVertexGraph) = CustomVertexGraph(copy(parent_graph(graph)), copy(vertex_to_parent_vertex(graph)))
 
   eltype(g::CustomVertexGraph{V}) where {V} = V
 
@@ -33,7 +36,6 @@ module CustomVertexGraphs
 
   vertices(graph::CustomVertexGraph) = domain(vertex_to_parent_vertex(graph))
 
-  parent_graph(graph::CustomVertexGraph) = graph.parent_graph
   parent_graph_type(::Type{<:CustomVertexGraph{<:Any,G}}) where {G} = G
 
   parent_vertices(graph::CustomVertexGraph) = vertices(parent_graph(graph))

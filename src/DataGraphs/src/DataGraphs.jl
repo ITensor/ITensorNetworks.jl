@@ -1,6 +1,6 @@
 module DataGraphs
 
-  import Base: get, getindex, setindex!, convert, show, isassigned, eltype
+  import Base: get, getindex, setindex!, convert, show, isassigned, eltype, copy
 
   using ..SubIndexing
 
@@ -47,8 +47,11 @@ module DataGraphs
   index_type(::IsEdge, graph::AbstractDataGraph, args...) = edgetype(graph)(args...)
 
   # Data access
-  getindex(ve::VertexOrEdge, graph::AbstractDataGraph, args...) = getindex(data(ve, graph), index_type(ve, graph, args...))
   getindex(graph::AbstractDataGraph, args...) = getindex(is_vertex_or_edge(graph, args...), graph, args...)
+  getindex(ve::VertexOrEdge, graph::AbstractDataGraph, args...) = getindex(data(ve, graph), index_type(ve, graph, args...))
+
+  isassigned(graph::AbstractDataGraph, args...) = isassigned(is_vertex_or_edge(graph, args...), graph, args...)
+  isassigned(ve::VertexOrEdge, graph::AbstractDataGraph, args...) = isassigned(data(ve, graph), index_type(ve, graph, args...))
 
   setindex!(graph::AbstractDataGraph, x, args...) = setindex!(is_vertex_or_edge(graph, args...), graph, x, args...)
   function setindex!(ve::IsVertex, graph::AbstractDataGraph, x, args...)
@@ -180,7 +183,8 @@ module DataGraphs
       nothing
     )
     # TODO: Use `merge`, once issues with `undef`
-    # are worked out in `Dictionaries.jl`.
+    # are worked out in `Dictionaries.jl`:
+    # https://github.com/andyferris/Dictionaries.jl/issues/86
     for i in eachindex(init_data)
       if isassigned(init_data, i)
         #data[i] = init_data[i]
@@ -193,6 +197,21 @@ module DataGraphs
   data_type(::Nothing) = Any
   data_type(::Vector{T}) where {T} = T
   data_type(::Vector{Pair{S,T}}) where {S,T} = T
+
+  function assign_data(graph::AbstractDataGraph; edge_data=Returns(nothing), vertex_data=Returns(nothing))
+    graph = copy(graph)
+    for v in vertices(graph)
+      if !isassigned(graph, v) && !isnothing(vertex_data(v))
+        graph[v] = vertex_data(v)
+      end
+    end
+    for e in edges(graph)
+      if !isassigned(graph, e) && !isnothing(edge_data(e))
+        graph[e] = edge_data(e)
+      end
+    end
+    return graph
+  end
 
   #
   # Printing
@@ -240,6 +259,8 @@ module DataGraphs
     edge_data = default_data(E, ED, edges, parent_graph, edge_data)
     return DataGraph{VD,ED,V,E,G}(parent_graph, vertex_data, edge_data)
   end
+
+  copy(graph::DataGraph) = DataGraph(copy(parent_graph(graph)), copy(vertex_data(graph)), copy(edge_data(graph)))
 
   function DataGraph{VD}(
     parent_graph::AbstractGraph,

@@ -3,7 +3,8 @@ using ITensorNetworks
 using ITensorUnicodePlots
 
 χ, d = 5, 2
-g = set_vertices(grid((2, 2)), (2, 2))
+dims = (4, 4)
+g = set_vertices(grid(dims), dims)
 
 # Network of indices
 is = IndsNetwork(g; link_space=χ, site_space=d)
