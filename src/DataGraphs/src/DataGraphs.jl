@@ -39,34 +39,34 @@ module DataGraphs
 
   # TODO: To allow the syntax `g[1, 1]` as a shorthand for the index `g[(1, 1)]`,
   # define `is_vertex_or_edge(graph::AbstractGraph, args...) = is_vertex_or_edge(graph::AbstractGraph, args)`.
-  is_vertex_or_edge(graph::AbstractGraph, args...) = error("$args doesn't represent a vertex or an edge for graph:\n$graph.")
-  is_vertex_or_edge(graph::AbstractGraph{V}, I::V) where {V} = IsVertex()
-  is_vertex_or_edge(graph::AbstractGraph, I::AbstractEdge) = IsEdge()
-  is_vertex_or_edge(graph::AbstractGraph{V}, I::Pair{V,V}) where {V} = IsEdge()
+  is_vertex_or_edge(graph::AbstractGraph, v_or_e) = error("$v_or_e doesn't represent a vertex or an edge for graph:\n$graph.")
+  is_vertex_or_edge(graph::AbstractGraph{V}, ::V) where {V} = IsVertex()
+  is_vertex_or_edge(graph::AbstractGraph, ::AbstractEdge) = IsEdge()
+  is_vertex_or_edge(graph::AbstractGraph{V}, ::Pair{V,V}) where {V} = IsEdge()
 
   data(::IsVertex, graph::AbstractDataGraph) = vertex_data(graph)
   data(::IsEdge, graph::AbstractDataGraph) = edge_data(graph)
-  index_type(::IsVertex, graph::AbstractDataGraph, args...) = eltype(graph)(args...)
-  index_type(::IsEdge, graph::AbstractDataGraph, args...) = edgetype(graph)(args...)
+  index_type(::IsVertex, graph::AbstractDataGraph, v_or_e) = eltype(graph)(v_or_e)
+  index_type(::IsEdge, graph::AbstractDataGraph, v_or_e) = edgetype(graph)(v_or_e)
 
   # Data access
-  getindex(graph::AbstractDataGraph, args...) = getindex(is_vertex_or_edge(graph, args...), graph, args...)
-  getindex(ve::VertexOrEdge, graph::AbstractDataGraph, args...) = getindex(data(ve, graph), index_type(ve, graph, args...))
+  getindex(graph::AbstractDataGraph, v_or_e) = getindex(is_vertex_or_edge(graph, v_or_e), graph, v_or_e)
+  getindex(ve::VertexOrEdge, graph::AbstractDataGraph, v_or_e) = getindex(data(ve, graph), index_type(ve, graph, v_or_e))
 
-  isassigned(graph::AbstractDataGraph, args...) = isassigned(is_vertex_or_edge(graph, args...), graph, args...)
-  isassigned(ve::VertexOrEdge, graph::AbstractDataGraph, args...) = isassigned(data(ve, graph), index_type(ve, graph, args...))
+  isassigned(graph::AbstractDataGraph, v_or_e) = isassigned(is_vertex_or_edge(graph, v_or_e), graph, v_or_e)
+  isassigned(ve::VertexOrEdge, graph::AbstractDataGraph, v_or_e) = isassigned(data(ve, graph), index_type(ve, graph, v_or_e))
 
-  setindex!(graph::AbstractDataGraph, x, args...) = setindex!(is_vertex_or_edge(graph, args...), graph, x, args...)
-  function setindex!(ve::IsVertex, graph::AbstractDataGraph, x, args...)
-    setindex!(data(ve, graph), x, index_type(ve, graph, args...))
+  setindex!(graph::AbstractDataGraph, x, v_or_e) = setindex!(is_vertex_or_edge(graph, v_or_e), graph, x, v_or_e)
+  function setindex!(ve::IsVertex, graph::AbstractDataGraph, x, v_or_e)
+    setindex!(data(ve, graph), x, index_type(ve, graph, v_or_e))
     return graph
   end
 
   # Induced subgraph
   getindex(g::AbstractDataGraph, sub_vertices::Union{Sub,SubIndex,Vector}) = induced_subgraph(g, sub_vertices)[1]
 
-  function induced_subgraph(graph::AbstractDataGraph, args...)
-    parent_induced_subgraph = induced_subgraph(underyling_graph(graph), args...)
+  function induced_subgraph(graph::AbstractDataGraph, vlist_or_elist)
+    parent_induced_subgraph = induced_subgraph(underyling_graph(graph), vlist_or_elist)
   end
 
   # Overload this to have custom behavior for the data in different directions,
