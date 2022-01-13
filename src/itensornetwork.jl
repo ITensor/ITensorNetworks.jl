@@ -31,7 +31,7 @@ copy(tn::ITensorNetwork) = ITensorNetwork(copy(data_graph(tn)))
 #
 
 # TODO: Add sitespace, linkspace
-function ITensorNetwork(g::CustomVertexGraph)
+function ITensorNetwork(g::Union{Graph,CustomVertexGraph})
   dg = DataGraph{ITensor,ITensor}(g)
   return ITensorNetwork(dg)
 end
