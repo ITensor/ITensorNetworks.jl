@@ -2,6 +2,7 @@ module ITensorNetworks
 
   using Dictionaries
   using ITensors
+  using ITensors.ITensorVisualizationCore
   using Graphs
 
   include(joinpath("SubIndexing", "src", "SubIndexing.jl"))
@@ -36,9 +37,22 @@ module ITensorNetworks
     return graph
   end
 
+  function CustomVertexGraph(itensors::Vector{ITensor})
+    return set_vertices(Graph(itensors), 1:length(itensors))
+  end
+
+  front(itr, n = 1) = Iterators.take(itr, length(itr) - n)
+  tail(itr) = Iterators.drop(itr, 1)
+
   # Helper functions
+  vertex_tag(v::Int) = "$v"
+
   function vertex_tag(v::Tuple)
-    return "$(v[1])×$(v[2])"
+    t = "$(first(v))"
+    for vn in Base.tail(v)
+      t *= "×$vn"
+    end
+    return t
   end
 
   function edge_tag(e)

@@ -25,7 +25,9 @@ export IndsNetwork
 
 # itensornetwork.jl
 export ITensorNetwork,
-  itensors
+  ⊗,
+  itensors,
+  tensor_product
 
 # lattices.jl
 export hypercubic_lattice_graph,

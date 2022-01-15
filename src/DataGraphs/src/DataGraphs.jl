@@ -16,7 +16,7 @@ module DataGraphs
 
   import Graphs: edgetype, ne, nv, vertices, edges, has_edge, has_vertex, neighbors, induced_subgraph
 
-  export DataGraph, AbstractDataGraph
+  export DataGraph, AbstractDataGraph, map_vertex_data, map_edge_data, map_data
 
   abstract type AbstractDataGraph{VD,ED,V,E} <: AbstractGraph{V} end
 
@@ -31,6 +31,11 @@ module DataGraphs
       $f(graph::AbstractDataGraph, args...) = $f(underlying_graph(graph), args...)
     end
   end
+
+  # Fix ambiguity with:
+  # neighbors(g::Graphs.AbstractGraph, v::Integer)
+  # in Graphs
+  neighbors(graph::AbstractDataGraph, v::Integer) = neighbors(underlying_graph(graph), v)
 
   # Vertex or Edge trait
   abstract type VertexOrEdge end
@@ -48,6 +53,29 @@ module DataGraphs
   data(::IsEdge, graph::AbstractDataGraph) = edge_data(graph)
   index_type(::IsVertex, graph::AbstractDataGraph, v_or_e) = eltype(graph)(v_or_e)
   index_type(::IsEdge, graph::AbstractDataGraph, v_or_e) = edgetype(graph)(v_or_e)
+
+  function map_vertex_data(f, graph::AbstractDataGraph; vertices=nothing)
+    graph′ = copy(graph)
+    vs = isnothing(vertices) ? Graphs.vertices(graph) : vertices
+    for v in vs
+      graph′[v] = f(graph[v])
+    end
+    return graph′
+  end
+
+  function map_edge_data(f, graph::AbstractDataGraph; edges=nothing)
+    graph′ = copy(graph)
+    es = isnothing(edges) ? Graphs.edges(graph) : edges
+    for e in es
+      graph′[e] = f(graph[e])
+    end
+    return graph′
+  end
+
+  function map_data(f, graph::AbstractDataGraph; vertices, edges)
+    graph = map_vertex_data(f, graph; vertices)
+    return map_edge_data(f, graph; edges)
+  end
 
   # Data access
   getindex(graph::AbstractDataGraph, v_or_e) = getindex(is_vertex_or_edge(graph, v_or_e), graph, v_or_e)

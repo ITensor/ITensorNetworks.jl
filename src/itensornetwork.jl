@@ -13,6 +13,14 @@ getindex(tn::ITensorNetwork, I1, I2, I...) = getindex(tn, (I1, I2, I...))
 isassigned(tn::ITensorNetwork, I1, I2, I...) = isassigned(tn, (I1, I2, I...))
 
 #
+# Visualization
+#
+
+function visualize(tn::ITensorNetwork, args...; kwargs...)
+  return visualize(itensors(tn), args...; kwargs...)
+end
+
+#
 # Data modification
 #
 
@@ -27,13 +35,31 @@ setindex!(tn::ITensorNetwork, x, I1, I2, I...) = setindex!(tn, x, (I1, I2, I...)
 copy(tn::ITensorNetwork) = ITensorNetwork(copy(data_graph(tn)))
 
 #
+# Construction from collections of ITensors
+#
+
+function ITensorNetwork(ts::Vector{ITensor})
+  g = CustomVertexGraph(ts)
+  tn = ITensorNetwork(g)
+  for v in vertices(tn)
+    tn[v] = ts[v]
+  end
+  return tn
+end
+
+#
 # Construction from Graphs
 #
 
-# TODO: Add sitespace, linkspace
-function ITensorNetwork(g::Union{Graph,CustomVertexGraph})
+function _ITensorNetwork(g::CustomVertexGraph, site_space::Nothing, link_space::Nothing)
   dg = DataGraph{ITensor,ITensor}(g)
   return ITensorNetwork(dg)
+end
+
+## # TODO: Add sitespace, linkspace
+function ITensorNetwork(g::CustomVertexGraph; site_space=nothing, link_space=nothing)
+  is = IndsNetwork(g; site_space, link_space)
+  return ITensorNetwork(is)
 end
 
 #
@@ -48,12 +74,14 @@ function _ITensorNetwork(is::IndsNetwork, link_space)
   return _ITensorNetwork(is_assigned, nothing)
 end
 
+get_assigned(d, i, default) = isassigned(d, i) ? d[i] : default
+
 function _ITensorNetwork(is::IndsNetwork, link_space::Nothing)
   g = underlying_graph(is)
-  tn = ITensorNetwork(g)
+  tn = _ITensorNetwork(g, nothing, nothing)
   for v in vertices(tn)
-    siteinds = is[v]
-    linkinds = [is[v => nv] for nv in neighbors(is, v)]
+    siteinds = get_assigned(is, v, Index[])
+    linkinds = [get_assigned(is, v => nv, Index[]) for nv in neighbors(is, v)]
     tn[v] = ITensor(siteinds, linkinds...)
   end
   return tn
@@ -148,33 +176,6 @@ function replaceinds(tn::ITensorNetwork, is_is′::Pair{<:IndsNetwork,<:IndsNetw
   return tn
 end
 
-function map_vertex_data(f, is::IndsNetwork; vertices=nothing)
-  is′ = copy(is)
-  vs = isnothing(vertices) ? Graphs.vertices(is) : vertices
-  for v in vs
-    is′[v] = f(is[v])
-  end
-  return is′
-end
-
-function map_edge_data(f, is::IndsNetwork; edges=nothing)
-  is′ = copy(is)
-  es = isnothing(edges) ? Graphs.edges(is) : edges
-  for e in es
-    is′[e] = f(is[e])
-  end
-  return is′
-end
-
-function map_data(f, is::IndsNetwork; vertices, edges)
-  is = map_vertex_data(f, is; vertices)
-  return map_edge_data(f, is; edges)
-end
-
-function map_inds(f, is::IndsNetwork, args...; sites=nothing, links=nothing, kwargs...)
-  return map_data(i -> f(i, args...; kwargs...), is; vertices=sites, edges=links)
-end
-
 function map_inds(f, tn::ITensorNetwork, args...; kwargs...)
   is = IndsNetwork(tn)
   is′ = map_inds(f, is, args...; kwargs...)
@@ -206,3 +207,35 @@ for f in map_inds_label_functions
     end
   end
 end
+
+dag(tn::ITensorNetwork) = map_vertex_data(dag, tn)
+
+# TODO: use vertices from the original graphs, currently
+# it flattens to linear vertex labels.
+# TODO: rename `tensor_product_network`, `otimes_network`,
+# `ITensorNetwork`, `contract_network`, etc. to denote that it is lazy?
+function contract_network(tn1::ITensorNetwork, tn2::ITensorNetwork)
+  tn1 = sim(tn1; sites=[])
+  tn2 = sim(tn2; sites=[])
+  tns = vcat(itensors(tn1), itensors(tn2))
+  # TODO: Define `blockdiag` for CustomVertexGraph to merge the graphs,
+  # then add edges to the results graph.
+  # Also, automatically merge vertices. For example, reproduce
+  # things like `vcat` for cases of linear indices and cartesian indices,
+  # or add `Sub(1)`, `Sub(2)`, etc.
+  #g1 = underlying_graph(tn1)
+  #g2 = underlying_graph(tn2)
+  #g = blockdiag(g1, g2)
+  #add_edge!(g, commoninds(tn1, tn2))
+  return ITensorNetwork(tns)
+end
+
+const ⊗ = contract_network
+
+# TODO: name `inner_network` to denote it is lazy?
+function inner(tn1::ITensorNetwork, tn2::ITensorNetwork)
+  return dag(tn1) ⊗ tn2
+end
+
+# TODO: how to define this lazily?
+#norm(tn::ITensorNetwork) = sqrt(inner(tn, tn))

@@ -87,7 +87,7 @@ module CustomVertexGraphs
   Pair(e::AbstractCustomVertexEdge) = Pair(src(e), dst(e))
   Tuple(e::AbstractCustomVertexEdge) = (src(e), dst(e))
 
-  CustomVertexEdge{T}(e::AbstractCustomVertexEdge) where T <: Integer = CustomVertexEdge{T}(T(e.src), T(e.dst))
+  CustomVertexEdge{T}(e::AbstractCustomVertexEdge) where {T} = CustomVertexEdge{T}(T(e.src), T(e.dst))
 
   # Convenience functions
   reverse(e::T) where T<:AbstractCustomVertexEdge = T(dst(e), src(e))

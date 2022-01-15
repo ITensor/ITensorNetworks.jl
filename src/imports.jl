@@ -27,4 +27,9 @@ import ITensors:
   addtags,
   removetags,
   replacetags,
-  settags
+  settags,
+  # dag
+  dag
+
+import ITensors.ITensorVisualizationCore:
+  visualize
