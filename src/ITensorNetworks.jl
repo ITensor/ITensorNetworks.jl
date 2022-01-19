@@ -4,6 +4,7 @@ module ITensorNetworks
   using ITensors
   using ITensors.ITensorVisualizationCore
   using Graphs
+  using Metis # for graph partitioning
 
   include(joinpath("SubIndexing", "src", "SubIndexing.jl"))
   using .SubIndexing
@@ -11,7 +12,7 @@ module ITensorNetworks
   include("CustomVertexGraphs/src/CustomVertexGraphs.jl")
   using .CustomVertexGraphs
 
-  using .CustomVertexGraphs: Bijection, CustomVertexEdge, CustomVertexGraph
+  using .CustomVertexGraphs: Bijection, CustomVertexEdge, CustomVertexGraph, parent_graph, vertex_to_parent_vertex
 
   include("DataGraphs/src/DataGraphs.jl")
   using .DataGraphs
@@ -69,6 +70,7 @@ module ITensorNetworks
 
   const UniformDataGraph{D,V} = DataGraph{D,D,V,CustomVertexEdge{V},CustomVertexGraph{V,Graphs.Graph{Int},Bijection{V,Int}}}
 
+  include("partition.jl")
   include("lattices.jl")
   include("abstractindsnetwork.jl")
   include("indsnetwork.jl")

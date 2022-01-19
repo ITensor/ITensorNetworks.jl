@@ -1,4 +1,7 @@
+#
 # Graphs
+#
+
 export grid,
   edges,
   vertices,
@@ -10,11 +13,25 @@ export grid,
   has_edge,
   has_vertex
 
+#
 # CustomVertexGraphs
+#
+
 export set_vertices
 
+#
 # DataGraphs
-export DataGraph
+#
+
+export DataGraph,
+  vertex_data,
+  edge_data
+
+#
+# ITensors
+#
+
+export optimal_contraction_sequence
 
 #
 # ITensorNetworks
@@ -33,3 +50,6 @@ export ITensorNetwork,
 export hypercubic_lattice_graph,
   square_lattice_graph,
   chain_lattice_graph
+
+# partition.jl
+export partition

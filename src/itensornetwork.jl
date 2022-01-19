@@ -13,14 +13,6 @@ getindex(tn::ITensorNetwork, I1, I2, I...) = getindex(tn, (I1, I2, I...))
 isassigned(tn::ITensorNetwork, I1, I2, I...) = isassigned(tn, (I1, I2, I...))
 
 #
-# Visualization
-#
-
-function visualize(tn::ITensorNetwork, args...; kwargs...)
-  return visualize(itensors(tn), args...; kwargs...)
-end
-
-#
 # Data modification
 #
 
@@ -63,6 +55,18 @@ function ITensorNetwork(g::CustomVertexGraph; site_space=nothing, link_space=not
 end
 
 #
+# Conversion to Graphs
+#
+
+function Graph(tn::ITensorNetwork)
+  return Graph(Vector{ITensor}(tn))
+end
+
+function CustomVertexGraph(tn::ITensorNetwork)
+  return CustomVertexGraph(Vector{ITensor}(tn))
+end
+
+#
 # Construction from IndsNetwork
 #
 
@@ -92,9 +96,12 @@ function ITensorNetwork(is::IndsNetwork; link_space=nothing)
 end
 
 # Convert to a collection of ITensors (`Vector{ITensor}`).
-function itensors(tn::ITensorNetwork)
+function Vector{ITensor}(tn::ITensorNetwork)
   return collect(vertex_data(tn))
 end
+
+# Convenience wrapper
+itensors(tn::ITensorNetwork) = Vector{ITensor}(tn)
 
 #
 # Conversion to IndsNetwork
@@ -208,6 +215,8 @@ for f in map_inds_label_functions
   end
 end
 
+adjoint(tn::Union{IndsNetwork,ITensorNetwork}) = prime(tn)
+
 dag(tn::ITensorNetwork) = map_vertex_data(dag, tn)
 
 # TODO: use vertices from the original graphs, currently
@@ -217,7 +226,7 @@ dag(tn::ITensorNetwork) = map_vertex_data(dag, tn)
 function contract_network(tn1::ITensorNetwork, tn2::ITensorNetwork)
   tn1 = sim(tn1; sites=[])
   tn2 = sim(tn2; sites=[])
-  tns = vcat(itensors(tn1), itensors(tn2))
+  tns = vcat(Vector{ITensor}(tn1), Vector{ITensor}(tn2))
   # TODO: Define `blockdiag` for CustomVertexGraph to merge the graphs,
   # then add edges to the results graph.
   # Also, automatically merge vertices. For example, reproduce
@@ -239,3 +248,36 @@ end
 
 # TODO: how to define this lazily?
 #norm(tn::ITensorNetwork) = sqrt(inner(tn, tn))
+
+function contract(tn::ITensorNetwork; kwargs...)
+  return contract(Vector{ITensor}(tn); kwargs...)
+end
+
+function optimal_contraction_sequence(tn::ITensorNetwork)
+  return optimal_contraction_sequence(Vector{ITensor}(tn))
+end
+
+#
+# Printing
+#
+
+function show(io::IO, mime::MIME"text/plain", graph::ITensorNetwork)
+  println(io, "DataGraph with $(nv(graph)) vertices:")
+  show(io, mime, vertices(graph))
+  println(io, "\n")
+  println(io, "and $(ne(graph)) edge(s):")
+  for e in edges(graph)
+    show(io, mime, e)
+    println(io)
+  end
+  println(io)
+  println(io, "with vertex data:")
+  show(io, mime, inds.(vertex_data(graph)))
+  return nothing
+end
+
+show(io::IO, graph::ITensorNetwork) = show(io, MIME"text/plain"(), graph)
+
+function visualize(tn::ITensorNetwork, args...; kwargs...)
+  return visualize(Vector{ITensor}(tn), args...; kwargs...)
+end

@@ -14,19 +14,19 @@ module DataGraphs
 
   using Graphs
 
-  import Graphs: edgetype, ne, nv, vertices, edges, has_edge, has_vertex, neighbors, induced_subgraph
+  import Graphs: edgetype, ne, nv, vertices, edges, has_edge, has_vertex, neighbors, induced_subgraph, is_directed, adjacency_matrix
 
   export DataGraph, AbstractDataGraph, map_vertex_data, map_edge_data, map_data
 
   abstract type AbstractDataGraph{VD,ED,V,E} <: AbstractGraph{V} end
 
   # Field access
-  underlying_graph(graph::AbstractDataGraph) = _not_implemented() #getfield(graph, :underlying_graph)
-  vertex_data(graph::AbstractDataGraph) = _not_implemented() #getfield(graph, :vertex_data)
-  edge_data(graph::AbstractDataGraph) = _not_implemented() #getfield(graph, :edge_data)
+  underlying_graph(graph::AbstractDataGraph) = _not_implemented()
+  vertex_data(graph::AbstractDataGraph) = _not_implemented()
+  edge_data(graph::AbstractDataGraph) = _not_implemented()
 
   # Graphs overloads
-  for f in [:edgetype, :nv, :ne, :vertices, :edges, :eltype, :has_edge, :has_vertex, :neighbors]
+  for f in [:edgetype, :nv, :ne, :vertices, :edges, :eltype, :has_edge, :has_vertex, :neighbors, :is_directed, :adjacency_matrix]
     @eval begin
       $f(graph::AbstractDataGraph, args...) = $f(underlying_graph(graph), args...)
     end
@@ -91,10 +91,26 @@ module DataGraphs
   end
 
   # Induced subgraph
-  getindex(g::AbstractDataGraph, sub_vertices::Union{Sub,SubIndex,Vector}) = induced_subgraph(g, sub_vertices)[1]
+  function getindex(g::AbstractDataGraph, sub_vertices::Union{Sub,SubIndex,Vector})
+    return induced_subgraph(g, sub_vertices)[1]
+  end
+
+  function _induced_subgraph(graph::AbstractDataGraph, vlist_or_elist)
+    parent_induced_subgraph = induced_subgraph(underlying_graph(graph), vlist_or_elist)
+    # TODO: Get the data of the subgraph.
+    return _not_implemented()
+  end
 
   function induced_subgraph(graph::AbstractDataGraph, vlist_or_elist)
-    parent_induced_subgraph = induced_subgraph(underyling_graph(graph), vlist_or_elist)
+    return _induced_subgraph(graph, vlist_or_elist)
+  end
+
+  # fix ambiguity error:
+  # ERROR: MethodError: induced_subgraph(::ITensorNetwork{Int64}, ::Vector{Int64}) is ambiguous. Candidates:
+  # induced_subgraph(g::T, vlist::AbstractVector{U}) where {U<:Integer, T<:Graphs.AbstractGraph} in Graphs at /home/mfishman/.julia/packages/Graphs/Mih78/src/operators.jl:639
+  # induced_subgraph(graph::ITensorNetworks.DataGraphs.AbstractDataGraph, vlist_or_elist) in ITensorNetworks.DataGraphs at /home/mfishman/.julia/dev/ITensorNetworks/src/DataGraphs/src/DataGraphs.jl:96
+  function induced_subgraph(graph::AbstractDataGraph, vlist_or_elist::AbstractVector{<:Integer})
+    return _induced_subgraph(graph, vlist_or_elist)
   end
 
   # Overload this to have custom behavior for the data in different directions,
@@ -258,7 +274,7 @@ module DataGraphs
       println(io)
     end
     println(io)
-    println(io, "and vertex data:")
+    println(io, "with vertex data:")
     show(io, mime, vertex_data(graph))
     println(io)
     println(io)
@@ -273,6 +289,8 @@ module DataGraphs
   # DataGraph concrete type
   #
 
+  # TODO: define VertexDataGraph, a graph with only data on the
+  # vertices, and EdgeDataGraph, a graph with only data on the edges.
   struct DataGraph{VD,ED,V,E,G<:AbstractGraph} <: AbstractDataGraph{VD,ED,V,E}
     underlying_graph::G
     vertex_data::Dictionary{V,VD}

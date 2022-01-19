@@ -15,9 +15,10 @@ module CustomVertexGraphs
 
   import Base: show, eltype, copy
 
-  # TODO: Restrict to `AbstractSimpleGraph` (graph with contiguous integer vertices)
+  # TODO: restrict to `AbstractSimpleGraph` (graph with contiguous integer vertices)
   # and `InvVectorBijection`, a Bijection where the inverse is a `Vector` (maps a contiguous
   # space of integers to another space).
+  # TODO: rename `parent_graph` to something more descriptive like `simple_graph`, `int_vertex_graph`, etc.
   struct CustomVertexGraph{V,G<:AbstractGraph,B<:AbstractBijection} <: AbstractGraph{V}
     parent_graph::G
     vertex_to_parent_vertex::B # Invertible map from the vertices to the parent vertices
