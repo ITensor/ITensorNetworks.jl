@@ -1,5 +1,4 @@
 using AbstractTrees
-using Graphs
 using ITensors
 using ITensorNetworks
 using ITensorUnicodePlots

@@ -1,22 +1,16 @@
 module ITensorNetworks
 
+  using CustomVertexGraphs
+  using DataGraphs
   using Dictionaries
   using ITensors
   using ITensors.ITensorVisualizationCore
   using Graphs
   using Metis # for graph partitioning
 
-  include(joinpath("SubIndexing", "src", "SubIndexing.jl"))
-  using .SubIndexing
+  using CustomVertexGraphs: Bijection, CustomVertexEdge, CustomVertexGraph, parent_graph, vertex_to_parent_vertex
 
-  include("CustomVertexGraphs/src/CustomVertexGraphs.jl")
-  using .CustomVertexGraphs
-
-  using .CustomVertexGraphs: Bijection, CustomVertexEdge, CustomVertexGraph, parent_graph, vertex_to_parent_vertex
-
-  include("DataGraphs/src/DataGraphs.jl")
-  using .DataGraphs
-  using .DataGraphs: assign_data
+  using DataGraphs: assign_data
 
   include("imports.jl")
 

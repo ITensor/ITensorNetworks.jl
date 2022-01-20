@@ -219,6 +219,9 @@ adjoint(tn::Union{IndsNetwork,ITensorNetwork}) = prime(tn)
 
 dag(tn::ITensorNetwork) = map_vertex_data(dag, tn)
 
+# TODO: replace vertices
+# Dictionary(getindices(k, eachindex(x)), getindices(x, eachindex(x)))
+
 # TODO: use vertices from the original graphs, currently
 # it flattens to linear vertex labels.
 # TODO: rename `tensor_product_network`, `otimes_network`,
@@ -226,7 +229,7 @@ dag(tn::ITensorNetwork) = map_vertex_data(dag, tn)
 function contract_network(tn1::ITensorNetwork, tn2::ITensorNetwork)
   tn1 = sim(tn1; sites=[])
   tn2 = sim(tn2; sites=[])
-  tns = vcat(Vector{ITensor}(tn1), Vector{ITensor}(tn2))
+  tns = [Vector{ITensor}(tn1); Vector{ITensor}(tn2)]
   # TODO: Define `blockdiag` for CustomVertexGraph to merge the graphs,
   # then add edges to the results graph.
   # Also, automatically merge vertices. For example, reproduce
