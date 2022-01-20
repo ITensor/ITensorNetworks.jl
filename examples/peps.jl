@@ -1,39 +1,47 @@
 using ITensors
 using ITensorNetworks
-using ITensorsVisualization
-using ITensorNetworks: Models, inds_network, project_boundary, sqnorm, sqnorm_approx
+using Graphs
+using ITensorUnicodePlots
 
-function peps_tensor(; linkdim, sitedim)
-  # left, right, top, bottom, site
-  return randn(linkdim, linkdim, linkdim, linkdim, sitedim)
+dims = (3, 3)
+g = square_lattice_graph(dims)
+
+function heisenberg(g::AbstractGraph)
+  # TODO: os = Sum{Op}()
+  os = OpSum()
+  for e in edges(g)
+    os += 1/2, "S⁺", src(e), "S⁻", dst(e)
+    os += 1/2, "S⁺", src(e), "S⁻", dst(e)
+    os += "Sᶻ", src(e), "Sᶻ", dst(e)
+  end
+  return os
 end
 
-N = (3, 4)
-ndims = length(N)
+ℋ = heisenberg(g)
+s = siteinds("S=1/2", g)
 
-site_inds = siteinds("S=1/2", N...)
-link_space = 2
-inds_net = inds_network(site_inds; linkdims=link_space)
+χ = 5
+ψ = ITensorNetwork(s; link_space=χ)
 
-A = peps_tensor(; linkdim=link_space, sitedim=dim(first(site_inds)))
-ψ = itensor.((A,), inds_net)
+ψt = itensors(ψ)
+@visualize ψt edge_labels = (; plevs=true)
 
-# Project periodic boundary indices
-# onto the 1 state
-state = 1
-ψ = project_boundary(ψ, state)
+# TODO: Implement priming, tagging, etc.
+ψ′ = prime(ψ)
 
-row = 2
-center = (row, :)
-cutoff_ = 1e-15
-maxdim_ = 100
+ψ′t = itensors(ψ′)
+@visualize ψ′t edge_labels = (; plevs=true)
 
-sqnormψ = sqnorm(ψ)
-sqnormψ_approx = sqnorm_approx(ψ; center=center, cutoff=cutoff_, maxdim=maxdim_)
-@show noncommoninds(sqnormψ_approx...)
-@visualize *(sqnormψ_approx...) contract=false
+@show siteinds(ψ)
+@show linkinds(ψ)
 
-@disable_warn_order begin
-  @show contract(sqnormψ_approx)[] / contract(sqnormψ)[]
-end
+ψ′ = addtags(ψ, "X"; links=[(1, 1) => (2, 1)], sites=[(2, 2)])
+@show linkinds(ψ′, (1, 1) => (2, 1)) == addtags(linkinds(ψ, (1, 1) => (2, 1)), "X")
+@show siteinds(ψ′, (2, 2)) == addtags(siteinds(ψ, (2, 2)), "X")
+@show siteinds(ψ′, (1, 1)) == siteinds(ψ, (1, 1))
 
+ψ′ = sim(ψ; links=[(1, 1) => (2, 1)])
+@show linkinds(ψ′, (1, 1) => (2, 1)) ≠ linkinds(ψ, (1, 1) => (2, 1))
+@show linkinds(ψ′, (1, 1) => (1, 2)) == linkinds(ψ, (1, 1) => (1, 2))
+
+nothing
