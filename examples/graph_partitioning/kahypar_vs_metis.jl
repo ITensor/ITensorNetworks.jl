@@ -1,9 +1,9 @@
-using LightGraphs: LightGraphs
+using Graphs
 using KaHyPar
 using Metis
 using Suppressor
 
-g = LightGraphs.grid((16,))
+g = grid((16,))
 npartitions = 4
 
 kahypar_partitions = @suppress KaHyPar.partition(adjacency_matrix(g), npartitions)
