@@ -1,5 +1,5 @@
-struct ITensorNetwork{V} <: AbstractITensorNetwork{V}
-  data_graph::UniformDataGraph{ITensor,V}
+struct ITensorNetwork <: AbstractITensorNetwork
+  data_graph::UniformDataGraph{ITensor}
 end
 
 #
@@ -70,11 +70,14 @@ end
 # Construction from IndsNetwork
 #
 
-# Assigns indices with space `link_space` to unassigned
-# edges of the network.
+# Alternative implementation:
+# edge_data(e) = [edge_index(e, link_space)]
+# is_assigned = assign_data(is; edge_data)
 function _ITensorNetwork(is::IndsNetwork, link_space)
-  edge_data(e) = [edge_index(e, link_space)]
-  is_assigned = assign_data(is; edge_data)
+  is_assigned = copy(is)
+  for e in edges(is)
+    is_assigned[e] = [edge_index(e, link_space)]
+  end
   return _ITensorNetwork(is_assigned, nothing)
 end
 
@@ -143,23 +146,23 @@ end
 # Index access
 #
 
-function neighbor_itensors(tn::ITensorNetwork{V}, v::V) where {V}
+function neighbor_itensors(tn::ITensorNetwork, v::Tuple)
   return [tn[vn] for vn in neighbors(tn, v)]
 end
 
-function uniqueinds(tn::ITensorNetwork{V}, v::V) where {V}
+function uniqueinds(tn::ITensorNetwork, v::Tuple)
   return uniqueinds(tn[v], neighbor_itensors(tn, v)...)
 end
 
-function siteinds(tn::ITensorNetwork{V}, v::V) where {V}
+function siteinds(tn::ITensorNetwork, v::Tuple)
   return uniqueinds(tn, v)
 end
 
-function commoninds(tn::ITensorNetwork{V}, e::NamedEdge{V}) where {V}
+function commoninds(tn::ITensorNetwork, e::NamedDimEdge)
   return commoninds(tn[src(e)], tn[dst(e)])
 end
 
-function linkinds(tn::ITensorNetwork{V}, e::NamedEdge{V}) where {V}
+function linkinds(tn::ITensorNetwork, e::NamedDimEdge)
   return commoninds(tn, e)
 end
 

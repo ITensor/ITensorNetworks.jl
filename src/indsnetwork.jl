@@ -1,5 +1,5 @@
-struct IndsNetwork{I,V} <: AbstractIndsNetwork{I,V}
-  data_graph::UniformDataGraph{Vector{I},V}
+struct IndsNetwork{I} <: AbstractIndsNetwork{I}
+  data_graph::UniformDataGraph{Vector{I}}
 end
 data_graph(is::IndsNetwork) = getfield(is, :data_graph)
 underlying_graph(is::IndsNetwork) = underlying_graph(data_graph(is))

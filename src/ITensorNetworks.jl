@@ -9,7 +9,7 @@ module ITensorNetworks
   using MultiDimDictionaries
   using NamedGraphs
 
-  using NamedGraphs: NamedEdge, NamedDimGraph, parent_graph, vertex_to_parent_vertex
+  using NamedGraphs: NamedDimEdge, NamedDimGraph, parent_graph, vertex_to_parent_vertex
 
   include("imports.jl")
 
@@ -64,7 +64,7 @@ module ITensorNetworks
     return Index(edge_space; tags=edge_tag(e))
   end
 
-  const UniformDataGraph{D,V} = DataGraph{D,D,V,NamedEdge{V},NamedDimGraph{V}}
+  const UniformDataGraph{D} = DataGraph{D,D,Tuple,NamedDimEdge{Tuple},NamedDimGraph{Tuple}}
 
   include("partition.jl")
   include("lattices.jl")

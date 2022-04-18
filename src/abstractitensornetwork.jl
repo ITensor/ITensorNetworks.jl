@@ -1,11 +1,8 @@
-abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{ITensor,ITensor,V,NamedEdge{V}} end
+abstract type AbstractITensorNetwork <: AbstractDataGraph{ITensor,ITensor,Tuple,NamedDimEdge{Tuple}} end
 
 # Field access
 data_graph(graph::AbstractITensorNetwork) = _not_implemented()
 
 # AbstractDataGraphs overloads
-for f in [:vertex_data, :edge_data]
-  @eval begin
-    $f(graph::AbstractITensorNetwork, args...) = $f(data_graph(graph), args...)
-  end
-end
+vertex_data(graph::AbstractITensorNetwork, args...) = vertex_data(data_graph(graph), args...)
+edge_data(graph::AbstractITensorNetwork, args...) = edge_data(data_graph(graph), args...)
