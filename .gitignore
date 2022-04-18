@@ -1,1 +1,12 @@
-.*.swp
+*.o
+*.swp
+.tmp
+*.cov
+docs/build/
+precompile/tmp
+.DS_Store
+benchmark/*.json
+.benchmarkci
+.vscode/
+/Manifest.toml
+docs/Manifest.toml

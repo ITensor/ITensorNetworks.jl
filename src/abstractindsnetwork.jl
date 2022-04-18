@@ -1,4 +1,4 @@
-abstract type AbstractIndsNetwork{I,V} <: AbstractDataGraph{Vector{I},Vector{I},V,CustomVertexEdge{V}} end
+abstract type AbstractIndsNetwork{I,V} <: AbstractDataGraph{Vector{I},Vector{I},V,NamedEdge{V}} end
 
 # Field access
 data_graph(graph::AbstractIndsNetwork) = _not_implemented()

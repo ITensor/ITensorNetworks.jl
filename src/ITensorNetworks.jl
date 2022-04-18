@@ -1,16 +1,15 @@
 module ITensorNetworks
 
-  using CustomVertexGraphs
   using DataGraphs
   using Dictionaries
+  using Graphs
   using ITensors
   using ITensors.ITensorVisualizationCore
-  using Graphs
   using Metis # for graph partitioning
+  using MultiDimDictionaries
+  using NamedGraphs
 
-  using CustomVertexGraphs: Bijection, CustomVertexEdge, CustomVertexGraph, parent_graph, vertex_to_parent_vertex
-
-  using DataGraphs: assign_data
+  using NamedGraphs: NamedEdge, NamedDimGraph, parent_graph, vertex_to_parent_vertex
 
   include("imports.jl")
 
@@ -32,7 +31,7 @@ module ITensorNetworks
     return graph
   end
 
-  function CustomVertexGraph(itensors::Vector{ITensor})
+  function NamedDimGraph(itensors::Vector{ITensor})
     return set_vertices(Graph(itensors), 1:length(itensors))
   end
 
@@ -50,6 +49,9 @@ module ITensorNetworks
     return t
   end
 
+  # TODO: DELETE
+  #vertex_tag(v::CartesianKey) = vertex_tag(Tuple(v))
+
   function edge_tag(e)
     return "$(vertex_tag(src(e)))↔$(vertex_tag(dst(e)))"
   end
@@ -62,7 +64,7 @@ module ITensorNetworks
     return Index(edge_space; tags=edge_tag(e))
   end
 
-  const UniformDataGraph{D,V} = DataGraph{D,D,V,CustomVertexEdge{V},CustomVertexGraph{V,Graphs.Graph{Int},Bijection{V,Int}}}
+  const UniformDataGraph{D,V} = DataGraph{D,D,V,NamedEdge{V},NamedDimGraph{V}}
 
   include("partition.jl")
   include("lattices.jl")

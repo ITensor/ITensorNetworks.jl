@@ -1,4 +1,4 @@
-abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{ITensor,ITensor,V,CustomVertexEdge{V}} end
+abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{ITensor,ITensor,V,NamedEdge{V}} end
 
 # Field access
 data_graph(graph::AbstractITensorNetwork) = _not_implemented()

@@ -14,7 +14,7 @@ function partition(g::Graph, npartitions::Integer)
   return partition(Metis.graph(adjacency_matrix(g)), npartitions)
 end
 
-function partition(g::CustomVertexGraph, npartitions::Integer)
+function partition(g::NamedDimGraph, npartitions::Integer)
   partitions = partition(parent_graph(g), npartitions)
   #[inv(vertex_to_parent_vertex(g))[v] for v in partitions]
   # TODO: output the reverse of this dictionary (a Vector of Vector

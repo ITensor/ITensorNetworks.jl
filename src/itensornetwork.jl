@@ -31,7 +31,7 @@ copy(tn::ITensorNetwork) = ITensorNetwork(copy(data_graph(tn)))
 #
 
 function ITensorNetwork(ts::Vector{ITensor})
-  g = CustomVertexGraph(ts)
+  g = NamedDimGraph(ts)
   tn = ITensorNetwork(g)
   for v in vertices(tn)
     tn[v] = ts[v]
@@ -43,13 +43,13 @@ end
 # Construction from Graphs
 #
 
-function _ITensorNetwork(g::CustomVertexGraph, site_space::Nothing, link_space::Nothing)
+function _ITensorNetwork(g::NamedDimGraph, site_space::Nothing, link_space::Nothing)
   dg = DataGraph{ITensor,ITensor}(g)
   return ITensorNetwork(dg)
 end
 
 ## # TODO: Add sitespace, linkspace
-function ITensorNetwork(g::CustomVertexGraph; site_space=nothing, link_space=nothing)
+function ITensorNetwork(g::NamedDimGraph; site_space=nothing, link_space=nothing)
   is = IndsNetwork(g; site_space, link_space)
   return ITensorNetwork(is)
 end
@@ -62,8 +62,8 @@ function Graph(tn::ITensorNetwork)
   return Graph(Vector{ITensor}(tn))
 end
 
-function CustomVertexGraph(tn::ITensorNetwork)
-  return CustomVertexGraph(Vector{ITensor}(tn))
+function NamedDimGraph(tn::ITensorNetwork)
+  return NamedDimGraph(Vector{ITensor}(tn))
 end
 
 #
@@ -155,11 +155,11 @@ function siteinds(tn::ITensorNetwork{V}, v::V) where {V}
   return uniqueinds(tn, v)
 end
 
-function commoninds(tn::ITensorNetwork{V}, e::CustomVertexEdge{V}) where {V}
+function commoninds(tn::ITensorNetwork{V}, e::NamedEdge{V}) where {V}
   return commoninds(tn[src(e)], tn[dst(e)])
 end
 
-function linkinds(tn::ITensorNetwork{V}, e::CustomVertexEdge{V}) where {V}
+function linkinds(tn::ITensorNetwork{V}, e::NamedEdge{V}) where {V}
   return commoninds(tn, e)
 end
 
@@ -230,7 +230,7 @@ function contract_network(tn1::ITensorNetwork, tn2::ITensorNetwork)
   tn1 = sim(tn1; sites=[])
   tn2 = sim(tn2; sites=[])
   tns = [Vector{ITensor}(tn1); Vector{ITensor}(tn2)]
-  # TODO: Define `blockdiag` for CustomVertexGraph to merge the graphs,
+  # TODO: Define `blockdiag` for NamedDimGraph to merge the graphs,
   # then add edges to the results graph.
   # Also, automatically merge vertices. For example, reproduce
   # things like `vcat` for cases of linear indices and cartesian indices,

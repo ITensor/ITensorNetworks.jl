@@ -32,4 +32,3 @@ for v in vertices(tn)
   linkinds = [is[v => nv] for nv in neighbors(is, v)]
   tn[v] = ITensor(siteinds, linkinds...)
 end
-
