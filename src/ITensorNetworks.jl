@@ -32,7 +32,7 @@ module ITensorNetworks
   end
 
   function NamedDimGraph(itensors::Vector{ITensor})
-    return set_vertices(Graph(itensors), 1:length(itensors))
+    return NamedDimGraph(Graph(itensors), 1:length(itensors))
   end
 
   front(itr, n = 1) = Iterators.take(itr, length(itr) - n)

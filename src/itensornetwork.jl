@@ -34,7 +34,7 @@ function ITensorNetwork(ts::Vector{ITensor})
   g = NamedDimGraph(ts)
   tn = ITensorNetwork(g)
   for v in vertices(tn)
-    tn[v] = ts[v]
+    tn[v] = ts[only(v)]
   end
   return tn
 end
