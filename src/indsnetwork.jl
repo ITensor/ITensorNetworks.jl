@@ -13,8 +13,12 @@ function visualize(is::IndsNetwork, args...; kwargs...)
 end
 
 function IndsNetwork(g::NamedDimGraph, link_space::Nothing, site_space::Nothing)
-  dg = DataGraph{Vector{Index},Vector{Index}}(g)
+  dg = NamedDimDataGraph{Vector{Index},Vector{Index}}(g)
   return IndsNetwork(dg)
+end
+
+function IndsNetwork(g::Graph, args...; kwargs...)
+  return IndsNetwork(NamedDimGraph(g), args...; kwargs...)
 end
 
 function IndsNetwork(g::NamedDimGraph, link_space, site_space)

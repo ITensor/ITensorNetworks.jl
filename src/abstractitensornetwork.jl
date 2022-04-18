@@ -1,4 +1,4 @@
-abstract type AbstractITensorNetwork <: AbstractDataGraph{ITensor,ITensor,Tuple,NamedDimEdge{Tuple}} end
+abstract type AbstractITensorNetwork <: AbstractNamedDimDataGraph{ITensor,ITensor,Tuple,NamedDimEdge{Tuple}} end
 
 # Field access
 data_graph(graph::AbstractITensorNetwork) = _not_implemented()

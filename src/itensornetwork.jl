@@ -9,8 +9,8 @@ end
 data_graph(tn::ITensorNetwork) = getfield(tn, :data_graph)
 underlying_graph(tn::ITensorNetwork) = underlying_graph(data_graph(tn))
 
-getindex(tn::ITensorNetwork, I1, I2, I...) = getindex(tn, (I1, I2, I...))
-isassigned(tn::ITensorNetwork, I1, I2, I...) = isassigned(tn, (I1, I2, I...))
+getindex(tn::ITensorNetwork, I1, I2, I...) = getindex(data_graph(tn), I1, I2, I...)
+isassigned(tn::ITensorNetwork, I1, I2, I...) = isassigned(data_graph(tn), I1, I2, I...)
 
 #
 # Data modification
@@ -22,7 +22,7 @@ function setindex_preserve_graph!(tn::ITensorNetwork, edge_or_vertex, data)
   return tn
 end
 
-setindex!(tn::ITensorNetwork, x, I1, I2, I...) = setindex!(tn, x, (I1, I2, I...))
+setindex!(tn::ITensorNetwork, x, I1, I2, I...) = setindex!(data_graph(tn), x, I1, I2, I...)
 
 copy(tn::ITensorNetwork) = ITensorNetwork(copy(data_graph(tn)))
 
@@ -33,8 +33,8 @@ copy(tn::ITensorNetwork) = ITensorNetwork(copy(data_graph(tn)))
 function ITensorNetwork(ts::Vector{ITensor})
   g = NamedDimGraph(ts)
   tn = ITensorNetwork(g)
-  for v in vertices(tn)
-    tn[v] = ts[only(v)]
+  for v in eachindex(ts)
+    tn[v] = ts[v]
   end
   return tn
 end
@@ -44,7 +44,7 @@ end
 #
 
 function _ITensorNetwork(g::NamedDimGraph, site_space::Nothing, link_space::Nothing)
-  dg = DataGraph{ITensor,ITensor}(g)
+  dg = NamedDimDataGraph{ITensor,ITensor}(g)
   return ITensorNetwork(dg)
 end
 
@@ -268,7 +268,7 @@ end
 #
 
 function show(io::IO, mime::MIME"text/plain", graph::ITensorNetwork)
-  println(io, "DataGraph with $(nv(graph)) vertices:")
+  println(io, "ITensorNetwork with $(nv(graph)) vertices:")
   show(io, mime, vertices(graph))
   println(io, "\n")
   println(io, "and $(ne(graph)) edge(s):")

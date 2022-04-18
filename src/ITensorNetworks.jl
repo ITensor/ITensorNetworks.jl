@@ -64,7 +64,7 @@ module ITensorNetworks
     return Index(edge_space; tags=edge_tag(e))
   end
 
-  const UniformDataGraph{D} = DataGraph{D,D,Tuple,NamedDimEdge{Tuple},NamedDimGraph{Tuple}}
+  const UniformDataGraph{D} = NamedDimDataGraph{D,D,Tuple,NamedDimEdge{Tuple},NamedDimGraph{Tuple}}
 
   include("partition.jl")
   include("lattices.jl")

@@ -1,4 +1,4 @@
-abstract type AbstractIndsNetwork{I} <: AbstractDataGraph{Vector{I},Vector{I},Tuple,NamedDimEdge{Tuple}} end
+abstract type AbstractIndsNetwork{I} <: AbstractNamedDimDataGraph{Vector{I},Vector{I},Tuple,NamedDimEdge{Tuple}} end
 
 # Field access
 data_graph(graph::AbstractIndsNetwork) = _not_implemented()
