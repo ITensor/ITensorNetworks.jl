@@ -18,8 +18,10 @@ s = siteinds("S=1/2", g)
 ψ′ = ψ'
 @visualize ψ′ edge_labels = (; plevs=true)
 
-@show siteinds(ψ)
-@show linkinds(ψ)
+v = (2, 2)
+neighbor_edges = [v => nv for nv in neighbors(ψ, v)]
+@show siteinds(ψ, v)
+@show [e => linkinds(ψ, e) for e in neighbor_edges]
 
 npartitions = 4
 partitions = partition(ψ, npartitions)
