@@ -5,9 +5,11 @@ module ITensorNetworks
   using Graphs
   using ITensors
   using ITensors.ITensorVisualizationCore
+  using KaHyPar # for graph partitioning
   using Metis # for graph partitioning
   using MultiDimDictionaries
   using NamedGraphs
+  using Suppressor
 
   using NamedGraphs: NamedDimEdge, NamedDimGraph, parent_graph, vertex_to_parent_vertex
 

@@ -2,7 +2,6 @@ using Graphs
 using ITensors
 using ITensorNetworks
 using ITensorUnicodePlots
-using KaHyPar
 using Suppressor
 
 dims = (4, 4)
