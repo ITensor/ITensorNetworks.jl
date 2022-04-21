@@ -4,21 +4,13 @@ end
 data_graph(is::IndsNetwork) = getfield(is, :data_graph)
 underlying_graph(is::IndsNetwork) = underlying_graph(data_graph(is))
 
-#
-# Visualization
-#
-
-function visualize(is::IndsNetwork, args...; kwargs...)
-  return visualize(ITensorNetwork(is), args...; kwargs...)
-end
-
 function IndsNetwork(g::NamedDimGraph, link_space::Nothing, site_space::Nothing)
   dg = NamedDimDataGraph{Vector{Index},Vector{Index}}(g)
   return IndsNetwork(dg)
 end
 
-function IndsNetwork(g::Graph, args...; kwargs...)
-  return IndsNetwork(NamedDimGraph(g), args...; kwargs...)
+function IndsNetwork(g::Graph, args...; dims=nothing, vertices=nothing, kwargs...)
+  return IndsNetwork(NamedDimGraph(g; dims, vertices), args...; kwargs...)
 end
 
 function IndsNetwork(g::NamedDimGraph, link_space, site_space)
@@ -46,3 +38,12 @@ copy(is::IndsNetwork) = IndsNetwork(copy(data_graph(is)))
 function map_inds(f, is::IndsNetwork, args...; sites=nothing, links=nothing, kwargs...)
   return map_data(i -> f(i, args...; kwargs...), is; vertices=sites, edges=links)
 end
+
+#
+# Visualization
+#
+
+function visualize(is::IndsNetwork, args...; kwargs...)
+  return visualize(ITensorNetwork(is), args...; kwargs...)
+end
+

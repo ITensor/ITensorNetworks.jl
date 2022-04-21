@@ -48,10 +48,12 @@ function _ITensorNetwork(g::NamedDimGraph, site_space::Nothing, link_space::Noth
   return ITensorNetwork(dg)
 end
 
-## # TODO: Add sitespace, linkspace
-function ITensorNetwork(g::NamedDimGraph; site_space=nothing, link_space=nothing)
-  is = IndsNetwork(g; site_space, link_space)
-  return ITensorNetwork(is)
+function ITensorNetwork(g::NamedDimGraph; kwargs...)
+  return ITensorNetwork(IndsNetwork(g; kwargs...))
+end
+
+function ITensorNetwork(g::Graph; kwargs...)
+  return ITensorNetwork(IndsNetwork(g; kwargs...))
 end
 
 #
