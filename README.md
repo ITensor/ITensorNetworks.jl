@@ -120,7 +120,7 @@ julia> neighbors(tn, 1, 2)
  (2, 2)
 
 julia> tn_1 = tn[1, :]
-DataGraphs.NamedDimDataGraph{Any, Any, Tuple, NamedGraphs.NamedDimEdge{Tuple}, NamedDimGraph{Tuple}} with 2 vertices:
+ITensorNetwork with 2 vertices:
 2-element Vector{Tuple}:
  (1, 1)
  (1, 2)
@@ -129,17 +129,12 @@ and 1 edge(s):
 (1, 1) => (1, 2)
 
 with vertex data:
-2-element MultiDimDictionaries.MultiDimDictionary{Tuple, Any}
- (1, 1) │ ITensor ord=0
-NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.…
- (1, 2) │ ITensor ord=0
-NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.…
-
-and edge data:
-0-element Dictionaries.Dictionary{NamedGraphs.NamedDimEdge{Tuple}, Any}
+2-element Dictionaries.Dictionary{Tuple, Any}
+ (1, 1) │ ()
+ (1, 2) │ ()
 
 julia> tn_2 = tn[2, :]
-DataGraphs.NamedDimDataGraph{Any, Any, Tuple, NamedGraphs.NamedDimEdge{Tuple}, NamedDimGraph{Tuple}} with 2 vertices:
+ITensorNetwork with 2 vertices:
 2-element Vector{Tuple}:
  (2, 1)
  (2, 2)
@@ -148,14 +143,9 @@ and 1 edge(s):
 (2, 1) => (2, 2)
 
 with vertex data:
-2-element MultiDimDictionaries.MultiDimDictionary{Tuple, Any}
- (2, 1) │ ITensor ord=0
-NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.…
- (2, 2) │ ITensor ord=0
-NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.…
-
-and edge data:
-0-element Dictionaries.Dictionary{NamedGraphs.NamedDimEdge{Tuple}, Any}
+2-element Dictionaries.Dictionary{Tuple, Any}
+ (2, 1) │ ()
+ (2, 2) │ ()
 ```
 
 

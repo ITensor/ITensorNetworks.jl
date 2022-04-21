@@ -11,6 +11,7 @@ module ITensorNetworks
   using NamedGraphs
   using Suppressor
 
+  using MultiDimDictionaries: IndexType, SliceIndex
   using NamedGraphs: NamedDimEdge, NamedDimGraph, parent_graph, vertex_to_parent_vertex
 
   include("imports.jl")

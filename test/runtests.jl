@@ -11,21 +11,22 @@ using Test
   tn = ITensorNetwork(s; link_space=2)
 
   @test tn isa ITensorNetwork
+  @test tn[1:2] isa ITensorNetwork
 
   randn!.(vertex_data(tn))
   tn′ = sim(dag(tn); sites=[])
 
   @test tn′ isa ITensorNetwork
 
-  inner_tn = tn ⊗ tn′
+  ## inner_tn = tn ⊗ tn′
 
-  @test inner_tn isa ITensorNetwork
+  ## @test inner_tn isa ITensorNetwork
 
-  sequence = optimal_contraction_sequence(inner_tn)
+  ## sequence = optimal_contraction_sequence(inner_tn)
 
-  @test sequence isa Vector
+  ## @test sequence isa Vector
 
-  inner_res = contract(inner_tn; sequence)[]
+  ## inner_res = contract(inner_tn; sequence)[]
 
-  @test inner_res isa Float64
+  ## @test inner_res isa Float64
 end

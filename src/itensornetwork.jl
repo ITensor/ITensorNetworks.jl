@@ -9,8 +9,16 @@ end
 data_graph(tn::ITensorNetwork) = getfield(tn, :data_graph)
 underlying_graph(tn::ITensorNetwork) = underlying_graph(data_graph(tn))
 
-getindex(tn::ITensorNetwork, I1, I2, I...) = getindex(data_graph(tn), I1, I2, I...)
-isassigned(tn::ITensorNetwork, I1, I2, I...) = isassigned(data_graph(tn), I1, I2, I...)
+function getindex(tn::ITensorNetwork, index...)
+  return getindex(IndexType(tn, index...), tn, index...)
+end
+
+function getindex(::SliceIndex, tn::ITensorNetwork, index...)
+  return ITensorNetwork(getindex(data_graph(tn), index...))
+end
+
+# getindex(tn::ITensorNetwork, I1, I2, I...) = getindex(data_graph(tn), I1, I2, I...)
+isassigned(tn::ITensorNetwork, index...) = isassigned(data_graph(tn), index...)
 
 #
 # Data modification
