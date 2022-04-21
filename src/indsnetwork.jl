@@ -1,5 +1,5 @@
-struct IndsNetwork{I,V} <: AbstractIndsNetwork{I,V}
-  data_graph::UniformDataGraph{Vector{I},V}
+struct IndsNetwork{I} <: AbstractIndsNetwork{I}
+  data_graph::UniformDataGraph{Vector{I}}
 end
 data_graph(is::IndsNetwork) = getfield(is, :data_graph)
 underlying_graph(is::IndsNetwork) = underlying_graph(data_graph(is))
@@ -12,12 +12,16 @@ function visualize(is::IndsNetwork, args...; kwargs...)
   return visualize(ITensorNetwork(is), args...; kwargs...)
 end
 
-function IndsNetwork(g::CustomVertexGraph, link_space::Nothing, site_space::Nothing)
-  dg = DataGraph{Vector{Index},Vector{Index}}(g)
+function IndsNetwork(g::NamedDimGraph, link_space::Nothing, site_space::Nothing)
+  dg = NamedDimDataGraph{Vector{Index},Vector{Index}}(g)
   return IndsNetwork(dg)
 end
 
-function IndsNetwork(g::CustomVertexGraph, link_space, site_space)
+function IndsNetwork(g::Graph, args...; kwargs...)
+  return IndsNetwork(NamedDimGraph(g), args...; kwargs...)
+end
+
+function IndsNetwork(g::NamedDimGraph, link_space, site_space)
   is = IndsNetwork(g, nothing, nothing)
   if !isnothing(link_space)
     for e in edges(is)
@@ -33,7 +37,7 @@ function IndsNetwork(g::CustomVertexGraph, link_space, site_space)
 end
 
 # TODO: Maybe make `link_space` and `site_space` functions of the edges and vertices.
-function IndsNetwork(g::CustomVertexGraph; link_space=nothing, site_space=nothing)
+function IndsNetwork(g::NamedDimGraph; link_space=nothing, site_space=nothing)
   return IndsNetwork(g, link_space, site_space)
 end
 

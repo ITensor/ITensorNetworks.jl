@@ -10,27 +10,31 @@ g = chain_lattice_graph(4)
 
 s = siteinds("S=1/2", g)
 
-tn = ITensorNetwork(s; link_space=2)
+ψ = ITensorNetwork(s; link_space=2)
 
 # randomize
-randn!.(vertex_data(tn))
+randn!.(vertex_data(ψ))
 
-@visualize tn
+@visualize ψ
 
-tn′ = sim(dag(tn); sites=[])
+is = IndsNetwork(ψ)
+v = vertex_data(is)
+e = edge_data(is)
 
-@visualize tn′
+ψ′ = sim(dag(ψ); sites=[])
 
-inner_tn = tn ⊗ tn′
+@visualize ψ′
 
-@visualize inner_tn
+inner_ψ = ψ ⊗ ψ′
+
+@visualize inner_ψ
 
 # quasi-optimal contraction sequence
-sequence = optimal_contraction_sequence(inner_tn)
+sequence = optimal_contraction_sequence(inner_ψ)
 
 print_tree(sequence)
 
-inner_res = contract(inner_tn; sequence)[]
+inner_res = contract(inner_ψ; sequence)[]
 
 # not yet implemented
-#sub_tn = inner_tn[[1, 2, 5, 6]]
+#sub_ψ = inner_ψ[[1, 2, 5, 6]]

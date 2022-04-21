@@ -1,5 +1,5 @@
-struct ITensorNetwork{V} <: AbstractITensorNetwork{V}
-  data_graph::UniformDataGraph{ITensor,V}
+struct ITensorNetwork <: AbstractITensorNetwork
+  data_graph::UniformDataGraph{ITensor}
 end
 
 #
@@ -9,8 +9,8 @@ end
 data_graph(tn::ITensorNetwork) = getfield(tn, :data_graph)
 underlying_graph(tn::ITensorNetwork) = underlying_graph(data_graph(tn))
 
-getindex(tn::ITensorNetwork, I1, I2, I...) = getindex(tn, (I1, I2, I...))
-isassigned(tn::ITensorNetwork, I1, I2, I...) = isassigned(tn, (I1, I2, I...))
+getindex(tn::ITensorNetwork, I1, I2, I...) = getindex(data_graph(tn), I1, I2, I...)
+isassigned(tn::ITensorNetwork, I1, I2, I...) = isassigned(data_graph(tn), I1, I2, I...)
 
 #
 # Data modification
@@ -22,7 +22,7 @@ function setindex_preserve_graph!(tn::ITensorNetwork, edge_or_vertex, data)
   return tn
 end
 
-setindex!(tn::ITensorNetwork, x, I1, I2, I...) = setindex!(tn, x, (I1, I2, I...))
+setindex!(tn::ITensorNetwork, x, I1, I2, I...) = setindex!(data_graph(tn), x, I1, I2, I...)
 
 copy(tn::ITensorNetwork) = ITensorNetwork(copy(data_graph(tn)))
 
@@ -31,9 +31,9 @@ copy(tn::ITensorNetwork) = ITensorNetwork(copy(data_graph(tn)))
 #
 
 function ITensorNetwork(ts::Vector{ITensor})
-  g = CustomVertexGraph(ts)
+  g = NamedDimGraph(ts)
   tn = ITensorNetwork(g)
-  for v in vertices(tn)
+  for v in eachindex(ts)
     tn[v] = ts[v]
   end
   return tn
@@ -43,13 +43,13 @@ end
 # Construction from Graphs
 #
 
-function _ITensorNetwork(g::CustomVertexGraph, site_space::Nothing, link_space::Nothing)
-  dg = DataGraph{ITensor,ITensor}(g)
+function _ITensorNetwork(g::NamedDimGraph, site_space::Nothing, link_space::Nothing)
+  dg = NamedDimDataGraph{ITensor,ITensor}(g)
   return ITensorNetwork(dg)
 end
 
 ## # TODO: Add sitespace, linkspace
-function ITensorNetwork(g::CustomVertexGraph; site_space=nothing, link_space=nothing)
+function ITensorNetwork(g::NamedDimGraph; site_space=nothing, link_space=nothing)
   is = IndsNetwork(g; site_space, link_space)
   return ITensorNetwork(is)
 end
@@ -62,19 +62,22 @@ function Graph(tn::ITensorNetwork)
   return Graph(Vector{ITensor}(tn))
 end
 
-function CustomVertexGraph(tn::ITensorNetwork)
-  return CustomVertexGraph(Vector{ITensor}(tn))
+function NamedDimGraph(tn::ITensorNetwork)
+  return NamedDimGraph(Vector{ITensor}(tn))
 end
 
 #
 # Construction from IndsNetwork
 #
 
-# Assigns indices with space `link_space` to unassigned
-# edges of the network.
+# Alternative implementation:
+# edge_data(e) = [edge_index(e, link_space)]
+# is_assigned = assign_data(is; edge_data)
 function _ITensorNetwork(is::IndsNetwork, link_space)
-  edge_data(e) = [edge_index(e, link_space)]
-  is_assigned = assign_data(is; edge_data)
+  is_assigned = copy(is)
+  for e in edges(is)
+    is_assigned[e] = [edge_index(e, link_space)]
+  end
   return _ITensorNetwork(is_assigned, nothing)
 end
 
@@ -143,23 +146,23 @@ end
 # Index access
 #
 
-function neighbor_itensors(tn::ITensorNetwork{V}, v::V) where {V}
+function neighbor_itensors(tn::ITensorNetwork, v::Tuple)
   return [tn[vn] for vn in neighbors(tn, v)]
 end
 
-function uniqueinds(tn::ITensorNetwork{V}, v::V) where {V}
+function uniqueinds(tn::ITensorNetwork, v::Tuple)
   return uniqueinds(tn[v], neighbor_itensors(tn, v)...)
 end
 
-function siteinds(tn::ITensorNetwork{V}, v::V) where {V}
+function siteinds(tn::ITensorNetwork, v::Tuple)
   return uniqueinds(tn, v)
 end
 
-function commoninds(tn::ITensorNetwork{V}, e::CustomVertexEdge{V}) where {V}
+function commoninds(tn::ITensorNetwork, e::NamedDimEdge)
   return commoninds(tn[src(e)], tn[dst(e)])
 end
 
-function linkinds(tn::ITensorNetwork{V}, e::CustomVertexEdge{V}) where {V}
+function linkinds(tn::ITensorNetwork, e::NamedDimEdge)
   return commoninds(tn, e)
 end
 
@@ -230,7 +233,7 @@ function contract_network(tn1::ITensorNetwork, tn2::ITensorNetwork)
   tn1 = sim(tn1; sites=[])
   tn2 = sim(tn2; sites=[])
   tns = [Vector{ITensor}(tn1); Vector{ITensor}(tn2)]
-  # TODO: Define `blockdiag` for CustomVertexGraph to merge the graphs,
+  # TODO: Define `blockdiag` for NamedDimGraph to merge the graphs,
   # then add edges to the results graph.
   # Also, automatically merge vertices. For example, reproduce
   # things like `vcat` for cases of linear indices and cartesian indices,
@@ -265,7 +268,7 @@ end
 #
 
 function show(io::IO, mime::MIME"text/plain", graph::ITensorNetwork)
-  println(io, "DataGraph with $(nv(graph)) vertices:")
+  println(io, "ITensorNetwork with $(nv(graph)) vertices:")
   show(io, mime, vertices(graph))
   println(io, "\n")
   println(io, "and $(ne(graph)) edge(s):")

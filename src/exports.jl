@@ -14,10 +14,11 @@ export grid,
   has_vertex
 
 #
-# CustomVertexGraphs
+# NamedGraphs
 #
 
-export set_vertices
+export NamedDimGraph,
+  CartesianKey
 
 #
 # DataGraphs

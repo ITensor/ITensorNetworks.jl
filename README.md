@@ -2,6 +2,21 @@
 
 A package to provide general network data structures and tools to use with ITensors.jl.
 
+## Installation
+
+This package relies on a few unregistered packages. To install, you will need to do:
+```julia
+julia> using Pkg
+
+julia> Pkg.add(url="https://github.com/mtfishman/MultiDimDictionaries.jl")
+
+julia> Pkg.add(url="https://github.com/mtfishman/NamedGraphs.jl")
+
+julia> Pkg.add(url="https://github.com/mtfishman/DataGraphs.jl")
+
+julia> Pkg.add(url="https://github.com/mtfishman/ITensorNetworks.jl")
+```
+
 Here are is an example of making a tensor network on a chain graph (a tensor train or matrix product state):
 ```julia
 julia> using ITensors, ITensorNetworks, Graphs
