@@ -8,9 +8,22 @@ using Test
   Random.seed!(1234)
   g = chain_lattice_graph(4)
   s = siteinds("S=1/2", g)
+
+  @test s isa IndsNetwork
+  @test nv(s) == 4
+  @test ne(s) == 3
+  @test neighbors(s, 2) == [1, 3]
+
   tn = ITensorNetwork(s; link_space=2)
 
+  @test nv(tn) == 4
+  @test ne(tn) == 3
   @test tn isa ITensorNetwork
+  @test neighbors(tn, 2) == [1, 3]
+  @test tn[1] isa ITensor
+  @test order(tn[1]) == 2
+  @test tn[2] isa ITensor
+  @test order(tn[2]) == 3
   @test tn[1:2] isa ITensorNetwork
 
   randn!.(vertex_data(tn))

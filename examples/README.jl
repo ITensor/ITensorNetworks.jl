@@ -26,7 +26,7 @@
 using ITensors
 using ITensorNetworks
 using Graphs
-tn = ITensorNetwork(grid((4,)))
+tn = ITensorNetwork(grid((4,)); link_space=2)
 tn[1]
 tn[2]
 neighbors(tn, 1)
@@ -37,7 +37,7 @@ neighbors(tn, 4)
 #' and here is a similar example for making a tensor network on a grid (a tensor product state or project entangled pair state (PEPS)):
 #+ term=true
 
-tn = ITensorNetwork(grid((2, 2)); dims=(2, 2))
+tn = ITensorNetwork(grid((2, 2)); dims=(2, 2), link_space=2)
 tn[1, 1]
 neighbors(tn, 1, 1)
 neighbors(tn, 1, 2)
@@ -47,8 +47,8 @@ tn_2 = tn[2, :]
 #' Networks can also be merged/unioned:
 #+ term=true
 
-tn1 = ITensorNetwork(grid((3,)); vertices=["A", "B", "C"])
-tn2 = ITensorNetwork(grid((3,)); vertices=["D", "E", "F"])
+tn1 = ITensorNetwork(grid((3,)); vertices=["A", "B", "C"], link_space=2)
+tn2 = ITensorNetwork(grid((3,)); vertices=["D", "E", "F"], link_space=2)
 # tn1 ⊗ tn2
 
 #' ## Generating this README
