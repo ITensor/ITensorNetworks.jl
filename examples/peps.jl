@@ -25,12 +25,11 @@ s = siteinds("S=1/2", g)
 
 @visualize ψ edge_labels = (; plevs=true)
 
-# TODO: Implement priming, tagging, etc.
 ψ′ = prime(ψ; sites=[])
 
-inner_ψ = ψ′ ⊗ ψ
+ψψ = ψ′ ⊗ ψ
 
-@visualize inner_ψ edge_labels = (; plevs=true)
+@visualize ψψ edge_labels = (; plevs=true) width=60 height=40
 
 #@show siteinds(ψ)
 #@show linkinds(ψ)

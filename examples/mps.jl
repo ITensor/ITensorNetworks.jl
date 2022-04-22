@@ -21,20 +21,23 @@ is = IndsNetwork(ψ)
 v = vertex_data(is)
 e = edge_data(is)
 
-ψ′ = sim(dag(ψ); sites=[])
+ψ̃ = sim(dag(ψ); sites=[])
 
-@visualize ψ′
+@visualize ψ̃
 
-inner_ψ = ψ ⊗ ψ′
+ψψ = ⊗(ψ̃, ψ; new_dim_names=("bra", "ket"))
 
-@visualize inner_ψ
+@visualize ψψ
 
 # quasi-optimal contraction sequence
-sequence = optimal_contraction_sequence(inner_ψ)
+sequence = optimal_contraction_sequence(ψψ)
 
 print_tree(sequence)
 
-inner_res = contract(inner_ψ; sequence)[]
+inner_res = contract(ψψ; sequence)[]
 
-# not yet implemented
-#sub_ψ = inner_ψ[[1, 2, 5, 6]]
+@show inner_res
+
+sub = ψψ[[("bra", 1), ("ket", 1), ("bra", 2), ("ket", 2)]]
+
+@visualize sub

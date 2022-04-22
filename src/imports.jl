@@ -5,6 +5,7 @@ import Base:
   convert,
   copy,
   getindex,
+  hvncat,
   setindex!,
   show,
   isassigned
@@ -12,6 +13,8 @@ import Base:
 import .DataGraphs: underlying_graph, vertex_data, edge_data
 
 import Graphs: Graph
+
+import NamedGraphs: vertex_to_parent_vertex
 
 import ITensors:
   # contraction
@@ -40,6 +43,9 @@ import ITensors:
 
 import ITensors.ContractionSequenceOptimization:
   optimal_contraction_sequence
+
+using ITensors.ContractionSequenceOptimization:
+  deepmap
 
 import ITensors.ITensorVisualizationCore:
   visualize

@@ -47,9 +47,14 @@ tn_2 = tn[2, :]
 #' Networks can also be merged/unioned:
 #+ term=true
 
-tn1 = ITensorNetwork(grid((3,)); vertices=["A", "B", "C"], link_space=2)
-tn2 = ITensorNetwork(grid((3,)); vertices=["D", "E", "F"], link_space=2)
-# tn1 ⊗ tn2
+using ITensorUnicodePlots
+s = siteinds("S=1/2", grid((3,)))
+tn1 = ITensorNetwork(s; link_space=2)
+tn2 = ITensorNetwork(s; link_space=2)
+@visualize tn1;
+@visualize tn2;
+Z = prime(tn1; sites=[]) ⊗ tn2;
+@visualize Z;
 
 #' ## Generating this README
 #'

@@ -9,6 +9,8 @@ end
 data_graph(tn::ITensorNetwork) = getfield(tn, :data_graph)
 underlying_graph(tn::ITensorNetwork) = underlying_graph(data_graph(tn))
 
+vertex_to_parent_vertex(tn::ITensorNetwork) = vertex_to_parent_vertex(underlying_graph(tn))
+
 function getindex(tn::ITensorNetwork, index...)
   return getindex(IndexType(tn, index...), tn, index...)
 end
@@ -239,25 +241,53 @@ dag(tn::ITensorNetwork) = map_vertex_data(dag, tn)
 # it flattens to linear vertex labels.
 # TODO: rename `tensor_product_network`, `otimes_network`,
 # `ITensorNetwork`, `contract_network`, etc. to denote that it is lazy?
-function contract_network(tn1::ITensorNetwork, tn2::ITensorNetwork)
-  tn1 = sim(tn1; sites=[])
-  tn2 = sim(tn2; sites=[])
-  tns = [Vector{ITensor}(tn1); Vector{ITensor}(tn2)]
-  # TODO: Define `blockdiag` for NamedDimGraph to merge the graphs,
-  # then add edges to the results graph.
-  # Also, automatically merge vertices. For example, reproduce
-  # things like `vcat` for cases of linear indices and cartesian indices,
-  # or add `Sub(1)`, `Sub(2)`, etc.
-  #g1 = underlying_graph(tn1)
-  #g2 = underlying_graph(tn2)
-  #g = blockdiag(g1, g2)
-  #add_edge!(g, commoninds(tn1, tn2))
-  return ITensorNetwork(tns)
+## function contract_network(tn1::ITensorNetwork, tn2::ITensorNetwork)
+##   tn1 = sim(tn1; sites=[])
+##   tn2 = sim(tn2; sites=[])
+##   tns = [Vector{ITensor}(tn1); Vector{ITensor}(tn2)]
+##   # TODO: Define `blockdiag` for NamedDimGraph to merge the graphs,
+##   # then add edges to the results graph.
+##   # Also, automatically merge vertices. For example, reproduce
+##   # things like `vcat` for cases of linear indices and cartesian indices,
+##   # or add `Sub(1)`, `Sub(2)`, etc.
+##   #g1 = underlying_graph(tn1)
+##   #g2 = underlying_graph(tn2)
+##   #g = blockdiag(g1, g2)
+##   #add_edge!(g, commoninds(tn1, tn2))
+##   return ITensorNetwork(tns)
+## end
+
+## const ⊗ = contract_network
+
+# TODO: should this make sure that internal indices
+# don't clash?
+function hvncat(
+  dim::Int, tn1::ITensorNetwork, tn2::ITensorNetwork; new_dim_names=(1, 2)
+)
+  dg = hvncat(dim, data_graph(tn1), data_graph(tn2); new_dim_names)
+
+  # Add in missing edges that may be shared
+  # across `tn1` and `tn2`.
+  vertices1 = vertices(dg)[1:nv(tn1)]
+  vertices2 = vertices(dg)[(nv(tn1) + 1):end]
+  for v1 in vertices1, v2 in vertices2
+    if hascommoninds(dg[v1], dg[v2])
+      add_edge!(dg, v1 => v2)
+    end
+  end
+
+  return ITensorNetwork(dg)
 end
 
-const ⊗ = contract_network
+# TODO: should this make sure that internal indices
+# don't clash?
+function ⊗(tn1::ITensorNetwork, tn2::ITensorNetwork; kwargs...)
+  return ⊔(tn1, tn2; kwargs...)
+end
 
 # TODO: name `inner_network` to denote it is lazy?
+# TODO: should this make sure that internal indices
+# don't clash?
 function inner(tn1::ITensorNetwork, tn2::ITensorNetwork)
   return dag(tn1) ⊗ tn2
 end
@@ -265,12 +295,15 @@ end
 # TODO: how to define this lazily?
 #norm(tn::ITensorNetwork) = sqrt(inner(tn, tn))
 
-function contract(tn::ITensorNetwork; kwargs...)
-  return contract(Vector{ITensor}(tn); kwargs...)
+function contract(tn::ITensorNetwork; sequence=nothing, kwargs...)
+  sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn)[v], sequence)
+  return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
 end
 
+# TODO: map to the vertex names!
 function optimal_contraction_sequence(tn::ITensorNetwork)
-  return optimal_contraction_sequence(Vector{ITensor}(tn))
+  seq_linear_index = optimal_contraction_sequence(Vector{ITensor}(tn))
+  return deepmap(n -> vertices(tn)[n], seq_linear_index)
 end
 
 #
@@ -294,6 +327,18 @@ end
 
 show(io::IO, graph::ITensorNetwork) = show(io, MIME"text/plain"(), graph)
 
-function visualize(tn::ITensorNetwork, args...; kwargs...)
-  return visualize(Vector{ITensor}(tn), args...; kwargs...)
+## TODO: Define this.
+## function visualize(graph::NamedDimGraph, args...; kwargs...)
+##   return visualize(parent_graph(graph), args...; kwargs...)
+## end
+## 
+## function visualize(graph::NamedDimDataGraph, args...; kwargs...)
+##   return visualize(underlying_graph(graph), args...; kwargs...)
+## end
+
+function visualize(tn::ITensorNetwork, args...; vertex_labels_prefix=nothing, vertex_labels=nothing, kwargs...)
+  if !isnothing(vertex_labels_prefix)
+    vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
+  end
+  return visualize(Vector{ITensor}(tn), args...; vertex_labels, kwargs...)
 end
