@@ -55,6 +55,8 @@ tn2 = ITensorNetwork(s; link_space=2)
 @visualize tn2;
 Z = prime(tn1; sites=[]) ⊗ tn2;
 @visualize Z;
+using ITensors.ContractionSequenceOptimization
+optimal_contraction_sequence(Z)
 
 #' ## Generating this README
 #'

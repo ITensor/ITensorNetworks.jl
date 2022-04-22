@@ -48,17 +48,17 @@ and 3 edge(s):
 
 with vertex data:
 4-element Dictionary{Tuple, Any}
- (1,) │ ((dim=2|id=423|"1↔2"),)
- (2,) │ ((dim=2|id=423|"1↔2"), (dim=2|id=51|"2↔3"))
- (3,) │ ((dim=2|id=51|"2↔3"), (dim=2|id=339|"3↔4"))
- (4,) │ ((dim=2|id=339|"3↔4"),)
+ (1,) │ ((dim=2|id=87|"1↔2"),)
+ (2,) │ ((dim=2|id=87|"1↔2"), (dim=2|id=929|"2↔3"))
+ (3,) │ ((dim=2|id=929|"2↔3"), (dim=2|id=321|"3↔4"))
+ (4,) │ ((dim=2|id=321|"3↔4"),)
 
 julia> tn[1]
-ITensor ord=1 (dim=2|id=423|"1↔2")
+ITensor ord=1 (dim=2|id=87|"1↔2")
 NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.Dense{NDTensors.EmptyNumber, Vector{NDTensors.EmptyNumber}}}
 
 julia> tn[2]
-ITensor ord=2 (dim=2|id=423|"1↔2") (dim=2|id=51|"2↔3")
+ITensor ord=2 (dim=2|id=87|"1↔2") (dim=2|id=929|"2↔3")
 NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.Dense{NDTensors.EmptyNumber, Vector{NDTensors.EmptyNumber}}}
 
 julia> neighbors(tn, 1)
@@ -100,13 +100,13 @@ and 4 edge(s):
 
 with vertex data:
 4-element Dictionary{Tuple, Any}
- (1, 1) │ ((dim=2|id=904|"1×1↔2×1"), (dim=2|id=737|"1×1↔1×2"))
- (2, 1) │ ((dim=2|id=904|"1×1↔2×1"), (dim=2|id=804|"2×1↔2×2"))
- (1, 2) │ ((dim=2|id=737|"1×1↔1×2"), (dim=2|id=652|"1×2↔2×2"))
- (2, 2) │ ((dim=2|id=804|"2×1↔2×2"), (dim=2|id=652|"1×2↔2×2"))
+ (1, 1) │ ((dim=2|id=481|"1×1↔2×1"), (dim=2|id=661|"1×1↔1×2"))
+ (2, 1) │ ((dim=2|id=481|"1×1↔2×1"), (dim=2|id=628|"2×1↔2×2"))
+ (1, 2) │ ((dim=2|id=661|"1×1↔1×2"), (dim=2|id=276|"1×2↔2×2"))
+ (2, 2) │ ((dim=2|id=628|"2×1↔2×2"), (dim=2|id=276|"1×2↔2×2"))
 
 julia> tn[1, 1]
-ITensor ord=2 (dim=2|id=904|"1×1↔2×1") (dim=2|id=737|"1×1↔1×2")
+ITensor ord=2 (dim=2|id=481|"1×1↔2×1") (dim=2|id=661|"1×1↔1×2")
 NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.Dense{NDTensors.EmptyNumber, Vector{NDTensors.EmptyNumber}}}
 
 julia> neighbors(tn, 1, 1)
@@ -130,8 +130,8 @@ and 1 edge(s):
 
 with vertex data:
 2-element Dictionary{Tuple, Any}
- (1, 1) │ ((dim=2|id=904|"1×1↔2×1"), (dim=2|id=737|"1×1↔1×2"))
- (1, 2) │ ((dim=2|id=737|"1×1↔1×2"), (dim=2|id=652|"1×2↔2×2"))
+ (1, 1) │ ((dim=2|id=481|"1×1↔2×1"), (dim=2|id=661|"1×1↔1×2"))
+ (1, 2) │ ((dim=2|id=661|"1×1↔1×2"), (dim=2|id=276|"1×2↔2×2"))
 
 julia> tn_2 = tn[2, :]
 ITensorNetwork with 2 vertices:
@@ -144,8 +144,8 @@ and 1 edge(s):
 
 with vertex data:
 2-element Dictionary{Tuple, Any}
- (2, 1) │ ((dim=2|id=904|"1×1↔2×1"), (dim=2|id=804|"2×1↔2×2"))
- (2, 2) │ ((dim=2|id=804|"2×1↔2×2"), (dim=2|id=652|"1×2↔2×2"))
+ (2, 1) │ ((dim=2|id=481|"1×1↔2×1"), (dim=2|id=628|"2×1↔2×2"))
+ (2, 2) │ ((dim=2|id=628|"2×1↔2×2"), (dim=2|id=276|"1×2↔2×2"))
 ```
 
 
@@ -167,9 +167,9 @@ and 2 edge(s):
 
 with vertex data:
 3-element MultiDimDictionaries.MultiDimDictionary{Tuple, Vector{Index}}
- (1,) │ Index[(dim=2|id=213|"1,S=1/2,Site")]
- (2,) │ Index[(dim=2|id=126|"2,S=1/2,Site")]
- (3,) │ Index[(dim=2|id=215|"3,S=1/2,Site")]
+ (1,) │ Index[(dim=2|id=17|"1,S=1/2,Site")]
+ (2,) │ Index[(dim=2|id=520|"2,S=1/2,Site")]
+ (3,) │ Index[(dim=2|id=332|"3,S=1/2,Site")]
 
 and edge data:
 0-element Dictionary{NamedDimEdge{Tuple}, Vector{Index}}
@@ -187,9 +187,9 @@ and 2 edge(s):
 
 with vertex data:
 3-element Dictionary{Tuple, Any}
- (1,) │ ((dim=2|id=213|"1,S=1/2,Site"), (dim=2|id=590|"1↔2"))
- (2,) │ ((dim=2|id=126|"2,S=1/2,Site"), (dim=2|id=590|"1↔2"), (dim=2|id=920|"2↔…
- (3,) │ ((dim=2|id=215|"3,S=1/2,Site"), (dim=2|id=920|"2↔3"))
+ (1,) │ ((dim=2|id=17|"1,S=1/2,Site"), (dim=2|id=562|"1↔2"))
+ (2,) │ ((dim=2|id=520|"2,S=1/2,Site"), (dim=2|id=562|"1↔2"), (dim=2|id=636|"2↔…
+ (3,) │ ((dim=2|id=332|"3,S=1/2,Site"), (dim=2|id=636|"2↔3"))
 
 julia> tn2 = ITensorNetwork(s; link_space=2)
 ITensorNetwork with 3 vertices:
@@ -204,9 +204,9 @@ and 2 edge(s):
 
 with vertex data:
 3-element Dictionary{Tuple, Any}
- (1,) │ ((dim=2|id=213|"1,S=1/2,Site"), (dim=2|id=709|"1↔2"))
- (2,) │ ((dim=2|id=126|"2,S=1/2,Site"), (dim=2|id=709|"1↔2"), (dim=2|id=914|"2↔…
- (3,) │ ((dim=2|id=215|"3,S=1/2,Site"), (dim=2|id=914|"2↔3"))
+ (1,) │ ((dim=2|id=17|"1,S=1/2,Site"), (dim=2|id=548|"1↔2"))
+ (2,) │ ((dim=2|id=520|"2,S=1/2,Site"), (dim=2|id=548|"1↔2"), (dim=2|id=999|"2↔…
+ (3,) │ ((dim=2|id=332|"3,S=1/2,Site"), (dim=2|id=999|"2↔3"))
 
 julia> @visualize tn1;
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -281,6 +281,13 @@ julia> @visualize Z;
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+
+julia> using ITensors.ContractionSequenceOptimization
+
+julia> optimal_contraction_sequence(Z)
+2-element Vector{Vector}:
+ [(1, 1), (2, 1)]
+ Any[(1, 2), Any[(2, 2), [(1, 3), (2, 3)]]]
 ```
 
 
