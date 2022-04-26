@@ -12,12 +12,29 @@ module ITensorNetworks
   using Suppressor
 
   using MultiDimDictionaries: IndexType, SliceIndex
-  using NamedGraphs: NamedDimEdge, NamedDimGraph, parent_graph, vertex_to_parent_vertex
+  using NamedGraphs: AbstractNamedGraph, NamedDimEdge, NamedDimGraph, parent_graph, vertex_to_parent_vertex, to_vertex
 
   include("imports.jl")
 
   # General functions
   _not_implemented() = error("Not implemented")
+
+  # Add-on AbstractGraph functionality
+  include("Graphs.jl")
+
+  # ITensorVisualizationBase overload
+  function visualize(graph::AbstractNamedGraph, args...; vertex_labels_prefix=nothing, vertex_labels=nothing, kwargs...)
+    if !isnothing(vertex_labels_prefix)
+      vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(graph)]
+    end
+    edge_labels = [string(e) for e in edges(graph)]
+    return visualize(parent_graph(graph), args...; vertex_labels, edge_labels, kwargs...)
+  end
+
+  # ITensorVisualizationBase overload
+  function visualize(graph::AbstractDataGraph, args...; kwargs...)
+    return visualize(underlying_graph(graph), args...; kwargs...)
+  end
 
   # When setting an edge with collections of `Index`, set the reverse direction
   # edge with the `dag`.
