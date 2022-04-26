@@ -1,10 +1,8 @@
 using ITensors
-using ITensorNetworks
 using Graphs
+using NamedGraphs
+using ITensorNetworks
 using ITensorUnicodePlots
-
-dims = (3, 3)
-g = square_lattice_graph(dims)
 
 function heisenberg(g::AbstractGraph)
   # TODO: os = Sum{Op}()
@@ -17,8 +15,11 @@ function heisenberg(g::AbstractGraph)
   return os
 end
 
-ℋ = heisenberg(g)
+dims = (3, 3)
+g = named_grid(dims)
 s = siteinds("S=1/2", g)
+
+ℋ = heisenberg(g)
 
 χ = 5
 ψ = ITensorNetwork(s; link_space=χ)
