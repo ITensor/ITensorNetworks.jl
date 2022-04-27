@@ -7,10 +7,11 @@ g = named_binary_tree(3)
 s = siteinds("S=1/2", g)
 ψ = TTNS(s; link_space=3)
 
-@visualize ψ
+for v in vertices(ψ)
+  ψ[v] = randn!(ψ[v])
+end
 
-bfs_tree_ψ = bfs_tree(ψ, 1, 2)
-dfs_tree_ψ = dfs_tree(ψ, 1, 2)
+@visualize ψ
 
 e = 1 => (1, 1)
 ψ̃ = contract(ψ, e)
@@ -39,13 +40,14 @@ z = contract(Z; sequence)[]
 
 # Contract according to `bfs_tree`.
 # Currently there is a bug.
-## z2 = Z
-## @visualize z2
-## for e in reverse(edges(bfs_tree(Z, 1, 1)))
-##   @show e
-##   global z2 = contract(z2, e)
-##   @visualize z2
-## end
-## @show z2[]
+z2 = Z
+source = (1, 1)
+@visualize z2
+for e in reverse(edges(bfs_tree(Z, source)))
+  @show e
+  global z2 = contract(z2, e)
+  @visualize z2
+end
+@show z2[source][1]
 
 nothing
