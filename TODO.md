@@ -1,5 +1,10 @@
 # TODO
 
+## Missing functions
+
+ - `Graphs.connected_components(::ITensorNetwork)`
+ - Shortest path algorithms: `Graphs.a_star`.
+
 ## Contraction sequence optimization
 
  - https://arxiv.org/abs/1304.6112 (Faster identification of optimal contraction sequences for tensor networks)

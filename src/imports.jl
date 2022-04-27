@@ -12,7 +12,7 @@ import Base:
 
 import .DataGraphs: underlying_graph, vertex_data, edge_data
 
-import Graphs: Graph
+import Graphs: Graph, is_directed
 
 import NamedGraphs: vertex_to_parent_vertex, to_vertex
 
@@ -41,11 +41,8 @@ import ITensors:
   # dag
   dag
 
-import ITensors.ContractionSequenceOptimization:
-  optimal_contraction_sequence
+import ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
 
-using ITensors.ContractionSequenceOptimization:
-  deepmap
+using ITensors.ContractionSequenceOptimization: deepmap
 
-import ITensors.ITensorVisualizationCore:
-  visualize
+import ITensors.ITensorVisualizationCore: visualize

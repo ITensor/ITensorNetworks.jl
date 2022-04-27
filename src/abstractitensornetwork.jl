@@ -1,7 +1,11 @@
-abstract type AbstractITensorNetwork <: AbstractNamedDimDataGraph{ITensor,ITensor,Tuple,NamedDimEdge{Tuple}} end
+abstract type AbstractITensorNetwork <:
+              AbstractNamedDimDataGraph{ITensor,ITensor,Tuple,NamedDimEdge{Tuple}} end
 
 # Field access
 data_graph(graph::AbstractITensorNetwork) = _not_implemented()
+
+# Overload if needed
+is_directed(::Type{<:AbstractITensorNetwork}) = false
 
 # Copy
 copy(tn::AbstractITensorNetwork) = _not_implemented()
@@ -12,11 +16,15 @@ copy(tn::AbstractITensorNetwork) = _not_implemented()
 to_vertex(tn::AbstractITensorNetwork, args...) = to_vertex(underlying_graph(tn), args...)
 
 # AbstractDataGraphs overloads
-vertex_data(graph::AbstractITensorNetwork, args...) = vertex_data(data_graph(graph), args...)
+function vertex_data(graph::AbstractITensorNetwork, args...)
+  return vertex_data(data_graph(graph), args...)
+end
 edge_data(graph::AbstractITensorNetwork, args...) = edge_data(data_graph(graph), args...)
 
 underlying_graph(tn::AbstractITensorNetwork) = underlying_graph(data_graph(tn))
-vertex_to_parent_vertex(tn::AbstractITensorNetwork) = vertex_to_parent_vertex(underlying_graph(tn))
+function vertex_to_parent_vertex(tn::AbstractITensorNetwork)
+  return vertex_to_parent_vertex(underlying_graph(tn))
+end
 
 function getindex(tn::AbstractITensorNetwork, index...)
   return getindex(IndexType(tn, index...), tn, index...)
@@ -38,20 +46,19 @@ function setindex_preserve_graph!(tn::AbstractITensorNetwork, value, index...)
 end
 
 function setindex!(tn::AbstractITensorNetwork, value, index...)
-  ## TODO: Implement, need `rem_edge!`
-  ## v = to_vertex(tn, index...)
-  ## for edge in incident_edges(tn, v)
-  ##   rem_edge!(tn, edge)
-  ## end
-  ## for vertex in vertices(tn)
-  ##   if v ≠ vertex
-  ##     edge = v => vertex
-  ##     if hascommoninds(tn, edge)
-  ##       add_edge!(tn, edge)
-  ##     end
-  ##   end
-  ## end
-  setindex_preserve_graph!(tn, value, index...)
+  v = to_vertex(tn, index...)
+  setindex_preserve_graph!(tn, value, v)
+  for edge in incident_edges(tn, v)
+    rem_edge!(tn, edge)
+  end
+  for vertex in vertices(tn)
+    if v ≠ vertex
+      edge = v => vertex
+      if hascommoninds(tn, edge)
+        add_edge!(tn, edge)
+      end
+    end
+  end
   return tn
 end
 
@@ -111,28 +118,25 @@ end
 # Index access
 #
 
-function neighbor_itensors(tn::AbstractITensorNetwork, v::Tuple)
-  return [tn[vn] for vn in neighbors(tn, v)]
+function neighbor_itensors(tn::AbstractITensorNetwork, vertex...)
+  return [tn[vn] for vn in neighbors(tn, vertex...)]
 end
 
-function uniqueinds(tn::AbstractITensorNetwork, v::Tuple)
-  return uniqueinds(tn[v], neighbor_itensors(tn, v)...)
+function uniqueinds(tn::AbstractITensorNetwork, vertex...)
+  return uniqueinds(tn[vertex...], neighbor_itensors(tn, vertex...)...)
 end
 
-function siteinds(tn::AbstractITensorNetwork, v::Tuple)
-  return uniqueinds(tn, v)
+function siteinds(tn::AbstractITensorNetwork, vertex...)
+  return uniqueinds(tn, vertex...)
 end
 
-function commoninds(tn::AbstractITensorNetwork, e::NamedDimEdge)
+function commoninds(tn::AbstractITensorNetwork, edge)
+  e = NamedDimEdge(edge)
   return commoninds(tn[src(e)], tn[dst(e)])
 end
 
-function linkinds(tn::AbstractITensorNetwork, e::NamedDimEdge)
-  return commoninds(tn, e)
-end
-
-function linkinds(tn::AbstractITensorNetwork, e)
-  return linkinds(tn, edgetype(tn)(e))
+function linkinds(tn::AbstractITensorNetwork, edge)
+  return commoninds(tn, edge)
 end
 
 # Priming and tagging (changing Index identifiers)
@@ -203,9 +207,21 @@ end
 # TODO: how to define this lazily?
 #norm(tn::AbstractITensorNetwork) = sqrt(inner(tn, tn))
 
-function contract(tn::AbstractITensorNetwork; sequence=nothing, kwargs...)
+function contract(tn::AbstractITensorNetwork; sequence=vertices(tn), kwargs...)
   sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn)[v], sequence)
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
+end
+
+function contract(tn::AbstractITensorNetwork, edge::Pair)
+  return contract(tn, edgetype(tn)(edge))
+end
+
+function contract(tn::AbstractITensorNetwork, edge::AbstractEdge)
+  tn = copy(tn)
+  new_itensor = tn[src(edge)] * tn[dst(edge)]
+  rem_vertex!(tn, dst(edge))
+  tn[src(edge)] = new_itensor
+  return tn
 end
 
 # TODO: map to the vertex names!
@@ -255,7 +271,13 @@ end
 
 show(io::IO, graph::AbstractITensorNetwork) = show(io, MIME"text/plain"(), graph)
 
-function visualize(tn::AbstractITensorNetwork, args...; vertex_labels_prefix=nothing, vertex_labels=nothing, kwargs...)
+function visualize(
+  tn::AbstractITensorNetwork,
+  args...;
+  vertex_labels_prefix=nothing,
+  vertex_labels=nothing,
+  kwargs...,
+)
   if !isnothing(vertex_labels_prefix)
     vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
   end

@@ -66,7 +66,7 @@ function _ITensorNetwork(is::IndsNetwork, link_space::Nothing)
   for v in vertices(tn)
     siteinds = get_assigned(is, v, Index[])
     linkinds = [get_assigned(is, v => nv, Index[]) for nv in neighbors(is, v)]
-    tn[v] = ITensor(siteinds, linkinds...)
+    setindex_preserve_graph!(tn, ITensor(siteinds, linkinds...), v)
   end
   return tn
 end

@@ -30,7 +30,7 @@ s = siteinds("S=1/2", g)
 
 ψψ = ψ′ ⊗ ψ
 
-@visualize ψψ edge_labels = (; plevs=true) width=60 height=40
+@visualize ψψ edge_labels = (; plevs=true) width = 60 height = 40
 
 #@show siteinds(ψ)
 #@show linkinds(ψ)

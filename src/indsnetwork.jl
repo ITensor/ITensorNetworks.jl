@@ -46,4 +46,3 @@ end
 function visualize(is::IndsNetwork, args...; kwargs...)
   return visualize(ITensorNetwork(is), args...; kwargs...)
 end
-
