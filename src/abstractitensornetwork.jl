@@ -247,7 +247,11 @@ function hvncat(
     end
   end
 
-  return promote_type(typeof(tn1), typeof(tn2))(dg)
+  # TODO: Allow customization of the output type.
+  ## return promote_type(typeof(tn1), typeof(tn2))(dg)
+  ## return contract_output(typeof(tn1), typeof(tn2))(dg)
+
+  return ITensorNetwork(dg)
 end
 
 #
