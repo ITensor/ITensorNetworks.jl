@@ -25,8 +25,7 @@
 
 using ITensors
 using ITensorNetworks
-using Graphs
-tn = ITensorNetwork(grid((4,)); link_space=2)
+tn = ITensorNetwork(named_grid((4,)); link_space=2)
 tn[1]
 tn[2]
 neighbors(tn, 1)
@@ -37,7 +36,7 @@ neighbors(tn, 4)
 #' and here is a similar example for making a tensor network on a grid (a tensor product state or project entangled pair state (PEPS)):
 #+ term=true
 
-tn = ITensorNetwork(grid((2, 2)); dims=(2, 2), link_space=2)
+tn = ITensorNetwork(named_grid((2, 2)); link_space=2)
 tn[1, 1]
 neighbors(tn, 1, 1)
 neighbors(tn, 1, 2)
@@ -48,7 +47,7 @@ tn_2 = tn[2, :]
 #+ term=true
 
 using ITensorUnicodePlots
-s = siteinds("S=1/2", grid((3,)))
+s = siteinds("S=1/2", named_grid((3,)))
 tn1 = ITensorNetwork(s; link_space=2)
 tn2 = ITensorNetwork(s; link_space=2)
 @visualize tn1;
@@ -57,6 +56,8 @@ Z = prime(tn1; sites=[]) ⊗ tn2;
 @visualize Z;
 using ITensors.ContractionSequenceOptimization
 optimal_contraction_sequence(Z)
+Z̃ = contract(Z, (1, 1) => (2, 1));
+@visualize Z̃;
 
 #' ## Generating this README
 #'
