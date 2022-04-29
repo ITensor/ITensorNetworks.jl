@@ -37,6 +37,10 @@ end
 isassigned(tn::AbstractITensorNetwork, index...) = isassigned(data_graph(tn), index...)
 
 #
+# Iteration
+#
+
+#
 # Data modification
 #
 
@@ -124,6 +128,14 @@ end
 
 function uniqueinds(tn::AbstractITensorNetwork, vertex...)
   return uniqueinds(tn[vertex...], neighbor_itensors(tn, vertex...)...)
+end
+
+function uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
+  return uniqueinds(tn[src(edge)], tn[dst(edge)])
+end
+
+function uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
+  return uniqueinds(tn, edgetype(tn)(edge))
 end
 
 function siteinds(tn::AbstractITensorNetwork, vertex...)
@@ -216,15 +228,124 @@ function contract(tn::AbstractITensorNetwork, edge::Pair)
   return contract(tn, edgetype(tn)(edge))
 end
 
+# Contract the tensors at vertices `src(edge)` and `dst(edge)`
+# and store the results in the vertex `dst(edge)`, removing
+# the vertex `src(edge)`.
 function contract(tn::AbstractITensorNetwork, edge::AbstractEdge)
   tn = copy(tn)
   new_itensor = tn[src(edge)] * tn[dst(edge)]
-  rem_vertex!(tn, dst(edge))
-  tn[src(edge)] = new_itensor
+  rem_vertex!(tn, src(edge))
+  tn[dst(edge)] = new_itensor
   return tn
 end
 
-# TODO: map to the vertex names!
+function tags(tn::AbstractITensorNetwork, edge)
+  is = linkinds(tn, edge)
+  return commontags(is)
+end
+
+function svd(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return svd(tn, edgetype(tn)(edge))
+end
+
+function svd(
+  tn::AbstractITensorNetwork,
+  edge::AbstractEdge;
+  U_vertex=src(edge),
+  S_vertex=("S", edge),
+  V_vertex=("V", edge),
+  u_tags=tags(tn, edge),
+  v_tags=tags(tn, edge),
+  kwargs...
+)
+  tn = copy(tn)
+  left_inds = uniqueinds(tn, edge)
+  U, S, V = svd(tn[src(edge)], left_inds; lefttags=u_tags, right_tags=v_tags, kwargs...)
+
+  rem_vertex!(tn, src(edge))
+  add_vertex!(tn, U_vertex)
+  tn[U_vertex] = U
+
+  add_vertex!(tn, S_vertex)
+  tn[S_vertex] = S
+
+  add_vertex!(tn, V_vertex)
+  tn[V_vertex] = V
+
+  return tn
+end
+
+function qr(
+  tn::AbstractITensorNetwork,
+  edge::AbstractEdge;
+  Q_vertex=src(edge),
+  R_vertex=("R", edge),
+  tags=tags(tn, edge),
+  kwargs...
+)
+  tn = copy(tn)
+  left_inds = uniqueinds(tn, edge)
+  Q, R = factorize(tn[src(edge)], left_inds; tags, kwargs...)
+
+  rem_vertex!(tn, src(edge))
+  add_vertex!(tn, Q_vertex)
+  tn[Q_vertex] = Q
+
+  add_vertex!(tn, R_vertex)
+  tn[R_vertex] = R
+
+  return tn
+end
+
+function factorize(
+  tn::AbstractITensorNetwork,
+  edge::AbstractEdge;
+  X_vertex = src(edge),
+  Y_vertex = ("Y", edge),
+  tags=tags(tn, edge),
+  kwargs...
+)
+  tn = copy(tn)
+  left_inds = uniqueinds(tn, edge)
+  X, Y = factorize(tn[src(edge)], left_inds; tags, kwargs...)
+
+  rem_vertex!(tn, src(edge))
+  add_vertex!(tn, X_vertex)
+  tn[X_vertex] = X
+
+  add_vertex!(tn, Y_vertex)
+  tn[Y_vertex] = Y
+
+  return tn
+end
+
+# For ambiguity error
+function _orthogonalize_edge(
+  tn::AbstractITensorNetwork,
+  edge::AbstractEdge;
+  kwargs...
+)
+  tn = factorize(tn, edge; kwargs...)
+  new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
+  return contract(tn, new_vertex => dst(edge))
+end
+
+function orthogonalize(
+  tn::AbstractITensorNetwork,
+  edge::AbstractEdge;
+  kwargs...
+)
+  return _orthogonalize_edge(tn, edge; kwargs...)
+end
+
+function orthogonalize(
+  tn::AbstractITensorNetwork,
+  edge::Pair;
+  kwargs...
+)
+  return orthogonalize(tn, edgetype(tn)(edge); kwargs...)
+end
+
 function optimal_contraction_sequence(tn::AbstractITensorNetwork)
   seq_linear_index = optimal_contraction_sequence(Vector{ITensor}(tn))
   return deepmap(n -> vertices(tn)[n], seq_linear_index)
@@ -252,6 +373,16 @@ function hvncat(
   ## return contract_output(typeof(tn1), typeof(tn2))(dg)
 
   return ITensorNetwork(dg)
+end
+
+function inner_network(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
+  tn1 = sim(tn1; sites=[])
+  tn2 = sim(tn2; sites=[])
+  return ⊗(dag(tn1), tn2; kwargs...)
+end
+
+function norm_network(tn::AbstractITensorNetwork; kwargs...)
+  return inner_network(tn, tn; kwargs...)
 end
 
 #

@@ -11,6 +11,9 @@ using MultiDimDictionaries
 using NamedGraphs
 using Suppressor
 
+# TODO: export from ITensors
+using ITensors: commontags
+
 using MultiDimDictionaries: IndexType, SliceIndex
 using NamedGraphs:
   AbstractNamedGraph,
@@ -36,8 +39,8 @@ function visualize(
   if !isnothing(vertex_labels_prefix)
     vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(graph)]
   end
-  edge_labels = [string(e) for e in edges(graph)]
-  return visualize(parent_graph(graph), args...; vertex_labels, edge_labels, kwargs...)
+  #edge_labels = [string(e) for e in edges(graph)]
+  return visualize(parent_graph(graph), args...; vertex_labels, kwargs...)
 end
 
 # ITensorVisualizationBase overload

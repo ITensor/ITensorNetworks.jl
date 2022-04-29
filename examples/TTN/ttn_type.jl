@@ -1,3 +1,4 @@
+using AbstractTrees
 using ITensors
 using ITensors.ContractionSequenceOptimization
 using ITensorNetworks
@@ -13,7 +14,14 @@ end
 
 @visualize ψ
 
-e = 1 => (1, 1)
+@show neighbors(ψ, 1)
+@show neighbors(ψ, 1, 1, 1)
+@show incident_edges(ψ, 1, 1)
+@show leaf_vertices(ψ)
+@show is_leaf(ψ, 1)
+@show is_leaf(ψ, 1, 1, 1)
+
+e = (1, 1) => 1
 ψ̃ = contract(ψ, e)
 
 @visualize ψ̃
@@ -25,7 +33,7 @@ Z = ψᴴ ⊗ ψ;
 
 # Contract across bra and ket
 for v in vertices(ψ)
-  global Z = contract(Z, (1, v...) => (2, v...))
+  global Z = contract(Z, (2, v...) => (1, v...))
 end
 
 @visualize Z
@@ -36,18 +44,72 @@ sequence = optimal_contraction_sequence(Z)
 
 z = contract(Z; sequence)[]
 
-@show z
+@show √z
 
-# Contract according to `bfs_tree`.
-# Currently there is a bug.
+# Contract according to a post-order depth-first
+# search, inward towards the root vertex.
+# https://en.wikipedia.org/wiki/Tree_traversal#Depth-first_search
 z2 = Z
-source = (1, 1)
+root_vertex = (1, 1)
 @visualize z2
-for e in reverse(edges(bfs_tree(Z, source)))
+for e in post_order_dfs_edges(z2, root_vertex)
   @show e
   global z2 = contract(z2, e)
   @visualize z2
 end
-@show z2[source][1]
+@show √(z2[root_vertex][1])
+
+e = edgetype(ψ)(1 => (1, 1))
+ψ_svd = svd(ψ, e)
+U = ψ_svd[src(e)]
+S = ψ_svd["S", e]
+V = ψ_svd["V", e]
+
+@visualize ψ_svd
+
+@show norm(U * S * V - ψ[src(e)])
+
+ψ̃_svd = contract(ψ_svd, ("V", e) => dst(e))
+ψ̃_svd = contract(ψ̃_svd, ("S", e) => dst(e))
+
+@visualize ψ̃_svd
+
+e = edgetype(ψ)(1 => (1, 1))
+ψ_qr = qr(ψ, e)
+Q = ψ_qr[src(e)]
+R = ψ_qr["R", e]
+
+@visualize ψ_qr
+
+@show norm(Q * R - ψ[src(e)])
+
+ψ̃_qr = contract(ψ_qr, ("R", e) => dst(e))
+
+@visualize ψ̃_qr
+
+# Orthogonalize according to post-order
+# depth-first search, towards the root vertex.
+# https://en.wikipedia.org/wiki/Tree_traversal#Depth-first_search
+ψ_ortho = ψ
+root_vertex = (1, 1)
+@visualize ψ_ortho
+
+for e in post_order_dfs_edges(ψ_ortho, root_vertex)
+  @show e
+  global ψ_ortho = orthogonalize(ψ_ortho, e)
+  @visualize ψ_ortho
+end
+
+@show √(contract(norm_network(ψ_ortho); sequence=optimal_contraction_sequence(norm_network(ψ_ortho)))[])
+@show √(contract(norm_network(ψ); sequence=optimal_contraction_sequence(norm_network(ψ)))[])
+@show norm(ψ_ortho[root_vertex])
+@show √(inner(ψ, ψ))
+@show √(inner(ψ_ortho, ψ_ortho))
+@show norm(ψ)
+@show norm(ψ_ortho)
+
+ψ_ortho = orthogonalize(ψ, 1)
+@show norm(ψ_ortho)
+@show norm(ψ_ortho[1])
 
 nothing

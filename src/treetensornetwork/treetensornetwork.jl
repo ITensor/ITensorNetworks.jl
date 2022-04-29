@@ -1,5 +1,46 @@
 abstract type AbstractTreeTensorNetwork <: AbstractITensorNetwork end
 
+default_root_vertex(ϕ::AbstractTreeTensorNetwork, ψ::AbstractTreeTensorNetwork) = first(vertices(ψ))
+
+function inner(ϕ::AbstractTreeTensorNetwork, ψ::AbstractTreeTensorNetwork; root_vertex=default_root_vertex(ϕ, ψ))
+  ϕᴴ = sim(dag(ψ); sites=[])
+  ψ = sim(ψ; sites=[])
+  ϕψ = ϕᴴ ⊗ ψ;
+  # TODO: find the largest tensor and use it as
+  # the `root_vertex`.
+  root_vertex = first(vertices(ψ))
+  for e in post_order_dfs_edges(ψ, root_vertex)
+    if has_vertex(ϕψ, 2, src(e)...)
+      ϕψ = contract(ϕψ, (2, src(e)...) => (1, src(e)...))
+    end
+    ϕψ = contract(ϕψ, (1, src(e)...) => (1, dst(e)...))
+    if has_vertex(ϕψ, 2, dst(e)...)
+      ϕψ = contract(ϕψ, (2, dst(e)...) => (1, dst(e)...))
+    end
+  end
+  return ϕψ[1, root_vertex...][]
+end
+
+function norm(ψ::AbstractTreeTensorNetwork)
+  return √(abs(real(inner(ψ, ψ))))
+end
+
+function orthogonalize(ψ::AbstractTreeTensorNetwork, root_vertex...)
+  for e in post_order_dfs_edges(ψ, root_vertex)
+    ψ = orthogonalize(ψ, e)
+  end
+  return ψ
+end
+
+# For ambiguity error
+function orthogonalize(
+  tn::AbstractTreeTensorNetwork,
+  edge::AbstractEdge;
+  kwargs...
+)
+  return _orthogonalize_edge(tn, edge; kwargs...)
+end
+
 """
     TreeTensorNetworkState <: AbstractITensorNetwork
 

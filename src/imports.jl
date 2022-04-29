@@ -14,11 +14,16 @@ import .DataGraphs: underlying_graph, vertex_data, edge_data
 
 import Graphs: Graph, is_directed
 
+import LinearAlgebra: svd, factorize, qr
+
 import NamedGraphs: vertex_to_parent_vertex, to_vertex
 
 import ITensors:
   # contraction
   contract,
+  orthogonalize,
+  inner,
+  norm,
   # site and link indices
   siteind,
   siteinds,
@@ -38,6 +43,7 @@ import ITensors:
   removetags,
   replacetags,
   settags,
+  tags,
   # dag
   dag
 
