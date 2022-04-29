@@ -1,0 +1,14 @@
+using ITensors
+using ITensorNetworks
+using ITensorUnicodePlots
+
+g = named_comb_tree((5, 2))
+
+@visualize g
+
+s = siteinds("S=1/2", g)
+ψ = TTNS(s; link_space=3)
+
+@visualize ψ
+
+nothing

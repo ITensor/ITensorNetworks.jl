@@ -8,7 +8,7 @@ export grid, edges, vertices, ne, nv, src, dst, neighbors, inneighbors, outneigh
 # NamedGraphs
 #
 
-export NamedDimGraph, CartesianKey, named_binary_tree, named_grid, is_tree, parent_vertex, child_vertices, post_order_dfs_edges, leaf_vertices, is_leaf, incident_edges
+export NamedDimGraph, CartesianKey, named_binary_tree, named_grid, is_tree, parent_vertex, child_vertices, post_order_dfs_edges, leaf_vertices, is_leaf, incident_edges, comb_tree, named_comb_tree
 
 #
 # DataGraphs
