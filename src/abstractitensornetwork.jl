@@ -256,7 +256,7 @@ function svd(
   V_vertex=("V", edge),
   u_tags=tags(tn, edge),
   v_tags=tags(tn, edge),
-  kwargs...
+  kwargs...,
 )
   tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
@@ -281,7 +281,7 @@ function qr(
   Q_vertex=src(edge),
   R_vertex=("R", edge),
   tags=tags(tn, edge),
-  kwargs...
+  kwargs...,
 )
   tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
@@ -300,10 +300,10 @@ end
 function factorize(
   tn::AbstractITensorNetwork,
   edge::AbstractEdge;
-  X_vertex = src(edge),
-  Y_vertex = ("Y", edge),
+  X_vertex=src(edge),
+  Y_vertex=("Y", edge),
   tags=tags(tn, edge),
-  kwargs...
+  kwargs...,
 )
   tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
@@ -320,29 +320,17 @@ function factorize(
 end
 
 # For ambiguity error
-function _orthogonalize_edge(
-  tn::AbstractITensorNetwork,
-  edge::AbstractEdge;
-  kwargs...
-)
+function _orthogonalize_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
   tn = factorize(tn, edge; kwargs...)
   new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
   return contract(tn, new_vertex => dst(edge))
 end
 
-function orthogonalize(
-  tn::AbstractITensorNetwork,
-  edge::AbstractEdge;
-  kwargs...
-)
+function orthogonalize(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
   return _orthogonalize_edge(tn, edge; kwargs...)
 end
 
-function orthogonalize(
-  tn::AbstractITensorNetwork,
-  edge::Pair;
-  kwargs...
-)
+function orthogonalize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
   return orthogonalize(tn, edgetype(tn)(edge); kwargs...)
 end
 

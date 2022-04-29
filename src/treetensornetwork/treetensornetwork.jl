@@ -1,11 +1,17 @@
 abstract type AbstractTreeTensorNetwork <: AbstractITensorNetwork end
 
-default_root_vertex(ϕ::AbstractTreeTensorNetwork, ψ::AbstractTreeTensorNetwork) = first(vertices(ψ))
+function default_root_vertex(ϕ::AbstractTreeTensorNetwork, ψ::AbstractTreeTensorNetwork)
+  return first(vertices(ψ))
+end
 
-function inner(ϕ::AbstractTreeTensorNetwork, ψ::AbstractTreeTensorNetwork; root_vertex=default_root_vertex(ϕ, ψ))
+function inner(
+  ϕ::AbstractTreeTensorNetwork,
+  ψ::AbstractTreeTensorNetwork;
+  root_vertex=default_root_vertex(ϕ, ψ),
+)
   ϕᴴ = sim(dag(ψ); sites=[])
   ψ = sim(ψ; sites=[])
-  ϕψ = ϕᴴ ⊗ ψ;
+  ϕψ = ϕᴴ ⊗ ψ
   # TODO: find the largest tensor and use it as
   # the `root_vertex`.
   root_vertex = first(vertices(ψ))
@@ -33,11 +39,7 @@ function orthogonalize(ψ::AbstractTreeTensorNetwork, root_vertex...)
 end
 
 # For ambiguity error
-function orthogonalize(
-  tn::AbstractTreeTensorNetwork,
-  edge::AbstractEdge;
-  kwargs...
-)
+function orthogonalize(tn::AbstractTreeTensorNetwork, edge::AbstractEdge; kwargs...)
   return _orthogonalize_edge(tn, edge; kwargs...)
 end
 
@@ -53,13 +55,17 @@ end
 struct TreeTensorNetworkState <: AbstractTreeTensorNetwork
   itensor_network::ITensorNetwork
   ortho_center::Vector{Tuple}
-  function TreeTensorNetworkState(itensor_network::ITensorNetwork, ortho_center::Vector{Tuple}=vertices(itensor_network))
+  function TreeTensorNetworkState(
+    itensor_network::ITensorNetwork, ortho_center::Vector{Tuple}=vertices(itensor_network)
+  )
     @assert is_tree(itensor_network)
     return new(itensor_network, ortho_center)
   end
 end
 
-copy(ψ::TreeTensorNetworkState) = TreeTensorNetworkState(copy(ψ.itensor_network), copy(ψ.ortho_center))
+function copy(ψ::TreeTensorNetworkState)
+  return TreeTensorNetworkState(copy(ψ.itensor_network), copy(ψ.ortho_center))
+end
 
 const TTNS = TreeTensorNetworkState
 
