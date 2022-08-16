@@ -1,0 +1,27 @@
+# https://github.com/kahypar/KaHyPar.jl/issues/20
+KaHyPar.HyperGraph(g::Graph) = incidence_matrix(g)
+
+# default_configuration => "cut_kKaHyPar_sea20.ini"
+# :edge_cut => "cut_kKaHyPar_sea20.ini"
+# :connectivity => "km1_kKaHyPar_sea20.ini"
+# imbalance::Number=0.03
+function partition(
+  ::Backend"KaHyPar",
+  g::Graph,
+  npartitions::Integer;
+  objective="edge_cut",
+  alg="kway",
+  configuration=nothing,
+  kwargs...,
+)
+  if isnothing(configuration)
+    configuration = joinpath(
+      pkgdir(KaHyPar),
+      "src",
+      "config",
+      kahypar_configurations[(objective=objective, alg=alg)],
+    )
+  end
+  partitions = @suppress KaHyPar.partition(g, npartitions; configuration, kwargs...)
+  return partitions .+ 1
+end

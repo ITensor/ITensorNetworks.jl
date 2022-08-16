@@ -1,5 +1,7 @@
 using Graphs
 using ITensorNetworks
+using KaHyPar
+using Metis
 
 g = grid((16,))
 npartitions = 2

@@ -31,7 +31,7 @@ end
 #
 
 function _ITensorNetwork(g::NamedDimGraph, site_space::Nothing, link_space::Nothing)
-  dg = NamedDimDataGraph{ITensor,ITensor}(g)
+  dg = NamedDimDataGraph{ITensor,ITensor}(copy(g))
   return ITensorNetwork(dg)
 end
 
@@ -73,4 +73,24 @@ end
 
 function ITensorNetwork(is::IndsNetwork; link_space=nothing)
   return _ITensorNetwork(is, link_space)
+end
+
+function insert_links(ψ::ITensorNetwork, edges::Vector=edges(ψ); cutoff=1e-15)
+  for e in edges
+    # Define this to work?
+    # ψ = factorize(ψ, e; cutoff)
+    ψᵥ₁, ψᵥ₂ = factorize(ψ[src(e)] * ψ[dst(e)], inds(ψ[src(e)]); cutoff, tags=edge_tag(e))
+    ψ[src(e)] = ψᵥ₁
+    ψ[dst(e)] = ψᵥ₂
+  end
+  return ψ
+end
+
+function ITensorNetwork(is::IndsNetwork, initstate::Function)
+  ψ = ITensorNetwork(is)
+  for v in vertices(ψ)
+    ψ[v] = state(initstate(v), only(is[v]))
+  end
+  ψ = insert_links(ψ, edges(is))
+  return ψ
 end

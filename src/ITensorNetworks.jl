@@ -5,10 +5,9 @@ using Dictionaries
 using Graphs
 using ITensors
 using ITensors.ITensorVisualizationCore
-using KaHyPar # for graph partitioning
-using Metis # for graph partitioning
 using MultiDimDictionaries
 using NamedGraphs
+using Requires
 using Suppressor
 
 # TODO: export from ITensors
@@ -88,6 +87,8 @@ end
 # TODO: DELETE
 #vertex_tag(v::CartesianKey) = vertex_tag(Tuple(v))
 
+edge_tag(e::Pair) = edge_tag(NamedDimEdge(e))
+
 function edge_tag(e)
   return "$(vertex_tag(src(e)))↔$(vertex_tag(dst(e)))"
 end
@@ -114,4 +115,10 @@ include("itensornetwork.jl")
 include(joinpath("treetensornetwork", "treetensornetwork.jl"))
 
 include("exports.jl")
+
+function __init__()
+  @require KaHyPar="2a6221f6-aa48-11e9-3542-2d9e0ef01880" include(joinpath("requires", "kahypar.jl"))
+  @require Metis="2679e427-3c69-5b7f-982b-ece356f1e94b" include(joinpath("requires", "metis.jl"))
+end
+
 end
