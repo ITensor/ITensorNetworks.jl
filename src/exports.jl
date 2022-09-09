@@ -17,7 +17,8 @@ export grid,
   bfs_tree,
   dfs_tree,
   edgetype,
-  is_directed
+  is_directed,
+  rem_vertex!
 
 #
 # NamedGraphs
