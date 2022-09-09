@@ -1,5 +1,6 @@
 using ITensors
 using ITensorNetworks
+using Dictionaries
 using Graphs
 using NamedGraphs
 using ITensors.ContractionSequenceOptimization

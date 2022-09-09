@@ -46,8 +46,9 @@ s = siteinds("S=1/2", g)
 E = expect(ℋ, ψ_peps; cutoff=1e-6, maxdim=χ)
 @show E
 
-β = 10.0
-Δβ = 0.1
+β = 1.0
+Δβ = 0.01
+
 ψ_peps = tebd(ℋ, ψ_peps; β, Δβ, cutoff=1e-6, maxdim=χ)
 
 E_peps = expect(ℋ, ψ_peps; cutoff=1e-6, maxdim=χ)
