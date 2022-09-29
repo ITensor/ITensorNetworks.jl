@@ -116,7 +116,7 @@ function ITensors.apply(o⃗::Vector{ITensor}, ψ::ITensorNetwork; cutoff, maxdi
 end
 
 function flattened_inner_network(ϕ::ITensorNetwork, ψ::ITensorNetwork)
-  tn = inner(ϕ, sim(dag(ψ), sites=[]))
+  tn = inner(ϕ, sim(ψ, sites=[]))
   for v in vertices(ψ)
     tn = ITensors.contract(tn, (2, v...) => (1, v...))
   end
@@ -124,7 +124,7 @@ function flattened_inner_network(ϕ::ITensorNetwork, ψ::ITensorNetwork)
 end
 
 function contract_inner(ϕ::ITensorNetwork, ψ::ITensorNetwork; sequence=nothing)
-  tn = inner(ϕ, sim(dag(ψ), sites=[]))
+  tn = inner(ϕ, sim(ψ, sites=[]))
   # TODO: convert to an IndsNetwork and compute the contraction sequence
   for v in vertices(ψ)
     tn = ITensors.contract(tn, (2, v...) => (1, v...))
