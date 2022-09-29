@@ -20,7 +20,6 @@ function GBP_construct_initial_mts(g::NamedDimGraph, psi::ITensorNetwork, nparti
     #Assign each subgraph to a vertex
     ps = ITensorNetworks.partition(g, npartitions, configuration = :edge_cut, imbalance = 0.0)
     subgraphs = [[v for v in vertices(psi) if ps[v] == s] for s = 1:(npartitions)]
-    display(subgraphs)
 
     no_subgraphs = length(subgraphs)
     #Define the subgraph adjacency matrix
@@ -177,6 +176,17 @@ function find_subgraph(v::Tuple, subgraphs)
             end
         end
     end
+end
+
+function find_edge(edges::Vector{NamedDimEdge{Tuple}}, source::Tuple, dest::Tuple)
+    for i = 1:length(edges)
+        if(src(edges[i]) == source && dst(edges[i]) == dest)
+            return i
+        elseif(dst(edges[i]) == source && src(edges[i]) == dest)
+            return -i
+        end
+    end
+    return 0
 end
 
 function graph_tensor_network(s, g::NamedDimGraph, beta::Float64; link_space)
