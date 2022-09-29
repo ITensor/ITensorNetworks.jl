@@ -9,7 +9,7 @@ using LinearAlgebra
 using KaHyPar
 using Metis
 
-
+#Construct the initial Message Tensors for an ITensor Network, partitioning into npartition subgraphs
 function GBP_construct_initial_mts(g::NamedDimGraph, psi::ITensorNetwork, npartitions::Int64)
 
     mts = Dict{Tuple, ITensor}()
@@ -71,9 +71,11 @@ function GBP_construct_initial_mts(g::NamedDimGraph, psi::ITensorNetwork, nparti
     end
 
 
+    #Returns a list of the vertices in each subgraphs, a list of the connecting subgraphes to each subgraph, and the message tensors
     return subgraphs, subgraphconns, mts
 end
 
+#DO a single update of a message tensor using the current subgraph and the incoming mts
 function GBP_update_mt(g::NamedDimGraph, psi::ITensorNetwork, subgraph::Vector, mts::Vector{ITensor}, s::IndsNetwork)
     Contract_list = ITensor[]
 
@@ -97,6 +99,7 @@ function GBP_update_mt(g::NamedDimGraph, psi::ITensorNetwork, subgraph::Vector, 
     return M
 end
 
+#Do an update of all message tensors for a given ITensornetwork
 function GBP_update_all_mts(g::NamedDimGraph, psi::ITensorNetwork, s::IndsNetwork, mts::Dict{Tuple, ITensor}, subgraphs, subgraphconns = Dict{Int, Vector{Int}})
     newmts =Dict{Tuple, ITensor}()
 
@@ -116,6 +119,7 @@ function GBP_update_all_mts(g::NamedDimGraph, psi::ITensorNetwork, s::IndsNetwor
     return newmts
 end
 
+#Form the message tensors for a given ITensor Network, using niters iterations and partitioning into npartitions subgraphs
 function GBP_form_mts(g::NamedDimGraph, psi::ITensorNetwork, s::IndsNetwork,  niters::Int64, npartitions::Int64)
 
     subgraphs, subgraphconns, mts = GBP_construct_initial_mts(g, psi, npartitions)
@@ -127,6 +131,7 @@ function GBP_form_mts(g::NamedDimGraph, psi::ITensorNetwork, s::IndsNetwork,  ni
     return subgraphs, subgraphconns, mts
 end
 
+#Calculate a single site expec value from an ITensorNetwork using its mts
 function GBP_get_single_site_expec(g::NamedDimGraph, psi::ITensorNetwork, s::IndsNetwork, mts::Dict{Tuple, ITensor}, subgraphs, subgraphconns::Dict{Int, Vector{Int}}, op::String)
     out = Dict{Tuple, Float64}()
     no_subgraphs = length(subgraphs)
@@ -168,16 +173,18 @@ function GBP_get_single_site_expec(g::NamedDimGraph, psi::ITensorNetwork, s::Ind
     return out
 end
 
-function find_subgraph(v::Tuple, subgraphs)
+#Find the subgraph in the list of subgraphs which contains the vertex v 
+function find_subgraph(vertex::Tuple, subgraphs)
     for i = 1:length(subgraphs[:,1])
         for s in subgraphs[i, :][1]
-            if(s == v)
+            if(s == vertex)
                 return i
             end
         end
     end
 end
 
+#Find the edge in the list of edges which goes from source to dest (use the negative index if the edge is reversed)
 function find_edge(edges::Vector{NamedDimEdge{Tuple}}, source::Tuple, dest::Tuple)
     for i = 1:length(edges)
         if(src(edges[i]) == source && dst(edges[i]) == dest)
@@ -187,27 +194,4 @@ function find_edge(edges::Vector{NamedDimEdge{Tuple}}, source::Tuple, dest::Tupl
         end
     end
     return 0
-end
-
-function graph_tensor_network(s, g::NamedDimGraph, beta::Float64; link_space)
-    ψ = ITensorNetwork(s; link_space)
-    J = 1
-    f1 = 0.5*sqrt(exp(-J*beta*0.5)*(-1+exp(J*beta)))
-    f2 = 0.5*sqrt(exp(-J*beta*0.5)*(1+exp(J*beta)))
-    A = [(f1 + f2)  (-f1 + f2); (-f1 + f2) (f1 + f2)]
-    for v in vertices(ψ)
-      is = inds(ψ[v])
-      ψ[v] = delta(is)
-      indices = inds(ψ[v])
-      for i in indices
-        if(!hastags(i,"Site"))
-            Atens = ITensor(A, i, i')
-            ψ[v] = ψ[v]*Atens
-            ψ[v] = noprime!(ψ[v])
-        end
-      end
-
-    end
-  
-    return ψ
 end

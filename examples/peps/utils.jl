@@ -215,6 +215,7 @@ function tebd(ℋ::OpSum, ψ::ITensorNetwork; β, Δβ, maxdim, cutoff)
   return ψ
 end
 
+#Build Tensor Network corresponding to the partition function of classical Ising at inv temp beta
 function graph_tensor_network(s, g::NamedDimGraph, beta::Float64; link_space)
   ψ = ITensorNetwork(s; link_space)
   J = 1
