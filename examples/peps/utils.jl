@@ -214,3 +214,26 @@ function tebd(ℋ::OpSum, ψ::ITensorNetwork; β, Δβ, maxdim, cutoff)
   end
   return ψ
 end
+
+function graph_tensor_network(s, g::NamedDimGraph, beta::Float64; link_space)
+  ψ = ITensorNetwork(s; link_space)
+  J = 1
+  f1 = 0.5*sqrt(exp(-J*beta*0.5)*(-1+exp(J*beta)))
+  f2 = 0.5*sqrt(exp(-J*beta*0.5)*(1+exp(J*beta)))
+  A = [(f1 + f2)  (-f1 + f2); (-f1 + f2) (f1 + f2)]
+  for v in vertices(ψ)
+    is = inds(ψ[v])
+    ψ[v] = delta(is)
+    indices = inds(ψ[v])
+    for i in indices
+      if(!hastags(i,"Site"))
+          Atens = ITensor(A, i, i')
+          ψ[v] = ψ[v]*Atens
+          ψ[v] = noprime!(ψ[v])
+      end
+    end
+
+  end
+
+  return ψ
+end
