@@ -40,7 +40,7 @@ szapprox = GBP_get_single_site_expec(g, ψ, s, mts, subgraphs, subgraphconns, "S
 approxszs = Vector{Float64}([szapprox[v] for v in vertices(ψ)])
 err = abs.(approxszs - exactszs)
 
-println("2 Site Subgraphs, Average Error (In Terms of Abs Diff) on Local values of Sz is "*string(sum(err)/n))
+println("Using 2 Site Subgraphs, Average Error (In Terms of Abs Diff) on Local values of Sz is "*string(sum(err)/n))
 
 
 n1 = 4
