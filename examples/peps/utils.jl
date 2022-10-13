@@ -238,3 +238,58 @@ function graph_tensor_network(s, g::NamedDimGraph, beta::Float64; link_space)
 
   return ψ
 end
+
+function IdentityITensorNetwork(g::NamedDimGraph; link_space)
+  ψ = ITensorNetwork(g; link_space=link_space)
+
+  for v in vertices(ψ)
+      is = inds(ψ[v])
+      ψ[v] = delta(is)
+  end
+  return ψ
+end
+
+#H = -sum{ij \in Edge Set}sigmaz_{i}sigmaz_{j}
+function PartitionFunctionITensorNetwork(g::NamedDimGraph, beta::Float64)
+  ψ = IdentityITensorNetwork(g; link_space = 2)
+  J = 1
+  f1 = 0.5*sqrt(exp(-J*2*beta*0.5)*(-1+exp(J*2*beta)))
+  f2 = 0.5*sqrt(exp(-J*2*beta*0.5)*(1+exp(J*2*beta)))
+  q = [(f1 + f2)  (-f1 + f2); (-f1 + f2) (f1 + f2)]
+  for v in vertices(ψ)
+    is = inds(ψ[v])
+    indices = inds(ψ[v])
+    for i in indices
+        qtens = ITensor(q, i, i')
+        ψ[v] = ψ[v]*qtens
+        ψ[v] = noprime!(ψ[v])
+    end
+
+  end
+
+  return ψ
+end
+
+#H = -sum{ij \in Edge Set}sigmaz_{i}sigmaz_{j}
+function PartitionFunctionITensorNetworkSzSz(g::NamedDimGraph, beta::Float64, v1,v2)
+  ψ = IdentityITensorNetwork(g; link_space = 2)
+  ψ[v1] = ITensors.diagITensor([1, -1], inds(ψ[v1]))
+  ψ[v2] = ITensors.diagITensor([1, -1], inds(ψ[v2]))
+
+  J = 1
+  f1 = 0.5*sqrt(exp(-J*2*beta*0.5)*(-1+exp(J*2*beta)))
+  f2 = 0.5*sqrt(exp(-J*2*beta*0.5)*(1+exp(J*2*beta)))
+  q = [(f1 + f2)  (-f1 + f2); (-f1 + f2) (f1 + f2)]
+  for v in vertices(ψ)
+    is = inds(ψ[v])
+    indices = inds(ψ[v])
+    for i in indices
+        qtens = ITensor(q, i, i')
+        ψ[v] = ψ[v]*qtens
+        ψ[v] = noprime!(ψ[v])
+    end
+
+  end
+
+  return ψ
+end

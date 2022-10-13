@@ -84,11 +84,11 @@ function GBP_update_mt(g::NamedDimGraph, psi::ITensorNetwork, subgraph::Vector, 
     end
 
     for v in subgraph
-        sv = s[v][1]
         psiv = psi[v]
+        push!(Contract_list, psiv)
+        sv = s[v][1]
         psidagv = prime(conj(psiv))
         noprime!(psidagv; tags = tags(sv))
-        push!(Contract_list, psiv)
         push!(Contract_list, psidagv)
     end
 
@@ -169,6 +169,102 @@ function GBP_get_single_site_expec(g::NamedDimGraph, psi::ITensorNetwork, s::Ind
         out[v] = numerator/denominator
 
     end
+
+    return out
+end
+
+function GBP_get_two_site_expec(g::NamedDimGraph, psi::ITensorNetwork, s::IndsNetwork, mts::Dict{Tuple, ITensor}, subgraphs, subgraphconns::Dict{Int, Vector{Int}}, op1::String, op2::String, v1 ,v2)
+    subgraph1 = find_subgraph(v1, subgraphs)
+    subgraph2 = find_subgraph(v2, subgraphs)
+    num_tensors_to_contract = ITensor[]
+    denom_tensors_to_contract = ITensor[]
+
+    if(subgraph1 == subgraph2)
+        connected_subgraphs = subgraphconns[subgraph1]
+        for k in connected_subgraphs
+                push!(num_tensors_to_contract, mts[(k, subgraph1)])
+                push!(denom_tensors_to_contract, mts[(k, subgraph1)])
+        end
+
+        for vertex in subgraphs[subgraph1]
+            sv = s[vertex][1]
+            psiv = psi[vertex]
+            psidagv = prime(conj(psiv))
+            if(vertex != v1 && vertex != v2)
+                noprime!(psidagv; tags = tags(sv))
+                push!(num_tensors_to_contract, psiv, psidagv)
+            elseif(vertex == v1)
+                noprime!(psidagv; tags = tags(sv))
+                O = ITensor(Op(op1, vertex), s)
+                push!(num_tensors_to_contract, noprime!(psiv*O), psidagv)
+            else
+                noprime!(psidagv; tags = tags(sv))
+                O = ITensor(Op(op2, vertex), s)
+                push!(num_tensors_to_contract, noprime!(psiv*O), psidagv)
+            end
+            push!(denom_tensors_to_contract, psiv, psidagv)
+        end
+    else
+        #IMPLEMENT ERROR MESSAGE IF THE SUBGRAPHS AREN'T ADJACENT!!!
+        connected_subgraphs1 = subgraphconns[subgraph1]
+        for k in connected_subgraphs1
+            if(k != subgraph2)
+                push!(num_tensors_to_contract, mts[(k, subgraph1)])
+                push!(denom_tensors_to_contract, mts[(k, subgraph1)])
+            end
+        end
+        
+        connected_subgraphs2 = subgraphconns[subgraph2]
+        for k in connected_subgraphs2
+            if(k != subgraph1)
+                push!(num_tensors_to_contract, mts[(k, subgraph2)])
+                push!(denom_tensors_to_contract, mts[(k, subgraph2)])
+            end
+        end
+
+
+        for vertex in subgraphs[subgraph1]
+            if(vertex != v1)
+                sv = s[vertex][1]
+                psiv = psi[vertex]
+                psidagv = prime(conj(psiv))
+                noprime!(psidagv; tags = tags(sv))
+                push!(num_tensors_to_contract, psiv, psidagv)
+                push!(denom_tensors_to_contract, psiv, psidagv)
+            else
+                sv = s[vertex][1]
+                psiv = psi[vertex]
+                psidagv = prime(conj(psiv))
+                noprime!(psidagv; tags = tags(sv))
+                O = ITensor(Op(op1, vertex), s)
+                push!(num_tensors_to_contract, noprime!(psiv*O), psidagv)
+                push!(denom_tensors_to_contract, psiv, psidagv)
+            end
+        end
+
+        for vertex in subgraphs[subgraph2]
+            if(vertex != v2)
+                sv = s[vertex][1]
+                psiv = psi[vertex]
+                psidagv = prime(conj(psiv))
+                noprime!(psidagv; tags = tags(sv))
+                push!(num_tensors_to_contract, psiv, psidagv)
+                push!(denom_tensors_to_contract, psiv, psidagv)
+            else
+                sv = s[vertex][1]
+                psiv = psi[vertex]
+                psidagv = prime(conj(psiv))
+                noprime!(psidagv; tags = tags(sv))
+                O = ITensor(Op(op2, vertex), s)
+                push!(num_tensors_to_contract, noprime!(psiv*O), psidagv)
+                push!(denom_tensors_to_contract, psiv, psidagv)
+            end
+        end
+    end
+
+    numerator = ITensors.contract(num_tensors_to_contract)[1]
+    denominator = ITensors.contract(denom_tensors_to_contract)[1]
+    out = numerator/denominator
 
     return out
 end
