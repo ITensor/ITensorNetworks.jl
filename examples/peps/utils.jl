@@ -137,7 +137,7 @@ end
 
 norm2(ψ::ITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)
 
-function ITensors.expect(op::String, ψ::ITensorNetwork; cutoff, maxdim)
+function ITensors.expect(op::String, ψ::ITensorNetwork, s::IndsNetwork; cutoff, maxdim)
   res = Dictionary(vertices(ψ), Vector{Float64}(undef, nv(ψ)))
   sequence = optimal_contraction_sequence(flattened_inner_network(ψ, ψ))
   normψ² = norm2(ψ; sequence)

@@ -9,7 +9,10 @@ using LinearAlgebra
 using KaHyPar
 using Metis
 
+#Belief Propagation but keeping top and bottom separate in the hope for efficiency
+
 #Construct the initial Message Tensors for an ITensor Network, partitioning into npartition subgraphs
+#Store only the `top` part of the message tensor, the bottom part is just the conjugate
 function GBP_construct_initial_mts(g::NamedDimGraph, psi::ITensorNetwork, npartitions::Int64)
 
     mts = Dict{Tuple, ITensor}()
@@ -32,34 +35,33 @@ function GBP_construct_initial_mts(g::NamedDimGraph, psi::ITensorNetwork, nparti
             sgraph2 = subgraphs[j]
 
             edge_inds = []
+            site_indsf = []
+            site_indsb = []
             for v1 in sgraph1
+                sind = s[v1]
+                push!(site_indsf, sind)
                 for v2 in sgraph2
                     ind = find_edge(es, v1, v2)
                     if(ind != 0)
                         edge = es[abs(ind)]
                         edge_ind = commoninds(psi, edge)[1]
-                        push!(edge_inds, edge_ind, edge_ind')
+                        push!(edge_inds, edge_ind)
                     end
+                    
                 end
             end
+
+
             if(!isempty(edge_inds))
                 subgraphadjmat[i, j] = 1
                 subgraphadjmat[j, i] = 1
-                X1 = randomITensor(edge_inds)
-                X2 = prime(dag(X1))
-                fM12 = X1*X2
-                normalize!(fM12)
-                swapprime!(fM12, 2=>1)
+                fM12 = normalize!(randomITensor(edge_inds))
                 push!(forwardmts, fM12)
                 mts[(i,j)] = fM12
 
-                X1 = randomITensor(edge_inds)
-                X2 = prime(dag(X1))
-                bM12 = X1*X2
-                normalize!(bM12)
-                swapprime!(bM12, 2=>1)
-                push!(backwardmts, bM12)
-                mts[(j,i)] = bM12
+                bM12 = normalize!(randomITensor(edge_inds))
+                push!(forwardmts, bM12)
+                mts[(i,j)] = bM12
 
             end
 
