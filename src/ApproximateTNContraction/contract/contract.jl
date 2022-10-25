@@ -669,11 +669,8 @@ function get_tn_cache_sub_info(
       push!(new_igs, nothing)
     else
       binary_tree = Vector{Vector}(binary_tree)
-      @info "binary_tree is", binary_tree, typeof(binary_tree)
       nodes = topo_sort(binary_tree; type=Vector{<:Vector})
-      @info "nodes is", nodes
       sub_tn = [tn_tree[n] for n in nodes]
-      @info "sub_tn is", sub_tn
       sub_tn_tree = Dict([n => tn_tree[n] for n in nodes]...)
       index_leaves = vectorize(binary_tree)
       new_indices = setdiff(noncommoninds(sub_tn...), index_leaves)
@@ -694,9 +691,6 @@ function get_tn_cache_info(
   tn_tree_2::Dict{Vector,OrthogonalITensor},
   cache_binary_trees::Vector,
 )
-  @info "tn_tree_1 is", tn_tree_1
-  @info "tn_tree_2 is", tn_tree_2
-  @info "cache_binary_trees is", cache_binary_trees
   @timeit timer "get_tn_cache_info" begin
     cached_tn_tree1, uncached_tn1, new_igs_1 = get_tn_cache_sub_info(
       tn_tree_1, cache_binary_trees
@@ -790,8 +784,6 @@ function approximate_contract(ctree::Vector; kwargs...)
     cache_binary_tree_right = line_to_tree([
       ig_to_ig_tree[ig].data for ig in cache_igs_right
     ])
-    @info "cache_binary_tree_left has type", typeof(cache_binary_tree_left)
-    @info "cache_binary_tree_right has type", typeof(cache_binary_tree_right)
     cached_tn_tree, uncached_tn, new_ig_left, new_ig_right = get_tn_cache_info(
       ctree_to_tn_tree[c[1]],
       ctree_to_tn_tree[c[2]],
