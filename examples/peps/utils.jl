@@ -10,7 +10,9 @@ function cartesian_to_linear(dims::Tuple)
 end
 
 NamedGraphs.NamedDimGraph(vertices::Vector) = NamedDimGraph(tuple.(vertices))
-NamedGraphs.NamedDimGraph(vertices::Vector{<:Tuple}) = NamedDimGraph(Graph(length(vertices)); vertices)
+function NamedGraphs.NamedDimGraph(vertices::Vector{<:Tuple})
+  return NamedDimGraph(Graph(length(vertices)); vertices)
+end
 
 function rename_vertices(e::AbstractEdge, name_map::Dictionary)
   return typeof(e)(name_map[src(e)], name_map[dst(e)])
@@ -92,7 +94,9 @@ function ITensors.apply(o::ITensor, ψ::ITensorNetwork; cutoff, maxdim, normaliz
       error("Vertices where the gates are being applied must be neighbors for now.")
     end
     oψᵥ = apply(o, ψ[v⃗[1]] * ψ[v⃗[2]])
-    ψᵥ₁, ψᵥ₂ = factorize(oψᵥ, inds(ψ[v⃗[1]]); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e))
+    ψᵥ₁, ψᵥ₂ = factorize(
+      oψᵥ, inds(ψ[v⃗[1]]); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e)
+    )
     if normalize
       ψᵥ₁ ./= norm(ψᵥ₁)
       ψᵥ₂ ./= norm(ψᵥ₂)
@@ -107,7 +111,9 @@ function ITensors.apply(o::ITensor, ψ::ITensorNetwork; cutoff, maxdim, normaliz
   return ψ
 end
 
-function ITensors.apply(o⃗::Vector{ITensor}, ψ::ITensorNetwork; cutoff, maxdim, normalize=false)
+function ITensors.apply(
+  o⃗::Vector{ITensor}, ψ::ITensorNetwork; cutoff, maxdim, normalize=false
+)
   o⃗ψ = ψ
   for oᵢ in o⃗
     o⃗ψ = apply(oᵢ, o⃗ψ; cutoff, maxdim, normalize)

@@ -72,4 +72,9 @@ using Test
   ## inner_res = contract(inner_tn; sequence)[]
 
   ## @test inner_res isa Float64
+
+  for filename in ["approximate_tn_contraction/runtests.jl"]
+    println("Running $filename")
+    include(filename)
+  end
 end
