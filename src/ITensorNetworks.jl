@@ -3,15 +3,18 @@ module ITensorNetworks
 using DataGraphs
 using Dictionaries
 using Graphs
+using IsApprox
 using ITensors
 using ITensors.ITensorVisualizationCore
 using MultiDimDictionaries
 using NamedGraphs
 using Requires
+using SparseArrayKit
+using StaticArrays
 using Suppressor
 
 # TODO: export from ITensors
-using ITensors: commontags
+using ITensors: commontags, OneITensor
 
 using MultiDimDictionaries: IndexType, SliceIndex
 using NamedGraphs:
@@ -112,7 +115,16 @@ include("indsnetwork.jl")
 include("sitetype.jl")
 include("abstractitensornetwork.jl")
 include("itensornetwork.jl")
-include(joinpath("treetensornetwork", "treetensornetwork.jl"))
+include(joinpath("treetensornetwork", "abstracttreetensornetwork.jl"))
+include(joinpath("treetensornetwork", "ttns.jl"))
+include(joinpath("treetensornetwork", "ttno.jl"))
+include(joinpath("treetensornetwork", "opsum_to_ttno.jl"))
+include(joinpath("treetensornetwork", "abstractprojttno.jl"))
+include(joinpath("treetensornetwork", "projttno.jl"))
+include(joinpath("treetensornetwork", "projttnosum.jl"))
+include(joinpath("graphs", "abstractgraph.jl"))
+include(joinpath("graphs", "namedgraphs.jl"))
+include("utility.jl")
 
 include("exports.jl")
 

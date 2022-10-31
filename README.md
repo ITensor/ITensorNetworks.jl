@@ -2,11 +2,13 @@
 
 A package to provide general network data structures and tools to use with ITensors.jl.
 
-
+This particular branch contains a draft of the extensions needed to implement sweeping
+algorithms for tree tensor networks.
 
 ## Installation
 
-This package relies on a few unregistered packages. To install, you will need to do:
+This package relies on a few unregistered packages. To install this version, you will need
+to do:
 
 ```julia
 julia> using Pkg
@@ -17,7 +19,7 @@ julia> Pkg.add(url="https://github.com/mtfishman/NamedGraphs.jl")
 
 julia> Pkg.add(url="https://github.com/mtfishman/DataGraphs.jl")
 
-julia> Pkg.add(url="https://github.com/mtfishman/ITensorNetworks.jl")
+julia> Pkg.add(url="https://github.com/leburgel/ITensorNetworks.jl#tree_sweeping")
 ```
 
 

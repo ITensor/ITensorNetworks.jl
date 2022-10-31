@@ -11,6 +11,8 @@ is_directed(::Type{<:AbstractIndsNetwork}) = false
 vertex_data(graph::AbstractIndsNetwork, args...) = vertex_data(data_graph(graph), args...)
 edge_data(graph::AbstractIndsNetwork, args...) = edge_data(data_graph(graph), args...)
 
+to_vertex(tn::AbstractIndsNetwork, args...) = to_vertex(underlying_graph(tn), args...)
+
 # 
 # Index access
 # 

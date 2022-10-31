@@ -18,7 +18,11 @@ export grid,
   dfs_tree,
   edgetype,
   is_directed,
-  rem_vertex!
+  rem_vertex!,
+  post_order_dfs_vertices,
+  edge_path,
+  vertex_path,
+  num_neighbors
 
 #
 # NamedGraphs
@@ -36,7 +40,8 @@ export NamedDimGraph,
   is_leaf,
   incident_edges,
   comb_tree,
-  named_comb_tree
+  named_comb_tree,
+  rename_vertices
 
 #
 # DataGraphs
@@ -55,23 +60,37 @@ export optimal_contraction_sequence
 #
 
 # indsnetwork.jl
-export IndsNetwork
+export IndsNetwork, merge
 
 # itensornetwork.jl
 export AbstractITensorNetwork,
   ITensorNetwork,
   ⊗,
   itensors,
-  tensor_product,
-  TreeTensorNetworkState,
-  TTNS,
+  reverse_bfs_edges,
   data_graph,
   inner_network,
   norm_network,
-  reverse_bfs_edges
+  default_root_vertex,
+  ortho_center,
+  set_ortho_center!,
+  factorize!,
+  contract!,
+  TreeTensorNetworkState,
+  TTNS,
+  randomTTNS,
+  productTTNS,
+  TreeTensorNetworkOperator,
+  TTNO,
+  ProjTTNO,
+  ProjTTNOSum,
+  finite_state_machine
 
 # lattices.jl
 export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
 
 # partition.jl
 export partition
+
+# utility.jl
+export relabel_sites

@@ -14,16 +14,27 @@ import .DataGraphs: underlying_graph, vertex_data, edge_data
 
 import Graphs: Graph, is_directed
 
-import LinearAlgebra: svd, factorize, qr
+import LinearAlgebra: svd, factorize, qr, normalize, normalize!
 
-import NamedGraphs: vertex_to_parent_vertex, to_vertex
+import NamedGraphs: vertex_to_parent_vertex, to_vertex, incident_edges
 
 import ITensors:
   # contraction
   contract,
+  contract!,
   orthogonalize,
+  orthogonalize!,
+  isortho,
   inner,
+  loginner,
   norm,
+  lognorm,
+  expect,
+  # truncation
+  truncate!,
+  truncate,
+  replacebond!,
+  replacebond,
   # site and link indices
   siteind,
   siteinds,
@@ -45,7 +56,27 @@ import ITensors:
   settags,
   tags,
   # dag
-  dag
+  dag,
+  # permute
+  permute,
+  #commoninds
+  check_hascommoninds,
+  hascommoninds,
+  # linkdims
+  linkdim,
+  linkdims,
+  maxlinkdim,
+  # projected operators
+  position!,
+  set_nsite!,
+  product,
+  nsite,
+  # promotion and conversion
+  promote_itensor_eltype,
+  scalartype,
+  # promotion and conversion
+  promote_itensor_eltype,
+  scalartype
 
 import ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
 
