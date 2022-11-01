@@ -4,8 +4,6 @@ using ITensorUnicodePlots
 using UnicodePlots
 using Random
 
-# include("utils.jl")
-
 Random.seed!(1234)
 
 ITensors.disable_warn_order()
