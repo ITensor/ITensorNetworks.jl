@@ -283,5 +283,5 @@ Then finds the contraction order inside each group with the greedy search algori
 * [Simulating the Sycamore quantum supremacy circuits](https://arxiv.org/abs/2103.03074)
 """
 function contraction_sequence(alg::OMEinsumContractionOrders.CodeOptimizer, tensors::ITensorList)
-  return optimize_contraction(tensors; optimizer=alg)
+  return optimize_contraction_sequence(tensors; optimizer=alg)
 end

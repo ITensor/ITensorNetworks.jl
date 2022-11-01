@@ -8,7 +8,7 @@ Random.seed!(1234)
 
 ITensors.disable_warn_order()
 
-dims = (2, 2)
+dims = (2, 3)
 g = named_grid(dims)
 s = siteinds("S=1/2", g)
 
@@ -22,19 +22,19 @@ tn = norm_network(ψ)
 # inner_sequence = reduce((x, y) -> [x, y], contract_edges)
 
 println("optimal")
-# seq_optimal = @time contraction_sequence(tn; alg="optimal")
+seq_optimal = @time contraction_sequence(tn; alg="optimal")
 
 using OMEinsumContractionOrders
 
 println("greedy")
-seq_greedy = @time contraction_sequence(Vector{ITensor}(tn); alg="greedy")
+seq_greedy = @time contraction_sequence(tn; alg="greedy")
 
 println("tree_sa")
-# seq_tree_sa = @time contraction_sequence(Vector{ITensor}(tn); alg="tree_sa")
+seq_tree_sa = @time contraction_sequence(tn; alg="tree_sa")
 
 println("sa_bipartite")
-seq_sa_bipartite = @time contraction_sequence(Vector{ITensor}(tn); alg="sa_bipartite")
+seq_sa_bipartite = @time contraction_sequence(tn; alg="sa_bipartite")
 
 println("kahypar_bipartite")
 using KaHyPar
-seq_kahypar_bipartite = @time contraction_sequence(Vector{ITensor}(tn); alg="kahypar_bipartite", sc_target=200)
+seq_kahypar_bipartite = @time contraction_sequence(tn; alg="kahypar_bipartite", sc_target=200)
