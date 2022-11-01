@@ -32,6 +32,7 @@ import ITensors:
   uniqueinds,
   commoninds,
   replaceinds,
+  hascommoninds,
   # priming and tagging
   adjoint,
   sim,

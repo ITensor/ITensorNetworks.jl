@@ -4,15 +4,18 @@ using DataGraphs
 using Dictionaries
 using Graphs
 using ITensors
+using ITensors.ContractionSequenceOptimization
 using ITensors.ITensorVisualizationCore
 using MultiDimDictionaries
 using NamedGraphs
 using Requires
+using SplitApplyCombine
 using Suppressor
 
 # TODO: export from ITensors
 using ITensors: commontags
 
+using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
 using MultiDimDictionaries: IndexType, SliceIndex
 using NamedGraphs:
   AbstractNamedGraph,
@@ -105,12 +108,20 @@ const UniformDataGraph{D} = NamedDimDataGraph{
   D,D,Tuple,NamedDimEdge{Tuple},NamedDimGraph{Tuple}
 }
 
+include("utils.jl")
+include("namedgraphs.jl")
+include("itensors.jl")
 include("partition.jl")
 include("lattices.jl")
 include("abstractindsnetwork.jl")
 include("indsnetwork.jl")
+include("opsum.jl") # Required IndsNetwork
 include("sitetype.jl")
 include("abstractitensornetwork.jl")
+include("apply.jl")
+include("expect.jl")
+include("models.jl")
+include("tebd.jl")
 include("itensornetwork.jl")
 include(joinpath("treetensornetwork", "treetensornetwork.jl"))
 

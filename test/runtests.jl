@@ -4,6 +4,8 @@ using ITensorUnicodePlots
 using Random
 using Test
 
+include("test_tebd.jl")
+
 @testset "ITensorNetworks.jl" begin
   @testset "Basics" begin
     Random.seed!(1234)

@@ -4,16 +4,20 @@ using ITensorUnicodePlots
 using UnicodePlots
 using Random
 
-include("utils.jl")
-
 Random.seed!(1234)
+
+ITensors.disable_warn_order()
 
 dims = (8, 8)
 n = prod(dims)
 g = named_grid(dims)
-h = 0.5
 
+h = 2.0
+
+@show h
 @show dims
+
+s = siteinds("S=1/2", g)
 
 #
 # DMRG comparison
@@ -21,13 +25,13 @@ h = 0.5
 
 g_dmrg = rename_vertices(g, cartesian_to_linear(dims))
 ℋ_dmrg = ising(g_dmrg; h)
-s_dmrg = siteinds("S=1/2", g_dmrg)
+s_dmrg = [only(s[v]) for v in vertices(s)]
 H_dmrg = MPO(ℋ_dmrg, s_dmrg)
-ψ_dmrg = MPS(s_dmrg, j -> "↑")
-@show inner(ψ_dmrg', H_dmrg, ψ_dmrg)
-E_dmrg, ψ0_dmrg = dmrg(H_dmrg, ψ_dmrg; nsweeps=4, maxdim=10, cutoff=1e-5)
+ψ_dmrg_init = MPS(s_dmrg, j -> "↑")
+@show inner(ψ_dmrg_init', H_dmrg, ψ_dmrg_init)
+E_dmrg, ψ_dmrg = dmrg(H_dmrg, ψ_dmrg_init; nsweeps=20, maxdim=[fill(10, 10); 20], cutoff=1e-8)
 @show E_dmrg
-Z_dmrg = reshape(expect(ψ0_dmrg, "Z"), dims)
+Z_dmrg = reshape(expect(ψ_dmrg, "Z"), dims)
 
 display(Z_dmrg)
 display(heatmap(Z_dmrg))
@@ -36,26 +40,42 @@ display(heatmap(Z_dmrg))
 # PEPS TEBD optimization
 #
 
-s = siteinds("S=1/2", g)
-
 ℋ = ising(g; h)
 
-ψ_peps = ITensorNetwork(s, v -> "↑")
+χ = 2
 
-χ = 4
-E = expect(ℋ, ψ_peps; cutoff=1e-6, maxdim=χ)
-@show E
+# Enable orthogonalizing the PEPS using a local gauge transformation
+ortho = true
+
+ψ_init = ITensorNetwork(s, v -> "↑")
 
 β = 1.0
-Δβ = 0.01
+Δβ = 0.1
 
-ψ_peps = tebd(ℋ, ψ_peps; β, Δβ, cutoff=1e-6, maxdim=χ)
+println("maxdim = $χ")
+@show β, Δβ
+@show ortho
 
-E_peps = expect(ℋ, ψ_peps; cutoff=1e-6, maxdim=χ)
-@show E_peps
+# Contraction sequence for exactly computing expectation values
+contract_edges = map(t -> (1, t...), collect(keys(cartesian_to_linear(dims))))
+inner_sequence = reduce((x, y) -> [x, y], contract_edges)
 
-Z_peps_dict = expect("Z", ψ_peps; cutoff=1e-6, maxdim=χ)
-Z_peps = [Z_peps_dict[Tuple(I)] for I in CartesianIndices(dims)]
+println("\nFirst run TEBD without orthogonalization")
+ψ = @time tebd(group_terms(ℋ, g), ψ_init; β, Δβ, cutoff=1e-8, maxdim=χ, ortho=false, print_frequency=1)
 
-display(Z_peps)
-display(heatmap(Z_peps))
+println("\nMeasure energy expectation value")
+E = @time expect(ℋ, ψ; sequence=inner_sequence)
+@show E
+
+println("\nThen run TEBD with orthogonalization (more accurate)")
+ψ = @time tebd(group_terms(ℋ, g), ψ_init; β, Δβ, cutoff=1e-8, maxdim=χ, ortho, print_frequency=1)
+
+println("\nMeasure energy expectation value")
+E = @time expect(ℋ, ψ; sequence=inner_sequence)
+@show E
+
+println("\nMeasure magnetization")
+Z_dict = @time expect("Z", ψ; sequence=inner_sequence)
+Z = [Z_dict[Tuple(I)] for I in CartesianIndices(dims)]
+display(Z)
+display(heatmap(Z))

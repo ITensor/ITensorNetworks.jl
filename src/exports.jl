@@ -68,7 +68,17 @@ export AbstractITensorNetwork,
   data_graph,
   inner_network,
   norm_network,
-  reverse_bfs_edges
+  reverse_bfs_edges,
+  # utils.jl
+  cartesian_to_linear,
+  # namedgraphs.jl
+  rename_vertices,
+  # models.jl
+  ising,
+  # opsum.jl
+  group_terms,
+  # tebd.jl
+  tebd
 
 # lattices.jl
 export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
