@@ -49,6 +49,14 @@ function setindex_preserve_graph!(tn::AbstractITensorNetwork, value, index...)
   return tn
 end
 
+function hascommoninds(tn::AbstractITensorNetwork, edge::Pair)
+  return hascommoninds(tn, edgetype(tn)(edge))
+end
+
+function hascommoninds(tn::AbstractITensorNetwork, edge::AbstractEdge)
+  return hascommoninds(tn[src(edge)], tn[dst(edge)])
+end
+
 function setindex!(tn::AbstractITensorNetwork, value, index...)
   v = to_vertex(tn, index...)
   setindex_preserve_graph!(tn, value, v)
@@ -231,11 +239,22 @@ end
 # Contract the tensors at vertices `src(edge)` and `dst(edge)`
 # and store the results in the vertex `dst(edge)`, removing
 # the vertex `src(edge)`.
+# TODO: write this in terms of a more generic function
+# `Graphs.merge_vertices!` (https://github.com/mtfishman/ITensorNetworks.jl/issues/12)
 function contract(tn::AbstractITensorNetwork, edge::AbstractEdge)
   tn = copy(tn)
+  neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
+  neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
   rem_vertex!(tn, src(edge))
-  tn[dst(edge)] = new_itensor
+  for n_src in neighbors_src
+    add_edge!(tn, dst(edge) => n_src)
+  end
+  for n_dst in neighbors_dst
+    add_edge!(tn, dst(edge) => n_dst)
+  end
+  # tn[dst(edge)] = new_itensor
+  setindex_preserve_graph!(tn, new_itensor, dst(edge))
   return tn
 end
 
@@ -306,15 +325,25 @@ function factorize(
   kwargs...,
 )
   tn = copy(tn)
+  neighbors_X = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   left_inds = uniqueinds(tn, edge)
   X, Y = factorize(tn[src(edge)], left_inds; tags, kwargs...)
 
   rem_vertex!(tn, src(edge))
   add_vertex!(tn, X_vertex)
-  tn[X_vertex] = X
-
   add_vertex!(tn, Y_vertex)
-  tn[Y_vertex] = Y
+
+  add_edge!(tn, X_vertex => Y_vertex)
+  for nX in neighbors_X
+    add_edge!(tn, X_vertex => nX)
+  end
+  add_edge!(tn, Y_vertex => dst(edge))
+
+  # tn[X_vertex] = X
+  setindex_preserve_graph!(tn, X, X_vertex)
+
+  # tn[Y_vertex] = Y
+  setindex_preserve_graph!(tn, Y, Y_vertex)
 
   return tn
 end
@@ -336,6 +365,7 @@ end
 
 function optimal_contraction_sequence(tn::AbstractITensorNetwork)
   seq_linear_index = optimal_contraction_sequence(Vector{ITensor}(tn))
+  # TODO: use Functors.fmap
   return deepmap(n -> vertices(tn)[n], seq_linear_index)
 end
 
