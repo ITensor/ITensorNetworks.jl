@@ -150,7 +150,7 @@ julia> x, y, z = randomITensor(i, j), randomITensor(j, k), randomITensor(k, l);
 julia> net = optimize_contraction([x, y, z]; optimizer=TreeSA());
 ```
 """
-function optimize_contraction(tensors::ITensorList; optimizer::OMEinsumContractionOrders.CodeOptimizer=TreeSA())::ITensorContractionTree
+function optimize_contraction(tensors::ITensorList; optimizer::OMEinsumContractionOrders.CodeOptimizer=TreeSA())
     r, size_dict, index_dict = rawcode(tensors)
     # merge vectors can speed up contraction order finding
     # optimize the permutation of tensors is set to true
@@ -161,7 +161,25 @@ function optimize_contraction(tensors::ITensorList; optimizer::OMEinsumContracti
         end
         res = res.eins
     end
-    return decorate(res, tensors)
+    return res
+end
+
+# decorate means converting the raw contraction pattern to ITensorContractionTree.
+# `tensors` is the original input tensor list.
+function convert_to_contraction_sequence(net::OMEinsumContractionOrders.NestedEinsum, tensor_indices)
+  if OMEinsumContractionOrders.isleaf(net)
+    return tensor_indices[net.tensorindex]
+  else
+    return convert_to_contraction_sequence.(net.args, Ref(tensor_indices))
+  end
+end
+
+"""
+Convert the result of `optimize_contraction` to a contraction sequence.
+"""
+function optimize_contraction_sequence(tensors::ITensorList; optimizer::OMEinsumContractionOrders.CodeOptimizer=TreeSA())
+  res = optimize_contraction(tensors; optimizer)
+  return convert_to_contraction_sequence(res, 1:length(tensors))
 end
 
 """

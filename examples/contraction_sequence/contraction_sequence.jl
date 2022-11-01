@@ -8,7 +8,7 @@ Random.seed!(1234)
 
 ITensors.disable_warn_order()
 
-dims = (20, 20)
+dims = (2, 2)
 g = named_grid(dims)
 s = siteinds("S=1/2", g)
 
