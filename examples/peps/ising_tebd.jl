@@ -8,11 +8,11 @@ Random.seed!(1234)
 
 ITensors.disable_warn_order()
 
-dims = (4, 4)
+dims = (8, 8)
 n = prod(dims)
 g = named_grid(dims)
 
-h = 0.1
+h = 2.0
 
 @show h
 @show dims
