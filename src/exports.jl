@@ -60,6 +60,7 @@ export IndsNetwork
 # itensornetwork.jl
 export AbstractITensorNetwork,
   ITensorNetwork,
+  randomITensorNetwork,
   ⊗,
   itensors,
   tensor_product,
@@ -69,6 +70,8 @@ export AbstractITensorNetwork,
   inner_network,
   norm_network,
   reverse_bfs_edges,
+  # contraction_sequences.jl
+  contraction_sequence,
   # utils.jl
   cartesian_to_linear,
   # namedgraphs.jl

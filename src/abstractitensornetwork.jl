@@ -380,12 +380,6 @@ function Base.:*(c::Number, ψ::AbstractITensorNetwork)
   return cψ
 end
 
-function optimal_contraction_sequence(tn::AbstractITensorNetwork)
-  seq_linear_index = optimal_contraction_sequence(Vector{ITensor}(tn))
-  # TODO: use Functors.fmap
-  return deepmap(n -> vertices(tn)[n], seq_linear_index)
-end
-
 # TODO: should this make sure that internal indices
 # don't clash?
 function hvncat(
