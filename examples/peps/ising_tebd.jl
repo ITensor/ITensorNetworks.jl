@@ -4,17 +4,17 @@ using ITensorUnicodePlots
 using UnicodePlots
 using Random
 
-include("utils.jl")
+# include("utils.jl")
 
 Random.seed!(1234)
 
 ITensors.disable_warn_order()
 
-dims = (8, 8)
+dims = (4, 4)
 n = prod(dims)
 g = named_grid(dims)
 
-h = 2.0
+h = 0.1
 
 @show h
 @show dims

@@ -363,6 +363,23 @@ function orthogonalize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
   return orthogonalize(tn, edgetype(tn)(edge); kwargs...)
 end
 
+# Orthogonalize an ITensorNetwork towards a source vertex, treating
+# the network as a tree spanned by a spanning tree.
+function orthogonalize(ψ::AbstractITensorNetwork, source_vertex::Tuple)
+  spanning_tree_edges = post_order_dfs_edges(bfs_tree(ψ, source_vertex), source_vertex)
+  for e in spanning_tree_edges
+    ψ = orthogonalize(ψ, e)
+  end
+  return ψ
+end
+
+function Base.:*(c::Number, ψ::AbstractITensorNetwork)
+  v₁ = first(vertices(ψ))
+  cψ = copy(ψ)
+  cψ[v₁] *= c
+  return cψ
+end
+
 function optimal_contraction_sequence(tn::AbstractITensorNetwork)
   seq_linear_index = optimal_contraction_sequence(Vector{ITensor}(tn))
   # TODO: use Functors.fmap
@@ -393,6 +410,14 @@ function hvncat(
   return ITensorNetwork(dg)
 end
 
+# Return a list of vertices in the ITensorNetwork `ψ`
+# that share indices with the ITensor `T`
+function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
+  ψT = ψ ⊔ ITensorNetwork([T])
+  v⃗ = neighbors(ψT, (2, 1))
+  return Base.tail.(v⃗)
+end
+
 function inner_network(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
   tn1 = sim(tn1; sites=[])
   tn2 = sim(tn2; sites=[])
@@ -402,6 +427,29 @@ end
 function norm_network(tn::AbstractITensorNetwork; kwargs...)
   return inner_network(tn, tn; kwargs...)
 end
+
+function flattened_inner_network(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork)
+  tn = inner(prime(ϕ; sites=[]), ψ)
+  for v in vertices(ψ)
+    tn = contract(tn, (2, v...) => (1, v...))
+  end
+  return tn
+end
+
+function contract_inner(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; sequence=nothing)
+  tn = inner(prime(ϕ; sites=[]), ψ)
+  # TODO: convert to an IndsNetwork and compute the contraction sequence
+  for v in vertices(ψ)
+    tn = contract(tn, (2, v...) => (1, v...))
+  end
+  if isnothing(sequence)
+    sequence = optimal_contraction_sequence(tn)
+  end
+  return contract(tn; sequence)[]
+end
+
+# TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl?
+norm2(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)
 
 #
 # Printing
