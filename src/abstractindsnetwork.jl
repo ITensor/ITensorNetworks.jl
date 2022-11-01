@@ -31,18 +31,18 @@ end
 # Convenience functions
 # 
 
-function Base.merge(is1::AbstractIndsNetwork{I}, is2::AbstractIndsNetwork{I}) where {I}
-  @assert underlying_graph(is1) == underlying_graph(is2)
-  is = IndsNetwork(underlying_graph(is1))
-  for v in vertices(is1)
-    if isassigned(is1, v) || isassigned(is2, v)
-      is[v] = unioninds(get_assigned(is1, v, Index[]), get_assigned(is2, v, Index[]))
+function union_all_inds(is_in::AbstractIndsNetwork{I}...) where {I}
+  @assert all(map(ug -> ug == underlying_graph(is_in[1]), underlying_graph.(is_in)))
+  is_out = IndsNetwork(underlying_graph(is_in[1]))
+  for v in vertices(is_out)
+    if any(isassigned(is, v) for is in is_in)
+      is_out[v] = unioninds([get_assigned(is, v, Index[]) for is in is_in]...)
     end
   end
-  for e in edges(is1)
-    if isassigned(is1, e) || isassigned(is2, e)
-      is[e] = unioninds(get_assigned(is1, e, Index[]), get_assigned(is2, e, Index[]))
+  for e in edges(is_out)
+    if any(isassigned(is, e) for is in is_in)
+      is_out[e] = unioninds([get_assigned(is, e, Index[]) for is in is_in]...)
     end
   end
-  return is
+  return is_out
 end
