@@ -526,7 +526,8 @@ function TTNO(
   sites::IndsNetwork{<:Index};
   root_vertex::Tuple=default_root_vertex(sites),
   splitblocks=false,
-  method::Symbol=:fsm, # default to construction from finite state machine with manual truncation until svdTTNO is fixed
+  method::Symbol=:fsm, # default to construction from finite state machine until svdTTNO is fixed
+  trunc=false,
   kwargs...,
 )::TTNO
   length(ITensors.terms(os)) == 0 && error("OpSum has no terms")
@@ -545,6 +546,10 @@ function TTNO(
     T = svdTTNO(os, sites, root_vertex; kwargs...)
   elseif method == :fsm
     T = fsmTTNO(os, sites, root_vertex)
+  end
+  # add option for numerical truncation, but throw warning as this can fail sometimes
+  if trunc
+    @warn "Naive numerical truncation of TTNO Hamiltonian may fail for larger systems."
     # see https://github.com/ITensor/ITensors.jl/issues/526
     lognormT = lognorm(T)
     T /= exp(lognormT / nv(T)) # TODO: fix broadcasting for in-place assignment

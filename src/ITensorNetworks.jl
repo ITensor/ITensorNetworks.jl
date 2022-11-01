@@ -122,7 +122,6 @@ include(joinpath("treetensornetwork", "opsum_to_ttno.jl"))
 include(joinpath("treetensornetwork", "abstractprojttno.jl"))
 include(joinpath("treetensornetwork", "projttno.jl"))
 include(joinpath("treetensornetwork", "projttnosum.jl"))
-include(joinpath("graphs", "abstractgraph.jl"))
 include(joinpath("graphs", "namedgraphs.jl"))
 include("utility.jl")
 
