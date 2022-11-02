@@ -1,4 +1,6 @@
-function ITensors.apply(o::ITensor, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false)
+function ITensors.apply(
+  o::ITensor, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false
+)
   ψ = copy(ψ)
   v⃗ = neighbor_vertices(ψ, o)
   if length(v⃗) == 1
@@ -19,7 +21,9 @@ function ITensors.apply(o::ITensor, ψ::AbstractITensorNetwork; cutoff, maxdim, 
       ψ = orthogonalize(ψ, v⃗[1])
     end
     oψᵥ = apply(o, ψ[v⃗[1]] * ψ[v⃗[2]])
-    ψᵥ₁, ψᵥ₂ = factorize(oψᵥ, inds(ψ[v⃗[1]]); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e))
+    ψᵥ₁, ψᵥ₂ = factorize(
+      oψᵥ, inds(ψ[v⃗[1]]); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e)
+    )
     if normalize
       ψᵥ₁ ./= norm(ψᵥ₁)
       ψᵥ₂ ./= norm(ψᵥ₂)
@@ -34,7 +38,14 @@ function ITensors.apply(o::ITensor, ψ::AbstractITensorNetwork; cutoff, maxdim, 
   return ψ
 end
 
-function ITensors.apply(o⃗::Vector{ITensor}, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false)
+function ITensors.apply(
+  o⃗::Vector{ITensor},
+  ψ::AbstractITensorNetwork;
+  cutoff,
+  maxdim,
+  normalize=false,
+  ortho=false,
+)
   o⃗ψ = ψ
   for oᵢ in o⃗
     o⃗ψ = apply(oᵢ, o⃗ψ; cutoff, maxdim, normalize, ortho)
@@ -42,11 +53,16 @@ function ITensors.apply(o⃗::Vector{ITensor}, ψ::AbstractITensorNetwork; cutof
   return o⃗ψ
 end
 
-function ITensors.apply(o⃗::Scaled, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false)
-  return maybe_real(Ops.coefficient(o⃗)) * apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho)
+function ITensors.apply(
+  o⃗::Scaled, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false
+)
+  return maybe_real(Ops.coefficient(o⃗)) *
+         apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho)
 end
 
-function ITensors.apply(o⃗::Prod, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false)
+function ITensors.apply(
+  o⃗::Prod, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false
+)
   o⃗ψ = ψ
   for oᵢ in o⃗
     o⃗ψ = apply(oᵢ, o⃗ψ; cutoff, maxdim, normalize, ortho)
@@ -54,6 +70,8 @@ function ITensors.apply(o⃗::Prod, ψ::AbstractITensorNetwork; cutoff, maxdim, 
   return o⃗ψ
 end
 
-function ITensors.apply(o::Op, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false)
+function ITensors.apply(
+  o::Op, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false
+)
   return apply(ITensor(o, siteinds(ψ)), ψ; cutoff, maxdim, normalize, ortho)
 end

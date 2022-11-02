@@ -21,7 +21,9 @@ ITensors.disable_warn_order()
   s_dmrg = [only(s[v]) for v in vertices(s)]
   H_dmrg = MPO(ℋ_dmrg, s_dmrg)
   ψ_dmrg_init = MPS(s_dmrg, j -> "↑")
-  E_dmrg, ψ_dmrg = dmrg(H_dmrg, ψ_dmrg_init; nsweeps=20, maxdim=[fill(10, 10); 20], cutoff=1e-8, outputlevel=0)
+  E_dmrg, ψ_dmrg = dmrg(
+    H_dmrg, ψ_dmrg_init; nsweeps=20, maxdim=[fill(10, 10); 20], cutoff=1e-8, outputlevel=0
+  )
 
   #
   # PEPS TEBD optimization
@@ -37,11 +39,29 @@ ITensors.disable_warn_order()
 
   ψ_init = ITensorNetwork(s, v -> "↑")
   E0 = expect(ℋ, ψ_init; sequence=inner_sequence)
-  ψ = tebd(group_terms(ℋ, g), ψ_init; β, Δβ, cutoff=1e-8, maxdim=χ, ortho=false, print_frequency=typemax(Int))
+  ψ = tebd(
+    group_terms(ℋ, g),
+    ψ_init;
+    β,
+    Δβ,
+    cutoff=1e-8,
+    maxdim=χ,
+    ortho=false,
+    print_frequency=typemax(Int),
+  )
   E1 = expect(ℋ, ψ; sequence=inner_sequence)
-  ψ = tebd(group_terms(ℋ, g), ψ_init; β, Δβ, cutoff=1e-8, maxdim=χ, ortho=true, print_frequency=typemax(Int))
+  ψ = tebd(
+    group_terms(ℋ, g),
+    ψ_init;
+    β,
+    Δβ,
+    cutoff=1e-8,
+    maxdim=χ,
+    ortho=true,
+    print_frequency=typemax(Int),
+  )
   E2 = expect(ℋ, ψ; sequence=inner_sequence)
-  
+
   @test E2 < E1 < E0
   @test E2 ≈ E_dmrg rtol = 1e-5
 end

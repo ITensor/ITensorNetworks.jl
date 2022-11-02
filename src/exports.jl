@@ -45,12 +45,6 @@ export NamedDimGraph,
 export DataGraph, vertex_data, edge_data, underlying_graph
 
 #
-# ITensors
-#
-
-export optimal_contraction_sequence
-
-#
 # ITensorNetworks
 #
 

@@ -30,7 +30,7 @@ e = edge_data(is)
 @visualize ψψ
 
 # quasi-optimal contraction sequence
-sequence = optimal_contraction_sequence(ψψ)
+sequence = contraction_sequence(ψψ)
 
 print_tree(sequence)
 

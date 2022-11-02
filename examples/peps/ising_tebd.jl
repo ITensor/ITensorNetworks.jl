@@ -29,7 +29,9 @@ s_dmrg = [only(s[v]) for v in vertices(s)]
 H_dmrg = MPO(ℋ_dmrg, s_dmrg)
 ψ_dmrg_init = MPS(s_dmrg, j -> "↑")
 @show inner(ψ_dmrg_init', H_dmrg, ψ_dmrg_init)
-E_dmrg, ψ_dmrg = dmrg(H_dmrg, ψ_dmrg_init; nsweeps=20, maxdim=[fill(10, 10); 20], cutoff=1e-8)
+E_dmrg, ψ_dmrg = dmrg(
+  H_dmrg, ψ_dmrg_init; nsweeps=20, maxdim=[fill(10, 10); 20], cutoff=1e-8
+)
 @show E_dmrg
 Z_dmrg = reshape(expect(ψ_dmrg, "Z"), dims)
 
@@ -61,14 +63,18 @@ contract_edges = map(t -> (1, t...), collect(keys(cartesian_to_linear(dims))))
 inner_sequence = reduce((x, y) -> [x, y], contract_edges)
 
 println("\nFirst run TEBD without orthogonalization")
-ψ = @time tebd(group_terms(ℋ, g), ψ_init; β, Δβ, cutoff=1e-8, maxdim=χ, ortho=false, print_frequency=1)
+ψ = @time tebd(
+  group_terms(ℋ, g), ψ_init; β, Δβ, cutoff=1e-8, maxdim=χ, ortho=false, print_frequency=1
+)
 
 println("\nMeasure energy expectation value")
 E = @time expect(ℋ, ψ; sequence=inner_sequence)
 @show E
 
 println("\nThen run TEBD with orthogonalization (more accurate)")
-ψ = @time tebd(group_terms(ℋ, g), ψ_init; β, Δβ, cutoff=1e-8, maxdim=χ, ortho, print_frequency=1)
+ψ = @time tebd(
+  group_terms(ℋ, g), ψ_init; β, Δβ, cutoff=1e-8, maxdim=χ, ortho, print_frequency=1
+)
 
 println("\nMeasure energy expectation value")
 E = @time expect(ℋ, ψ; sequence=inner_sequence)

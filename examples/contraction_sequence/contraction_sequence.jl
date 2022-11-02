@@ -35,6 +35,9 @@ seq_tree_sa = @time contraction_sequence(tn; alg="tree_sa")
 println("sa_bipartite")
 seq_sa_bipartite = @time contraction_sequence(tn; alg="sa_bipartite")
 
-println("kahypar_bipartite")
 using KaHyPar
-seq_kahypar_bipartite = @time contraction_sequence(tn; alg="kahypar_bipartite", sc_target=200)
+
+println("kahypar_bipartite")
+seq_kahypar_bipartite = @time contraction_sequence(
+  tn; alg="kahypar_bipartite", sc_target=200
+)

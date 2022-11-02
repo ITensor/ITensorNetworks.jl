@@ -430,14 +430,19 @@ function flattened_inner_network(ϕ::AbstractITensorNetwork, ψ::AbstractITensor
   return tn
 end
 
-function contract_inner(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; sequence=nothing)
+function contract_inner(
+  ϕ::AbstractITensorNetwork,
+  ψ::AbstractITensorNetwork;
+  sequence=nothing,
+  contraction_sequence_kwargs=(;),
+)
   tn = inner(prime(ϕ; sites=[]), ψ)
   # TODO: convert to an IndsNetwork and compute the contraction sequence
   for v in vertices(ψ)
     tn = contract(tn, (2, v...) => (1, v...))
   end
   if isnothing(sequence)
-    sequence = optimal_contraction_sequence(tn)
+    sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
   end
   return contract(tn; sequence)[]
 end

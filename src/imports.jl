@@ -48,8 +48,6 @@ import ITensors:
   # dag
   dag
 
-import ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
-
 using ITensors.ContractionSequenceOptimization: deepmap
 
 import ITensors.ITensorVisualizationCore: visualize
