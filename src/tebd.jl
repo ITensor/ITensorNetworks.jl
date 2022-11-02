@@ -1,4 +1,6 @@
-function tebd(ℋ::Sum, ψ::AbstractITensorNetwork; β, Δβ, maxdim, cutoff, print_frequency=10, ortho=false)
+function tebd(
+  ℋ::Sum, ψ::AbstractITensorNetwork; β, Δβ, maxdim, cutoff, print_frequency=10, ortho=false
+)
   𝒰 = exp(-Δβ * ℋ; alg=Trotter{2}())
   # Imaginary time evolution terms
   s = siteinds(ψ)

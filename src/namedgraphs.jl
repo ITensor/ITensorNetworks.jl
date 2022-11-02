@@ -1,5 +1,7 @@
 NamedGraphs.NamedDimGraph(vertices::Vector) = NamedDimGraph(tuple.(vertices))
-NamedGraphs.NamedDimGraph(vertices::Vector{<:Tuple}) = NamedDimGraph(Graph(length(vertices)); vertices)
+function NamedGraphs.NamedDimGraph(vertices::Vector{<:Tuple})
+  return NamedDimGraph(Graph(length(vertices)); vertices)
+end
 
 function rename_vertices(e::AbstractEdge, name_map::Dictionary)
   return typeof(e)(name_map[src(e)], name_map[dst(e)])
