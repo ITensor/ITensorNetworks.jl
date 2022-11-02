@@ -5,6 +5,7 @@ using Random
 using Test
 
 include("test_tebd.jl")
+include("test_contraction_sequence.jl")
 
 @testset "ITensorNetworks.jl" begin
   @testset "Basics" begin

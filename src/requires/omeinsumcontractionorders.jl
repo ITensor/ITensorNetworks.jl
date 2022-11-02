@@ -3,10 +3,12 @@
 
 const ITensorList = Union{Vector{<:ITensor},Tuple{Vararg{<:ITensor}}}
 
+# TODO: Replace with `inds(A::ITensor)` or `collect(inds(A::ITensor))`
 getid(index::Index) = index
 getids(A::ITensor) = Index{Int}[getid(x) for x in ITensors.inds(A)]
 
 # infer the output tensor labels
+# TODO: Use `symdiff` instead.
 function infer_output(inputs::AbstractVector{<:AbstractVector{Index{IT}}}) where {IT}
   indslist = vcat(inputs...)
   # get output indices
@@ -69,12 +71,12 @@ end
 Convert NestedEinsum to contraction sequence, such as `[[1, 2], [3, 4]]`.
 """
 function convert_to_contraction_sequence(
-  net::OMEinsumContractionOrders.NestedEinsum, tensor_indices
+  net::OMEinsumContractionOrders.NestedEinsum
 )
   if OMEinsumContractionOrders.isleaf(net)
-    return tensor_indices[net.tensorindex]
+    return net.tensorindex
   else
-    return convert_to_contraction_sequence.(net.args, Ref(tensor_indices))
+    return convert_to_contraction_sequence.(net.args)
   end
 end
 
@@ -85,5 +87,5 @@ function optimize_contraction_sequence(
   tensors::ITensorList; optimizer::OMEinsumContractionOrders.CodeOptimizer=TreeSA()
 )
   res = optimize_contraction_nested_einsum(tensors; optimizer)
-  return convert_to_contraction_sequence(res, 1:length(tensors))
+  return convert_to_contraction_sequence(res)
 end

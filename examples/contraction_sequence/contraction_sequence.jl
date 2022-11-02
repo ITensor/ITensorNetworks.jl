@@ -1,7 +1,5 @@
 using ITensors
 using ITensorNetworks
-using ITensorUnicodePlots
-using UnicodePlots
 using Random
 
 Random.seed!(1234)
@@ -28,6 +26,7 @@ using OMEinsumContractionOrders
 
 println("greedy")
 seq_greedy = @time contraction_sequence(tn; alg="greedy")
+res_greedy = @time contract(tn; alg=res_greedy)
 
 println("tree_sa")
 seq_tree_sa = @time contraction_sequence(tn; alg="tree_sa")
