@@ -88,6 +88,7 @@ export AbstractITensorNetwork,
   # namedgraphs.jl
   rename_vertices,
   # models.jl
+  heisenberg,
   ising,
   # opsum.jl
   group_terms,

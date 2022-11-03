@@ -2,7 +2,6 @@ using Test
 using ITensorNetworks
 using ITensors
 using Random
-include("utils.jl")
 
 @testset "OpSum to TTNO" begin
   # small comb tree
@@ -20,7 +19,7 @@ include("utils.jl")
   J1 = -1
   J2 = 2
   h = 0.5
-  H = ising_graph(c; J1=J1, J2=J2, h=h)
+  H = ising(c; J1=J1, J2=J2, h=h)
 
   # add combination of longer range interactions
   Hlr = copy(H)

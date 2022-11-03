@@ -546,7 +546,7 @@ function norm_network(tn::AbstractITensorNetwork; kwargs...)
 end
 
 function flattened_inner_network(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork)
-  tn = inner(prime(ϕ; sites=[]), ψ)
+  tn = inner_network(prime(ϕ; sites=[]), ψ)
   for v in vertices(ψ)
     tn = contract(tn, (2, v...) => (1, v...))
   end
@@ -559,7 +559,7 @@ function contract_inner(
   sequence=nothing,
   contraction_sequence_kwargs=(;),
 )
-  tn = inner(prime(ϕ; sites=[]), ψ)
+  tn = inner_network(prime(ϕ; sites=[]), ψ)
   # TODO: convert to an IndsNetwork and compute the contraction sequence
   for v in vertices(ψ)
     tn = contract(tn, (2, v...) => (1, v...))

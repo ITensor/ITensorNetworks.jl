@@ -12,7 +12,7 @@ using Random
   dmap = v -> rand(1:3)
   is = siteinds(dmap, c)
   # operator site inds
-  is_isp = merge(is, prime(is; links=[]))
+  is_isp = union_all_inds(is, prime(is; links=[]))
   # specify random linear vertex ordering of graph vertices
   vertex_order = shuffle(vertices(c))
 

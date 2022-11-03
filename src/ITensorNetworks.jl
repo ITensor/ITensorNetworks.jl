@@ -113,7 +113,6 @@ const UniformDataGraph{D} = NamedDimDataGraph{
 }
 
 include("utils.jl")
-include("namedgraphs.jl")
 include("itensors.jl")
 include("partition.jl")
 include("lattices.jl")
@@ -135,7 +134,6 @@ include(joinpath("treetensornetwork", "opsum_to_ttno.jl"))
 include(joinpath("treetensornetwork", "abstractprojttno.jl"))
 include(joinpath("treetensornetwork", "projttno.jl"))
 include(joinpath("treetensornetwork", "projttnosum.jl"))
-include(joinpath("graphs", "namedgraphs.jl"))
 include("utility.jl")
 
 include("exports.jl")
