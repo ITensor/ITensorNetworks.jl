@@ -8,4 +8,6 @@ precompile/tmp
 benchmark/*.json
 .benchmarkci
 .vscode/
+Manifest.toml
 docs/Manifest.toml
+test/Manifest.toml

@@ -31,7 +31,7 @@ using Test
   @test tn′ isa ITensorNetwork
   inner_tn = tn ⊗ tn′
   @test inner_tn isa ITensorNetwork
-  sequence = optimal_contraction_sequence(inner_tn)
+  sequence = contraction_sequence(inner_tn)
   @test sequence isa Vector
   inner_res = contract(inner_tn; sequence)[]
   @test inner_res isa Float64
