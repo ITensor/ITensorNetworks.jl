@@ -148,15 +148,15 @@ end
   is2 = IndsNetwork(c; site_space=site_dims2, link_space=link_dims2)
 
   # merge some networks
-  is1_m = merge(is1_s, is1_e)
+  is1_m = union_all_inds(is1_s, is1_e)
   @test dim.(vertex_data(is1_m)) == dim.(vertex_data(is1))
-  is_ms = merge(is1_s, is2_s)
+  is_ms = union_all_inds(is1_s, is2_s)
   @test all(issetequal(is_ms[v], union(is1_s[v], is2_s[v])) for v in vertices(c))
   @test isempty(edge_data(is_ms))
-  is_me = merge(is1_e, is2_e)
+  is_me = union_all_inds(is1_e, is2_e)
   @test all(issetequal(is_me[e], union(is1_e[e], is2_e[e])) for e in edges(c))
   @test isempty(vertex_data(is_me))
-  is_m = merge(is1, is2)
+  is_m = union_all_inds(is1, is2)
   @test all(issetequal(is_m[v], union(is1[v], is2[v])) for v in vertices(c))
   @test all(issetequal(is_m[e], union(is1[e], is2[e])) for e in edges(c))
 end

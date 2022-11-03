@@ -1,6 +1,5 @@
 using AbstractTrees
 using ITensors
-using ITensors.ContractionSequenceOptimization
 using ITensorNetworks
 using ITensorUnicodePlots
 
@@ -38,7 +37,7 @@ end
 
 @visualize Z
 
-sequence = optimal_contraction_sequence(Z)
+sequence = contraction_sequence(Z)
 
 @show sequence
 
@@ -101,11 +100,9 @@ for e in post_order_dfs_edges(ψ_ortho, root_vertex)
 end
 
 @show √(
-  contract(
-    norm_network(ψ_ortho); sequence=optimal_contraction_sequence(norm_network(ψ_ortho))
-  )[],
+  contract(norm_network(ψ_ortho); sequence=contraction_sequence(norm_network(ψ_ortho)))[]
 )
-@show √(contract(norm_network(ψ); sequence=optimal_contraction_sequence(norm_network(ψ)))[])
+@show √(contract(norm_network(ψ); sequence=contraction_sequence(norm_network(ψ)))[])
 @show norm(ψ_ortho[root_vertex])
 @show √(inner(ψ, ψ))
 @show √(inner(ψ_ortho, ψ_ortho))

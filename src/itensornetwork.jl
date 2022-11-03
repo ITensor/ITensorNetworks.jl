@@ -124,3 +124,19 @@ function ITensorNetwork(::Type{ElT}, is::IndsNetwork, state::Function) where {El
   states_map = dictionary([v => state(v) for v in vertices(is)])
   return ITensorNetwork(ElT, is, states_map)
 end
+
+#
+# Random constructor
+#
+
+# TODO: generalize to other random number distributions
+function randomITensorNetwork(s; link_space)
+  ψ = ITensorNetwork(s; link_space)
+  for v in vertices(ψ)
+    ψᵥ = copy(ψ[v])
+    randn!(ψᵥ)
+    ψᵥ ./= norm(ψᵥ)
+    ψ[v] = ψᵥ
+  end
+  return ψ
+end

@@ -43,6 +43,7 @@ import ITensors:
   uniqueinds,
   commoninds,
   replaceinds,
+  hascommoninds,
   # priming and tagging
   adjoint,
   sim,
@@ -77,8 +78,6 @@ import ITensors:
   # promotion and conversion
   promote_itensor_eltype,
   scalartype
-
-import ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
 
 using ITensors.ContractionSequenceOptimization: deepmap
 

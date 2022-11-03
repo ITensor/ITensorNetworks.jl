@@ -58,6 +58,14 @@ function setindex_preserve_graph!(tn::AbstractITensorNetwork, value, index...)
   return tn
 end
 
+function hascommoninds(tn::AbstractITensorNetwork, edge::Pair)
+  return hascommoninds(tn, edgetype(tn)(edge))
+end
+
+function hascommoninds(tn::AbstractITensorNetwork, edge::AbstractEdge)
+  return hascommoninds(tn[src(edge)], tn[dst(edge)])
+end
+
 function setindex!(tn::AbstractITensorNetwork, value, index...)
   v = to_vertex(tn, index...)
   setindex_preserve_graph!(tn, value, v)
@@ -309,10 +317,21 @@ end
 # Contract the tensors at vertices `src(edge)` and `dst(edge)`
 # and store the results in the vertex `dst(edge)`, removing
 # the vertex `src(edge)`.
+# TODO: write this in terms of a more generic function
+# `Graphs.merge_vertices!` (https://github.com/mtfishman/ITensorNetworks.jl/issues/12)
 function contract!(tn::AbstractITensorNetwork, edge::AbstractEdge)
+  neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
+  neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
   rem_vertex!(tn, src(edge))
-  tn[dst(edge)] = new_itensor
+  for n_src in neighbors_src
+    add_edge!(tn, dst(edge) => n_src)
+  end
+  for n_dst in neighbors_dst
+    add_edge!(tn, dst(edge) => n_dst)
+  end
+  # tn[dst(edge)] = new_itensor
+  setindex_preserve_graph!(tn, new_itensor, dst(edge))
   return tn
 end
 
@@ -392,15 +411,25 @@ function factorize!(
   tags=tags(tn, edge),
   kwargs...,
 )
+  neighbors_X = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   left_inds = uniqueinds(tn, edge)
   X, Y = factorize(tn[src(edge)], left_inds; tags, kwargs...)
 
   rem_vertex!(tn, src(edge)) # TODO: avoid this if we can?
   add_vertex!(tn, X_vertex)
-  tn[X_vertex] = X
-
   add_vertex!(tn, Y_vertex)
-  tn[Y_vertex] = Y
+
+  add_edge!(tn, X_vertex => Y_vertex)
+  for nX in neighbors_X
+    add_edge!(tn, X_vertex => nX)
+  end
+  add_edge!(tn, Y_vertex => dst(edge))
+
+  # tn[X_vertex] = X
+  setindex_preserve_graph!(tn, X, X_vertex)
+
+  # tn[Y_vertex] = Y
+  setindex_preserve_graph!(tn, Y, Y_vertex)
 
   return tn
 end
@@ -457,9 +486,21 @@ function truncate(tn::AbstractITensorNetwork, edge; kwargs...)
   return truncate!(copy(tn), edge; kwargs...)
 end
 
-function optimal_contraction_sequence(tn::AbstractITensorNetwork)
-  seq_linear_index = optimal_contraction_sequence(Vector{ITensor}(tn))
-  return deepmap(n -> vertices(tn)[n], seq_linear_index)
+# Orthogonalize an ITensorNetwork towards a source vertex, treating
+# the network as a tree spanned by a spanning tree.
+function orthogonalize(ψ::AbstractITensorNetwork, source_vertex::Tuple)
+  spanning_tree_edges = post_order_dfs_edges(bfs_tree(ψ, source_vertex), source_vertex)
+  for e in spanning_tree_edges
+    ψ = orthogonalize(ψ, e)
+  end
+  return ψ
+end
+
+function Base.:*(c::Number, ψ::AbstractITensorNetwork)
+  v₁ = first(vertices(ψ))
+  cψ = copy(ψ)
+  cψ[v₁] *= c
+  return cψ
 end
 
 # TODO: should this make sure that internal indices
@@ -486,6 +527,14 @@ function hvncat(
   return ITensorNetwork(dg)
 end
 
+# Return a list of vertices in the ITensorNetwork `ψ`
+# that share indices with the ITensor `T`
+function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
+  ψT = ψ ⊔ ITensorNetwork([T])
+  v⃗ = neighbors(ψT, (2, 1))
+  return Base.tail.(v⃗)
+end
+
 function inner_network(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
   tn1 = sim(tn1; sites=[])
   tn2 = sim(tn2; sites=[])
@@ -495,6 +544,34 @@ end
 function norm_network(tn::AbstractITensorNetwork; kwargs...)
   return inner_network(tn, tn; kwargs...)
 end
+
+function flattened_inner_network(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork)
+  tn = inner(prime(ϕ; sites=[]), ψ)
+  for v in vertices(ψ)
+    tn = contract(tn, (2, v...) => (1, v...))
+  end
+  return tn
+end
+
+function contract_inner(
+  ϕ::AbstractITensorNetwork,
+  ψ::AbstractITensorNetwork;
+  sequence=nothing,
+  contraction_sequence_kwargs=(;),
+)
+  tn = inner(prime(ϕ; sites=[]), ψ)
+  # TODO: convert to an IndsNetwork and compute the contraction sequence
+  for v in vertices(ψ)
+    tn = contract(tn, (2, v...) => (1, v...))
+  end
+  if isnothing(sequence)
+    sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
+  end
+  return contract(tn; sequence)[]
+end
+
+# TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl?
+norm2(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)
 
 #
 # Printing
