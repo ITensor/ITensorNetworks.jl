@@ -55,7 +55,7 @@ export optimal_contraction_sequence
 #
 
 # indsnetwork.jl
-export IndsNetwork
+export IndsNetwork, union_all_inds
 
 # itensornetwork.jl
 export AbstractITensorNetwork,
