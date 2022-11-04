@@ -49,7 +49,7 @@ export DataGraph, vertex_data, edge_data, underlying_graph
 #
 
 # indsnetwork.jl
-export IndsNetwork
+export IndsNetwork, union_all_inds
 
 # itensornetwork.jl
 export AbstractITensorNetwork,
