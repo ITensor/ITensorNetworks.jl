@@ -24,9 +24,7 @@ ITensors.disable_warn_order()
   res_tree_sa = contract(tn; sequence=seq_tree_sa)[]
   seq_sa_bipartite = contraction_sequence(tn; alg="sa_bipartite")
   res_sa_bipartite = contract(tn; sequence=seq_sa_bipartite)[]
-  seq_kahypar_bipartite = contraction_sequence(
-    tn; alg="kahypar_bipartite", sc_target=200
-  )
+  seq_kahypar_bipartite = contraction_sequence(tn; alg="kahypar_bipartite", sc_target=200)
   res_kahypar_bipartite = contract(tn; sequence=seq_kahypar_bipartite)[]
   @test res_optimal ≈ res_greedy ≈ res_tree_sa ≈ res_sa_bipartite ≈ res_kahypar_bipartite
 end
