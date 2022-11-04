@@ -206,3 +206,17 @@ function take_2sexpec_two_networks(g::NamedDimGraph, psi::ITensorNetwork, psiO::
 
     return out
 end
+
+#Starting with initial guess for messagetensors, monitor the convergence of an observable on a single site v (which is emedded in psiflatO)
+function iterate_single_site_expec(g::NamedDimGraph, psiflat::ITensorNetwork, psiflatO::ITensorNetwork, s::IndsNetwork, initmts::Dict{Tuple, ITensor}, subgraphs::Dict{Int, Vector{Tuple}}, subgraphconns::Dict{Int, Vector{Int}}, niters::Int64, v::Tuple)
+
+    println("Initial Guess for Observable on site "*string(v)*" is "*string(get_single_site_expec(g, psiflat, psiflatO, s, initmts, subgraphs, subgraphconns, v)))
+    mts = deepcopy(initmts)
+    for i = 1:niters
+        mts = update_all_mts(g, psiflat, s, mts, subgraphs, subgraphconns, niters)
+        approx_O = get_single_site_expec(g, psiflat, psiflatO, s, mts, subgraphs, subgraphconns, v)
+        println("After iteration "*string(i)*" Belief propagation gives observable on site "*string(v)*" as "*string(approx_O))
+    
+    end
+
+end
