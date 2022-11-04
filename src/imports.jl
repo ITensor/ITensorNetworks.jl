@@ -29,7 +29,6 @@ import ITensors:
   loginner,
   norm,
   lognorm,
-  expect,
   # truncation
   truncate!,
   truncate,
@@ -72,9 +71,6 @@ import ITensors:
   set_nsite!,
   product,
   nsite,
-  # promotion and conversion
-  promote_itensor_eltype,
-  scalartype,
   # promotion and conversion
   promote_itensor_eltype,
   scalartype

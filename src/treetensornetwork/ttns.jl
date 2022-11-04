@@ -107,22 +107,3 @@ end
 function replacebond(T0::TTNS, args...; kwargs...)
   return replacebond!(copy(T0), args...; kwargs...)
 end
-
-# 
-# Expectation values
-# 
-
-# TODO: temporary patch, to be implemented properly
-function expect(psi::TTNS, opname::String; kwargs...)
-  s = siteinds(psi)
-  sites = get(kwargs, :sites, vertices(psi))
-  res = Dictionary(sites, Vector{ComplexF64}(undef, length(sites)))
-  norm2_psi = inner(psi, psi)
-  for v in sites
-    Opsi = copy(psi)
-    Opsi[v] *= op(opname, s[v])
-    noprime!(Opsi[v])
-    res[v] = inner(psi, Opsi) / norm2_psi
-  end
-  return res
-end

@@ -17,7 +17,7 @@ using StaticArrays
 using Suppressor
 
 # TODO: export from ITensors
-using ITensors: commontags, @Algorithm_str, Algorithm
+using ITensors: commontags, @Algorithm_str, Algorithm, OneITensor
 
 using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
 using MultiDimDictionaries: IndexType, SliceIndex

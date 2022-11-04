@@ -49,7 +49,7 @@ function TreeTensorNetworkOperator(
 end
 
 # 
-# Expectation values
+# Inner products
 # 
 
 # TODO: implement using multi-graph disjoint union
