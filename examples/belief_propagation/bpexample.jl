@@ -22,7 +22,7 @@ chi = 3
 psi = randomITensorNetwork(s; link_space=chi)
 psiflat, combiners = flatten_thicken_bonds(deepcopy(psi))
 
-v = (2, 2)
+v = (1, 1)
 
 #Apply Sz to site v and flatten that
 psiflatO = flatten_thicken_bonds(psi; ops=["Sz"], vops=[v], s=s, combiners=combiners)
@@ -34,15 +34,15 @@ println("Actual value of Sz on site " * string(v) * " is " * string(actual_sz))
 
 nsites = 1
 println("First " * string(nsites) * " sites form a subgraph")
-subgraphs, subgraphconns = formsubgraphs(g, Int(n * n / nsites))
-mts = construct_initial_mts(g, psiflat, s, subgraphs, subgraphconns; id_init=1)
+dg_subgraphs = formsubgraphs(g, Int(n * n / nsites))
+mts = construct_initial_mts(g, psiflat, dg_subgraphs; id_init=1)
 niters = 5
 
-iterate_single_site_expec(g, psiflat, psiflatO, s, mts, subgraphs, subgraphconns, niters, v)
+iterate_single_site_expec(g, psiflat, psiflatO, s, mts, dg_subgraphs, niters, v)
 
 nsites = 4
 println("Now " * string(nsites) * " sites form a subgraph")
-subgraphs, subgraphconns = formsubgraphs(g, Int(n * n / nsites))
-mts = construct_initial_mts(g, psiflat, s, subgraphs, subgraphconns; id_init=1)
+dg_subgraphs = formsubgraphs(g, Int(n * n / nsites))
+mts = construct_initial_mts(g, psiflat, dg_subgraphs; id_init=1)
 
-iterate_single_site_expec(g, psiflat, psiflatO, s, mts, subgraphs, subgraphconns, niters, v)
+iterate_single_site_expec(g, psiflat, psiflatO, s, mts, dg_subgraphs, niters, v)

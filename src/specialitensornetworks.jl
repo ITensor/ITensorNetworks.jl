@@ -53,7 +53,7 @@ function ising_network(g::NamedDimGraph, beta::Float64; szverts=nothing)
 end
 
 #Build an ITensor network on a graph specified by the inds network s. Bond_dim is given by link_space and entries are randomised (normal distribution, mean 0 std 1)
-function randomITensorNetwork(s::IndsNetwork; link_space)
+function randomITensorNetwork(s::IndsNetwork; link_space=nothing)
   ψ = ITensorNetwork(s; link_space)
   for v in vertices(ψ)
     ψᵥ = copy(ψ[v])

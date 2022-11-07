@@ -1,66 +1,33 @@
 #Construct the random initial Message Tensors for an ITensor Network, based on a partitioning into subgraphs specified ny 'sub graphs'
-#The ITensorNetwork needs to be flat (i.e. just sites and link indices, no site indices)
-#If combiners are sent through then get mts by tracing out bonds in original network
-#Or else: id_init = 0 => Random, id_init = 1 => Identity Matrix initialisation (preferred)
+#The ITensorNetwork needs to be flat (i.e. just sites and link indices, no site indices), and is assumed to only have 1 link indice between any two sites
+#id_init = 0 => Random, id_init = 1 => Identity Matrix initialisation (preferred)
 function construct_initial_mts(
-  g::NamedDimGraph,
-  flatpsi::ITensorNetwork,
-  s::IndsNetwork,
-  subgraphs::Dict{Int,Vector{Tuple}},
-  subgraphconns::Dict{Int,Vector{Int}};
-  combiners=Dict{NamedDimEdge{Tuple},ITensor}(),
-  id_init=0,
+  g::NamedDimGraph, flatpsi::ITensorNetwork, dg_subgraphs::DataGraph; id_init=1
 )
-  mts = Dict{Tuple,ITensor}()
-  no_cs = length(keys(combiners))
+  mts = Dict{Pair,ITensor}()
 
-  no_subgraphs = length(subgraphs)
-  es = edges(g)
-  for i in 1:no_subgraphs
+  for i in vertices(dg_subgraphs)
     tns_to_contract = ITensor[]
-    for j in subgraphconns[i]
+    for j in neighbors(dg_subgraphs, i)
       edge_inds = []
 
-      if (no_cs == 0)
-        for vertex in subgraphs[i]
-          psiv = flatpsi[vertex]
-          es_v = find_edges_involving_vertex(es, vertex)
-          for e in es_v
-            if (
-              find_subgraph(dst(e), subgraphs) == j || find_subgraph(src(e), subgraphs) == j
-            )
-              edge_ind = commoninds(flatpsi, e)[1]
-              push!(edge_inds, edge_ind)
-            end
+      for vertex in dg_subgraphs[i]
+        psiv = flatpsi[vertex]
+        for e in NamedDimEdge.(Ref(vertex) .=> neighbors(g, vertex))
+          if (find_subgraph(dst(e), dg_subgraphs) == j)
+            edge_ind = commoninds(flatpsi, e)[1]
+            push!(edge_inds, edge_ind)
           end
         end
-        if (id_init == 1)
-          A = Array(delta(edge_inds), edge_inds)
-          X1 = ITensor(A, edge_inds)
-        else
-          X1 = randomITensor(edge_inds)
-          normalize!(X1)
-        end
-        mts[(i, j)] = X1
-      else
-        for vertex in subgraphs[i]
-          psiv = flatpsi[vertex]
-          es_v = find_edges_involving_vertex(es, vertex)
-          for e in es_v
-            if (
-              find_subgraph(dst(e), subgraphs) != j && find_subgraph(src(e), subgraphs) != j
-            )
-              C = combiners[e]
-              psiv = dag(C) * psiv
-              is = commoninds(C, psiv)
-              d = delta(is)
-              psiv = d * psiv
-            end
-          end
-          push!(tns_to_contract, psiv)
-        end
-        mts[(i, j)] = ITensors.contract(tns_to_contract)
       end
+      if (id_init == 1)
+        A = Array(delta(edge_inds), edge_inds)
+        X1 = ITensor(A, edge_inds)
+      else
+        X1 = randomITensor(edge_inds)
+      end
+      normalize!(X1)
+      mts[i => j] = X1
     end
   end
 
@@ -69,11 +36,7 @@ end
 
 #DO a single update of a message tensor using the current subgraph and the incoming mts
 function updatemt(
-  g::NamedDimGraph,
-  flatpsi::ITensorNetwork,
-  subgraph::Vector{Tuple},
-  mts::Vector{ITensor},
-  s::IndsNetwork,
+  g::NamedDimGraph, flatpsi::ITensorNetwork, subgraph::Vector{Tuple}, mts::Vector{ITensor}
 )
   Contract_list = ITensor[]
 
@@ -97,25 +60,23 @@ end
 function update_all_mts(
   g::NamedDimGraph,
   flatpsi::ITensorNetwork,
-  s::IndsNetwork,
-  mts::Dict{Tuple,ITensor},
-  subgraphs::Dict{Int,Vector{Tuple}},
-  subgraphconns::Dict{Int,Vector{Int}},
+  mts::Dict{Pair,ITensor},
+  dg_subgraphs::DataGraph,
 )
-  newmts = Dict{Tuple,ITensor}()
+  newmts = Dict{Pair,ITensor}()
 
   for (key, value) in mts
     mts_to_use = ITensor[]
     subgraph_src = key[1]
     subgraph_dst = key[2]
-    connected_subgraphs = subgraphconns[subgraph_src]
+    connected_subgraphs = neighbors(dg_subgraphs, subgraph_src)
     for k in connected_subgraphs
       if (k != subgraph_dst)
-        push!(mts_to_use, mts[(k, subgraph_src)])
+        push!(mts_to_use, mts[k => subgraph_src])
       end
     end
-    newmts[(subgraph_src, subgraph_dst)] = updatemt(
-      g, flatpsi, subgraphs[subgraph_src], mts_to_use, s
+    newmts[subgraph_src => subgraph_dst] = updatemt(
+      g, flatpsi, dg_subgraphs[subgraph_src], mts_to_use
     )
   end
 
@@ -125,16 +86,14 @@ end
 function update_all_mts(
   g::NamedDimGraph,
   flatpsi::ITensorNetwork,
-  s::IndsNetwork,
-  mts::Dict{Tuple,ITensor},
-  subgraphs::Dict{Int,Vector{Tuple}},
-  subgraphconns::Dict{Int,Vector{Int}},
+  mts::Dict{Pair,ITensor},
+  dg_subgraphs::DataGraph,
   niters::Int64,
 )
   newmts = deepcopy(mts)
 
   for i in 1:niters
-    newmts = update_all_mts(g, flatpsi, s, deepcopy(newmts), subgraphs, subgraphconns)
+    newmts = update_all_mts(g, flatpsi, deepcopy(newmts), dg_subgraphs)
   end
 
   return newmts
@@ -147,24 +106,22 @@ function get_single_site_expec(
   flatpsi::ITensorNetwork,
   flatpsiO::ITensorNetwork,
   s::IndsNetwork,
-  mts::Dict{Tuple,ITensor},
-  subgraphs::Dict{Int,Vector{Tuple}},
-  subgraphconns::Dict{Int,Vector{Int}},
+  mts::Dict{Pair,ITensor},
+  dg_subgraphs::DataGraph,
   v::Tuple,
 )
-  no_subgraphs = length(subgraphs)
   es = edges(flatpsi)
 
-  subgraph = find_subgraph(v, subgraphs)
-  connected_subgraphs = subgraphconns[subgraph]
+  subgraph = find_subgraph(v, dg_subgraphs)
+  connected_subgraphs = neighbors(dg_subgraphs, subgraph)
   num_tensors_to_contract = ITensor[]
   denom_tensors_to_contract = ITensor[]
   for k in connected_subgraphs
-    push!(num_tensors_to_contract, mts[(k, subgraph)])
-    push!(denom_tensors_to_contract, mts[(k, subgraph)])
+    push!(num_tensors_to_contract, mts[k => subgraph])
+    push!(denom_tensors_to_contract, mts[k => subgraph])
   end
 
-  for vertex in subgraphs[subgraph]
+  for vertex in dg_subgraphs[subgraph]
     sv = s[vertex][1]
     flatpsiv = flatpsi[vertex]
     flatpsivO = flatpsiO[vertex]
@@ -178,31 +135,30 @@ function get_single_site_expec(
   return numerator / denominator
 end
 
-#given two flat networks psi and psi0, calculate the ratio of their contraction centred on the the subgraph(s) containing v1 and v2. The message tensors should be formulated over psi.
+#given two flat networks psi and psi0, calculate the ratio of their contraction centred on the subgraph(s) containing v1 and v2. The message tensors should be formulated over psi.
 function take_2sexpec_two_networks(
   g::NamedDimGraph,
   psi::ITensorNetwork,
   psiO::ITensorNetwork,
   s::IndsNetwork,
-  mts::Dict{Tuple,ITensor},
-  subgraphs::Dict{Int,Vector{Tuple}},
-  subgraphconns::Dict{Int,Vector{Int}},
+  mts::Dict{Pair,ITensor},
+  dg_subgraphs::DataGraph,
   v1::Tuple,
   v2::Tuple,
 )
-  subgraph1 = find_subgraph(v1, subgraphs)
-  subgraph2 = find_subgraph(v2, subgraphs)
+  subgraph1 = find_subgraph(v1, dg_subgraphs)
+  subgraph2 = find_subgraph(v2, dg_subgraphs)
   num_tensors_to_contract = ITensor[]
   denom_tensors_to_contract = ITensor[]
 
   if (subgraph1 == subgraph2)
-    connected_subgraphs = subgraphconns[subgraph1]
+    connected_subgraphs = neighbors(dg_subgraphs, subgraph1)
     for k in connected_subgraphs
-      push!(num_tensors_to_contract, mts[(k, subgraph1)])
-      push!(denom_tensors_to_contract, mts[(k, subgraph1)])
+      push!(num_tensors_to_contract, mts[k => subgraph1])
+      push!(denom_tensors_to_contract, mts[k => subgraph1])
     end
 
-    for vertex in subgraphs[subgraph1]
+    for vertex in dg_subgraphs[subgraph1]
       if (vertex != v1 && vertex != v2)
         push!(num_tensors_to_contract, deepcopy(psi[vertex]))
       else
@@ -211,23 +167,23 @@ function take_2sexpec_two_networks(
       push!(denom_tensors_to_contract, deepcopy(psi[vertex]))
     end
   else
-    connected_subgraphs1 = subgraphconns[subgraph1]
+    connected_subgraphs1 = neighbors(dg_subgraphs, subgraph1)
     for k in connected_subgraphs1
       if (k != subgraph2)
-        push!(num_tensors_to_contract, mts[(k, subgraph1)])
-        push!(denom_tensors_to_contract, mts[(k, subgraph1)])
+        push!(num_tensors_to_contract, mts[k => subgraph1])
+        push!(denom_tensors_to_contract, mts[k => subgraph1])
       end
     end
 
-    connected_subgraphs2 = subgraphconns[subgraph2]
+    connected_subgraphs2 = neighbors(dg_subgraphs, subgraph2)
     for k in connected_subgraphs2
       if (k != subgraph1)
-        push!(num_tensors_to_contract, mts[(k, subgraph2)])
-        push!(denom_tensors_to_contract, mts[(k, subgraph2)])
+        push!(num_tensors_to_contract, mts[k => subgraph2])
+        push!(denom_tensors_to_contract, mts[k => subgraph2])
       end
     end
 
-    for vertex in subgraphs[subgraph1]
+    for vertex in dg_subgraphs[subgraph1]
       if (vertex != v1)
         push!(num_tensors_to_contract, deepcopy(psi[vertex]))
       else
@@ -237,7 +193,7 @@ function take_2sexpec_two_networks(
       push!(denom_tensors_to_contract, deepcopy(psi[vertex]))
     end
 
-    for vertex in subgraphs[subgraph2]
+    for vertex in dg_subgraphs[subgraph2]
       if (vertex != v2)
         push!(num_tensors_to_contract, deepcopy(psi[vertex]))
       else
@@ -261,9 +217,8 @@ function iterate_single_site_expec(
   psiflat::ITensorNetwork,
   psiflatO::ITensorNetwork,
   s::IndsNetwork,
-  initmts::Dict{Tuple,ITensor},
-  subgraphs::Dict{Int,Vector{Tuple}},
-  subgraphconns::Dict{Int,Vector{Int}},
+  initmts::Dict{Pair,ITensor},
+  dg_subgraphs::DataGraph,
   niters::Int64,
   v::Tuple,
 )
@@ -271,16 +226,12 @@ function iterate_single_site_expec(
     "Initial Guess for Observable on site " *
     string(v) *
     " is " *
-    string(
-      get_single_site_expec(g, psiflat, psiflatO, s, initmts, subgraphs, subgraphconns, v)
-    ),
+    string(get_single_site_expec(g, psiflat, psiflatO, s, initmts, dg_subgraphs, v)),
   )
   mts = deepcopy(initmts)
   for i in 1:niters
-    mts = update_all_mts(g, psiflat, s, mts, subgraphs, subgraphconns, niters)
-    approx_O = get_single_site_expec(
-      g, psiflat, psiflatO, s, mts, subgraphs, subgraphconns, v
-    )
+    mts = update_all_mts(g, psiflat, mts, dg_subgraphs, niters)
+    approx_O = get_single_site_expec(g, psiflat, psiflatO, s, mts, dg_subgraphs, v)
     println(
       "After iteration " *
       string(i) *

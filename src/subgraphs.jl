@@ -1,36 +1,23 @@
 #Given a graph g, form 'nsubgraphs' subgraphs. Try to keep all subgraphs the same size and minimise edges cut between them
-#Return the subgraphs (1... nsubgraphs) with their contained vertices. Also return a dictionary of the subgraphs connected to each sgraph
-#KaHyPar needs to be installed for this function
+#Returns a datagraph where each vertex contains the list of vertices involved in that subgraph. The edges state which subgraphs are connected
+#KaHyPar needs to be installed for this function to work
 function formsubgraphs(g::NamedDimGraph, nsubgraphs::Int64)
   ps = partition(g, nsubgraphs; configuration=:edge_cut, imbalance=0.0)
 
-  subgraphconns = Dict{Int,Vector{Int}}()
-  subgraphs = Dict{Int,Vector{Tuple}}()
+  dg_subgraphs = DataGraph{Vector{Tuple},Any}(NamedDimGraph([(i,) for i in 1:nsubgraphs]))
   for s in 1:nsubgraphs
-    subgraphs[s] = [v for v in vertices(g) if ps[v] == s]
+    dg_subgraphs[(s,)] = [v for v in vertices(g) if ps[v] == s]
   end
 
-  subgraphadjmat = zeros(Int, nsubgraphs, nsubgraphs)
-  es = edges(g)
-
-  for i in 1:nsubgraphs
-    for j in (i + 1):nsubgraphs
-      sgraph1, sgraph2 = subgraphs[i], subgraphs[j]
-      for v1 in sgraph1
-        for v2 in sgraph2
-          if (find_edge(es, v1, v2) != 0)
-            subgraphadjmat[i, j], subgraphadjmat[j, i] = 1, 1
-          end
-        end
-      end
+  for e in edges(g)
+    v1, v2 = src(e), dst(e)
+    s1, s2 = find_subgraph(v1, dg_subgraphs), find_subgraph(v2, dg_subgraphs)
+    if (!has_edge(dg_subgraphs, s1, s2) && s1 != s2)
+      add_edge!(dg_subgraphs, s1, s2)
     end
-
-    row = subgraphadjmat[i, :]
-    inds = findall(!iszero, row)
-    subgraphconns[i] = inds
   end
 
-  return subgraphs, subgraphconns
+  return dg_subgraphs
 end
 
 #Given a graph g on a d-dimensional grid of size Ls[1] x Ls[2] x ..., form subgraphs of size ls[1] x ls[2] in a regular fashion
@@ -55,51 +42,28 @@ function formsubgraphs_grid(g::NamedDimGraph, Ls::Vector{Int64}, ls::Vector{Int6
 
   nsubgraphs = Int(prod(lengths))
 
-  subgraphconns = Dict{Int,Vector{Int}}()
-  subgraphs = Dict{Int,Vector{Tuple}}()
+  dg_subgraphs = DataGraph{Vector{Tuple},Any}(NamedDimGraph([(i,) for i in 1:nsubgraphs]))
   for s in 1:nsubgraphs
-    subgraphs[s] = [v for v in vertices(g) if ps[v] == s]
+    dg_subgraphs[(s,)] = [v for v in vertices(g) if ps[v] == s]
   end
 
-  subgraphadjmat = zeros(Int, nsubgraphs, nsubgraphs)
-  es = edges(g)
-
-  for i in 1:nsubgraphs
-    for j in (i + 1):nsubgraphs
-      sgraph1, sgraph2 = subgraphs[i], subgraphs[j]
-      for v1 in sgraph1
-        for v2 in sgraph2
-          if (find_edge(es, v1, v2) != 0)
-            subgraphadjmat[i, j], subgraphadjmat[j, i] = 1, 1
-          end
-        end
-      end
-    end
-
-    row = subgraphadjmat[i, :]
-    inds = findall(!iszero, row)
-    subgraphconns[i] = inds
-  end
-
-  return subgraphs, subgraphconns
-end
-
-#Find the subgraph in the list of subgraphs which contains the vertex v 
-function find_subgraph(vertex::Tuple, subgraphs::Dict{Int,Vector{Tuple}})
-  for i in 1:length(subgraphs)
-    for v in subgraphs[i]
-      if (v == vertex)
-        return i
-      end
+  for e in edges(g)
+    v1, v2 = src(e), dst(e)
+    s1, s2 = find_subgraph(v1, dg_subgraphs), find_subgraph(v2, dg_subgraphs)
+    if (!has_edge(dg_subgraphs, s1, s2) && s1 != s2)
+      add_edge!(dg_subgraphs, s1, s2)
     end
   end
+
+  return dg_subgraphs
 end
 
-#CHECK IF TWO VERTICES ARE INT HE SAME SUBGRAPH
-function in_same_subgraph(subgraphs::Dict{Int,Vector{Tuple}}, v1::Tuple, v2::Tuple)
-  if find_subgraph(v1, subgraphs) == find_subgraph(v2, subgraphs)
-    return true
-  else
-    return false
+#Find the subgraph in subgraph data_graph which contains vertex
+function find_subgraph(vertex::Tuple, dg_subgraphs::DataGraph)
+  for v in vertices(dg_subgraphs)
+    verts = dg_subgraphs[v]
+    if vertex in verts
+      return v
+    end
   end
 end
