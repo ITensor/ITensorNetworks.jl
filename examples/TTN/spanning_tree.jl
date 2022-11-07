@@ -1,19 +1,22 @@
 using ITensors
 using ITensorNetworks
+using ITensorGLMakie
 
 s = siteinds("S=1/2", named_grid((4, 4)))
 ψ = ITensorNetwork(s; link_space=3)
 
 @visualize ψ
 
-# Gives a snake pattern
-t_dfs = dfs_tree(g, 1, 1)
-
-@visualize t_dfs
+readline()
 
 # Gives a comb pattern
-t_bfs = bfs_tree(g, 1, 1)
+t = bfs_tree(ψ, (1, 1))
+@visualize t
 
-@visualize t_bfs
+readline()
+
+# Gives a snake pattern
+t_dfs = dfs_tree(ψ, (1, 1))
+@visualize t_dfs
 
 nothing
