@@ -1,6 +1,6 @@
 using ITensors
 using ITensorNetworks
-using ITensorNetworks: identityITensorNetwork, formsubgraphs, partition, flatten_thicken_bonds, flattened_inner_network, construct_initial_mts, update_all_mts, get_single_site_expec, iterate_single_site_expec
+using ITensorNetworks: delta_network, formsubgraphs, partition, flatten_thicken_bonds, flattened_inner_network, construct_initial_mts, update_all_mts, get_single_site_expec, iterate_single_site_expec
 using KaHyPar
 
 #nxn GRID
