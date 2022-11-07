@@ -11,8 +11,6 @@ This package relies on a few unregistered packages. To install, you will need to
 ```julia
 julia> using Pkg
 
-julia> Pkg.add(url="https://github.com/mtfishman/MultiDimDictionaries.jl")
-
 julia> Pkg.add(url="https://github.com/mtfishman/NamedGraphs.jl")
 
 julia> Pkg.add(url="https://github.com/mtfishman/DataGraphs.jl")
