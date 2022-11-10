@@ -2,18 +2,22 @@ module ITensorNetworks
 
 using DataGraphs
 using Dictionaries
+using DocStringExtensions
 using Graphs
 using ITensors
+using ITensors.ContractionSequenceOptimization
 using ITensors.ITensorVisualizationCore
 using MultiDimDictionaries
 using NamedGraphs
 using Requires
 using Reexport
+using SplitApplyCombine
 using Suppressor
 
 # TODO: export from ITensors
-using ITensors: commontags
+using ITensors: commontags, @Algorithm_str, Algorithm
 
+using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
 using MultiDimDictionaries: IndexType, SliceIndex
 using NamedGraphs:
   AbstractNamedGraph,
@@ -106,12 +110,21 @@ const UniformDataGraph{D} = NamedDimDataGraph{
   D,D,Tuple,NamedDimEdge{Tuple},NamedDimGraph{Tuple}
 }
 
+include("utils.jl")
+include("namedgraphs.jl")
+include("itensors.jl")
 include("partition.jl")
 include("lattices.jl")
 include("abstractindsnetwork.jl")
 include("indsnetwork.jl")
+include("opsum.jl") # Required IndsNetwork
 include("sitetype.jl")
 include("abstractitensornetwork.jl")
+include("contraction_sequences.jl")
+include("apply.jl")
+include("expect.jl")
+include("models.jl")
+include("tebd.jl")
 include("itensornetwork.jl")
 include(joinpath("treetensornetwork", "treetensornetwork.jl"))
 
@@ -125,6 +138,9 @@ function __init__()
   )
   @require Metis = "2679e427-3c69-5b7f-982b-ece356f1e94b" include(
     joinpath("requires", "metis.jl")
+  )
+  @require OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715" include(
+    joinpath("requires", "omeinsumcontractionorders.jl")
   )
 end
 

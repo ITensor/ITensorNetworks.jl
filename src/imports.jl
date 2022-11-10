@@ -32,6 +32,7 @@ import ITensors:
   uniqueinds,
   commoninds,
   replaceinds,
+  hascommoninds,
   # priming and tagging
   adjoint,
   sim,
@@ -46,8 +47,6 @@ import ITensors:
   tags,
   # dag
   dag
-
-import ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
 
 using ITensors.ContractionSequenceOptimization: deepmap
 

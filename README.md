@@ -11,8 +11,6 @@ This package relies on a few unregistered packages. To install, you will need to
 ```julia
 julia> using Pkg
 
-julia> Pkg.add(url="https://github.com/mtfishman/MultiDimDictionaries.jl")
-
 julia> Pkg.add(url="https://github.com/mtfishman/NamedGraphs.jl")
 
 julia> Pkg.add(url="https://github.com/mtfishman/DataGraphs.jl")
@@ -280,9 +278,7 @@ julia> @visualize Z;
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
-julia> using ITensors.ContractionSequenceOptimization
-
-julia> optimal_contraction_sequence(Z)
+julia> contraction_sequence(Z)
 2-element Vector{Vector}:
  [(1, 1), (2, 1)]
  Any[(1, 2), Any[(2, 2), [(1, 3), (2, 3)]]]
