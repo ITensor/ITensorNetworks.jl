@@ -376,6 +376,10 @@ function generate_adjacency_tree(ctree, ancestors, ctree_to_igs)
         return collect(values(igs_to_adjacency_tree))[1]
       end
     end
+    if length(igs_to_adjacency_tree) >= 1
+      @info "generate_adjacency_tree has ", length(igs_to_adjacency_tree), "outputs"
+      return IndexAdjacencyTree([collect(values(igs_to_adjacency_tree))...], false, false)
+    end
   end
 end
 
@@ -580,20 +584,19 @@ function _approximate_contract_pre_process(tn_leaves, ctrees)
     end
     for c in ctrees
       ancestors = ctree_to_ancestors[c]
-      if ancestors == []
-        continue
-      end
       adj_tree = generate_adjacency_tree(c, ancestors, ctree_to_igs)
-      ctree_to_adj_tree[c] = minswap_adjacency_tree(
-        adj_tree, ctree_to_adj_tree[c[1]], ctree_to_adj_tree[c[2]]
-      )
+      if adj_tree != nothing
+        ctree_to_adj_tree[c] = minswap_adjacency_tree(
+          adj_tree, ctree_to_adj_tree[c[1]], ctree_to_adj_tree[c[2]]
+        )
+      end
     end
     # mapping each index group to the index group tree
     ig_to_ig_tree = Dict{IndexGroup,IndexGroup}()
     for leaf in tn_leaves
       for ig in ctree_to_igs[leaf]
         if !haskey(ig_to_ig_tree, ig)
-          inds_tree = inds_binary_tree(leaf, ig.data; algorithm="mincut")
+          inds_tree = inds_binary_tree(leaf, ig.data; algorithm="mps")
           ig_to_ig_tree[ig] = IndexGroup(inds_tree, true)
         end
       end
@@ -739,6 +742,17 @@ function update_tn_tree_keys!(tn_tree, inds_btree, pairs::Vector{Pair})
   end
 end
 
+function get_child_tn(
+  ctree_to_tn_tree::Dict{Vector,Dict{Vector,OrthogonalITensor}}, ctree::Vector
+)
+  if !haskey(ctree_to_tn_tree, ctree)
+    @assert ctree isa Vector{ITensor}
+    return orthogonal_tensors(ctree)
+  else
+    return vcat(collect(values(ctree_to_tn_tree[ctree]))...)
+  end
+end
+
 # ctree: contraction tree
 # tn: vector of tensors representing a tensor network
 # tn_tree: a dict maps each index tree in the tn to a tensor
@@ -758,24 +772,31 @@ function approximate_contract(ctree::Vector; kwargs...)
     ctree_to_contract_igs[c[1]] = contract_igs
     ctree_to_contract_igs[c[2]] = contract_igs
   end
+  # special case when the network contains uncontracted inds
+  ctree_to_contract_igs[ctrees[end]] = ctree_to_igs[ctrees[end]]
   # mapping each contraction tree to a tensor network
   ctree_to_tn_tree = Dict{Vector,Dict{Vector,OrthogonalITensor}}()
-  for leaf in tn_leaves
-    inds_btree = ordered_igs_to_binary_tree(
-      ctree_to_adj_tree[leaf].children, ctree_to_contract_igs[leaf], ig_to_ig_tree
-    )
-    ctree_to_tn_tree[leaf] = approximate_contract_ctree_to_tensor(
-      orthogonal_tensors(leaf), inds_btree; kwargs...
-    )
-  end
   for c in ctrees
     if ctree_to_igs[c] == []
       @assert c == ctrees[end]
-      tn1 = vcat(collect(values(ctree_to_tn_tree[c[1]]))...)
-      tn2 = vcat(collect(values(ctree_to_tn_tree[c[2]]))...)
+      tn1 = get_child_tn(ctree_to_tn_tree, c[1])
+      tn2 = get_child_tn(ctree_to_tn_tree, c[2])
       tn = vcat(tn1, tn2)
       return get_tensors([optcontract(tn)])
     end
+    # caching is not needed here
+    if !haskey(ctree_to_tn_tree, c[1]) || !haskey(ctree_to_tn_tree, c[2])
+      tn1 = get_child_tn(ctree_to_tn_tree, c[1])
+      tn2 = get_child_tn(ctree_to_tn_tree, c[2])
+      inds_btree = ordered_igs_to_binary_tree(
+        ctree_to_adj_tree[c].children, ctree_to_contract_igs[c], ig_to_ig_tree
+      )
+      ctree_to_tn_tree[c] = approximate_contract_ctree_to_tensor(
+        [tn1..., tn2...], inds_btree; kwargs...
+      )
+      continue
+    end
+    # caching
     uncache_igs, cache_igs_left, cache_igs_right = get_igs_cache_info(
       [ctree_to_adj_tree[i].children for i in [c, c[1], c[2]]],
       [ctree_to_contract_igs[i] for i in [c, c[1], c[2]]],

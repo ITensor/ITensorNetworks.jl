@@ -9,6 +9,10 @@ end
 
 function TensorNetworkGraph(network::Vector{ITensor})
   uncontract_inds = noncommoninds(network...)
+  return TensorNetworkGraph(network, uncontract_inds)
+end
+
+function TensorNetworkGraph(network::Vector{ITensor}, uncontract_inds::Vector)
   graph = Graphs.DiGraph(length(network))
   # construct contract_edges
   contract_edges = []

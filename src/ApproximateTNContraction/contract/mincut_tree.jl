@@ -5,7 +5,7 @@ MAX_WEIGHT = 100000
 function inds_binary_tree(
   network::Vector{ITensor}, inds_groups::Vector{<:Vector}; kwargs...
 )
-  tng = TensorNetworkGraph(network)
+  tng = TensorNetworkGraph(network, vectorize(inds_groups))
   function get_sub_tree(inds)
     @assert all(ind -> ind isa Index, inds)
     if length(inds) == 1
@@ -55,7 +55,7 @@ function inds_binary_tree(
     end
     return out_inds
   end
-  tng = TensorNetworkGraph(network)
+  tng = TensorNetworkGraph(network, outinds)
   grouped_uncontracted_inds = [[i] for i in outinds]
   return inds_binary_tree!(tng, grouped_uncontracted_inds; algorithm=algorithm)
 end

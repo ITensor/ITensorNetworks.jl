@@ -13,5 +13,5 @@ using ITensorNetworks.ApproximateTNContraction: IndexGroup, get_igs_cache_info
   igs_list = [type([l, k, i, m, n]), type([i, j, k]), type([l, j, m, n])]
   contract_igs_list = [type([m]), type([j]), type([j])]
   out = get_igs_cache_info(igs_list, contract_igs_list)
-  @test out == ([k, i, m], [l], [n])
+  @test out == ([l, k, i, m, n], [], [])
 end

@@ -19,7 +19,6 @@ function ITensors.noncommoninds(ortho_tensors::OrthogonalITensor...)
   if length(ortho_tensors) == 1
     return collect(inds(ortho_tensors[1]))
   end
-  @info "ortho_tensors are", ortho_tensors
   return noncommoninds(get_tensors([ortho_tensors...])...)
 end
 

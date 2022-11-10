@@ -38,8 +38,8 @@ using Test
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
     ψ = ITensorNetwork(s, v -> "↑")
-    tn = inner(ψ, sim(dag(ψ), sites=[]))
-    tn_2 = contract(tn,  (2, 1, 2) => (1, 1, 2))
+    tn = inner(ψ, sim(dag(ψ); sites=[]))
+    tn_2 = contract(tn, (2, 1, 2) => (1, 1, 2))
     @test !has_vertex(tn_2, (2, 1, 2))
     @test tn_2[1, 1, 2] ≈ tn[2, 1, 2] * tn[1, 1, 2]
   end
@@ -50,7 +50,7 @@ using Test
     s = siteinds("S=1/2", g)
     ψ = ITensorNetwork(s, v -> "↑")
     rem_vertex!(ψ, (1, 2))
-    tn = inner(ψ, sim(dag(ψ), sites=[]))
+    tn = inner(ψ, sim(dag(ψ); sites=[]))
     @test !has_vertex(tn, (1, 1, 2))
     @test !has_vertex(tn, (2, 1, 2))
     @test has_vertex(tn, (1, 1, 1))

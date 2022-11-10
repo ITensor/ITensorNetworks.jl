@@ -13,7 +13,15 @@ end
 function get_index_groups(tn_tree::Vector)
   @timeit timer "get_index_groups" begin
     tn_leaves = get_leaves(tn_tree)
+    tn = vcat(tn_leaves...)
+    uncontract_inds = noncommoninds(tn...)
     igs = []
+    for leaf in tn_leaves
+      inds = intersect(noncommoninds(leaf...), uncontract_inds)
+      if length(inds) >= 1
+        push!(igs, IndexGroup(inds))
+      end
+    end
     for (t1, t2) in powerset(tn_leaves, 2, 2)
       inds = intersect(noncommoninds(t1...), noncommoninds(t2...))
       if length(inds) >= 1
