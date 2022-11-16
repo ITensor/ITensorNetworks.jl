@@ -10,8 +10,7 @@ using ITensorNetworks:
   update_all_mts,
   get_single_site_expec,
   iterate_single_site_expec,
-  contract_boundary_mps,
-  boundary_PEPS_contractor
+  contract_boundary_mps
 using KaHyPar
 
 #nxn GRID
@@ -37,7 +36,7 @@ println("Actual value of Sz on site " * string(v) * " is " * string(actual_sz))
 nsites = 1
 println("First " * string(nsites) * " sites form a subgraph")
 dg_subgraphs = formsubgraphs(g, Int(n * n / nsites))
-mts = construct_initial_mts(psiflat, dg_subgraphs; id_init=1)
+mts = construct_initial_mts(psiflat, dg_subgraphs; init="I")
 niters = 5
 
 iterate_single_site_expec(psiflat, psiflatO, s, mts, dg_subgraphs, niters, v)
@@ -45,6 +44,6 @@ iterate_single_site_expec(psiflat, psiflatO, s, mts, dg_subgraphs, niters, v)
 nsites = 4
 println("Now " * string(nsites) * " sites form a subgraph")
 dg_subgraphs = formsubgraphs(g, Int(n * n / nsites))
-mts = construct_initial_mts(psiflat, dg_subgraphs; id_init=1)
+mts = construct_initial_mts(psiflat, dg_subgraphs; init="I")
 
 iterate_single_site_expec(psiflat, psiflatO, s, mts, dg_subgraphs, niters, v)

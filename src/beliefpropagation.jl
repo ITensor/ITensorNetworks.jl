@@ -1,14 +1,14 @@
 #Construct the random initial Message Tensors for an ITensor Network, based on a partitioning into subgraphs specified ny 'sub graphs'
 #The ITensorNetwork needs to be flat (i.e. just sites and link indices, no site indices), and is assumed to only have 1 link indice between any two sites
 #id_init = 0 => Random, id_init = 1 => Identity Matrix initialisation (preferred)
-function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph; id_init=1
+function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph; init=delta
 )
   mts = Dict{Pair,ITensor}()
 
   for i in vertices(dg_subgraphs)
     tns_to_contract = ITensor[]
     for j in neighbors(dg_subgraphs, i)
-      edge_inds = []
+      edge_inds = Index[]
       for vertex in dg_subgraphs[i]
         psiv = flatpsi[vertex]
         for e in NamedDimEdge.(Ref(vertex) .=> neighbors(flatpsi, vertex))
@@ -18,10 +18,10 @@ function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph;
           end
         end
       end
-      if (id_init == 1)
+      if(init=="I")
         X1 = dense(delta(edge_inds))
       else
-        X1 = randomITensor(edge_inds)
+        X1 = itensor(init(dim(edge_inds)), edge_inds)
       end
       normalize!(X1)
       mts[i => j] = X1
