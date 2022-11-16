@@ -1,8 +1,7 @@
 #Construct the random initial Message Tensors for an ITensor Network, based on a partitioning into subgraphs specified ny 'sub graphs'
 #The ITensorNetwork needs to be flat (i.e. just sites and link indices, no site indices), and is assumed to only have 1 link indice between any two sites
 #id_init = 0 => Random, id_init = 1 => Identity Matrix initialisation (preferred)
-function construct_initial_mts(
-  g::NamedDimGraph, flatpsi::ITensorNetwork, dg_subgraphs::DataGraph; id_init=1
+function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph; id_init=1
 )
   mts = Dict{Pair,ITensor}()
 
@@ -10,10 +9,9 @@ function construct_initial_mts(
     tns_to_contract = ITensor[]
     for j in neighbors(dg_subgraphs, i)
       edge_inds = []
-
       for vertex in dg_subgraphs[i]
         psiv = flatpsi[vertex]
-        for e in NamedDimEdge.(Ref(vertex) .=> neighbors(g, vertex))
+        for e in NamedDimEdge.(Ref(vertex) .=> neighbors(flatpsi, vertex))
           if (find_subgraph(dst(e), dg_subgraphs) == j)
             edge_ind = commoninds(flatpsi, e)[1]
             push!(edge_inds, edge_ind)
@@ -21,8 +19,7 @@ function construct_initial_mts(
         end
       end
       if (id_init == 1)
-        A = Array(delta(edge_inds), edge_inds)
-        X1 = ITensor(A, edge_inds)
+        X1 = dense(delta(edge_inds))
       else
         X1 = randomITensor(edge_inds)
       end
@@ -35,8 +32,7 @@ function construct_initial_mts(
 end
 
 #DO a single update of a message tensor using the current subgraph and the incoming mts
-function updatemt(
-  g::NamedDimGraph, flatpsi::ITensorNetwork, subgraph::Vector{Tuple}, mts::Vector{ITensor}
+function updatemt(flatpsi::ITensorNetwork, subgraph::Vector{Tuple}, mts::Vector{ITensor}
 )
   Contract_list = ITensor[]
 
@@ -58,7 +54,6 @@ end
 
 #Do an update of all message tensors for a given flat ITensornetwork and its partition into sub graphs
 function update_all_mts(
-  g::NamedDimGraph,
   flatpsi::ITensorNetwork,
   mts::Dict{Pair,ITensor},
   dg_subgraphs::DataGraph,
@@ -76,7 +71,7 @@ function update_all_mts(
       end
     end
     newmts[subgraph_src => subgraph_dst] = updatemt(
-      g, flatpsi, dg_subgraphs[subgraph_src], mts_to_use
+      flatpsi, dg_subgraphs[subgraph_src], mts_to_use
     )
   end
 
@@ -84,7 +79,6 @@ function update_all_mts(
 end
 
 function update_all_mts(
-  g::NamedDimGraph,
   flatpsi::ITensorNetwork,
   mts::Dict{Pair,ITensor},
   dg_subgraphs::DataGraph,
@@ -93,7 +87,7 @@ function update_all_mts(
   newmts = deepcopy(mts)
 
   for i in 1:niters
-    newmts = update_all_mts(g, flatpsi, deepcopy(newmts), dg_subgraphs)
+    newmts = update_all_mts(flatpsi, deepcopy(newmts), dg_subgraphs)
   end
 
   return newmts
@@ -102,7 +96,6 @@ end
 #given two flat networks psi and psi0, calculate the ratio of their contraction centred on the the subgraph containing v. The message tensors should be formulated over psi
 #Link indices between psi and psi0 should be consistent so the mts can be applied to both
 function get_single_site_expec(
-  g::NamedDimGraph,
   flatpsi::ITensorNetwork,
   flatpsiO::ITensorNetwork,
   s::IndsNetwork,
@@ -137,7 +130,6 @@ end
 
 #given two flat networks psi and psi0, calculate the ratio of their contraction centred on the subgraph(s) containing v1 and v2. The message tensors should be formulated over psi.
 function take_2sexpec_two_networks(
-  g::NamedDimGraph,
   psi::ITensorNetwork,
   psiO::ITensorNetwork,
   s::IndsNetwork,
@@ -213,7 +205,6 @@ end
 
 #Starting with initial guess for messagetensors, monitor the convergence of an observable on a single site v (which is emedded in psiflatO)
 function iterate_single_site_expec(
-  g::NamedDimGraph,
   psiflat::ITensorNetwork,
   psiflatO::ITensorNetwork,
   s::IndsNetwork,
@@ -226,12 +217,12 @@ function iterate_single_site_expec(
     "Initial Guess for Observable on site " *
     string(v) *
     " is " *
-    string(get_single_site_expec(g, psiflat, psiflatO, s, initmts, dg_subgraphs, v)),
+    string(get_single_site_expec(psiflat, psiflatO, s, initmts, dg_subgraphs, v)),
   )
   mts = deepcopy(initmts)
   for i in 1:niters
-    mts = update_all_mts(g, psiflat, mts, dg_subgraphs, niters)
-    approx_O = get_single_site_expec(g, psiflat, psiflatO, s, mts, dg_subgraphs, v)
+    mts = update_all_mts(psiflat, mts, dg_subgraphs, niters)
+    approx_O = get_single_site_expec(psiflat, psiflatO, s, mts, dg_subgraphs, v)
     println(
       "After iteration " *
       string(i) *
