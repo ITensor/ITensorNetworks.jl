@@ -1,35 +1,13 @@
-#GIVEN AN ITENSOR NETWORK CORRESPONDING TO A Lx*Ly grid indexed as (i,j) then perform boundary sweeping using a max_dim of chi_max
-function boundary_PEPS_contractor(
-  psi::ITensorNetwork, Lx::Int64, Ly::Int64; chi_max=nothing, cut_off=nothing
-)
-  tn = deepcopy(psi)
-  for i in 1:(Ly - 1)
-    #First contract the row upwards
-    for j in 1:Lx
-      tn = ITensors.contract(tn, (i, j) => (i + 1, j))
-    end
-    #Now SVD all double Bonds on that row Down
-    for j in 1:(Lx - 1)
-      psi1 = tn[(i + 1, j)]
-      psi2 = tn[(i + 1, j + 1)]
-
-      A = psi1 * psi2
-      inds_U = uniqueinds(A, NDTensors.inds(psi1))
-      if (chi_max == nothing && cut_off != nothing)
-        U, S, V = svd(A, inds_U; cutoff=cut_off)
-      elseif (chi_max != nothing && cut_off == nothing)
-        U, S, V = svd(A, inds_U; maxdim=chi_max)
-      elseif (chi_max != nothing && cut_off != nothing)
-        U, S, V = svd(A, inds_U; cutoff=cut_off, maxdim=chi_max)
-      else
-        U, S, V = svd(A, inds_U)
-      end
-      tn[(i + 1, j + 1)] = U * S
-      tn[(i + 1, j)] = V
-    end
+#GIVEN AN ITENSOR NETWORK CORRESPONDING to an Lx*Ly grid with sites indexed as (i,j) then perform contraction using a sequence of mps-mpo contractions
+function contract_boundary_mps(tn::ITensorNetwork; kwargs...)
+  dims = maximum(vertices(tn))
+  d1, d2 = dims
+  vL = MPS([tn[i1, 1] for i1 in 1:d1])
+  for i2 in 2:(d2 - 2)
+    T = MPO([tn[i1, i2] for i1 in 1:d1])
+    vL = contract(T, vL; kwargs...)
   end
-
-  Z = ITensors.contract(tn)
-
-  return Z
+  T = MPO([tn[i1, d2 - 1] for i1 in 1:d1])
+  vR = MPS([tn[i1, d2] for i1 in 1:d1])
+  return inner(dag(vL), T, vR)[]
 end
