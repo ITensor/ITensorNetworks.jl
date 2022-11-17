@@ -519,7 +519,7 @@ function flatten_thicken_bonds(
   end
 
   flatpsi = flattened_inner_network(psiin, psi)
-  flatpsi = rename_vertices(flatpsi, Dictionary(vertices(flatpsi), vertices(psi)))
+  flatpsi = rename_vertices_itn(flatpsi, Dictionary(vertices(flatpsi), vertices(psi)))
 
   return combine_link_indices(flatpsi; combiners=combiners)
 end
