@@ -1,5 +1,5 @@
 #RENAME THE VERTICES OF AN ITENSORNETWORK
-function rename_vertices(psi::ITensorNetwork, name_map::Dictionary)
+function rename_vertices_itn(psi::ITensorNetwork, name_map::Dictionary)
   old_g = NamedDimGraph(vertices(psi))
 
   for e in edges(psi)
@@ -16,7 +16,7 @@ function rename_vertices(psi::ITensorNetwork, name_map::Dictionary)
   return psi_new
 end
 
-function rename_vertices(psi::ITensorNetwork, name_map::Function)
+function rename_vertices_itn(psi::ITensorNetwork, name_map::Function)
   original_vertices = vertices(psi)
   return rename_vertices(psi, Dictionary(original_vertices, name_map.(original_vertices)))
 end
