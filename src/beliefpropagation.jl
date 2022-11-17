@@ -1,6 +1,6 @@
 #Construct the random initial Message Tensors for an ITensor Network, based on a partitioning into subgraphs specified ny 'sub graphs'
 #The ITensorNetwork needs to be flat (i.e. just sites and link indices, no site indices), and is assumed to only have 1 link indice between any two sites
-#id_init = 0 => Random, id_init = 1 => Identity Matrix initialisation (preferred)
+#init=(I...) -> allequal(I) ? 1 : 0 (identity), init=(I...) -> randn() (normally distributed random), etc...
 function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph; init
 )
   mts = Dict{Pair,ITensor}()
@@ -200,7 +200,7 @@ function take_2sexpec_two_networks(
       push!(denom_tensors_to_contract, deepcopy(psi[vertex]))
     end
   end
-  
+
   numerator = ITensors.contract(num_tensors_to_contract; sequence=contraction_sequence(num_tensors_to_contract))[1]
   denominator = ITensors.contract(denom_tensors_to_contract; sequence=contraction_sequence(denom_tensors_to_contract))[1]
   out = numerator / denominator
