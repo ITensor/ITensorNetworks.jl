@@ -1,7 +1,7 @@
 #Construct the random initial Message Tensors for an ITensor Network, based on a partitioning into subgraphs specified ny 'sub graphs'
 #The ITensorNetwork needs to be flat (i.e. just sites and link indices, no site indices), and is assumed to only have 1 link indice between any two sites
 #id_init = 0 => Random, id_init = 1 => Identity Matrix initialisation (preferred)
-function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph; init=delta
+function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph; init
 )
   mts = Dict{Pair,ITensor}()
 
@@ -18,11 +18,12 @@ function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph;
           end
         end
       end
-      if(init=="I")
-        X1 = dense(delta(edge_inds))
-      else
-        X1 = itensor(init(dim(edge_inds)), edge_inds)
-      end
+      X1 = itensor([init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(edge_inds)...))], edge_inds)
+      # if(init=="I")
+      #   X1 = dense(delta(edge_inds))
+      # else
+      #   X1 = itensor(init(dim(edge_inds)), edge_inds)
+      # end
       normalize!(X1)
       mts[i => j] = X1
     end
@@ -32,7 +33,7 @@ function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph;
 end
 
 #DO a single update of a message tensor using the current subgraph and the incoming mts
-function updatemt(flatpsi::ITensorNetwork, subgraph::Vector{Tuple}, mts::Vector{ITensor}
+function updatemt(flatpsi::ITensorNetwork, subgraph::Vector{Tuple}, mts::Vector{ITensor}; contraction_sequence::Function=tn -> ITensorNetworks.contraction_sequence(tn; alg="optimal")
 )
   Contract_list = ITensor[]
 
@@ -45,7 +46,7 @@ function updatemt(flatpsi::ITensorNetwork, subgraph::Vector{Tuple}, mts::Vector{
     push!(Contract_list, psiv)
   end
 
-  M = ITensors.contract(Contract_list)
+  M = contract(Contract_list; sequence=contraction_sequence(Contract_list))
 
   normalize!(M)
 
@@ -56,7 +57,8 @@ end
 function update_all_mts(
   flatpsi::ITensorNetwork,
   mts::Dict{Pair,ITensor},
-  dg_subgraphs::DataGraph,
+  dg_subgraphs::DataGraph;
+  contraction_sequence::Function=tn -> ITensorNetworks.contraction_sequence(tn; alg="optimal")
 )
   newmts = Dict{Pair,ITensor}()
 
@@ -71,7 +73,7 @@ function update_all_mts(
       end
     end
     newmts[subgraph_src => subgraph_dst] = updatemt(
-      flatpsi, dg_subgraphs[subgraph_src], mts_to_use
+      flatpsi, dg_subgraphs[subgraph_src], mts_to_use; contraction_sequence = contraction_sequence
     )
   end
 
@@ -82,12 +84,13 @@ function update_all_mts(
   flatpsi::ITensorNetwork,
   mts::Dict{Pair,ITensor},
   dg_subgraphs::DataGraph,
-  niters::Int64,
+  niters::Int64;
+  contraction_sequence::Function=tn -> ITensorNetworks.contraction_sequence(tn; alg="optimal")
 )
   newmts = deepcopy(mts)
 
   for i in 1:niters
-    newmts = update_all_mts(flatpsi, deepcopy(newmts), dg_subgraphs)
+    newmts = update_all_mts(flatpsi, deepcopy(newmts), dg_subgraphs; contraction_sequence = contraction_sequence)
   end
 
   return newmts
@@ -101,7 +104,8 @@ function get_single_site_expec(
   s::IndsNetwork,
   mts::Dict{Pair,ITensor},
   dg_subgraphs::DataGraph,
-  v::Tuple,
+  v::Tuple;
+  contraction_sequence::Function=tn -> ITensorNetworks.contraction_sequence(tn; alg="optimal")
 )
   es = edges(flatpsi)
 
@@ -122,8 +126,8 @@ function get_single_site_expec(
     push!(denom_tensors_to_contract, flatpsiv)
   end
 
-  numerator = ITensors.contract(num_tensors_to_contract)[1]
-  denominator = ITensors.contract(denom_tensors_to_contract)[1]
+  numerator = ITensors.contract(num_tensors_to_contract; sequence=contraction_sequence(num_tensors_to_contract))[1]
+  denominator = ITensors.contract(denom_tensors_to_contract; sequence=contraction_sequence(denom_tensors_to_contract))[1]
 
   return numerator / denominator
 end
@@ -136,7 +140,8 @@ function take_2sexpec_two_networks(
   mts::Dict{Pair,ITensor},
   dg_subgraphs::DataGraph,
   v1::Tuple,
-  v2::Tuple,
+  v2::Tuple;
+  contraction_sequence::Function=tn -> ITensorNetworks.contraction_sequence(tn; alg="optimal")
 )
   subgraph1 = find_subgraph(v1, dg_subgraphs)
   subgraph2 = find_subgraph(v2, dg_subgraphs)
@@ -195,9 +200,9 @@ function take_2sexpec_two_networks(
       push!(denom_tensors_to_contract, deepcopy(psi[vertex]))
     end
   end
-
-  numerator = ITensors.contract(num_tensors_to_contract)[1]
-  denominator = ITensors.contract(denom_tensors_to_contract)[1]
+  
+  numerator = ITensors.contract(num_tensors_to_contract; sequence=contraction_sequence(num_tensors_to_contract))[1]
+  denominator = ITensors.contract(denom_tensors_to_contract; sequence=contraction_sequence(denom_tensors_to_contract))[1]
   out = numerator / denominator
 
   return out
