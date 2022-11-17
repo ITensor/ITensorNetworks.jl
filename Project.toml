@@ -4,6 +4,7 @@ authors = ["Matthew Fishman <mfishman@flatironinstitute.org> and contributors"]
 version = "0.1.0"
 
 [deps]
+AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
 DataGraphs = "b5a273c3-7e6c-41f6-98bd-8d7f1525a36a"
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"

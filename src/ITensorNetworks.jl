@@ -1,5 +1,6 @@
 module ITensorNetworks
 
+using AbstractTrees
 using DataGraphs
 using Dictionaries
 using DocStringExtensions
@@ -15,6 +16,7 @@ using Suppressor
 
 # TODO: export from ITensors
 using ITensors: commontags, @Algorithm_str, Algorithm
+using ITensors.ContractionSequenceOptimization: deepmap
 
 using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
 using MultiDimDictionaries: IndexType, SliceIndex
@@ -30,6 +32,24 @@ include("imports.jl")
 
 # General functions
 _not_implemented() = error("Not implemented")
+
+"""
+  Vertex{T}
+
+Simple type representing a vertex of a graph.
+Mostly with `AbstractTrees` as a leaf type,
+for example:
+deepmap(Vertex, [(1, 1), [(1, 2), (2, 2)]])
+"""
+struct Vertex{T}
+  vertex::T
+end
+Base.show(io::IO, x::Vertex) = print(io, "Vertex(", x.vertex, ")")
+AbstractTrees.children(::Vertex) = []
+Base.length(x::Vertex) = 1
+Base.iterate(x::Vertex) = (x, nothing)
+Base.iterate(x::Vertex, ::Any) = nothing
+Base.keys(::Vertex) = error("Not implemented") #Base.OneTo(1)
 
 # ITensorVisualizationBase overload
 function visualize(
@@ -126,6 +146,7 @@ include("models.jl")
 include("tebd.jl")
 include("itensornetwork.jl")
 include(joinpath("treetensornetwork", "treetensornetwork.jl"))
+include(joinpath("contract_approx", "contract_approx_bond_compression.jl"))
 
 include("exports.jl")
 

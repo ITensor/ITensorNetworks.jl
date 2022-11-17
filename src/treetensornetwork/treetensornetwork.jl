@@ -1,5 +1,8 @@
 abstract type AbstractTreeTensorNetwork <: AbstractITensorNetwork end
 
+# TODO: Use graph centrality here, i.e.:
+# argmax(closeness_centrality(ψ))
+# to use the most central vertex of the tree.
 function default_root_vertex(ϕ::AbstractTreeTensorNetwork, ψ::AbstractTreeTensorNetwork)
   return first(vertices(ψ))
 end
@@ -15,6 +18,8 @@ function inner(
   # TODO: find the largest tensor and use it as
   # the `root_vertex`.
   root_vertex = first(vertices(ψ))
+  # TODO: rewrite this in terms of a contraction sequence tree
+  # (which internally uses `post_order_dfs_edges`)
   for e in post_order_dfs_edges(ψ, root_vertex)
     if has_vertex(ϕψ, 2, src(e)...)
       ϕψ = contract(ϕψ, (2, src(e)...) => (1, src(e)...))

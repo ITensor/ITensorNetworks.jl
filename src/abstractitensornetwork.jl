@@ -232,8 +232,8 @@ function contract(tn::AbstractITensorNetwork; sequence=vertices(tn), kwargs...)
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
 end
 
-function contract(tn::AbstractITensorNetwork, edge::Pair)
-  return contract(tn, edgetype(tn)(edge))
+function contract(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return contract(tn, edgetype(tn)(edge); kwargs...)
 end
 
 # Contract the tensors at vertices `src(edge)` and `dst(edge)`
@@ -241,20 +241,27 @@ end
 # the vertex `src(edge)`.
 # TODO: write this in terms of a more generic function
 # `Graphs.merge_vertices!` (https://github.com/mtfishman/ITensorNetworks.jl/issues/12)
-function contract(tn::AbstractITensorNetwork, edge::AbstractEdge)
+function contract(tn::AbstractITensorNetwork, edge::AbstractEdge; new_vertex=dst(edge))
   tn = copy(tn)
   neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
   rem_vertex!(tn, src(edge))
+  rem_vertex!(tn, dst(edge))
+
+  add_vertex!(tn, new_vertex)
   for n_src in neighbors_src
-    add_edge!(tn, dst(edge) => n_src)
+    add_edge!(tn, new_vertex => n_src)
   end
   for n_dst in neighbors_dst
-    add_edge!(tn, dst(edge) => n_dst)
+    add_edge!(tn, new_vertex => n_dst)
   end
   # tn[dst(edge)] = new_itensor
-  setindex_preserve_graph!(tn, new_itensor, dst(edge))
+  setindex_preserve_graph!(tn, new_itensor, new_vertex)
+
+  @show new_vertex
+  @show tn[new_vertex]
+
   return tn
 end
 
