@@ -40,11 +40,11 @@ dg_subgraphs = formsubgraphs(g, Int(n * n / nsites))
 mts = construct_initial_mts(psiflat, dg_subgraphs; init=(I...) -> allequal(I) ? 1 : 0)
 niters = 5
 
-iterate_single_site_expec(psiflat, psiflatO, s, mts, dg_subgraphs, niters, v)
+iterate_single_site_expec(psiflat, psiflatO, mts, dg_subgraphs, niters, v)
 
 nsites = 4
 println("Now " * string(nsites) * " sites form a subgraph")
 dg_subgraphs = formsubgraphs(g, Int(n * n / nsites))
 mts = construct_initial_mts(psiflat, dg_subgraphs; init=(I...) -> allequal(I) ? 1 : 0)
 
-iterate_single_site_expec(psiflat, psiflatO, s, mts, dg_subgraphs, niters, v)
+iterate_single_site_expec(psiflat, psiflatO, mts, dg_subgraphs, niters, v)

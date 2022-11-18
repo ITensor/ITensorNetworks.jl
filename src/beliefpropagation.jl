@@ -19,11 +19,6 @@ function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph;
         end
       end
       X1 = itensor([init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(edge_inds)...))], edge_inds)
-      # if(init=="I")
-      #   X1 = dense(delta(edge_inds))
-      # else
-      #   X1 = itensor(init(dim(edge_inds)), edge_inds)
-      # end
       normalize!(X1)
       mts[i => j] = X1
     end
@@ -101,13 +96,13 @@ end
 function get_single_site_expec(
   flatpsi::ITensorNetwork,
   flatpsiO::ITensorNetwork,
-  s::IndsNetwork,
   mts::Dict{Pair,ITensor},
   dg_subgraphs::DataGraph,
   v::Tuple;
   contraction_sequence::Function=tn -> ITensorNetworks.contraction_sequence(tn; alg="optimal")
 )
   es = edges(flatpsi)
+
 
   subgraph = find_subgraph(v, dg_subgraphs)
   connected_subgraphs = neighbors(dg_subgraphs, subgraph)
@@ -119,7 +114,6 @@ function get_single_site_expec(
   end
 
   for vertex in dg_subgraphs[subgraph]
-    sv = s[vertex][1]
     flatpsiv = flatpsi[vertex]
     flatpsivO = flatpsiO[vertex]
     push!(num_tensors_to_contract, flatpsivO)
@@ -136,7 +130,6 @@ end
 function take_2sexpec_two_networks(
   psi::ITensorNetwork,
   psiO::ITensorNetwork,
-  s::IndsNetwork,
   mts::Dict{Pair,ITensor},
   dg_subgraphs::DataGraph,
   v1::Tuple,
@@ -212,7 +205,6 @@ end
 function iterate_single_site_expec(
   psiflat::ITensorNetwork,
   psiflatO::ITensorNetwork,
-  s::IndsNetwork,
   initmts::Dict{Pair,ITensor},
   dg_subgraphs::DataGraph,
   niters::Int64,
@@ -222,12 +214,12 @@ function iterate_single_site_expec(
     "Initial Guess for Observable on site " *
     string(v) *
     " is " *
-    string(get_single_site_expec(psiflat, psiflatO, s, initmts, dg_subgraphs, v)),
+    string(get_single_site_expec(psiflat, psiflatO, initmts, dg_subgraphs, v)),
   )
   mts = deepcopy(initmts)
   for i in 1:niters
     mts = update_all_mts(psiflat, mts, dg_subgraphs, niters)
-    approx_O = get_single_site_expec(psiflat, psiflatO, s, mts, dg_subgraphs, v)
+    approx_O = get_single_site_expec(psiflat, psiflatO, mts, dg_subgraphs, v)
     println(
       "After iteration " *
       string(i) *
