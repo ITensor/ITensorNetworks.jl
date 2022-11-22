@@ -1,6 +1,7 @@
 #Construct the random initial Message Tensors for an ITensor Network, based on a partitioning into subgraphs specified ny 'sub graphs'
 #The ITensorNetwork needs to be flat (i.e. just sites and link indices, no site indices), and is assumed to only have 1 link indice between any two sites
 #init=(I...) -> allequal(I) ? 1 : 0 (identity), init=(I...) -> randn() (normally distributed random), etc...
+#PRODUCT MPS INITIALISATION?!
 function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph; init
 )
   mts = Dict{Pair,ITensor}()
