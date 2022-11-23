@@ -110,16 +110,34 @@ using Test
   is_isite_link = IndsNetwork(c; site_space=site_inds_map, link_space=link_dim_map)
   @test is_isite_link isa IndsNetwork
   @test all(is_isite_link[v] == [site_inds_map[v]] for v in vertices(is_isite_link))
-  @test all(dim.(is_isite_link[e]) == [link_dim_map[e]] for e in edges(is_isite_link))
+
+  # XXX: Broken, `IndsNetwork` is now a directed graph so `edges` includes both
+  # edge directions.
+  # TODO: Create a function the outputs only unique undirected edges (`unique(arrange.(edges(g)))`)
+  @test_broken all(dim.(is_isite_link[e]) == [link_dim_map[e]] for e in edges(is_isite_link))
+  @test all(e -> dim.(is_isite_link[e]) == [link_dim_map[e]], keys(link_dim_map))
+
   is_isite_mlink = IndsNetwork(c; site_space=site_inds_map, link_space=link_dim_map_multi)
   @test is_isite_mlink isa IndsNetwork
   @test all(is_isite_mlink[v] == [site_inds_map[v]] for v in vertices(is_isite_mlink))
-  @test all(dim.(is_isite_mlink[e]) == link_dim_map_multi[e] for e in edges(is_isite_mlink))
+
+  # XXX: Broken, `IndsNetwork` is now a directed graph so `edges` includes both
+  # edge directions.
+  # TODO: Create a function the outputs only unique undirected edges (`unique(arrange.(edges(g)))`)
+  @test_broken all(dim.(is_isite_mlink[e]) == link_dim_map_multi[e] for e in edges(is_isite_mlink))
+  @test all(e -> dim.(is_isite_mlink[e]) == link_dim_map_multi[e], keys(link_dim_map_multi))
+
   # index site dict, index link dict
   is_misite_ilink = IndsNetwork(c; site_space=site_inds_map_multi, link_space=link_inds_map)
   @test is_misite_ilink isa IndsNetwork
   @test all(is_misite_ilink[v] == site_inds_map_multi[v] for v in vertices(is_misite_ilink))
-  @test all(is_misite_ilink[e] == [link_inds_map[e]] for e in edges(is_misite_ilink))
+
+  # XXX: Broken, `IndsNetwork` is now a directed graph so `edges` includes both
+  # edge directions.
+  # TODO: Create a function the outputs only unique undirected edges (`unique(arrange.(edges(g)))`)
+  @test_broken all(is_misite_ilink[e] == [link_inds_map[e]] for e in edges(is_misite_ilink))
+  @test all(e -> is_misite_ilink[e] == [link_inds_map[e]], keys(link_inds_map))
+
   is_misite_milink = IndsNetwork(
     c; site_space=site_inds_map_multi, link_space=link_inds_map_multi
   )
@@ -127,7 +145,12 @@ using Test
   @test all(
     is_misite_milink[v] == site_inds_map_multi[v] for v in vertices(is_misite_milink)
   )
-  @test all(is_misite_milink[e] == link_inds_map_multi[e] for e in edges(is_misite_milink))
+
+  # XXX: Broken, `IndsNetwork` is now a directed graph so `edges` includes both
+  # edge directions.
+  # TODO: Create a function the outputs only unique undirected edges (`unique(arrange.(edges(g)))`)
+  @test_broken all(is_misite_milink[e] == link_inds_map_multi[e] for e in edges(is_misite_milink))
+  @test all(e -> is_misite_milink[e] == link_inds_map_multi[e], keys(link_inds_map_multi))
 end
 
 @testset "IndsNetwork merging" begin

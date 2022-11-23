@@ -8,15 +8,21 @@ import Base:
   hvncat,
   setindex!,
   show,
-  isassigned
+  isassigned,
+  union
 
-import .DataGraphs: underlying_graph, vertex_data, edge_data
+import .DataGraphs: underlying_graph, underlying_graph_type, vertex_data, edge_data
 
 import Graphs: Graph, is_directed
 
 import LinearAlgebra: svd, factorize, qr
 
-import NamedGraphs: vertex_to_parent_vertex, to_vertex
+import NamedGraphs:
+  vertextype,
+  vertex_to_parent_vertex,
+  rename_vertices,
+  disjoint_union
+  #, to_vertex
 
 import ITensors:
   # contraction

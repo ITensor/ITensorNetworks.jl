@@ -8,7 +8,7 @@ function partition(g::Graph, npartitions::Integer; backend="KaHyPar", kwargs...)
   return partition(Backend(backend), g, npartitions; kwargs...)
 end
 
-function partition(g::NamedDimGraph, npartitions::Integer; kwargs...)
+function partition(g::NamedGraph, npartitions::Integer; kwargs...)
   partitions = partition(parent_graph(g), npartitions; kwargs...)
   #[inv(vertex_to_parent_vertex(g))[v] for v in partitions]
   # TODO: output the reverse of this dictionary (a Vector of Vector

@@ -1,4 +1,5 @@
-abstract type AbstractTreeTensorNetwork <: AbstractITensorNetwork end
+# TODO: Replace `AbstractITensorNetwork` with a trait `IsTree`.
+abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
 
 function default_root_vertex(ϕ::AbstractTreeTensorNetwork, ψ::AbstractTreeTensorNetwork)
   return first(vertices(ψ))
@@ -52,14 +53,14 @@ end
 - ortho_lims::Vector{Tuple}: A vector of vertices defining the orthogonality limits.
 
 """
-struct TreeTensorNetworkState <: AbstractTreeTensorNetwork
-  itensor_network::ITensorNetwork
+struct TreeTensorNetworkState{V} <: AbstractTreeTensorNetwork{V}
+  itensor_network::ITensorNetwork{V}
   ortho_center::Vector{Tuple}
   function TreeTensorNetworkState(
     itensor_network::ITensorNetwork, ortho_center::Vector{Tuple}=vertices(itensor_network)
   )
     @assert is_tree(itensor_network)
-    return new(itensor_network, ortho_center)
+    return new{vertex_type(itensor_network)}(itensor_network, ortho_center)
   end
 end
 

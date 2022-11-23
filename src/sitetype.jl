@@ -12,8 +12,8 @@ end
 function siteinds(sitetypes::AbstractDictionary, g::AbstractGraph; kwargs...)
   is = IndsNetwork(g)
   for v in vertices(g)
-    vis = to_vertex(is, v...) # needed if g is not a NamedDimGraph
-    is[vis] = [siteind(sitetypes[v], vis; kwargs...)]
+    # vis = to_vertex(is, v...) # needed if g is not a NamedDimGraph
+    is[v] = [siteind(sitetypes[v], v; kwargs...)]
   end
   return is
 end

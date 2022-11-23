@@ -1,19 +1,19 @@
-abstract type AbstractITensorNetwork <:
-              AbstractNamedDimDataGraph{ITensor,ITensor,Tuple,NamedDimEdge{Tuple}} end
+abstract type AbstractITensorNetwork{V} <:
+              AbstractDataGraph{V,ITensor,ITensor} end
 
 # Field access
-data_graph(graph::AbstractITensorNetwork) = _not_implemented()
+data_graph(graph::AbstractITensorNetwork) = not_implemented()
 
 # Overload if needed
 is_directed(::Type{<:AbstractITensorNetwork}) = false
 
 # Copy
-copy(tn::AbstractITensorNetwork) = _not_implemented()
+copy(tn::AbstractITensorNetwork) = not_implemented()
 
 # NamedDimGraph indexing
 # TODO: Define for DataGraphs
 # to_vertex(tn::AbstractITensorNetwork, args...) = to_vertex(data_graph(tn), args...)
-to_vertex(tn::AbstractITensorNetwork, args...) = to_vertex(underlying_graph(tn), args...)
+# to_vertex(tn::AbstractITensorNetwork, args...) = to_vertex(underlying_graph(tn), args...)
 
 # AbstractDataGraphs overloads
 function vertex_data(graph::AbstractITensorNetwork, args...)
@@ -26,26 +26,50 @@ function vertex_to_parent_vertex(tn::AbstractITensorNetwork)
   return vertex_to_parent_vertex(underlying_graph(tn))
 end
 
-function getindex(tn::AbstractITensorNetwork, index...)
-  return getindex(IndexType(tn, index...), tn, index...)
-end
+# function getindex(tn::AbstractITensorNetwork, index...)
+#   return getindex(IndexType(tn, index...), tn, index...)
+# end
 
-function getindex(::SliceIndex, tn::AbstractITensorNetwork, index...)
-  return ITensorNetwork(getindex(data_graph(tn), index...))
-end
+# function getindex(::SliceIndex, tn::AbstractITensorNetwork, index...)
+#   return ITensorNetwork(getindex(data_graph(tn), index...))
+# end
 
-isassigned(tn::AbstractITensorNetwork, index...) = isassigned(data_graph(tn), index...)
+# isassigned(tn::AbstractITensorNetwork, index...) = isassigned(data_graph(tn), index...)
 
 #
 # Iteration
 #
 
+function union(
+  tn1::AbstractITensorNetwork,
+  tn2::AbstractITensorNetwork;
+  kwargs...,
+)
+  tn = ITensorNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
+  # Add any new edges that are introduced during the union
+  for v1 in vertices(tn1)
+    for v2 in vertices(tn2)
+      if hascommoninds(tn[v1], tn[v2])
+        add_edge!(tn, v1 => v2)
+      end
+    end
+  end
+  return tn
+end
+
+function rename_vertices(
+  f::Function,
+  tn::AbstractITensorNetwork,
+)
+  return ITensorNetwork(rename_vertices(f, data_graph(tn)))
+end
+
 #
 # Data modification
 #
 
-function setindex_preserve_graph!(tn::AbstractITensorNetwork, value, index...)
-  setindex!(data_graph(tn), value, index...)
+function setindex_preserve_graph!(tn::AbstractITensorNetwork, value, vertex)
+  data_graph(tn)[vertex] = value
   return tn
 end
 
@@ -57,8 +81,8 @@ function hascommoninds(tn::AbstractITensorNetwork, edge::AbstractEdge)
   return hascommoninds(tn[src(edge)], tn[dst(edge)])
 end
 
-function setindex!(tn::AbstractITensorNetwork, value, index...)
-  v = to_vertex(tn, index...)
+function setindex!(tn::AbstractITensorNetwork, value, v)
+  # v = to_vertex(tn, index...)
   setindex_preserve_graph!(tn, value, v)
   for edge in incident_edges(tn, v)
     rem_edge!(tn, edge)
@@ -90,8 +114,12 @@ function Graph(tn::AbstractITensorNetwork)
   return Graph(Vector{ITensor}(tn))
 end
 
-function NamedDimGraph(tn::AbstractITensorNetwork)
-  return NamedDimGraph(Vector{ITensor}(tn))
+# function NamedDimGraph(tn::AbstractITensorNetwork)
+#   return NamedDimGraph(Vector{ITensor}(tn))
+# end
+
+function NamedGraph(tn::AbstractITensorNetwork)
+  return NamedGraph(Vector{ITensor}(tn))
 end
 
 #
@@ -130,12 +158,12 @@ end
 # Index access
 #
 
-function neighbor_itensors(tn::AbstractITensorNetwork, vertex...)
-  return [tn[vn] for vn in neighbors(tn, vertex...)]
+function neighbor_itensors(tn::AbstractITensorNetwork, vertex)
+  return [tn[vn] for vn in neighbors(tn, vertex)]
 end
 
-function uniqueinds(tn::AbstractITensorNetwork, vertex...)
-  return uniqueinds(tn[vertex...], neighbor_itensors(tn, vertex...)...)
+function uniqueinds(tn::AbstractITensorNetwork, vertex)
+  return uniqueinds(tn[vertex], neighbor_itensors(tn, vertex)...)
 end
 
 function uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
@@ -146,12 +174,13 @@ function uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
   return uniqueinds(tn, edgetype(tn)(edge))
 end
 
-function siteinds(tn::AbstractITensorNetwork, vertex...)
-  return uniqueinds(tn, vertex...)
+function siteinds(tn::AbstractITensorNetwork, vertex)
+  return uniqueinds(tn, vertex)
 end
 
 function commoninds(tn::AbstractITensorNetwork, edge)
-  e = NamedDimEdge(edge)
+  # e = NamedDimEdge(edge)
+  e = NamedEdge(edge)
   return commoninds(tn[src(e)], tn[dst(e)])
 end
 
@@ -246,6 +275,13 @@ function contract(tn::AbstractITensorNetwork, edge::AbstractEdge)
   neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
+
+  # The following is equivalent to:
+  #
+  # tn[dst(edge)] = new_itensor
+  #
+  # but without having to search all vertices
+  # to update the edges.
   rem_vertex!(tn, src(edge))
   for n_src in neighbors_src
     add_edge!(tn, dst(edge) => n_src)
@@ -253,8 +289,8 @@ function contract(tn::AbstractITensorNetwork, edge::AbstractEdge)
   for n_dst in neighbors_dst
     add_edge!(tn, dst(edge) => n_dst)
   end
-  # tn[dst(edge)] = new_itensor
   setindex_preserve_graph!(tn, new_itensor, dst(edge))
+
   return tn
 end
 
@@ -408,8 +444,8 @@ end
 # that share indices with the ITensor `T`
 function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
   ψT = ψ ⊔ ITensorNetwork([T])
-  v⃗ = neighbors(ψT, (2, 1))
-  return Base.tail.(v⃗)
+  v⃗ = neighbors(ψT, (1, 2))
+  return first.(v⃗)
 end
 
 function inner_network(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
@@ -425,7 +461,8 @@ end
 function flattened_inner_network(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork)
   tn = inner(prime(ϕ; sites=[]), ψ)
   for v in vertices(ψ)
-    tn = contract(tn, (2, v...) => (1, v...))
+    # TODO: Rename vertices to `v`, check if `ϕ` and `ψ` have the same vertices
+    tn = contract(tn, (v, 2) => (v, 1))
   end
   return tn
 end
@@ -439,7 +476,8 @@ function contract_inner(
   tn = inner(prime(ϕ; sites=[]), ψ)
   # TODO: convert to an IndsNetwork and compute the contraction sequence
   for v in vertices(ψ)
-    tn = contract(tn, (2, v...) => (1, v...))
+    # TODO: Rename vertices to `v`, check if `ϕ` and `ψ` have the same vertices
+    tn = contract(tn, (v, 2) => (v, 1))
   end
   if isnothing(sequence)
     sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
@@ -447,7 +485,8 @@ function contract_inner(
   return contract(tn; sequence)[]
 end
 
-# TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl?
+# TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
+# or `norm_sqr` to match `LinearAlgebra.norm_sqr`
 norm2(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)
 
 #

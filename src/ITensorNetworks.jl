@@ -7,29 +7,33 @@ using Graphs
 using ITensors
 using ITensors.ContractionSequenceOptimization
 using ITensors.ITensorVisualizationCore
-using MultiDimDictionaries
+# using MultiDimDictionaries # TODO: Remove
 using NamedGraphs
 using Requires
 using SplitApplyCombine
 using Suppressor
 
+# TODO: load directly
+using Graphs.SimpleTraits
+
 # TODO: export from ITensors
 using ITensors: commontags, @Algorithm_str, Algorithm
 
 using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
-using MultiDimDictionaries: IndexType, SliceIndex
+# using MultiDimDictionaries: IndexType, SliceIndex # TODO: Remove
 using NamedGraphs:
   AbstractNamedGraph,
-  NamedDimEdge,
-  NamedDimGraph,
+#  NamedDimEdge,
+#  NamedDimGraph,
   parent_graph,
   vertex_to_parent_vertex,
-  to_vertex
+  not_implemented
+#  to_vertex
 
 include("imports.jl")
 
 # General functions
-_not_implemented() = error("Not implemented")
+# _not_implemented() = error("Not implemented")
 
 # ITensorVisualizationBase overload
 function visualize(
@@ -70,44 +74,41 @@ function Graph(itensors::Vector{ITensor})
   return graph
 end
 
-function NamedDimGraph(itensors::Vector{ITensor})
-  return NamedDimGraph(Graph(itensors), 1:length(itensors))
-end
+# function NamedDimGraph(itensors::Vector{ITensor})
+#   return NamedDimGraph(Graph(itensors), 1:length(itensors))
+# end
 
 front(itr, n=1) = Iterators.take(itr, length(itr) - n)
 tail(itr) = Iterators.drop(itr, 1)
 
-# Helper functions
-vertex_tag(v::Int) = "$v"
-
-function vertex_tag(v::Tuple)
-  t = "$(first(v))"
-  for vn in Base.tail(v)
-    t *= "×$vn"
-  end
-  return t
-end
-
-# TODO: DELETE
-#vertex_tag(v::CartesianKey) = vertex_tag(Tuple(v))
-
-edge_tag(e::Pair) = edge_tag(NamedDimEdge(e))
-
-function edge_tag(e)
-  return "$(vertex_tag(src(e)))↔$(vertex_tag(dst(e)))"
-end
-
-function vertex_index(v, vertex_space)
-  return Index(vertex_space; tags=vertex_tag(v))
-end
-
-function edge_index(e, edge_space)
-  return Index(edge_space; tags=edge_tag(e))
-end
-
-const UniformDataGraph{D} = NamedDimDataGraph{
-  D,D,Tuple,NamedDimEdge{Tuple},NamedDimGraph{Tuple}
-}
+## # Helper functions
+## vertex_tag(v::Int) = "$v"
+## 
+## function vertex_tag(v::Tuple)
+##   t = "$(first(v))"
+##   for vn in Base.tail(v)
+##     t *= "×$vn"
+##   end
+##   return t
+## end
+## 
+## # TODO: DELETE
+## #vertex_tag(v::CartesianKey) = vertex_tag(Tuple(v))
+## 
+## # edge_tag(e::Pair) = edge_tag(NamedDimEdge(e))
+## edge_tag(e::Pair) = edge_tag(NamedEdge(e))
+## 
+## function edge_tag(e)
+##   return "$(vertex_tag(src(e)))↔$(vertex_tag(dst(e)))"
+## end
+## 
+## function vertex_index(v, vertex_space)
+##   return Index(vertex_space; tags=vertex_tag(v))
+## end
+## 
+## function edge_index(e, edge_space)
+##   return Index(edge_space; tags=edge_tag(e))
+## end
 
 include("utils.jl")
 include("namedgraphs.jl")

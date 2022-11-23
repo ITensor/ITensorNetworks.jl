@@ -34,7 +34,7 @@ ITensors.disable_warn_order()
   Δβ = 0.2
 
   # Sequence for contracting expectation values
-  contract_edges = map(t -> (1, t...), collect(keys(cartesian_to_linear(dims))))
+  contract_edges = map(t -> (t, 1), collect(keys(cartesian_to_linear(dims))))
   inner_sequence = reduce((x, y) -> [x, y], contract_edges)
 
   ψ_init = ITensorNetwork(s, v -> "↑")
