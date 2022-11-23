@@ -28,6 +28,32 @@ function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph;
   return mts
 end
 
+function construct_initial_mts_V2(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph)
+    mts = Dict{Pair,ITensor}()
+  
+    for i in vertices(dg_subgraphs)
+      tns_to_contract = ITensor[]
+      for j in neighbors(dg_subgraphs, i)
+        X1 = 1.0
+        for vertex in dg_subgraphs[i]
+          psiv = flatpsi[vertex]
+          for e in NamedDimEdge.(Ref(vertex) .=> neighbors(flatpsi, vertex))
+            edge_ind = commoninds(flatpsi, e)[1]
+            if (find_subgraph(dst(e), dg_subgraphs) != j)
+              psiv = psiv * delta(edge_ind)
+            end
+          end
+            X1 = X1*psiv
+        end
+
+        normalize!(X1)
+        mts[i => j] = X1
+      end
+    end
+  
+    return mts
+end
+
 #DO a single update of a message tensor using the current subgraph and the incoming mts
 function updatemt(flatpsi::ITensorNetwork, subgraph::Vector{Tuple}, mts::Vector{ITensor}; contraction_sequence::Function=tn -> ITensorNetworks.contraction_sequence(tn; alg="optimal")
 )
@@ -39,7 +65,7 @@ function updatemt(flatpsi::ITensorNetwork, subgraph::Vector{Tuple}, mts::Vector{
 
   for v in subgraph
     psiv = flatpsi[v]
-    push!(Contract_list, psiv)
+    push!(Contract_list, deepcopy(psiv))
   end
 
   M = contract(Contract_list; sequence=contraction_sequence(Contract_list))
