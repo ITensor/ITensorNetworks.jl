@@ -130,8 +130,6 @@ include(joinpath("treetensornetwork", "treetensornetwork.jl"))
 
 include("exports.jl")
 
-include("ApproximateTNContraction/ApproximateTNContraction.jl")
-
 function __init__()
   @require KaHyPar = "2a6221f6-aa48-11e9-3542-2d9e0ef01880" include(
     joinpath("requires", "kahypar.jl")
@@ -143,5 +141,7 @@ function __init__()
     joinpath("requires", "omeinsumcontractionorders.jl")
   )
 end
+
+include("ApproximateTNContraction/ApproximateTNContraction.jl")
 
 end

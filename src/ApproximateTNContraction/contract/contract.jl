@@ -1,5 +1,7 @@
 using Graphs, GraphsFlows, Combinatorics, SimpleWeightedGraphs
 using GraphRecipes, Plots
+using OMEinsumContractionOrders
+using ITensorNetworks: contraction_sequence
 
 function Base.show(io::IO, tensor::ITensor)
   return print(io, string(inds(tensor)))
@@ -10,8 +12,6 @@ include("index_group.jl")
 include("tensornetwork_graph.jl")
 include("mincut_tree.jl")
 include("tree_embedding.jl")
-
-ITensors.enable_contraction_sequence_optimization()
 
 function optcontract(t_list::Vector)
   @timeit timer "optcontract" begin
@@ -24,8 +24,12 @@ function optcontract(t_list::Vector)
     # for t in t_list
     #   @info "size of t is", size(t)
     # end
-    # TODO: use optimized contraction path
-    output = contract(t_list)
+    @timeit timer "contraction_sequence" begin
+      seq = contraction_sequence(t_list; alg="greedy")
+    end
+    @timeit timer "contract" begin
+      output = contract(t_list; sequence=seq)
+    end
     return OrthogonalITensor(output)
   end
 end
@@ -766,6 +770,7 @@ function approximate_contract(ctree::Vector; kwargs...)
   ctree_to_igs, ctree_to_adj_tree, ig_to_ig_tree = _approximate_contract_pre_process(
     tn_leaves, ctrees
   )
+  # TODO: move these to preprocess
   ctree_to_contract_igs = Dict{Vector,Vector{IndexGroup}}()
   for c in ctrees
     contract_igs = intersect(ctree_to_igs[c[1]], ctree_to_igs[c[2]])
@@ -776,7 +781,8 @@ function approximate_contract(ctree::Vector; kwargs...)
   ctree_to_contract_igs[ctrees[end]] = ctree_to_igs[ctrees[end]]
   # mapping each contraction tree to a tensor network
   ctree_to_tn_tree = Dict{Vector,Dict{Vector,OrthogonalITensor}}()
-  for c in ctrees
+  for (ii, c) in enumerate(ctrees)
+    @info ii, "th tree approximation"
     if ctree_to_igs[c] == []
       @assert c == ctrees[end]
       tn1 = get_child_tn(ctree_to_tn_tree, c[1])

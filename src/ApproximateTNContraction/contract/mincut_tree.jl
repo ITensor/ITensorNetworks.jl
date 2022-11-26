@@ -151,6 +151,9 @@ function mps_inds!(tng::TensorNetworkGraph, outinds::Vector)
   if length(outinds) == 1
     return outinds[1]
   end
+  if length(outinds) == 2
+    return outinds
+  end
   new_edge, minval = new_edge_mincut(tng, collect(powerset(outinds, 2, 2)))
   outinds = update!(tng, outinds, new_edge, minval)
   first_ind = new_edge
