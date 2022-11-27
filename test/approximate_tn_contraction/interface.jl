@@ -1,8 +1,6 @@
-using ITensors, Random, SweepContractor, ITensorNetworkAD
-using ITensorNetworkAD.Profiler
-using ITensorNetworkAD.ITensorNetworks:
-  timer, ITensor_networks, line_network, TreeTensor, approximate_contract
-using ITensorNetworkAD.ITensorAutoHOOT: SubNetwork, batch_tensor_contraction
+using ITensors, Random, SweepContractor
+using ITensorNetworks.ApproximateTNContraction:
+  timer, ITensor_networks, line_network, approximate_contract
 
 include("utils.jl")
 
@@ -51,62 +49,60 @@ end
 function get_contracted_peps(LTN, rank, N)
   tnet = ITensor_networks(LTN)
   tnet_mat = reshape(tnet, N...)
-  # out_mps = peps_contraction_mpomps(tnet_mat; cutoff=1e-15, maxdim=rank, snake=true)
+  out_mps = peps_contraction_mpomps(tnet_mat; cutoff=1e-15, maxdim=rank, snake=true)
   out = contract_w_sweep(LTN, rank)
-  return out2 = contract_element_group(tnet, rank)
-  # out3 = contract_line_group(tnet_mat, rank, N)
-  # return out, out2[1][], ITensor(out3[1])[], out_mps[]
+  out2 = contract_element_group(tnet; cutoff=1e-15, maxdim=rank)
+  out3 = contract_line_group(tnet_mat; cutoff=1e-15, maxdim=rank)
+  return out, out2[1][1], out3[1][1], out_mps[]
 end
 
-# @testset "test on 2D grid" begin
-#   Random.seed!(1234)
-#   ITensors.set_warn_order(100)
-#   row, column, d = 8, 8, 2
-#   LTN = lattice(row, column, d)
+@testset "test on 2D grid" begin
+  Random.seed!(1234)
+  ITensors.set_warn_order(100)
+  row, column, d = 8, 8, 2
+  LTN = lattice(row, column, d)
 
-#   out_true, out_element, out_line, out_mps = get_contracted_peps(
-#     LTN, d^(Int(row / 2)), [row, column]
-#   )
-#   @test abs((out_true - out_element) / out_true) < 1e-3
-#   @test abs((out_true - out_line) / out_true) < 1e-3
-#   @test abs((out_true - out_mps) / out_true) < 1e-3
-#   for rank in [2, 3, 4, 6, 8, 10, 12, 14, 15, 16]
-#     out, out_element, out_line, out_mps = get_contracted_peps(LTN, rank, [row, column])
-#     error_sweepcontractor = abs((out - out_true) / out_true)
-#     error_element = abs((out_element - out_true) / out_true)
-#     error_line = abs((out_line - out_true) / out_true)
-#     error_mps = abs((out_mps - out_true) / out_true)
-#     print(
-#       "maxdim, ",
-#       rank,
-#       ", error_sweepcontractor, ",
-#       error_sweepcontractor,
-#       ", error_element, ",
-#       error_element,
-#       ", error_line, ",
-#       error_line,
-#       ", error_mps, ",
-#       error_mps,
-#       "\n",
-#     )
-#   end
-# end
+  out_true, out_element, out_line, out_mps = get_contracted_peps(
+    LTN, d^(Int(row / 2)), [row, column]
+  )
+  @test abs((out_true - out_element) / out_true) < 1e-3
+  @test abs((out_true - out_line) / out_true) < 1e-3
+  @test abs((out_true - out_mps) / out_true) < 1e-3
+  for rank in [2, 3, 4, 6, 8, 10, 12, 14, 15, 16]
+    out, out_element, out_line, out_mps = get_contracted_peps(LTN, rank, [row, column])
+    error_sweepcontractor = abs((out - out_true) / out_true)
+    error_element = abs((out_element - out_true) / out_true)
+    error_line = abs((out_line - out_true) / out_true)
+    error_mps = abs((out_mps - out_true) / out_true)
+    print(
+      "maxdim, ",
+      rank,
+      ", error_sweepcontractor, ",
+      error_sweepcontractor,
+      ", error_element, ",
+      error_element,
+      ", error_line, ",
+      error_line,
+      ", error_mps, ",
+      error_mps,
+      "\n",
+    )
+  end
+end
 
-# @testset "benchmark on 2D grid" begin
-#   Random.seed!(1234)
-#   ITensors.set_warn_order(100)
-#   row, column, d, rank = 15, 15, 10, 10
-#   LTN = lattice(row, column, d)
-#   # warm-up
-#   get_contracted_peps(LTN, rank, [row, column])
-#   @info "start benchmark on 2D grid"
-#   do_profile(true)
-#   for _ in 1:2
-#     LTN = lattice(row, column, d)
-#     get_contracted_peps(LTN, rank, [row, column])
-#   end
-#   profile_exit()
-# end
+@testset "benchmark on 2D grid" begin
+  Random.seed!(1234)
+  ITensors.set_warn_order(100)
+  row, column, d, rank = 10, 10, 2, 10
+  LTN = lattice(row, column, d)
+  # warm-up
+  get_contracted_peps(LTN, rank, [row, column])
+  @info "start benchmark on 2D grid"
+  reset_timer!(timer)
+  LTN = lattice(row, column, d)
+  get_contracted_peps(LTN, rank, [row, column])
+  show(timer)
+end
 
 function cube_3d(L=3, d=2)
   function build_adj(i, j, k)
@@ -148,23 +144,20 @@ function cube_3d(L=3, d=2)
   return TN
 end
 
-# TODO
-# @testset "test on 3D cube" begin
-#   Random.seed!(1234)
-#   ITensors.set_warn_order(100)
-#   L, d = 3, 2
-#   rank = 16
-#   TN = cube_3d(L, d)
-#   out = contract_w_sweep(TN, rank)
-#   tnet = ITensor_networks(TN)
-#   out2 = contract_element_group(tnet, rank)
+@testset "test on 3D cube with element grouping" begin
+  Random.seed!(1234)
+  ITensors.set_warn_order(100)
+  L, d = 3, 2
+  rank = 16
+  TN = cube_3d(L, d)
+  out = contract_w_sweep(TN, rank)
+  tnet = ITensor_networks(TN)
+  out2 = contract_element_group(tnet; cutoff=1e-15, maxdim=rank)
 
-#   do_profile(true)
-#   for _ in 1:3
-#     TN = cube_3d(L, d)
-#     out = contract_w_sweep(TN, rank)
-#     tnet = ITensor_networks(TN)
-#     out2 = contract_element_group(tnet, rank)
-#   end
-#   profile_exit()
-# end
+  reset_timer!(timer)
+  TN = cube_3d(L, d)
+  out = contract_w_sweep(TN, rank)
+  tnet = ITensor_networks(TN)
+  out2 = contract_element_group(tnet; cutoff=1e-15, maxdim=rank)
+  show(timer)
+end

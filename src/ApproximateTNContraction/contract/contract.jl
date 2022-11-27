@@ -318,6 +318,7 @@ function update_igs_to_adjacency_tree!(
       for r in root_igs
         delete!(igs_to_adjacency_tree, r)
       end
+      return nothing
     end
     # if 2: assign adjacent_igs to boundary of root_igs (if possible), then concatenate
     igs1, igs2 = collect(keys(root_igs_to_adjacent_igs))

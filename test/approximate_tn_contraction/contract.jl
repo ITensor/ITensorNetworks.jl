@@ -6,8 +6,7 @@ using ITensorNetworks.ApproximateTNContraction:
   inds_binary_tree,
   tree_embedding,
   approximate_contract
-using ITensorNetworks.ApproximateTNContraction:
-  timer, inds_network, Models, ising_partition
+using ITensorNetworks.ApproximateTNContraction: timer, inds_network, Models, ising_partition
 
 include("utils.jl")
 

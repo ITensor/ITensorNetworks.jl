@@ -7,10 +7,10 @@ test_files = filter(
 )
 
 @testset "ITensorNetworks.jl" begin
-  # @testset "$filename" for filename in test_files
-  #   println("Running $filename")
-  #   include(joinpath(test_path, filename))
-  # end
+  @testset "$filename" for filename in test_files
+    println("Running $filename")
+    include(joinpath(test_path, filename))
+  end
 
   for filename in ["approximate_tn_contraction/runtests.jl"]
     println("Running $filename")

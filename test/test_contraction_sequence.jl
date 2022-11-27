@@ -25,18 +25,14 @@ ITensors.disable_warn_order()
   res_sa_bipartite = contract(tn; sequence=seq_sa_bipartite)[]
   @test res_optimal ≈ res_greedy ≈ res_tree_sa ≈ res_sa_bipartite
 
-
   if !Sys.iswindows()
     # KaHyPar doesn't work on Windows
     # https://github.com/kahypar/KaHyPar.jl/issues/9
     using Pkg
     Pkg.add("KaHyPar")
     using KaHyPar
-    seq_kahypar_bipartite = contraction_sequence(
-      tn; alg="kahypar_bipartite", sc_target=200
-    )
+    seq_kahypar_bipartite = contraction_sequence(tn; alg="kahypar_bipartite", sc_target=200)
     res_kahypar_bipartite = contract(tn; sequence=seq_kahypar_bipartite)[]
     @test res_optimal ≈ res_kahypar_bipartite
   end
 end
-

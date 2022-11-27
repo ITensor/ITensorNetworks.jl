@@ -3,13 +3,13 @@ using Test
 
 @testset "ApproximateTNContraction.jl" begin
   for filename in [
-    # "lattice.jl",
-    # "models.jl",
-    # "tree.jl",
-    # "indexgroup.jl",
-    # "cache.jl",
+    "lattice.jl",
+    "models.jl",
+    "tree.jl",
+    "indexgroup.jl",
+    "cache.jl",
     "contract.jl",
-    # "interface.jl",
+    "interface.jl",
   ]
     println("Running $filename in ApproximateTNContraction.jl")
     include(filename)
