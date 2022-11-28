@@ -629,7 +629,11 @@ function linkdim(tn::AbstractITensorNetwork, edge::AbstractEdge)
 end
 
 function linkdims(tn::AbstractITensorNetwork)
-  return Dictionary(edges(tn), map(e -> linkdim(tn, e), edges(tn)))
+  ld = NamedDimDataGraph{Int,Int}(copy(underlying_graph(tn)))
+  for e in edges(ld)
+    ld[e] = linkdim(tn, e)
+  end
+  return ld
 end
 
 # 
