@@ -110,7 +110,7 @@ ITensors.scalartype(tn::AbstractITensorNetwork) = LinearAlgebra.promote_leaf_elt
 # TODO: mimic ITensors.AbstractMPS implementation using map
 function ITensors.convert_leaf_eltype(eltype::Type, tn::AbstractITensorNetwork)
   tn = copy(tn)
-  vertex_data(tn) .= ITensors.convert_leaf_eltype.(Ref(eltype), vertex_data(tn))
+  vertex_data(tn) .= convert_eltype.(Ref(eltype), vertex_data(tn))
   return tn
 end
 

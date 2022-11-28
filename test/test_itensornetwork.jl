@@ -92,11 +92,45 @@ using Test
     @test linkinds(only, ψ, e) == only(commoninds(ψ[1, 1], ψ[2, 1]))
   end
 
-  @testset "ElType in constructors" begin
-    # TODO
+  @testset "ElType in constructors, $ElT" for ElT in (Float32, Float64, ComplexF64)
+    dims = (2, 2)
+    g = named_grid(dims)
+    s = siteinds("S=1/2", g)
+    ψ = ITensorNetwork(ElT, s; link_space=2)
+    @test ITensors.scalartype(ψ) == ElT
   end
 
-  @testset "Construction from state (function)" begin
-    # TODO
+  @testset "ElType conversion, $new_eltype" for new_eltype in (Float32, ComplexF64)
+    dims = (2, 2)
+    g = named_grid(dims)
+    s = siteinds("S=1/2", g)
+    ψ = randomITensorNetwork(s; link_space=2)
+    @test ITensors.scalartype(ψ) == Float64
+
+    ϕ = ITensors.convert_leaf_eltype(new_eltype, ψ)
+    @test ITensors.scalartype(ϕ) == new_eltype
+  end
+
+  @testset "Construction from state map" for ElT in (Float32, ComplexF64)
+    dims = (2, 2)
+    g = named_grid(dims)
+    s = siteinds("S=1/2", g)
+    state_map(v::Tuple) = iseven(sum(isodd.(v))) ? "↑" : "↓"
+
+    ψ = ITensorNetwork(s, state_map)
+    t = ψ[2, 2]
+    si = siteinds(only, ψ, 2, 2)
+    bi = map(e -> linkinds(only, ψ, e), incident_edges(ψ, 2, 2))
+    @test eltype(t) == Float64
+    @test abs(t[si => "↑", [b => end for b in bi]...]) == 1.0 # insert_links introduces extra signs through factorization...
+    @test t[si => "↓", [b => end for b in bi]...] == 0.0
+
+    ϕ = ITensorNetwork(ElT, s, state_map)
+    t = ϕ[2, 2]
+    si = siteinds(only, ϕ, 2, 2)
+    bi = map(e -> linkinds(only, ϕ, e), incident_edges(ϕ, 2, 2))
+    @test eltype(t) == ElT
+    @test abs(t[si => "↑", [b => end for b in bi]...]) == convert(ElT, 1.0) # insert_links introduces extra signs through factorization...
+    @test t[si => "↓", [b => end for b in bi]...] == convert(ElT, 0.0)
   end
 end

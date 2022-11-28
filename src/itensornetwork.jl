@@ -107,7 +107,7 @@ function ITensorNetwork(
 ) where {ElT<:Number}
   ψ = ITensorNetwork(is)
   for v in vertices(ψ)
-    ψ[v] = ITensors.convert_leaf_eltype(ElT, state(only(is[v]), states_map[v]))
+    ψ[v] = convert_eltype(ElT, state(only(is[v]), states_map[v]))
   end
   ψ = insert_links(ψ, edges(is))
   return ψ
