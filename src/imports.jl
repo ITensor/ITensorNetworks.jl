@@ -11,18 +11,23 @@ import Base:
   isassigned,
   union
 
-import .DataGraphs: underlying_graph, underlying_graph_type, vertex_data, edge_data
-
-import Graphs: Graph, is_directed
-
-import LinearAlgebra: svd, factorize, qr
-
 import NamedGraphs:
   vertextype,
+  convert_vertextype,
   vertex_to_parent_vertex,
   rename_vertices,
   disjoint_union
-  #, to_vertex
+
+import .DataGraphs:
+  underlying_graph,
+  underlying_graph_type,
+  vertex_data,
+  edge_data,
+  reverse_data_direction
+
+import Graphs: SimpleGraph, is_directed
+
+import LinearAlgebra: svd, factorize, qr
 
 import ITensors:
   # contraction

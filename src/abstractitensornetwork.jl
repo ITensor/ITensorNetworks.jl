@@ -3,6 +3,7 @@ abstract type AbstractITensorNetwork{V} <:
 
 # Field access
 data_graph(graph::AbstractITensorNetwork) = not_implemented()
+underlying_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
 
 # Overload if needed
 is_directed(::Type{<:AbstractITensorNetwork}) = false
@@ -360,7 +361,10 @@ function factorize(
   tags=tags(tn, edge),
   kwargs...,
 )
-  tn = copy(tn)
+  # Promote vertex type
+  V = promote_type(vertextype(tn), typeof(X_vertex), typeof(Y_vertex))
+  tn = ITensorNetwork{V}(tn)
+
   neighbors_X = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   left_inds = uniqueinds(tn, edge)
   X, Y = factorize(tn[src(edge)], left_inds; tags, kwargs...)

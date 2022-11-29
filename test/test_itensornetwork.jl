@@ -10,7 +10,7 @@ using Test
 
   @test s isa IndsNetwork
   @test nv(s) == 4
-  @test ne(s) == 6 # Not 3, since IndsNetwork is directed
+  @test ne(s) == 3
   @test neighbors(s, (2,)) == [(1,), (3,)]
 
   tn = ITensorNetwork(s; link_space=2)
