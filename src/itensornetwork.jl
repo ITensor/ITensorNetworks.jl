@@ -123,15 +123,3 @@ function insert_links(ψ::ITensorNetwork, edges::Vector=edges(ψ); cutoff=1e-15)
   end
   return ψ
 end
-
-# TODO: generalize to other random number distributions
-function randomITensorNetwork(s; link_space)
-  ψ = ITensorNetwork(s; link_space)
-  for v in vertices(ψ)
-    ψᵥ = copy(ψ[v])
-    randn!(ψᵥ)
-    ψᵥ ./= norm(ψᵥ)
-    ψ[v] = ψᵥ
-  end
-  return ψ
-end
