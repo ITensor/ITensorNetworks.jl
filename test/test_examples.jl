@@ -1,4 +1,5 @@
 using ITensorNetworks
+using Suppressor
 using Test
 
 @testset "Test examples" begin
@@ -11,12 +12,12 @@ using Test
     joinpath("partition", "kahypar_vs_metis.jl"),
     joinpath("partition", "partitioning.jl"),
     joinpath("peps", "ising_tebd.jl"),
-    joinpath("ttn", "comb_tree.jl"),
-    joinpath("ttn", "spanning_tree.jl"),
-    joinpath("ttn", "ttn_basics.jl"),
-    joinpath("ttn", "ttn_type.jl"),
+    joinpath("ttns", "comb_tree.jl"),
+    joinpath("ttns", "spanning_tree.jl"),
+    joinpath("ttns", "ttn_basics.jl"),
+    joinpath("ttns", "ttn_type.jl"),
   ]
   @testset "Test $example_file" for example_file in example_files
-    include(joinpath(pkgdir(ITensorNetworks), "examples", example_file))
+    @suppress include(joinpath(pkgdir(ITensorNetworks), "examples", example_file))
   end
 end
