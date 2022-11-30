@@ -58,8 +58,7 @@ end
   g = named_grid(dims)
   s = siteinds("S=1/2", g)
   ψ = ITensorNetwork(s, v -> "↑")
-  # TODO: rename `inner_network`.
-  tn = inner(ψ, sim(dag(ψ); sites=[]))
+  tn = inner_network(ψ, ψ)
   tn_2 = contract(tn, ((1, 2), 2) => ((1, 2), 1))
   @test !has_vertex(tn_2, ((1, 2), 2))
   @test tn_2[((1, 2), 1)] ≈ tn[((1, 2), 2)] * tn[((1, 2), 1)]
@@ -71,9 +70,7 @@ end
   s = siteinds("S=1/2", g)
   ψ = ITensorNetwork(s, v -> "↑")
   rem_vertex!(ψ, (1, 2))
-  # TODO: rename `inner_network`.
-  # TODO: collapse vertices back to original vertices.
-  tn = inner(ψ, sim(dag(ψ); sites=[]))
+  tn = inner_network(ψ, ψ)
   @test !has_vertex(tn, ((1, 2), 1))
   @test !has_vertex(tn, ((1, 2), 2))
   @test has_vertex(tn, ((1, 1), 1))

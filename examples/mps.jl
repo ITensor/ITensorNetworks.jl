@@ -25,7 +25,7 @@ e = edge_data(is)
 
 @visualize ψ̃
 
-ψψ = ⊗(ψ̃, ψ; new_dim_names=("bra", "ket"))
+ψψ = ("bra" => ψ̃) ⊗ ("ket" => ψ)
 
 @visualize ψψ
 
@@ -38,6 +38,6 @@ inner_res = contract(ψψ; sequence)[]
 
 @show inner_res
 
-sub = ψψ[[("bra", 1), ("ket", 1), ("bra", 2), ("ket", 2)]]
+sub = subgraph(ψψ, [(1, "bra"), (1, "ket"), (2, "bra"), (2, "ket")])
 
 @visualize sub

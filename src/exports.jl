@@ -25,8 +25,6 @@ export grid,
 # NamedGraphs
 #
 
-# export NamedDimGraph,
-#   CartesianKey,
 export  named_binary_tree,
   named_grid,
   is_tree,
@@ -37,7 +35,8 @@ export  named_binary_tree,
   is_leaf,
   incident_edges,
   comb_tree,
-  named_comb_tree
+  named_comb_tree,
+  subgraph
 
 #
 # DataGraphs

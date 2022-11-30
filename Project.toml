@@ -18,7 +18,7 @@ Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 
 [compat]
 Dictionaries = "0.3.15"
-DocStringExtensions = "0.9"
+DocStringExtensions = "0.8, 0.9"
 Graphs = "1.6"
 ITensors = "0.3"
 NamedGraphs = "0.1.1"

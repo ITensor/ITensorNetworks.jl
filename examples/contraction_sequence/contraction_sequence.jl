@@ -1,3 +1,4 @@
+using NamedGraphs
 using ITensors
 using ITensorNetworks
 using Random
@@ -26,7 +27,7 @@ using OMEinsumContractionOrders
 
 println("greedy")
 seq_greedy = @time contraction_sequence(tn; alg="greedy")
-res_greedy = @time contract(tn; alg=res_greedy)
+res_greedy = @time contract(tn; sequence=seq_greedy)
 
 println("tree_sa")
 seq_tree_sa = @time contraction_sequence(tn; alg="tree_sa")

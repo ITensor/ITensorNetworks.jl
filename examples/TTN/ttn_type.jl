@@ -1,4 +1,5 @@
 using AbstractTrees
+using NamedGraphs
 using ITensors
 using ITensorNetworks
 using ITensorUnicodePlots
@@ -13,14 +14,14 @@ end
 
 @visualize ψ
 
-@show neighbors(ψ, 1)
-@show neighbors(ψ, 1, 1, 1)
-@show incident_edges(ψ, 1, 1)
+@show neighbors(ψ, (1,))
+@show neighbors(ψ, (1, 1, 1))
+@show incident_edges(ψ, (1, 1))
 @show leaf_vertices(ψ)
-@show is_leaf(ψ, 1)
-@show is_leaf(ψ, 1, 1, 1)
+@show is_leaf(ψ, (1,))
+@show is_leaf(ψ, (1, 1, 1))
 
-e = (1, 1) => 1
+e = (1, 1) => (1,)
 ψ̃ = contract(ψ, e)
 
 @visualize ψ̃
@@ -32,7 +33,7 @@ Z = ψᴴ ⊗ ψ;
 
 # Contract across bra and ket
 for v in vertices(ψ)
-  global Z = contract(Z, (2, v...) => (1, v...))
+  global Z = contract(Z, (v, 2) => (v, 1))
 end
 
 @visualize Z
@@ -49,7 +50,7 @@ z = contract(Z; sequence)[]
 # search, inward towards the root vertex.
 # https://en.wikipedia.org/wiki/Tree_traversal#Depth-first_search
 z2 = Z
-root_vertex = (1, 1)
+root_vertex = ((1,), 1)
 @visualize z2
 for e in post_order_dfs_edges(z2, root_vertex)
   @show e
@@ -58,31 +59,31 @@ for e in post_order_dfs_edges(z2, root_vertex)
 end
 @show √(z2[root_vertex][1])
 
-e = edgetype(ψ)(1 => (1, 1))
+e = edgetype(ψ)((1,) => (1, 1))
 ψ_svd = svd(ψ, e)
 U = ψ_svd[src(e)]
-S = ψ_svd["S", e]
-V = ψ_svd["V", e]
+S = ψ_svd[e, "S"]
+V = ψ_svd[e, "V"]
 
 @visualize ψ_svd
 
 @show norm(U * S * V - ψ[src(e)])
 
-ψ̃_svd = contract(ψ_svd, ("V", e) => dst(e))
-ψ̃_svd = contract(ψ̃_svd, ("S", e) => dst(e))
+ψ̃_svd = contract(ψ_svd, (e, "V") => dst(e))
+ψ̃_svd = contract(ψ̃_svd, (e, "S") => dst(e))
 
 @visualize ψ̃_svd
 
-e = edgetype(ψ)(1 => (1, 1))
+e = edgetype(ψ)((1,) => (1, 1))
 ψ_qr = qr(ψ, e)
 Q = ψ_qr[src(e)]
-R = ψ_qr["R", e]
+R = ψ_qr[e, "R"]
 
 @visualize ψ_qr
 
 @show norm(Q * R - ψ[src(e)])
 
-ψ̃_qr = contract(ψ_qr, ("R", e) => dst(e))
+ψ̃_qr = contract(ψ_qr, (e, "R") => dst(e))
 
 @visualize ψ̃_qr
 
@@ -109,8 +110,8 @@ end
 @show norm(ψ)
 @show norm(ψ_ortho)
 
-ψ_ortho = orthogonalize(ψ, 1)
+ψ_ortho = orthogonalize(ψ, (1,))
 @show norm(ψ_ortho)
-@show norm(ψ_ortho[1])
+@show norm(ψ_ortho[(1,)])
 
 nothing

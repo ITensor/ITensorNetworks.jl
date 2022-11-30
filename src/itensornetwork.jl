@@ -1,8 +1,13 @@
+struct Private end
+
 """
     ITensorNetwork
 """
 struct ITensorNetwork{V} <: AbstractITensorNetwork{V}
   data_graph::DataGraph{V,ITensor,ITensor,NamedGraph{V},NamedEdge{V}}
+  function ITensorNetwork{V}(::Private, data_graph::DataGraph) where {V}
+    return new{V}(data_graph)
+  end
 end
 
 #
@@ -13,6 +18,9 @@ data_graph(tn::ITensorNetwork) = getfield(tn, :data_graph)
 data_graph_type(TN::Type{<:ITensorNetwork}) = fieldtype(TN, :data_graph)
 
 underlying_graph_type(TN::Type{<:ITensorNetwork}) = fieldtype(data_graph_type(TN), :underlying_graph)
+
+ITensorNetwork{V}(data_graph::DataGraph{V}) where {V} = ITensorNetwork{V}(Private(), copy(data_graph))
+ITensorNetwork{V}(data_graph::DataGraph) where {V} = ITensorNetwork{V}(Private(), DataGraph{V}(data_graph))
 
 ITensorNetwork(data_graph::DataGraph) = ITensorNetwork{vertextype(data_graph)}(data_graph)
 
@@ -25,9 +33,10 @@ ITensorNetwork() = ITensorNetwork{Any}()
 # Conversion
 ITensorNetwork(tn::ITensorNetwork) = copy(tn)
 ITensorNetwork{V}(tn::ITensorNetwork{V}) where {V} = copy(tn)
-function ITensorNetwork{V}(tn::ITensorNetwork) where {V}
-  return ITensorNetwork(DataGraph{V}(data_graph(tn)))
+function ITensorNetwork{V}(tn::AbstractITensorNetwork) where {V}
+  return ITensorNetwork{V}(Private(), DataGraph{V}(data_graph(tn)))
 end
+ITensorNetwork(tn::AbstractITensorNetwork) = ITensorNetwork{vertextype(tn)}(tn)
 
 convert_vertextype(::Type{V}, tn::ITensorNetwork{V}) where {V} = tn
 convert_vertextype(V::Type, tn::ITensorNetwork) = ITensorNetwork{V}(tn)

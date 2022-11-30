@@ -25,7 +25,7 @@
 
 using ITensors
 using ITensorNetworks
-tn = ITensorNetwork(named_grid((4,)); link_space=2)
+tn = ITensorNetwork(named_grid(4); link_space=2)
 tn[1]
 tn[2]
 neighbors(tn, 1)
@@ -38,16 +38,16 @@ neighbors(tn, 4)
 
 tn = ITensorNetwork(named_grid((2, 2)); link_space=2)
 tn[1, 1]
-neighbors(tn, 1, 1)
-neighbors(tn, 1, 2)
-tn_1 = tn[1, :]
-tn_2 = tn[2, :]
+neighbors(tn, (1, 1))
+neighbors(tn, (1, 2))
+tn_1 = subgraph(v -> v[1] == 1, tn)
+tn_2 = subgraph(v -> v[1] == 2, tn)
 
 #' Networks can also be merged/unioned:
 #+ term=true
 
 using ITensorUnicodePlots
-s = siteinds("S=1/2", named_grid((3,)))
+s = siteinds("S=1/2", named_grid(3))
 tn1 = ITensorNetwork(s; link_space=2)
 tn2 = ITensorNetwork(s; link_space=2)
 @visualize tn1;
@@ -59,9 +59,9 @@ Z̃ = contract(Z, (1, 1) => (2, 1));
 @visualize Z̃;
 
 #' ## Generating this README
-#'
+
 #' This file was generated with [weave.jl](https://github.com/JunoLab/Weave.jl) with the following commands:
-#' ```julia
-#' using ITensorNetworks, Weave
-#' weave(joinpath(pkgdir(ITensorNetworks), "examples", "README.jl"); doctype="github", out_path=pkgdir(ITensorNetworks))
-#' ```
+#+ eval=false
+
+using ITensorNetworks, Weave
+weave(joinpath(pkgdir(ITensorNetworks), "examples", "README.jl"); doctype="github", out_path=pkgdir(ITensorNetworks))

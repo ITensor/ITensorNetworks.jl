@@ -2,19 +2,17 @@ abstract type AbstractITensorNetwork{V} <:
               AbstractDataGraph{V,ITensor,ITensor} end
 
 # Field access
+data_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
 data_graph(graph::AbstractITensorNetwork) = not_implemented()
-underlying_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
-
-# Overload if needed
-is_directed(::Type{<:AbstractITensorNetwork}) = false
 
 # Copy
 copy(tn::AbstractITensorNetwork) = not_implemented()
 
-# NamedDimGraph indexing
-# TODO: Define for DataGraphs
-# to_vertex(tn::AbstractITensorNetwork, args...) = to_vertex(data_graph(tn), args...)
-# to_vertex(tn::AbstractITensorNetwork, args...) = to_vertex(underlying_graph(tn), args...)
+# Overload if needed
+is_directed(::Type{<:AbstractITensorNetwork}) = false
+
+# Derived interface, may need to be overloaded
+underlying_graph_type(G::Type{<:AbstractITensorNetwork}) = underlying_graph_type(data_graph_type(G))
 
 # AbstractDataGraphs overloads
 function vertex_data(graph::AbstractITensorNetwork, args...)
@@ -26,16 +24,6 @@ underlying_graph(tn::AbstractITensorNetwork) = underlying_graph(data_graph(tn))
 function vertex_to_parent_vertex(tn::AbstractITensorNetwork)
   return vertex_to_parent_vertex(underlying_graph(tn))
 end
-
-# function getindex(tn::AbstractITensorNetwork, index...)
-#   return getindex(IndexType(tn, index...), tn, index...)
-# end
-
-# function getindex(::SliceIndex, tn::AbstractITensorNetwork, index...)
-#   return ITensorNetwork(getindex(data_graph(tn), index...))
-# end
-
-# isassigned(tn::AbstractITensorNetwork, index...) = isassigned(data_graph(tn), index...)
 
 #
 # Iteration
@@ -247,12 +235,16 @@ function ⊗(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...
   return ⊔(tn1, tn2; kwargs...)
 end
 
-# TODO: name `inner_network` to denote it is lazy?
-# TODO: should this make sure that internal indices
-# don't clash?
-function inner(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
-  return dag(tn1) ⊗ tn2
+function ⊗(tn1::Pair{<:Any,<:AbstractITensorNetwork}, tn2::Pair{<:Any,<:AbstractITensorNetwork}; kwargs...)
+  return ⊔(tn1, tn2; kwargs...)
 end
+
+# TODO: name `inner_network` to denote it is lazy?
+# TODO: should this make sure that internal indices don't clash?
+# Add a keyword argument `map_linkinds ∈ (identity, sim, prime)`
+## function inner_network(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
+##   return dag(tn1) ⊗ tn2
+## end
 
 # TODO: how to define this lazily?
 #norm(tn::AbstractITensorNetwork) = sqrt(inner(tn, tn))
@@ -262,8 +254,8 @@ function contract(tn::AbstractITensorNetwork; sequence=vertices(tn), kwargs...)
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
 end
 
-function contract(tn::AbstractITensorNetwork, edge::Pair)
-  return contract(tn, edgetype(tn)(edge))
+function contract(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return contract(tn, edgetype(tn)(edge); kwargs...)
 end
 
 # Contract the tensors at vertices `src(edge)` and `dst(edge)`
@@ -271,8 +263,9 @@ end
 # the vertex `src(edge)`.
 # TODO: write this in terms of a more generic function
 # `Graphs.merge_vertices!` (https://github.com/mtfishman/ITensorNetworks.jl/issues/12)
-function contract(tn::AbstractITensorNetwork, edge::AbstractEdge)
-  tn = copy(tn)
+function contract(tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex=dst(edge))
+  V = promote_type(vertextype(tn), typeof(merged_vertex))
+  tn = ITensorNetwork{V}(tn)
   neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
@@ -284,13 +277,15 @@ function contract(tn::AbstractITensorNetwork, edge::AbstractEdge)
   # but without having to search all vertices
   # to update the edges.
   rem_vertex!(tn, src(edge))
+  rem_vertex!(tn, dst(edge))
+  add_vertex!(tn, merged_vertex)
   for n_src in neighbors_src
-    add_edge!(tn, dst(edge) => n_src)
+    add_edge!(tn, merged_vertex => n_src)
   end
   for n_dst in neighbors_dst
-    add_edge!(tn, dst(edge) => n_dst)
+    add_edge!(tn, merged_vertex => n_dst)
   end
-  setindex_preserve_graph!(tn, new_itensor, dst(edge))
+  setindex_preserve_graph!(tn, new_itensor, merged_vertex)
 
   return tn
 end
@@ -308,8 +303,8 @@ function svd(
   tn::AbstractITensorNetwork,
   edge::AbstractEdge;
   U_vertex=src(edge),
-  S_vertex=("S", edge),
-  V_vertex=("V", edge),
+  S_vertex=(edge, "S"),
+  V_vertex=(edge, "V"),
   u_tags=tags(tn, edge),
   v_tags=tags(tn, edge),
   kwargs...,
@@ -335,7 +330,7 @@ function qr(
   tn::AbstractITensorNetwork,
   edge::AbstractEdge;
   Q_vertex=src(edge),
-  R_vertex=("R", edge),
+  R_vertex=(edge, "R"),
   tags=tags(tn, edge),
   kwargs...,
 )
@@ -391,6 +386,7 @@ end
 # For ambiguity error
 function _orthogonalize_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
   tn = factorize(tn, edge; kwargs...)
+  # TODO: Implement as `only(common_neighbors(tn, src(edge), dst(edge)))`
   new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
   return contract(tn, new_vertex => dst(edge))
 end
@@ -405,7 +401,8 @@ end
 
 # Orthogonalize an ITensorNetwork towards a source vertex, treating
 # the network as a tree spanned by a spanning tree.
-function orthogonalize(ψ::AbstractITensorNetwork, source_vertex::Tuple)
+# TODO: Rename `tree_orthogonalize`.
+function orthogonalize(ψ::AbstractITensorNetwork, source_vertex)
   spanning_tree_edges = post_order_dfs_edges(bfs_tree(ψ, source_vertex), source_vertex)
   for e in spanning_tree_edges
     ψ = orthogonalize(ψ, e)
@@ -452,24 +449,30 @@ function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
   return first.(v⃗)
 end
 
-function inner_network(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
-  tn1 = sim(tn1; sites=[])
-  tn2 = sim(tn2; sites=[])
-  return ⊗(dag(tn1), tn2; kwargs...)
+function inner_network(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; map_bra_linkinds=sim, flatten=false, kwargs...)
+  tn1 = map_bra_linkinds(tn1; sites=[])
+  inner_net = ⊗(dag(tn1), tn2; kwargs...)
+  if flatten
+    for v in vertices(ψ)
+      # TODO: Combine the indices, optionally with `combine_linkinds`
+      inner_net = contract(inner_net, (v, 2) => (v, 1); merged_vertex=v)
+    end
+  end
+  return inner_net
 end
 
 function norm_network(tn::AbstractITensorNetwork; kwargs...)
   return inner_network(tn, tn; kwargs...)
 end
 
-function flattened_inner_network(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork)
-  tn = inner(prime(ϕ; sites=[]), ψ)
-  for v in vertices(ψ)
-    # TODO: Rename vertices to `v`, check if `ϕ` and `ψ` have the same vertices
-    tn = contract(tn, (v, 2) => (v, 1))
-  end
-  return tn
-end
+## function flattened_inner_network(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork)
+##   tn = inner_network(ϕ, ψ; map_bra_linkinds=prime)
+##   for v in vertices(ψ)
+##     # TODO: Rename vertices to `v`, check if `ϕ` and `ψ` have the same vertices
+##     tn = contract(tn, (v, 2) => (v, 1); merged_vertex=v)
+##   end
+##   return tn
+## end
 
 function contract_inner(
   ϕ::AbstractITensorNetwork,
@@ -477,11 +480,11 @@ function contract_inner(
   sequence=nothing,
   contraction_sequence_kwargs=(;),
 )
-  tn = inner(prime(ϕ; sites=[]), ψ)
+  tn = inner_network(ϕ, ψ; map_bra_linkinds=prime)
   # TODO: convert to an IndsNetwork and compute the contraction sequence
   for v in vertices(ψ)
     # TODO: Rename vertices to `v`, check if `ϕ` and `ψ` have the same vertices
-    tn = contract(tn, (v, 2) => (v, 1))
+    tn = contract(tn, (v, 2) => (v, 1); merged_vertex=v)
   end
   if isnothing(sequence)
     sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
