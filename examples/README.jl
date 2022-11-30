@@ -14,6 +14,12 @@
 #' julia> Pkg.add(url="https://github.com/mtfishman/ITensorNetworks.jl")
 #' ```
 
+#+ echo=false; term=false
+
+using Random
+using ITensors
+Random.seed!(ITensors.index_id_rng(), 1234);
+
 #' ## Examples
 #'
 #' Here are is an example of making a tensor network on a chain graph (a tensor train or matrix product state):
