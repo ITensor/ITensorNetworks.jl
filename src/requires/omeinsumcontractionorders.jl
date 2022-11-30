@@ -70,9 +70,7 @@ end
 """
 Convert NestedEinsum to contraction sequence, such as `[[1, 2], [3, 4]]`.
 """
-function convert_to_contraction_sequence(
-  net::OMEinsumContractionOrders.NestedEinsum
-)
+function convert_to_contraction_sequence(net::OMEinsumContractionOrders.NestedEinsum)
   if OMEinsumContractionOrders.isleaf(net)
     return net.tensorindex
   else

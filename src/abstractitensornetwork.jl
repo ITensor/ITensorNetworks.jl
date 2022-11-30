@@ -450,6 +450,80 @@ end
 # TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl?
 norm2(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)
 
+#Run over all edges of an ITENSORNETWORK and combine any duplicated indices into one
+#Can take pre-existing combiners as an argument
+function combine_link_indices(psi::AbstractITensorNetwork; combiners=nothing)
+  if (combiners == nothing)
+    outcombiners = Dict{NamedDimEdge{Tuple},ITensor}()
+  end
+  es = edges(psi)
+  new_psi = deepcopy(psi)
+
+  for e in es
+    v1, v2 = src(e), dst(e)
+    if (combiners == nothing)
+      is = commoninds(psi, e)
+      C = combiner(is; tags=tags(is[1]))
+    else
+      C = combiners[e]
+    end
+    new_psi[v1] = new_psi[v1] * C
+    new_psi[v2] = new_psi[v2] * C
+    if (combiners == nothing)
+      outcombiners[e] = C
+    end
+  end
+
+  if (combiners == nothing)
+    return new_psi, outcombiners
+  else
+    return new_psi
+  end
+end
+
+#Run over all edges of an ITENSORNETWORK and uncombine any indices which were previously combined
+#Can take pre-existing combiners as an argument
+function uncombine_link_indices(
+  psi::AbstractITensorNetwork, combiners=Dict{NamedDimEdge{Tuple},ITensor}()
+)
+  es = edges(psi)
+  new_psi = deepcopy(psi)
+
+  for e in es
+    v1, v2 = src(e), dst(e)
+    if (haskey(combiners, e))
+      C = combiners[e]
+      new_psi[v1] = new_psi[v1] * C
+      new_psi[v2] = new_psi[v2] * C
+    end
+  end
+
+  return new_psi
+end
+
+#GIVEN AN ITENSOR NETWORK WITH DANGLING (PHYSICAL) BONDS, CONTRACT IT ONTO ITS CONJUGATE AND COMBINE ALL
+#DOUBLE INDICES. RETURN THE COMBINERS USED ON THE LINK INDICES
+#CAN APPLY LOCAL OPS ALONG THE PHYSICAL INDICES OF THE ITENSORNETWORK BEFORE CONTRACTION (ops is a list of strings, vops is a list of vertices, s is the indsnetwork)
+#CAN ALSO PASS COMBINERS FROM BEFORE TO ENSURE THE INDICES ARE CONSISTENT BETWEEN DIFFERENT APPLICATIONS OF THIS FUNCTION
+function flatten_thicken_bonds(
+  psi::AbstractITensorNetwork; ops=nothing, vops=nothing, s=nothing, combiners=nothing
+)
+  psiin = deepcopy(psi)
+  outcombiners = Dict{NamedDimEdge{Tuple},ITensor}()
+
+  if (ops != nothing)
+    for (op, v) in zip(ops, vops)
+      O = ITensor(Op(op, v), s)
+      psiin[v] = noprime!(O * psiin[v])
+    end
+  end
+
+  flatpsi = flattened_inner_network(psiin, psi)
+  flatpsi = rename_vertices_itn(flatpsi, Dictionary(vertices(flatpsi), vertices(psi)))
+
+  return combine_link_indices(flatpsi; combiners=combiners)
+end
+
 #
 # Printing
 #
