@@ -1,7 +1,6 @@
 #Construct the random initial Message Tensors for an ITensor Network, based on a partitioning into subgraphs specified ny 'sub graphs'
 #The ITensorNetwork needs to be flat (i.e. just sites and link indices, no site indices), and is assumed to only have 1 link indice between any two sites
 #init=(I...) -> allequal(I) ? 1 : 0 (identity), init=(I...) -> randn() (normally distributed random), etc...
-#PRODUCT MPS INITIALISATION?!
 function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph; init
 )
   mts = Dict{Pair,ITensor}()
@@ -26,32 +25,6 @@ function construct_initial_mts(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph;
   end
 
   return mts
-end
-
-function construct_initial_mts_V2(flatpsi::ITensorNetwork, dg_subgraphs::DataGraph)
-    mts = Dict{Pair,ITensor}()
-  
-    for i in vertices(dg_subgraphs)
-      tns_to_contract = ITensor[]
-      for j in neighbors(dg_subgraphs, i)
-        X1 = 1.0
-        for vertex in dg_subgraphs[i]
-          psiv = flatpsi[vertex]
-          for e in NamedDimEdge.(Ref(vertex) .=> neighbors(flatpsi, vertex))
-            edge_ind = commoninds(flatpsi, e)[1]
-            if (find_subgraph(dst(e), dg_subgraphs) != j)
-              psiv = psiv * delta(edge_ind)
-            end
-          end
-            X1 = X1*psiv
-        end
-
-        normalize!(X1)
-        mts[i => j] = X1
-      end
-    end
-  
-    return mts
 end
 
 #DO a single update of a message tensor using the current subgraph and the incoming mts
@@ -154,7 +127,7 @@ function get_single_site_expec(
 end
 
 #given two flat networks psi and psi0, calculate the ratio of their contraction centred on the subgraph(s) containing v1 and v2. The message tensors should be formulated over psi.
-function take_2sexpec_two_networks(
+function get_two_site_expec(
   psi::ITensorNetwork,
   psiO::ITensorNetwork,
   mts::Dict{Pair,ITensor},
@@ -252,8 +225,96 @@ function iterate_single_site_expec(
       string(i) *
       " Belief propagation gives observable on site " *
       string(v) *
-      " as " *
+      " is " *
       string(approx_O),
     )
   end
+end
+
+#Starting with initial guess for messagetensors, monitor the convergence of an observable on a pair of sites v1 and v2 (which is emedded in psiflatO)
+function iterate_two_site_expec(
+  psiflat::ITensorNetwork,
+  psiflatO::ITensorNetwork,
+  initmts::Dict{Pair,ITensor},
+  dg_subgraphs::DataGraph,
+  niters::Int64,
+  v1::Tuple,
+  v2::Tuple
+)
+  println(
+    "Initial Guess for Observable on sites " *
+    string(v1) * " and " *string(v2) *
+    " is " *
+    string(get_two_site_expec(psiflat, psiflatO, initmts, dg_subgraphs, v1, v2)),
+  )
+  mts = deepcopy(initmts)
+  for i in 1:niters
+    mts = update_all_mts(psiflat, mts, dg_subgraphs, niters)
+    approx_O = get_two_site_expec(psiflat, psiflatO, mts, dg_subgraphs, v1, v2)
+    println(
+      "After iteration " *
+      string(i) *
+      " Belief propagation gives observable on site " *
+      string(v1) * " and " *string(v2) *
+      " is " *
+      string(approx_O),
+    )
+  end
+end
+
+#Get two_site_rdm using belief propagation messagetensors
+function two_site_rdm_bp(psiflat::ITensorNetwork, psi::ITensorNetwork, mts::Dict{Pair, ITensor}, dg_subgraphs::DataGraph, v1::Tuple, v2::Tuple, s::IndsNetwork, combiners::Dict{NamedDimEdge{Tuple},ITensor})
+  subgraph1 = find_subgraph(v1, dg_subgraphs)
+  subgraph2 = find_subgraph(v2, dg_subgraphs)
+  tensors_to_contract = ITensor[]
+
+  connected_subgraphs = neighbors(dg_subgraphs, subgraph1)
+  for k in connected_subgraphs
+    if(k != subgraph2)
+      push!(tensors_to_contract, mts[k => subgraph1])
+    end
+  end
+
+  for vertex in dg_subgraphs[subgraph1]
+    if (vertex != v1 && vertex != v2)
+      push!(tensors_to_contract, deepcopy(psiflat[vertex]))
+    end
+  end
+
+  if(subgraph2 != subgraph1)
+    connected_subgraphs2 = neighbors(dg_subgraphs, subgraph2)
+    for k in connected_subgraphs2
+      if (k != subgraph1)
+        push!(tensors_to_contract, mts[k => subgraph2])
+      end
+    end
+
+    for vertex in dg_subgraphs[subgraph2]
+      if (vertex != v2)
+        push!(tensors_to_contract, deepcopy(psiflat[vertex]))
+      end
+    end
+  end
+
+  psi1 = deepcopy(psi[v1])*prime!(dag(deepcopy(psi[v1])))
+  for v in neighbors(psi, v1)
+    C = haskey(combiners,NamedDimEdge(v => v1)) ? combiners[NamedDimEdge(v => v1)] : combiners[NamedDimEdge(v1 => v)]
+    psi1 = psi1*C
+  end
+  push!(tensors_to_contract, psi1)
+
+  psi2 = deepcopy(psi[v2])*prime!(dag(deepcopy(psi[v2])))
+  for v in neighbors(psi, v2)
+    C = haskey(combiners,NamedDimEdge(v => v2)) ? combiners[NamedDimEdge(v => v2)] : combiners[NamedDimEdge(v2 => v)]
+    psi2 = psi2*C
+  end
+  push!(tensors_to_contract, psi2)
+
+  rdm = ITensors.contract(tensors_to_contract)
+  C = combiner(s[v1], s[v2])
+  Cp = combiner(s[v1]', s[v2]')
+  rdm = rdm * C * Cp
+  tr_rdm = rdm * delta(combinedind(C), combinedind(Cp))
+  return array(rdm / tr_rdm)
+
 end
