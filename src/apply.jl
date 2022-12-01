@@ -1,5 +1,5 @@
 function ITensors.apply(
-  o::ITensor, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false
+  o::ITensor, ψ::AbstractITensorNetwork; cutoff=nothing, maxdim=nothing, normalize=false, ortho=false
 )
   ψ = copy(ψ)
   v⃗ = neighbor_vertices(ψ, o)

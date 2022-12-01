@@ -35,6 +35,7 @@ import ITensors:
   orthogonalize,
   inner,
   norm,
+  expect,
   # site and link indices
   siteind,
   siteinds,

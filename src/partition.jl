@@ -1,10 +1,35 @@
+"""
+Graph partitioning backend
+"""
 struct Backend{T} end
-Backend(s) = Backend{Symbol(s)}()
+
+Backend(s::Symbol) = Backend{s}()
+Backend(s::String) = Backend(Symbol(s))
+Backend(backend::Backend) = backend
+
 macro Backend_str(s)
   return :(Backend{$(Expr(:quote, Symbol(s)))})
 end
 
-function partition(g::Graph, npartitions::Integer; backend="KaHyPar", kwargs...)
+"""
+Current default graph partitioning backend
+"""
+const CURRENT_PARTITIONING_BACKEND = Ref{Union{Missing,Backend}}(missing)
+
+"""
+Get the graph partitioning backend
+"""
+current_partitioning_backend() = CURRENT_PARTITIONING_BACKEND[]
+
+"""
+Set the graph partitioning backend
+"""
+function set_partitioning_backend!(backend::Union{Missing,Backend,String})
+  CURRENT_PARTITIONING_BACKEND[] = Backend(backend)
+  return nothing
+end
+
+function partition(g::Graph, npartitions::Integer; backend=current_partitioning_backend(), kwargs...)
   return partition(Backend(backend), g, npartitions; kwargs...)
 end
 

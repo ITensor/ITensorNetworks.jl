@@ -10,7 +10,7 @@ function delta_network(s::IndsNetwork; link_space=nothing)
   return ψ
 end
 
-function delta_network(g::NamedDimGraph; link_space=2)
+function delta_network(g::NamedGraph; link_space=2)
   s = IndsNetwork(g; link_space=link_space)
   return delta_network(s; link_space=link_space)
 end
@@ -47,7 +47,7 @@ end
 #BUILD Z OF CLASSICAL ISING MODEL ON A GIVEN GRAPH AT INVERSE TEMP BETA
 #H = -\sum_{(v,v') \in edges}\sigma^{z}_{v}\sigma^{z}_{v'}
 #TAKE AS AN OPTIONAL ARGUMENT A LIST OF VERTICES OVER WHICH TO APPLY A SZ. THE RESULTANT NETWORK CAN THEN BE CONTRACTED AND DIVIDED BY THE ACTUAL PARTITION FUNCTION TO GET THAT OBSERVABLE
-function ising_network(g::NamedDimGraph, beta::Float64; szverts=nothing)
+function ising_network(g::NamedGraph, beta::Float64; szverts=nothing)
   s = IndsNetwork(g; link_space=2)
   return ising_network(s, beta; szverts=szverts)
 end

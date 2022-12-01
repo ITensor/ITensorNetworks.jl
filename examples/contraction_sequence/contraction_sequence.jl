@@ -14,7 +14,7 @@ s = siteinds("S=1/2", g)
 χ = 10
 ψ = randomITensorNetwork(s; link_space=χ)
 
-tn = norm_network(ψ)
+tn = norm_sqr_network(ψ)
 
 # Contraction sequence for exactly computing expectation values
 # contract_edges = map(t -> (1, t...), collect(keys(cartesian_to_linear(dims))))

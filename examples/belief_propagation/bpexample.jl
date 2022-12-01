@@ -1,50 +1,70 @@
 using ITensors
+using Metis
 using ITensorNetworks
+
 using ITensorNetworks:
-  delta_network,
-  formsubgraphs,
-  partition,
-  flatten_thicken_bonds,
-  flattened_inner_network,
+  subgraphs,
   construct_initial_mts,
   update_all_mts,
-  get_single_site_expec,
   iterate_single_site_expec,
-  contract_boundary_mps
-using KaHyPar
-using Compat
+  get_single_site_expec
 
-#nxn GRID
-n = 4
-g = named_grid((n, n))
+n = 2
+g = named_grid(n)
+# g = named_comb_tree((n, n))
 s = siteinds("S=1/2", g)
-chi = 3
+chi = 2
 
-#Random Tensor Network, Flatten it too
-psi = randomITensorNetwork(s; link_space=chi)
-psiflat, combiners = flatten_thicken_bonds(deepcopy(psi))
+ψ = randomITensorNetwork(s; link_space=chi)
 
-v = (1, 1)
+ψψ = norm_sqr_network(ψ; flatten=true, map_bra_linkinds=prime)
+combiners = linkinds_combiners(ψψ)
+ψψ = combine_linkinds(ψψ, combiners)
 
-#Apply Sz to site v and flatten that
-psiflatO = flatten_thicken_bonds(psi; ops=["Sz"], vops=[v], s=s, combiners=combiners)
+# Apply Sz to site v
+# v = (1, 1)
+v = 1
+# Oψ = apply(op("Sz", s[v]), ψ; ortho=false)
+
+@show ψ[2]
+
+Oψ = copy(ψ)
+
+@show Oψ[2]
+
+Oψ[v] = apply(op("Sz", s[v]), ψ[v])
+
+@show Oψ[2]
+
+ψOψ = inner_network(ψ, Oψ; flatten=true, map_bra_linkinds=prime)
+ψOψ = combine_linkinds(ψOψ, combiners)
+
+@show Oψ[2]
+@show ψψ[2]
+@show ψOψ[2]
 
 #Get the value of sz on v via exact contraction
-actual_sz = ITensors.contract(psiflatO)[1] / ITensors.contract(psiflat)[1]
+actual_sz = contract(ψOψ)[] / contract(ψψ)[]
 
 println("Actual value of Sz on site " * string(v) * " is " * string(actual_sz))
 
+niters = 20
+
 nsites = 1
 println("First " * string(nsites) * " sites form a subgraph")
-dg_subgraphs = formsubgraphs(g, Int(n * n / nsites))
-mts = construct_initial_mts(psiflat, dg_subgraphs; init=(I...) -> allequal(I) ? 1 : 0)
-niters = 5
+mts = construct_initial_mts(ψψ, nsites; init=(I...) -> allequal(I) ? 1 : 0)
 
-iterate_single_site_expec(psiflat, psiflatO, mts, dg_subgraphs, niters, v)
+@show ψψ[2]
+@show ψOψ[2]
 
-nsites = 4
-println("Now " * string(nsites) * " sites form a subgraph")
-dg_subgraphs = formsubgraphs(g, Int(n * n / nsites))
-mts = construct_initial_mts(psiflat, dg_subgraphs; init=(I...) -> allequal(I) ? 1 : 0)
+# mts = update_all_mts(ψψ, init_mts, niters)
 
-iterate_single_site_expec(psiflat, psiflatO, mts, dg_subgraphs, niters, v)
+mts = iterate_single_site_expec(deepcopy(ψψ), deepcopy(mts), niters, deepcopy(ψOψ), v)
+
+@show ψψ[2]
+@show ψOψ[2]
+
+# nsites = 4
+# println("Now " * string(nsites) * " sites form a subgraph")
+# mts = construct_initial_mts(ψψ, nsites; init=(I...) -> allequal(I) ? 1 : 0)
+# iterate_single_site_expec(ψψ, mts, niters, ψOψ, v)

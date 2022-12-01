@@ -21,6 +21,7 @@ using NamedGraphs:
   parent_graph,
   vertex_to_parent_vertex,
   not_implemented
+using DataGraphs: vertex_data_type
 
 include("imports.jl")
 

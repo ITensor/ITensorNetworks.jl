@@ -8,6 +8,7 @@ using Test
     "examples.jl",
     "mps.jl",
     "peps.jl",
+    joinpath("belief_propagation", "bpexample.jl"),
     joinpath("contraction_sequence", "contraction_sequence.jl"),
     joinpath("partition", "kahypar_vs_metis.jl"),
     joinpath("partition", "partitioning.jl"),

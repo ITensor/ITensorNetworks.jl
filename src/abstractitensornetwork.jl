@@ -103,10 +103,6 @@ function Graph(tn::AbstractITensorNetwork)
   return Graph(Vector{ITensor}(tn))
 end
 
-# function NamedDimGraph(tn::AbstractITensorNetwork)
-#   return NamedDimGraph(Vector{ITensor}(tn))
-# end
-
 function NamedGraph(tn::AbstractITensorNetwork)
   return NamedGraph(Vector{ITensor}(tn))
 end
@@ -168,8 +164,7 @@ function siteinds(tn::AbstractITensorNetwork, vertex)
 end
 
 function commoninds(tn::AbstractITensorNetwork, edge)
-  # e = NamedDimEdge(edge)
-  e = NamedEdge(edge)
+  e = edgetype(tn)(edge)
   return commoninds(tn[src(e)], tn[dst(e)])
 end
 
@@ -238,13 +233,6 @@ end
 function ⊗(tn1::Pair{<:Any,<:AbstractITensorNetwork}, tn2::Pair{<:Any,<:AbstractITensorNetwork}; kwargs...)
   return ⊔(tn1, tn2; kwargs...)
 end
-
-# TODO: name `inner_network` to denote it is lazy?
-# TODO: should this make sure that internal indices don't clash?
-# Add a keyword argument `map_linkinds ∈ (identity, sim, prime)`
-## function inner_network(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
-##   return dag(tn1) ⊗ tn2
-## end
 
 # TODO: how to define this lazily?
 #norm(tn::AbstractITensorNetwork) = sqrt(inner(tn, tn))
@@ -417,30 +405,6 @@ function Base.:*(c::Number, ψ::AbstractITensorNetwork)
   return cψ
 end
 
-# TODO: should this make sure that internal indices
-# don't clash?
-function hvncat(
-  dim::Int, tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; new_dim_names=(1, 2)
-)
-  dg = hvncat(dim, data_graph(tn1), data_graph(tn2); new_dim_names)
-
-  # Add in missing edges that may be shared
-  # across `tn1` and `tn2`.
-  vertices1 = vertices(dg)[1:nv(tn1)]
-  vertices2 = vertices(dg)[(nv(tn1) + 1):end]
-  for v1 in vertices1, v2 in vertices2
-    if hascommoninds(dg[v1], dg[v2])
-      add_edge!(dg, v1 => v2)
-    end
-  end
-
-  # TODO: Allow customization of the output type.
-  ## return promote_type(typeof(tn1), typeof(tn2))(dg)
-  ## return contract_output(typeof(tn1), typeof(tn2))(dg)
-
-  return ITensorNetwork(dg)
-end
-
 # Return a list of vertices in the ITensorNetwork `ψ`
 # that share indices with the ITensor `T`
 function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
@@ -449,43 +413,56 @@ function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
   return first.(v⃗)
 end
 
-function inner_network(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; map_bra_linkinds=sim, flatten=false, kwargs...)
+function linkinds_combiners(tn::AbstractITensorNetwork)
+  combiners = DataGraph(directed_graph(underlying_graph(tn)), ITensor, ITensor)
+  for e in edges(tn)
+    C = combiner(linkinds(tn, e); tags=edge_tag(e))
+    combiners[e] = C
+    combiners[reverse(e)] = dag(C)
+  end
+  return combiners
+end
+
+function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combiners(tn))
+  combined_tn = copy(tn)
+  for e in edges(tn)
+    combined_tn[src(e)] = combined_tn[src(e)] * combiners[e]
+    combined_tn[dst(e)] = combined_tn[dst(e)] * combiners[reverse(e)]
+  end
+  return combined_tn
+end
+
+function inner_network(
+  tn1::AbstractITensorNetwork,
+  tn2::AbstractITensorNetwork;
+  map_bra_linkinds=sim,
+  combine_linkinds=false,
+  flatten=combine_linkinds,
+  kwargs...,
+)
+  @assert issetequal(vertices(tn1), vertices(tn2))
   tn1 = map_bra_linkinds(tn1; sites=[])
   inner_net = ⊗(dag(tn1), tn2; kwargs...)
   if flatten
-    for v in vertices(ψ)
+    for v in vertices(tn1)
       # TODO: Combine the indices, optionally with `combine_linkinds`
       inner_net = contract(inner_net, (v, 2) => (v, 1); merged_vertex=v)
     end
   end
+  if combine_linkinds
+    inner_net = ITensorNetworks.combine_linkinds(inner_net)
+  end
   return inner_net
 end
 
-function norm_network(tn::AbstractITensorNetwork; kwargs...)
-  return inner_network(tn, tn; kwargs...)
-end
-
-## function flattened_inner_network(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork)
-##   tn = inner_network(ϕ, ψ; map_bra_linkinds=prime)
-##   for v in vertices(ψ)
-##     # TODO: Rename vertices to `v`, check if `ϕ` and `ψ` have the same vertices
-##     tn = contract(tn, (v, 2) => (v, 1); merged_vertex=v)
-##   end
-##   return tn
-## end
-
+# TODO: Rename `inner`.
 function contract_inner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   sequence=nothing,
   contraction_sequence_kwargs=(;),
 )
-  tn = inner_network(ϕ, ψ; map_bra_linkinds=prime)
-  # TODO: convert to an IndsNetwork and compute the contraction sequence
-  for v in vertices(ψ)
-    # TODO: Rename vertices to `v`, check if `ϕ` and `ψ` have the same vertices
-    tn = contract(tn, (v, 2) => (v, 1); merged_vertex=v)
-  end
+  tn = inner_network(ϕ, ψ; combine_linkinds=true)
   if isnothing(sequence)
     sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
   end
@@ -494,81 +471,9 @@ end
 
 # TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
 # or `norm_sqr` to match `LinearAlgebra.norm_sqr`
-norm2(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)
+norm_sqr(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)
 
-#Run over all edges of an ITENSORNETWORK and combine any duplicated indices into one
-#Can take pre-existing combiners as an argument
-function combine_link_indices(psi::AbstractITensorNetwork; combiners=nothing)
-  if (combiners == nothing)
-    outcombiners = Dict{NamedDimEdge{Tuple},ITensor}()
-  end
-  es = edges(psi)
-  new_psi = deepcopy(psi)
-
-  for e in es
-    v1, v2 = src(e), dst(e)
-    if (combiners == nothing)
-      is = commoninds(psi, e)
-      C = combiner(is; tags=tags(is[1]))
-    else
-      C = combiners[e]
-    end
-    new_psi[v1] = new_psi[v1] * C
-    new_psi[v2] = new_psi[v2] * C
-    if (combiners == nothing)
-      outcombiners[e] = C
-    end
-  end
-
-  if (combiners == nothing)
-    return new_psi, outcombiners
-  else
-    return new_psi
-  end
-end
-
-#Run over all edges of an ITENSORNETWORK and uncombine any indices which were previously combined
-#Can take pre-existing combiners as an argument
-function uncombine_link_indices(
-  psi::AbstractITensorNetwork, combiners=Dict{NamedDimEdge{Tuple},ITensor}()
-)
-  es = edges(psi)
-  new_psi = deepcopy(psi)
-
-  for e in es
-    v1, v2 = src(e), dst(e)
-    if (haskey(combiners, e))
-      C = combiners[e]
-      new_psi[v1] = new_psi[v1] * C
-      new_psi[v2] = new_psi[v2] * C
-    end
-  end
-
-  return new_psi
-end
-
-#GIVEN AN ITENSOR NETWORK WITH DANGLING (PHYSICAL) BONDS, CONTRACT IT ONTO ITS CONJUGATE AND COMBINE ALL
-#DOUBLE INDICES. RETURN THE COMBINERS USED ON THE LINK INDICES
-#CAN APPLY LOCAL OPS ALONG THE PHYSICAL INDICES OF THE ITENSORNETWORK BEFORE CONTRACTION (ops is a list of strings, vops is a list of vertices, s is the indsnetwork)
-#CAN ALSO PASS COMBINERS FROM BEFORE TO ENSURE THE INDICES ARE CONSISTENT BETWEEN DIFFERENT APPLICATIONS OF THIS FUNCTION
-function flatten_thicken_bonds(
-  psi::AbstractITensorNetwork; ops=nothing, vops=nothing, s=nothing, combiners=nothing
-)
-  psiin = deepcopy(psi)
-  outcombiners = Dict{NamedDimEdge{Tuple},ITensor}()
-
-  if (ops != nothing)
-    for (op, v) in zip(ops, vops)
-      O = ITensor(Op(op, v), s)
-      psiin[v] = noprime!(O * psiin[v])
-    end
-  end
-
-  flatpsi = flattened_inner_network(psiin, psi)
-  flatpsi = rename_vertices_itn(flatpsi, Dictionary(vertices(flatpsi), vertices(psi)))
-
-  return combine_link_indices(flatpsi; combiners=combiners)
-end
+norm_sqr_network(ψ::AbstractITensorNetwork; kwargs...) = inner_network(ψ, ψ; kwargs...)
 
 #
 # Printing
@@ -603,3 +508,27 @@ function visualize(
   end
   return visualize(Vector{ITensor}(tn), args...; vertex_labels, kwargs...)
 end
+
+## # TODO: should this make sure that internal indices
+## # don't clash?
+## function hvncat(
+##   dim::Int, tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; new_dim_names=(1, 2)
+## )
+##   dg = hvncat(dim, data_graph(tn1), data_graph(tn2); new_dim_names)
+## 
+##   # Add in missing edges that may be shared
+##   # across `tn1` and `tn2`.
+##   vertices1 = vertices(dg)[1:nv(tn1)]
+##   vertices2 = vertices(dg)[(nv(tn1) + 1):end]
+##   for v1 in vertices1, v2 in vertices2
+##     if hascommoninds(dg[v1], dg[v2])
+##       add_edge!(dg, v1 => v2)
+##     end
+##   end
+## 
+##   # TODO: Allow customization of the output type.
+##   ## return promote_type(typeof(tn1), typeof(tn2))(dg)
+##   ## return contract_output(typeof(tn1), typeof(tn2))(dg)
+## 
+##   return ITensorNetwork(dg)
+## end
