@@ -17,6 +17,7 @@ SplitApplyCombine = "03a91e81-4c3e-53e1-a0a4-9c0c8f19dd66"
 Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 
 [compat]
+DataGraphs = "0.1.1"
 Dictionaries = "0.3.15"
 DocStringExtensions = "0.8, 0.9"
 Graphs = "1.6"
