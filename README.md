@@ -6,14 +6,9 @@ A package to provide general network data structures and tools to use with ITens
 
 ## Installation
 
-This package relies on the unregistered package `DataGraphs.jl`. To install, you will need to do:
-
+You can install this package through the Julia package manager:
 ```julia
-julia> using Pkg
-
-julia> Pkg.add(url="https://github.com/mtfishman/DataGraphs.jl")
-
-julia> Pkg.add(url="https://github.com/mtfishman/ITensorNetworks.jl")
+julia> ] add ITensorNetworks
 ```
 
 
@@ -166,7 +161,7 @@ with vertex data:
  3 │ Index[(dim=2|id=683|"S=1/2,Site,n=3")]
 
 and edge data:
-0-element Dictionaries.Dictionary{NamedEdge{Int64}, Vector{Index}}
+0-element Dictionaries.Dictionary{NamedGraphs.NamedEdge{Int64}, Vector{Index}}
 
 julia> tn1 = ITensorNetwork(s; link_space=2)
 ITensorNetwork{Int64} with 3 vertices:

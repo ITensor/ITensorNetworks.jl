@@ -4,14 +4,9 @@
 
 #' ## Installation
 #'
-#' This package relies on the unregistered package `DataGraphs.jl`. To install, you will need to do:
-#'
+#' You can install this package through the Julia package manager:
 #' ```julia
-#' julia> using Pkg
-#' 
-#' julia> Pkg.add(url="https://github.com/mtfishman/DataGraphs.jl")
-#' 
-#' julia> Pkg.add(url="https://github.com/mtfishman/ITensorNetworks.jl")
+#' julia> ] add ITensorNetworks
 #' ```
 
 #+ echo=false; term=false
