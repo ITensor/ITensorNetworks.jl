@@ -31,18 +31,17 @@ Returns a datagraph where each vertex contains the list of vertices involved in 
 KaHyPar needs to be installed for this function to work
 """
 function subgraphs(g::AbstractGraph, nvertices_per_partition::Integer; kwargs...)
-  @show nvertices_per_partition
-  @show nv(g)
   nvertices_per_partition = min(nv(g), nvertices_per_partition)
-  @show nvertices_per_partition
   npartitions = nv(g) ÷ nvertices_per_partition
   vertex_to_partition = partition(g, npartitions; kwargs...)
   partition_vertices = groupfind(vertex_to_partition)
   if length(partition_vertices) ≠ npartitions
-    @warn "Requested $nvertices_per_partition vertices per partition for a graph with $(nv(g)) vertices. Attempting to partition the graph into $npartitions partitions but instead it was partitioned into $(length(partition_vertices)) partitions."
+    @warn "Requested $nvertices_per_partition vertices per partition for a graph with $(nv(g)) vertices. Attempting to partition the graph into $npartitions partitions but instead it was partitioned into $(length(partition_vertices)) partitions. Partitions are $partition_vertices."
   end
-  @assert issetequal(keys(partition_vertices), 1:length(partition_vertices))
-  dg_subgraphs = DataGraph(NamedGraph(npartitions), groupfind(vertex_to_partition))
+  if !issetequal(keys(partition_vertices), 1:length(partition_vertices))
+    @warn "Vertex partioning is $partition_vertices, which may not be what you were hoping for. If not, try a different graph partitioning algorithm or backend."
+  end
+  dg_subgraphs = DataGraph(NamedGraph(keys(partition_vertices)), partition_vertices)
   for e in edges(g)
     s1 = findfirst_on_vertices(subgraph_vertices -> src(e) ∈ subgraph_vertices, dg_subgraphs)
     s2 = findfirst_on_vertices(subgraph_vertices -> dst(e) ∈ subgraph_vertices, dg_subgraphs)

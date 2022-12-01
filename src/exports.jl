@@ -65,6 +65,7 @@ export AbstractITensorNetwork,
   norm_sqr_network,
   linkinds_combiners,
   combine_linkinds,
+  subgraphs,
   reverse_bfs_edges,
   # contraction_sequences.jl
   contraction_sequence,

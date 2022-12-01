@@ -5,7 +5,10 @@ end
 function construct_initial_mts(tn::ITensorNetwork, subgraphs::DataGraph; init)
   # TODO: This is dropping the vertex data for some reason.
   # mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensor}(subgraphs)
-  mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensor}(directed_graph(underlying_graph(subgraphs)), vertex_data(subgraphs))
+  mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensor}(directed_graph(underlying_graph(subgraphs)))
+  for v in vertices(mts)
+    mts[v] = subgraphs[v]
+  end
   for subgraph in vertices(subgraphs)
     tns_to_contract = ITensor[]
     for subgraph_neighbor in neighbors(subgraphs, subgraph)
@@ -18,8 +21,7 @@ function construct_initial_mts(tn::ITensorNetwork, subgraphs::DataGraph; init)
           end
         end
       end
-      mt = itensor([init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(edge_inds)...))], edge_inds)
-      normalize!(mt)
+      mt = normalize!(itensor([init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(edge_inds)...))], edge_inds))
       mts[subgraph => subgraph_neighbor] = mt
     end
   end
@@ -32,9 +34,12 @@ DO a single update of a message tensor using the current subgraph and the incomi
 function update_mt(tn::ITensorNetwork, subgraph_vertices::Vector, mts::Vector{ITensor}; contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal")
 )
   contract_list = [mts; [tn[v] for v in subgraph_vertices]]
-  M = contract(contract_list; sequence=contraction_sequence(contract_list))
-  normalize!(M)
-  return M
+  new_mt = if isone(length(contract_list))
+    copy(only(contract_list))
+  else
+    contract(contract_list; sequence=contraction_sequence(contract_list))
+  end
+  return normalize!(new_mt)
 end
 
 """
@@ -84,18 +89,15 @@ function get_single_site_expec(
   contraction_sequence::Function=tn -> ITensorNetworks.contraction_sequence(tn; alg="optimal")
 )
   subgraph = find_subgraph(v, subgraphs)
-  connected_subgraphs = neighbors(subgraphs, subgraph)
   num_tensors_to_contract = ITensor[]
   denom_tensors_to_contract = ITensor[]
-  for k in connected_subgraphs
+  for k in neighbors(subgraphs, subgraph)
     push!(num_tensors_to_contract, subgraphs[k => subgraph])
     push!(denom_tensors_to_contract, subgraphs[k => subgraph])
   end
   for vertex in subgraphs[subgraph]
-    tnv = tn[vertex]
-    tnvO = tnO[vertex]
-    push!(num_tensors_to_contract, tnvO)
-    push!(denom_tensors_to_contract, tnv)
+    push!(num_tensors_to_contract, tnO[vertex])
+    push!(denom_tensors_to_contract, tn[vertex])
   end
   numerator = ITensors.contract(num_tensors_to_contract; sequence=contraction_sequence(num_tensors_to_contract))[]
   denominator = ITensors.contract(denom_tensors_to_contract; sequence=contraction_sequence(denom_tensors_to_contract))[]
