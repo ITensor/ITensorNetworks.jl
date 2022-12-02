@@ -1,5 +1,6 @@
 module ITensorNetworks
 
+using Compat
 using DataGraphs
 using Dictionaries
 using DocStringExtensions

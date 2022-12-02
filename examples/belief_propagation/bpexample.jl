@@ -1,3 +1,4 @@
+using Compat
 using ITensors
 using Metis
 using ITensorNetworks
@@ -37,14 +38,14 @@ niters = 20
 
 nsites = 1
 println("\nFirst " * string(nsites) * " sites form a subgraph")
-mts = construct_initial_mts(ψψ, nsites; init=(I...) -> allequal(I) ? 1 : 0)
+mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
 @show get_single_site_expec(ψψ, mts, ψOψ, v)
 mts = update_all_mts(ψψ, mts, niters)
 @show get_single_site_expec(ψψ, mts, ψOψ, v)
 
 nsites = 4
 println("\nNow " * string(nsites) * " sites form a subgraph")
-mts = construct_initial_mts(ψψ, nsites; init=(I...) -> allequal(I) ? 1 : 0)
+mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
 @show get_single_site_expec(ψψ, mts, ψOψ, v)
 mts = update_all_mts(ψψ, mts, niters)
 @show get_single_site_expec(ψψ, mts, ψOψ, v)
