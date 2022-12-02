@@ -1,7 +1,7 @@
 
 #RENAME THE VERTICES OF AN ITENSORNETWORK, THIS SHOULD NOT BE NEEDED BUT CURRENTLY IS BECAUSE RENAME_VERTICES DOESN'T WRAP ONTO IT
 function rename_vertices_itn(psi::ITensorNetwork, name_map::Dictionary)
-  old_g = NamedDimGraph(vertices(psi))
+  old_g = NamedGraph(vertices(psi))
 
   for e in edges(psi)
     add_edge!(old_g, e)

@@ -1,8 +1,8 @@
 function hypercubic_lattice_graph(dims::Tuple{Vararg{Int}})
-  return NamedDimGraph(grid(dims); dims)
+  return NamedGraph(grid(dims); vertices=dims)
 end
 function hypercubic_lattice_graph(dim::Int)
-  return NamedDimGraph(grid((dim,)), 1:dim)
+  return NamedGraph(grid((dim,)), 1:dim)
 end
 function hypercubic_lattice_graph(dim1::Int, dim2::Int, dims::Int...)
   return hypercubic_lattice_graph((dim1, dim2, dims...))

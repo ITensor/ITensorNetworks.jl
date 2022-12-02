@@ -39,7 +39,7 @@ jobs:
         shell: julia --project=dev {0}
         run: |
           using Pkg;
-          pkg"dev https://github.com/mtfishman/DataGraphs.jl.git ."
+          pkg"dev ."
       - name: Run the tests
         shell: julia --project=dev {0}
         run: |

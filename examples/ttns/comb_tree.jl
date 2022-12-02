@@ -1,3 +1,4 @@
+using NamedGraphs
 using ITensors
 using ITensorNetworks
 using ITensorUnicodePlots

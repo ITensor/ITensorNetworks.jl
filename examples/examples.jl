@@ -1,11 +1,11 @@
 using ITensors
 using ITensorNetworks
 using ITensorUnicodePlots
+using NamedGraphs
 
 χ, d = 5, 2
 dims = (4, 4)
-vertices = vec([(i, j) for i in 1:dims[1], j in 1:dims[2]])
-g = NamedDimGraph(grid(dims), vertices)
+g = named_grid(dims)
 
 # Network of indices
 is = IndsNetwork(g; link_space=χ, site_space=d)

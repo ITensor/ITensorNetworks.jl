@@ -1,50 +1,51 @@
+using Compat
 using ITensors
+using Metis
 using ITensorNetworks
+
 using ITensorNetworks:
-  delta_network,
-  formsubgraphs,
-  partition,
-  flatten_thicken_bonds,
-  flattened_inner_network,
   construct_initial_mts,
   update_all_mts,
-  get_single_site_expec,
-  iterate_single_site_expec,
-  contract_boundary_mps
-using KaHyPar
-using Compat
+  get_single_site_expec
 
-#nxn GRID
 n = 4
-g = named_grid((n, n))
+dims = (n, n)
+g = named_grid(dims)
+# g = named_comb_tree(dims)
 s = siteinds("S=1/2", g)
-chi = 3
+chi = 2
 
-#Random Tensor Network, Flatten it too
-psi = randomITensorNetwork(s; link_space=chi)
-psiflat, combiners = flatten_thicken_bonds(deepcopy(psi))
+ψ = randomITensorNetwork(s; link_space=chi)
 
-v = (1, 1)
+ψψ = norm_sqr_network(ψ; flatten=true, map_bra_linkinds=prime)
+combiners = linkinds_combiners(ψψ)
+ψψ = combine_linkinds(ψψ, combiners)
 
-#Apply Sz to site v and flatten that
-psiflatO = flatten_thicken_bonds(psi; ops=["Sz"], vops=[v], s=s, combiners=combiners)
+# Apply Sz to site v
+v = one.(dims)
+Oψ = copy(ψ)
+Oψ[v] = apply(op("Sz", s[v]), ψ[v])
+ψOψ = inner_network(ψ, Oψ; flatten=true, map_bra_linkinds=prime)
+ψOψ = combine_linkinds(ψOψ, combiners)
 
-#Get the value of sz on v via exact contraction
-actual_sz = ITensors.contract(psiflatO)[1] / ITensors.contract(psiflat)[1]
+# Get the value of sz on v via exact contraction
+contract_seq = contraction_sequence(ψψ)
+actual_sz = contract(ψOψ; sequence=contract_seq)[] / contract(ψψ; sequence=contract_seq)[]
 
 println("Actual value of Sz on site " * string(v) * " is " * string(actual_sz))
 
-nsites = 1
-println("First " * string(nsites) * " sites form a subgraph")
-dg_subgraphs = formsubgraphs(g, Int(n * n / nsites))
-mts = construct_initial_mts(psiflat, dg_subgraphs; init=(I...) -> allequal(I) ? 1 : 0)
-niters = 5
+niters = 20
 
-iterate_single_site_expec(psiflat, psiflatO, mts, dg_subgraphs, niters, v)
+nsites = 1
+println("\nFirst " * string(nsites) * " sites form a subgraph")
+mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
+@show get_single_site_expec(ψψ, mts, ψOψ, v)
+mts = update_all_mts(ψψ, mts, niters)
+@show get_single_site_expec(ψψ, mts, ψOψ, v)
 
 nsites = 4
-println("Now " * string(nsites) * " sites form a subgraph")
-dg_subgraphs = formsubgraphs(g, Int(n * n / nsites))
-mts = construct_initial_mts(psiflat, dg_subgraphs; init=(I...) -> allequal(I) ? 1 : 0)
-
-iterate_single_site_expec(psiflat, psiflatO, mts, dg_subgraphs, niters, v)
+println("\nNow " * string(nsites) * " sites form a subgraph")
+mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
+@show get_single_site_expec(ψψ, mts, ψOψ, v)
+mts = update_all_mts(ψψ, mts, niters)
+@show get_single_site_expec(ψψ, mts, ψOψ, v)

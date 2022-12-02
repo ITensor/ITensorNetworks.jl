@@ -11,6 +11,7 @@ export grid,
   dst,
   neighbors,
   inneighbors,
+  induced_subgraph,
   outneighbors,
   has_edge,
   has_vertex,
@@ -24,9 +25,7 @@ export grid,
 # NamedGraphs
 #
 
-export NamedDimGraph,
-  CartesianKey,
-  named_binary_tree,
+export  named_binary_tree,
   named_grid,
   is_tree,
   parent_vertex,
@@ -36,7 +35,8 @@ export NamedDimGraph,
   is_leaf,
   incident_edges,
   comb_tree,
-  named_comb_tree
+  named_comb_tree,
+  subgraph
 
 #
 # DataGraphs
@@ -62,7 +62,10 @@ export AbstractITensorNetwork,
   TTNS,
   data_graph,
   inner_network,
-  norm_network,
+  norm_sqr_network,
+  linkinds_combiners,
+  combine_linkinds,
+  subgraphs,
   reverse_bfs_edges,
   # contraction_sequences.jl
   contraction_sequence,
