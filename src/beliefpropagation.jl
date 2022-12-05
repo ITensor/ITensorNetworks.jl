@@ -289,14 +289,14 @@ function two_site_rdm_bp(
 
   psi1 = deepcopy(psi[v1])*prime!(dag(deepcopy(psi[v1])))
   for v in neighbors(psi, v1)
-    C = combiners[NamedEdge(v => v1)]
+    C = combiners[v => v1]
     psi1 = psi1*C
   end
   push!(tensors_to_contract, psi1)
 
   psi2 = deepcopy(psi[v2])*prime!(dag(deepcopy(psi[v2])))
   for v in neighbors(psi, v2)
-    C = combiners[NamedEdge(v => v2)]
+    C = combiners[v => v2]
     psi2 = psi2*C
   end
   push!(tensors_to_contract, psi2)
