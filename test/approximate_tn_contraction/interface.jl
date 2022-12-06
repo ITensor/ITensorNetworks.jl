@@ -53,7 +53,7 @@ function get_contracted_peps(LTN, rank, N)
   out = contract_w_sweep(LTN, rank)
   out2 = contract_element_group(tnet; cutoff=1e-15, maxdim=rank)
   out3 = contract_line_group(tnet_mat; cutoff=1e-15, maxdim=rank)
-  return out, out2[1][1], out3[1][1], out_mps[]
+  return out, out2, out3, out_mps[]
 end
 
 @testset "test on 2D grid" begin

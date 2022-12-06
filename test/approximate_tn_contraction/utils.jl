@@ -23,7 +23,8 @@ end
 function contract_element_group(tnet; cutoff, maxdim)
   @timeit timer "contract_element_group" begin
     element_grouping = line_network(tnet)
-    return approximate_contract(element_grouping; cutoff=cutoff, maxdim=maxdim)
+    out, log_norm = approximate_contract(element_grouping; cutoff=cutoff, maxdim=maxdim)
+    return out[1][1] * exp(log_norm)
   end
 end
 
@@ -34,6 +35,7 @@ function contract_line_group(tnet; cutoff, maxdim)
     for i in 2:N[2]
       tntree = [tntree, tnet[:, i]]
     end
-    return approximate_contract(tntree; cutoff=cutoff, maxdim=maxdim)
+    out, log_norm = approximate_contract(tntree; cutoff=cutoff, maxdim=maxdim)
+    return out[1][1] * exp(log_norm)
   end
 end

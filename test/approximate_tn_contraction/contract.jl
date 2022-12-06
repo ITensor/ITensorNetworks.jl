@@ -46,7 +46,8 @@ include("utils.jl")
     [[[i], [j]], [[k], [l]]] => [ABCD],
     [[[[i], [j]], [[k], [l]]], [m]] => [ABCDE],
   ])
-  out = tree_approximation_cache(embedding, btree)
+  out, log_norm = tree_approximation_cache(embedding, btree)
+  out[btree].tensor *= exp(log_norm)
   out = get_tensors(collect(values(out)))
   @test isapprox(contract(out...), contract(get_tensors(tensors)...))
 end
@@ -59,17 +60,17 @@ end
   tn = map(inds -> randomITensor(inds...), tn_inds)
   x, A = tn[:, 1], tn[:, 2]
   out_true = contract(MPO(A), MPS(x); cutoff=cutoff, maxdim=linkdim * linkdim)
-  out2 = approximate_contract([A, x]; cutoff=cutoff, maxdim=linkdim * linkdim)
+  out2, log_norm = approximate_contract([A, x]; cutoff=cutoff, maxdim=linkdim * linkdim)
   tsr_true = contract(out_true...)
   tsr_nrmsquare = (tsr_true * tsr_true)[1]
-  @test isapprox(tsr_true, contract(out2...))
+  @test isapprox(tsr_true, contract(out2...) * exp(log_norm))
 
   maxdims = [2, 4, 6, 8]
   for dim in maxdims
     out = contract(MPO(A), MPS(x); cutoff=cutoff, maxdim=dim)
-    out2 = approximate_contract([A, x]; cutoff=cutoff, maxdim=dim)
+    out2, log_norm = approximate_contract([A, x]; cutoff=cutoff, maxdim=dim)
     residual1 = tsr_true - contract(out...)
-    residual2 = tsr_true - contract(out2...)
+    residual2 = tsr_true - contract(out2...) * exp(log_norm)
     error1 = sqrt((residual1 * residual1)[1] / tsr_nrmsquare)
     error2 = sqrt((residual2 * residual2)[1] / tsr_nrmsquare)
     print("maxdim, ", dim, ", error1, ", error1, ", error2, ", error2, "\n")
@@ -135,7 +136,7 @@ end
 function benchmark_peps_contraction(tn; cutoff=1e-15, maxdim=1000)
   out = peps_contraction_mpomps(tn; cutoff=cutoff, maxdim=maxdim, snake=false)
   out2 = contract_line_group(tn; cutoff=cutoff, maxdim=maxdim)
-  return out[], out2[1][1]
+  return out[], out2
 end
 
 @testset "test PEPS" begin
@@ -160,41 +161,6 @@ end
     error2 = abs((out2 - out_true) / out_true)
     print("maxdim, ", dim, ", error1, ", error1, ", error2, ", error2, "\n")
   end
-end
-
-@testset "test 3-D cube with 1D grouping" begin
-  ITensors.set_warn_order(100)
-  reset_timer!(timer)
-  N = (3, 3, 3)
-  linkdim = 2
-  maxdim = 5
-  cutoff = 1e-15
-  # tn = ising_partition(N, linkdim)
-  tn_inds = inds_network(N...; linkdims=linkdim, periodic=false)
-  tn = map(inds -> randomITensor(inds...), tn_inds)
-  tn = reshape(tn, (N[1], N[2] * N[3]))
-  tntree = tn[:, 1]
-  for i in 2:(N[2] * N[3])
-    tntree = [tntree, tn[:, i]]
-  end
-  out = approximate_contract(tntree; cutoff=cutoff, maxdim=maxdim)
-  @info "out is", out[1][1]
-  show(timer)
-  # after warmup, start to benchmark
-  reset_timer!(timer)
-  N = (3, 3, 3)
-  linkdim = 2
-  maxdim = 5
-  cutoff = 1e-15
-  tn = ising_partition(N, linkdim)
-  tn = reshape(tn, (N[1], N[2] * N[3]))
-  tntree = tn[:, 1]
-  for i in 2:(N[2] * N[3])
-    tntree = [tntree, tn[:, i]]
-  end
-  out = approximate_contract(tntree; cutoff=cutoff, maxdim=maxdim)
-  @info "out is", out[1][1]
-  show(timer)
 end
 
 @testset "benchmark PEPS" begin

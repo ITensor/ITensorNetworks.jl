@@ -34,18 +34,20 @@ function optcontract(t_list::Vector)
   end
 end
 
-approximate_contract(tn::ITensor, inds_groups; kwargs...) = [tn]
+approximate_contract(tn::ITensor, inds_groups; kwargs...) = [tn], 0.0
 
-approximate_contract(tn::OrthogonalITensor, inds_groups; kwargs...) = [tn]
+approximate_contract(tn::OrthogonalITensor, inds_groups; kwargs...) = [tn], 0.0
 
 function approximate_contract(tn::Vector{ITensor}, inds_btree=nothing; kwargs...)
-  out = approximate_contract(orthogonal_tensors(tn), inds_btree; kwargs...)
-  return get_tensors(out)
+  out, log_norm = approximate_contract(orthogonal_tensors(tn), inds_btree; kwargs...)
+  return get_tensors(out), log_norm
 end
 
 function approximate_contract(tn::Vector{OrthogonalITensor}, inds_btree=nothing; kwargs...)
-  ctree_to_tensor = approximate_contract_ctree_to_tensor(tn, inds_btree; kwargs...)
-  return Vector{OrthogonalITensor}(vcat(collect(values(ctree_to_tensor))...))
+  ctree_to_tensor, log_root_norm = approximate_contract_ctree_to_tensor(
+    tn, inds_btree; kwargs...
+  )
+  return Vector{OrthogonalITensor}(vcat(collect(values(ctree_to_tensor))...)), log_root_norm
 end
 
 function approximate_contract_ctree_to_tensor(
@@ -63,7 +65,7 @@ function approximate_contract_ctree_to_tensor(
     if inds_btree == nothing
       inds_btree = [[i] for i in uncontract_inds]
     end
-    return Dict{Vector,OrthogonalITensor}(inds_btree => optcontract(tn))
+    return Dict{Vector,OrthogonalITensor}(inds_btree => optcontract(tn)), 0.0
   end
   # # cases where tn is a tree, or contains 2 disconnected trees
   # if length(innerinds) <= length(tn) - 1
@@ -782,6 +784,8 @@ function approximate_contract(ctree::Vector; kwargs...)
   ctree_to_contract_igs[ctrees[end]] = ctree_to_igs[ctrees[end]]
   # mapping each contraction tree to a tensor network
   ctree_to_tn_tree = Dict{Vector,Dict{Vector,OrthogonalITensor}}()
+  # accumulate norm
+  log_accumulated_norm = 0.0
   for (ii, c) in enumerate(ctrees)
     @info ii, "th tree approximation"
     if ctree_to_igs[c] == []
@@ -789,7 +793,7 @@ function approximate_contract(ctree::Vector; kwargs...)
       tn1 = get_child_tn(ctree_to_tn_tree, c[1])
       tn2 = get_child_tn(ctree_to_tn_tree, c[2])
       tn = vcat(tn1, tn2)
-      return get_tensors([optcontract(tn)])
+      return get_tensors([optcontract(tn)]), log_accumulated_norm
     end
     # caching is not needed here
     if !haskey(ctree_to_tn_tree, c[1]) || !haskey(ctree_to_tn_tree, c[2])
@@ -798,9 +802,10 @@ function approximate_contract(ctree::Vector; kwargs...)
       inds_btree = ordered_igs_to_binary_tree(
         ctree_to_adj_tree[c].children, ctree_to_contract_igs[c], ig_to_ig_tree
       )
-      ctree_to_tn_tree[c] = approximate_contract_ctree_to_tensor(
+      ctree_to_tn_tree[c], log_root_norm = approximate_contract_ctree_to_tensor(
         [tn1..., tn2...], inds_btree; kwargs...
       )
+      log_accumulated_norm += log_root_norm
       continue
     end
     # caching
@@ -833,18 +838,22 @@ function approximate_contract(ctree::Vector; kwargs...)
     inds_btree = ordered_igs_to_binary_tree(
       new_igs, ctree_to_contract_igs[c], new_ig_to_ig_tree
     )
-    new_tn_tree = approximate_contract_ctree_to_tensor(uncached_tn, inds_btree; kwargs...)
+    new_tn_tree, log_root_norm = approximate_contract_ctree_to_tensor(
+      uncached_tn, inds_btree; kwargs...
+    )
+    log_accumulated_norm += log_root_norm
     update_tn_tree_keys!(new_tn_tree, inds_btree, new_ig_to_binary_tree_pairs)
     ctree_to_tn_tree[c] = merge(new_tn_tree, cached_tn_tree)
   end
   tn = vcat(collect(values(ctree_to_tn_tree[ctrees[end]]))...)
-  return get_tensors(tn)
+  return get_tensors(tn), log_accumulated_norm
 end
 
 # interlaced HOSVD using caching
 function tree_approximation_cache(
   embedding::Dict, inds_btree::Vector; cutoff=1e-15, maxdim=10000, maxsize=10000
 )
+  @info "start tree_approximation_cache", inds_btree
   ctree_to_tensor = Dict{Vector,OrthogonalITensor}()
   # initialize sim_dict
   network = vcat(collect(values(embedding))...)
@@ -890,11 +899,15 @@ function tree_approximation_cache(
     tnormal = optcontract(net)
     dim2 = floor(maxsize / (space(ind1_pair[1]) * space(ind2_pair[1])))
     dim = min(maxdim, dim2)
+    t00 = time()
+    @info "eigen input size", size(tnormal.tensor)
     @timeit timer "eigen" begin
       diag, U = eigen(
         tnormal.tensor, linds, rinds; cutoff=cutoff, maxdim=dim, ishermitian=true
       )
     end
+    t11 = time() - t00
+    @info "size of U", size(U), "size of diag", size(diag), "costs", t11
     dr = commonind(diag, U)
     Usim = replaceinds(U, rinds => linds)
     ortho_U = OrthogonalITensor(U)
@@ -922,6 +935,8 @@ function tree_approximation_cache(
   # last tensor
   envnet = [n1[1], n2[1], bra...]
   last_tensor = optcontract(envnet)
+  root_norm = norm(last_tensor.tensor)
+  last_tensor.tensor /= root_norm
   ctree_to_tensor[inds_btree] = last_tensor
-  return ctree_to_tensor
+  return ctree_to_tensor, log(root_norm)
 end
