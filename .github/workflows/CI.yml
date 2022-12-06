@@ -32,44 +32,29 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-#      - uses: julia-actions/cache@v1
-#      - uses: julia-actions/julia-buildpkg@v1
-#      - uses: julia-actions/julia-runtest@v1
-      - name: Install Julia dependencies
-        shell: julia --project=dev {0}
-        run: |
-          using Pkg;
-          pkg"dev https://github.com/mtfishman/NamedGraphs.jl.git https://github.com/mtfishman/DataGraphs.jl.git ."
-      - name: Run the tests
-        shell: julia --project=dev {0}
-        run: |
-          using Pkg;
-          Pkg.test("ITensorNetworks"; coverage=true)
+      - uses: julia-actions/cache@v1
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v2
         with:
           files: lcov.info
-#  docs:
-#    name: Documentation
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v2
-#      - uses: julia-actions/setup-julia@v1
-#        with:
-#          version: '1'
-##      - uses: julia-actions/julia-buildpkg@v1
-#      - name: Install Julia dependencies
-#        shell: julia --project=dev {0}
-#        run: |
-#          using Pkg;
-#          pkg"dev https://github.com/mtfishman/NamedGraphs.jl.git https://github.com/mtfishman/DataGraphs.jl.git ."
-#      - uses: julia-actions/julia-docdeploy@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
-#      - run: |
-#          julia --project=docs -e '
-#            using Documenter: DocMeta, doctest
-#            using ITensorNetworks
-#            DocMeta.setdocmeta!(ITensorNetworks, :DocTestSetup, :(using ITensorNetworks); recursive=true)
-#            doctest(ITensorNetworks)'
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: '1'
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-docdeploy@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+      - run: |
+          julia --project=docs -e '
+            using Documenter: DocMeta, doctest
+            using ITensorNetworks
+            DocMeta.setdocmeta!(ITensorNetworks, :DocTestSetup, :(using ITensorNetworks); recursive=true)
+            doctest(ITensorNetworks)'

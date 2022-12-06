@@ -14,7 +14,7 @@ ITensors.disable_warn_order()
   s = siteinds("S=1/2", g)
   χ = 10
   ψ = randomITensorNetwork(s; link_space=χ)
-  tn = norm_network(ψ)
+  tn = norm_sqr_network(ψ)
   seq_optimal = contraction_sequence(tn; alg="optimal")
   res_optimal = contract(tn; sequence=seq_optimal)[]
   seq_greedy = contraction_sequence(tn; alg="greedy")
