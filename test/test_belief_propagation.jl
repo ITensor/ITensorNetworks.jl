@@ -1,9 +1,10 @@
+using ITensorNetworks
 using ITensorNetworks: construct_initial_mts, get_single_site_expec, update_all_mts, ising_network, get_two_site_expec, two_site_rdm_bp
 using Test
 using Compat
 using ITensors
 #ASSUME ONE CAN INSTALL THIS, MIGHT FAIL FOR WINDOWS
-using KaHyPar
+using Metis
 using LinearAlgebra
 
 @testset "belief_propagation" begin
@@ -26,7 +27,7 @@ using LinearAlgebra
   ψOψ = combine_linkinds(ψOψ, combiners)
 
   contract_seq = contraction_sequence(ψψ)
-  actual_sz = contract(ψOψ; sequence=contract_seq)[] / contract(ψψ; sequence=contract_seq)[]
+  actual_sz = ITensors.contract(ψOψ; sequence=contract_seq)[] / ITensors.contract(ψψ; sequence=contract_seq)[]
 
   niters, nsites = 20,1
   mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
@@ -46,7 +47,7 @@ using LinearAlgebra
   ψOψ = ising_network(s, beta; szverts = [v1, v2]) 
 
   contract_seq = contraction_sequence(ψψ)
-  actual_szsz = contract(ψOψ; sequence=contract_seq)[] / contract(ψψ; sequence=contract_seq)[]
+  actual_szsz = ITensors.contract(ψOψ; sequence=contract_seq)[] / ITensors.contract(ψψ; sequence=contract_seq)[]
 
   niters, nsites = 10,2
   mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
@@ -71,7 +72,7 @@ using LinearAlgebra
   mts = update_all_mts(ψψ, mts, niters)
   approx_rdm = two_site_rdm_bp(ψψ, ψ, mts, v1, v2, s, combiners)
 
-  @test tr(approx_rdm) == 1.0
+  @test abs(tr(approx_rdm) - 1.0) < 0.00000001
   eigs = eigvals(approx_rdm)
   @test all(>=(0), real(eigs)) && all(==(0), imag(eigs))
   @test size(approx_rdm) == (4,4)
