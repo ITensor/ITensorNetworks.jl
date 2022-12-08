@@ -64,24 +64,20 @@ end
 
 # example: [[[1,2], [3,4]], [[5,6], [7,8]]] = [[1,2], [3,4], [5,6], [7,8]]
 function get_leaves(tree::Vector)
-  @timeit timer "get_leaves" begin
-    if !(tree isa Vector{<:Vector})
-      return [tree]
-    end
-    return mapreduce(get_leaves, vcat, tree)
+  if !(tree isa Vector{<:Vector})
+    return [tree]
   end
+  return mapreduce(get_leaves, vcat, tree)
 end
 
 function line_to_tree(line::Vector)
-  @timeit timer "line_to_tree" begin
-    if length(line) == 1 && line[1] isa Vector
-      return line[1]
-    end
-    if length(line) <= 2
-      return line
-    end
-    return [line_to_tree(line[1:(end - 1)]), line[end]]
+  if length(line) == 1 && line[1] isa Vector
+    return line[1]
   end
+  if length(line) <= 2
+    return line
+  end
+  return [line_to_tree(line[1:(end - 1)]), line[end]]
 end
 
 function topo_sort(tn; type=Vector, leaves=[])

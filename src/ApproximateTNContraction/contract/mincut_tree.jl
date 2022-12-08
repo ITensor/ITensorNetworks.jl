@@ -35,8 +35,49 @@ function inds_binary_tree!(tng::TensorNetworkGraph, outinds::Vector; algorithm="
     end
     return out_inds
   elseif algorithm == "mps"
-    return mps_inds!(tng, outinds)
+    return line_to_tree(inds_linear_order!(tng, outinds))
   end
+end
+
+function inds_linear_order(
+  network::Vector{ITensor}, outinds::Union{Nothing,Vector{<:Index}}
+)
+  if outinds == nothing
+    outinds = noncommoninds(network...)
+  end
+  if length(outinds) == 1
+    return outinds
+  end
+  tng = TensorNetworkGraph(network, outinds)
+  grouped_uncontracted_inds = [[i] for i in outinds]
+  return inds_linear_order!(tng, grouped_uncontracted_inds)
+end
+
+function inds_linear_order!(tng::TensorNetworkGraph, outinds::Vector)
+  @assert length(outinds) >= 1
+  # base case here, for the case length(outinds) == 2, we still need to do the update
+  if length(outinds) == 1
+    return outinds[1]
+  end
+  if length(outinds) == 2
+    return outinds
+  end
+  new_edge, minval = new_edge_mincut(tng, collect(powerset(outinds, 1, 1)))
+  new_edge = new_edge[1]
+  # outinds = update!(tng, outinds, new_edge, minval)
+  # first_ind = new_edge
+  linear_order = [new_edge]
+  while length(outinds) > 2
+    splitinds = [[new_edge, i] for i in outinds if i != new_edge]
+    new_edge, minval = new_edge_mincut(tng, splitinds)
+    outinds = update!(tng, outinds, new_edge, minval)
+    # first_ind = new_edge
+    push!(linear_order, new_edge[2])
+  end
+  splitinds = [[new_edge, i] for i in outinds if i != new_edge]
+  @assert length(splitinds) == 1
+  push!(linear_order, splitinds[1][2])
+  return linear_order
 end
 
 function inds_binary_tree(
@@ -143,33 +184,6 @@ function mincut_inds(tng::TensorNetworkGraph, uncontract_inds::Vector)
     uncontract_inds = copy(uncontract_inds)
     return mincut_inds!(tng, uncontract_inds)
   end
-end
-
-function mps_inds!(tng::TensorNetworkGraph, outinds::Vector)
-  @assert length(outinds) >= 1
-  # base case here, for the case length(outinds) == 2, we still need to do the update
-  if length(outinds) == 1
-    return outinds[1]
-  end
-  if length(outinds) == 2
-    return outinds
-  end
-  new_edge, minval = new_edge_mincut(tng, collect(powerset(outinds, 2, 2)))
-  outinds = update!(tng, outinds, new_edge, minval)
-  first_ind = new_edge
-  while length(outinds) > 2
-    splitinds = [[first_ind, i] for i in outinds if i != first_ind]
-    new_edge, minval = new_edge_mincut(tng, splitinds)
-    outinds = update!(tng, outinds, new_edge, minval)
-    first_ind = new_edge
-  end
-  return outinds
-end
-
-function mps_inds(tng::TensorNetworkGraph, uncontract_inds::Vector)
-  tng = copy(tng)
-  uncontract_inds = copy(uncontract_inds)
-  return mps_inds!(tng, uncontract_inds)
 end
 
 # update the graph

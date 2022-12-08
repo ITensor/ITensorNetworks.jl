@@ -28,7 +28,9 @@ function bench_3d_cube(N)
   for i in 2:(N[2] * N[3])
     tntree = [tntree, tn[:, i]]
   end
-  out, log_acc_norm = approximate_contract(tntree; cutoff=cutoff, maxdim=maxdim)
+  out, log_acc_norm = approximate_contract(
+    tntree; cutoff=cutoff, maxdim=maxdim, ansatz="mps", use_cache=true
+  )
   @info "out is", log(out[1][1]) + log_acc_norm
   show(timer)
   # after warmup, start to benchmark
@@ -42,9 +44,11 @@ function bench_3d_cube(N)
   for i in 2:(N[2] * N[3])
     tntree = [tntree, tn[:, i]]
   end
-  out, log_acc_norm = approximate_contract(tntree; cutoff=cutoff, maxdim=maxdim)
+  out, log_acc_norm = approximate_contract(
+    tntree; cutoff=cutoff, maxdim=maxdim, ansatz="mps", use_cache=true
+  )
   @info "out is", log(out[1][1]) + log_acc_norm
   return show(timer)
 end
 
-bench_3d_cube((4, 4, 4))
+bench_3d_cube((5, 5, 5))
