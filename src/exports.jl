@@ -11,6 +11,7 @@ export grid,
   dst,
   neighbors,
   inneighbors,
+  induced_subgraph,
   outneighbors,
   has_edge,
   has_vertex,
@@ -21,16 +22,13 @@ export grid,
   rem_vertex!,
   post_order_dfs_vertices,
   edge_path,
-  vertex_path,
-  num_neighbors
+  vertex_path
 
 #
 # NamedGraphs
 #
 
-export NamedDimGraph,
-  CartesianKey,
-  named_binary_tree,
+export  named_binary_tree,
   named_grid,
   is_tree,
   parent_vertex,
@@ -41,7 +39,7 @@ export NamedDimGraph,
   incident_edges,
   comb_tree,
   named_comb_tree,
-  rename_vertices
+  subgraph
 
 #
 # DataGraphs
@@ -67,11 +65,15 @@ export AbstractITensorNetwork,
   inner_network,
   norm_network,
   factorize!,
-  contract!,
+  norm_sqr_network,
+  linkinds_combiners,
+  combine_linkinds,
+  subgraphs,
+  reverse_bfs_edges,
   # treetensornetwork
   default_root_vertex,
   ortho_center,
-  set_ortho_center!,
+  set_ortho_center,
   TreeTensorNetworkState,
   TTNS,
   randomTTNS,

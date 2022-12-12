@@ -8,20 +8,31 @@ import Base:
   hvncat,
   setindex!,
   show,
-  isassigned
+  isassigned,
+  union
 
-import .DataGraphs: underlying_graph, vertex_data, edge_data
+import NamedGraphs:
+  vertextype,
+  convert_vertextype,
+  vertex_to_parent_vertex,
+  rename_vertices,
+  disjoint_union,
+  incident_edges
 
-import Graphs: Graph, is_directed
+import .DataGraphs:
+  underlying_graph,
+  underlying_graph_type,
+  vertex_data,
+  edge_data,
+  reverse_data_direction
+
+import Graphs: SimpleGraph, is_directed
 
 import LinearAlgebra: svd, factorize, qr, normalize, normalize!
-
-import NamedGraphs: vertex_to_parent_vertex, to_vertex, incident_edges
 
 import ITensors:
   # contraction
   contract,
-  contract!,
   orthogonalize,
   orthogonalize!,
   isortho,
@@ -29,6 +40,7 @@ import ITensors:
   loginner,
   norm,
   lognorm,
+  expect,
   # truncation
   truncate!,
   truncate,

@@ -30,6 +30,7 @@ using Random
     # dense array constructor from Vector{Index} and NamedDimGraph
     @disable_warn_order s4 = TTNS(AS, sites_s, c; vertex_order, cutoff)
     # see if this actually worked
+    @show ortho_center(s1)
     root_vertex = only(ortho_center(s1))
     @disable_warn_order begin
       S1 = contract(s1, root_vertex)

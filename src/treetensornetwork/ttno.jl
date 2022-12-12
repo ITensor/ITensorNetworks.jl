@@ -6,19 +6,21 @@ Keeps track of the orthogonality center.
 
 # Fields
 
-- itensor_network::ITensorNetwork
-- ortho_lims::Vector{Tuple}: A vector of vertices defining the orthogonality limits.
+- itensor_network::ITensorNetwork{V}
+- ortho_lims::Vector{V}: A vector of vertices defining the orthogonality limits.
 """
-mutable struct TreeTensorNetworkOperator <: AbstractTreeTensorNetwork
-  itensor_network::ITensorNetwork
-  ortho_center::Vector{Tuple}
-  function TreeTensorNetworkOperator(
-    itensor_network::ITensorNetwork, ortho_center::Vector{<:Tuple}=vertices(itensor_network)
-  )
+struct TreeTensorNetworkOperator{V} <: AbstractTreeTensorNetwork{V}
+  itensor_network::ITensorNetwork{V}
+  ortho_center::Vector{V}
+  function TreeTensorNetworkOperator{V}(
+    itensor_network::ITensorNetwork, ortho_center::Vector=vertices(itensor_network)
+  ) where {V}
     @assert is_tree(itensor_network)
-    return new(itensor_network, ortho_center)
+    return new{V}(itensor_network, ortho_center)
   end
 end
+
+data_graph_type(G::Type{<:TreeTensorNetworkOperator}) = data_graph_type(fieldtype(G, :itensor_network))
 
 function copy(ψ::TreeTensorNetworkOperator)
   return TreeTensorNetworkOperator(copy(ψ.itensor_network), copy(ψ.ortho_center))
@@ -27,7 +29,7 @@ end
 const TTNO = TreeTensorNetworkOperator
 
 # Field access
-ITensorNetwork(ψ::TreeTensorNetworkOperator) = ψ.itensor_network
+itensor_network(ψ::TreeTensorNetworkOperator) = getfield(ψ, :itensor_network)
 
 # Required for `AbstractITensorNetwork` interface
 data_graph(ψ::TreeTensorNetworkOperator) = data_graph(ITensorNetwork(ψ))
@@ -35,6 +37,8 @@ data_graph(ψ::TreeTensorNetworkOperator) = data_graph(ITensorNetwork(ψ))
 # 
 # Constructor
 # 
+
+TreeTensorNetworkOperator(tn::ITensorNetwork, args...) = TreeTensorNetworkOperator{vertextype(tn)}(tn, args...)
 
 # catch-all for default ElType
 function TreeTensorNetworkOperator(graph::AbstractGraph, args...; kwargs...)

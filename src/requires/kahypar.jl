@@ -1,10 +1,16 @@
+set_partitioning_backend!(Backend"KaHyPar"())
+
 # https://github.com/kahypar/KaHyPar.jl/issues/20
 KaHyPar.HyperGraph(g::Graph) = incidence_matrix(g)
 
-# default_configuration => "cut_kKaHyPar_sea20.ini"
-# :edge_cut => "cut_kKaHyPar_sea20.ini"
-# :connectivity => "km1_kKaHyPar_sea20.ini"
-# imbalance::Number=0.03
+"""
+    partition(::Backend"KaHyPar", g::Graph, npartiations::Integer; objective="edge_cut", alg="kway", kwargs...)
+
+- default_configuration => "cut_kKaHyPar_sea20.ini"
+- :edge_cut => "cut_kKaHyPar_sea20.ini"
+- :connectivity => "km1_kKaHyPar_sea20.ini"
+- imbalance::Number=0.03
+"""
 function partition(
   ::Backend"KaHyPar",
   g::Graph,

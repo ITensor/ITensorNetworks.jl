@@ -3,20 +3,22 @@
 
 # Fields
 
-- itensor_network::ITensorNetwork
-- ortho_lims::Vector{Tuple}: A vector of vertices defining the orthogonality limits.
+- itensor_network::ITensorNetwork{V}
+- ortho_lims::Vector{V}: A vector of vertices defining the orthogonality limits.
 
 """
-mutable struct TreeTensorNetworkState <: AbstractTreeTensorNetwork
-  itensor_network::ITensorNetwork
-  ortho_center::Vector{Tuple}
-  function TreeTensorNetworkState(
-    itensor_network::ITensorNetwork, ortho_center::Vector{<:Tuple}=vertices(itensor_network)
-  )
+struct TreeTensorNetworkState{V} <: AbstractTreeTensorNetwork{V}
+  itensor_network::ITensorNetwork{V}
+  ortho_center::Vector{V}
+  function TreeTensorNetworkState{V}(
+    itensor_network::ITensorNetwork, ortho_center::Vector=vertices(itensor_network)
+  ) where {V}
     @assert is_tree(itensor_network)
-    return new(itensor_network, ortho_center)
+    return new{V}(itensor_network, ortho_center)
   end
 end
+
+data_graph_type(G::Type{<:TreeTensorNetworkState}) = data_graph_type(fieldtype(G, :itensor_network))
 
 function copy(ψ::TreeTensorNetworkState)
   return TreeTensorNetworkState(copy(ψ.itensor_network), copy(ψ.ortho_center))
@@ -25,7 +27,7 @@ end
 const TTNS = TreeTensorNetworkState
 
 # Field access
-ITensorNetwork(ψ::TreeTensorNetworkState) = ψ.itensor_network
+itensor_network(ψ::TreeTensorNetworkState) = getfield(ψ, :itensor_network)
 
 # Required for `AbstractITensorNetwork` interface
 data_graph(ψ::TreeTensorNetworkState) = data_graph(ITensorNetwork(ψ))
@@ -38,6 +40,8 @@ data_graph(ψ::TreeTensorNetworkState) = data_graph(ITensorNetwork(ψ))
 function TreeTensorNetworkState(g::AbstractGraph, args...; kwargs...)
   return TreeTensorNetworkState(Float64, g, args...; kwargs...)
 end
+
+TreeTensorNetworkState(tn::ITensorNetwork, args...) = TreeTensorNetworkState{vertextype(tn)}(tn, args...)
 
 # can defer almost everything to ITensorNework constructor
 function TreeTensorNetworkState(
@@ -92,10 +96,10 @@ function replacebond!(T::TTNS, edge::AbstractEdge, phi::ITensor; kwargs...)
   T[dst(edge)] = R
   if ortho == "left"
     normalize && (T[dst(edge)] ./= norm(T[dst(edge)]))
-    isortho(T) && set_ortho_center!(T, [dst(edge)])
+    isortho(T) && (T = set_ortho_center(T, [dst(edge)]))
   elseif ortho == "right"
     normalize && (T[src(edge)] ./= norm(T[src(edge)]))
-    isortho(T) && set_ortho_center!(T, [src(edge)])
+    isortho(T) && (T = set_ortho_center(T, [src(edge)]))
   end
   return spec
 end

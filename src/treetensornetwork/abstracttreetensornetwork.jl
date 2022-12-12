@@ -1,4 +1,7 @@
-abstract type AbstractTreeTensorNetwork <: AbstractITensorNetwork end
+# TODO: Replace `AbstractITensorNetwork` with a trait `IsTree`.
+abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
+
+underlying_graph_type(G::Type{<:AbstractTreeTensorNetwork}) = underlying_graph_type(data_graph_type(G))
 
 # 
 # Field access
@@ -18,16 +21,11 @@ end
 
 isortho(ψ::AbstractTreeTensorNetwork) = isone(length(ortho_center(ψ)))
 
-function set_ortho_center!(ψ::AbstractTreeTensorNetwork, new_center::Vector{<:Tuple})
-  ψ.ortho_center = new_center
-  return ψ
+function set_ortho_center(ψ::AbstractTreeTensorNetwork{V}, new_center::Vector{<:V}) where {V}
+  return typeof(ψ)(itensor_network(ψ), new_center)
 end
 
-function set_ortho_center(ψ::AbstractTreeTensorNetwork, new_center::Vector{<:Tuple})
-  return set_ortho_center!(copy(ψ), new_center)
-end
-
-reset_ortho_center!(ψ::AbstractTreeTensorNetwork) = set_ortho_center!(ψ, vertices(ψ))
+reset_ortho_center(ψ::AbstractTreeTensorNetwork) = set_ortho_center(ψ, vertices(ψ))
 
 # 
 # Dense constructors
@@ -53,14 +51,14 @@ function (::Type{TTNT})(
   end
   ψ[ortho_center] = Ã
   T = TTNT(ψ)
-  orthogonalize!(T, ortho_center)
+  T = orthogonalize(T, ortho_center)
   return T
 end
 
-# construct from dense ITensor, using NamedDimGraph and vector of site indices
+# construct from dense ITensor, using AbstractNamedGraph and vector of site indices
 # TODO: remove if it doesn't turn out to be useful
 function (::Type{TTNT})(
-  A::ITensor, sites::Vector, g::NamedDimGraph; vertex_order=vertices(g), kwargs...
+  A::ITensor, sites::Vector, g::AbstractNamedGraph; vertex_order=vertices(g), kwargs...
 ) where {TTNT<:AbstractTreeTensorNetwork}
   is = IndsNetwork(g; site_space=Dictionary(vertex_order, sites))
   return TTNT(A, is; kwargs...)
@@ -86,7 +84,7 @@ end
 # Orthogonalization
 # 
 
-function orthogonalize!(ψ::AbstractTreeTensorNetwork, root_vertex::Tuple)
+function orthogonalize(ψ::AbstractTreeTensorNetwork{V}, root_vertex::V; kwargs...) where {V}
   (isortho(ψ) && only(ortho_center(ψ)) == root_vertex) && return ψ
   if isortho(ψ)
     edge_list = edge_path(ψ, only(ortho_center(ψ)), root_vertex)
@@ -94,48 +92,36 @@ function orthogonalize!(ψ::AbstractTreeTensorNetwork, root_vertex::Tuple)
     edge_list = post_order_dfs_edges(ψ, root_vertex)
   end
   for e in edge_list
-    ψ = orthogonalize!(ψ, e)
+    ψ = orthogonalize(ψ, e)
   end
-  set_ortho_center!(ψ, [root_vertex])
-  return ψ
-end
-
-function orthogonalize!(ψ::AbstractTreeTensorNetwork, root_vertex...; kwargs...)
-  return orthogonalize!(ψ, to_vertex(ψ, root_vertex...); kwargs...)
+  return set_ortho_center(ψ, [root_vertex])
 end
 
 # For ambiguity error
-function orthogonalize!(ψ::AbstractTreeTensorNetwork, edge::AbstractEdge; kwargs...)
-  return _orthogonalize_edge!(ψ, edge; kwargs...)
-end
 
-function orthogonalize(ψ::AbstractTreeTensorNetwork, args...; kwargs...)
-  return orthogonalize!(copy(ψ), args...; kwargs...)
+function orthogonalize(tn::AbstractTreeTensorNetwork, edge::AbstractEdge; kwargs...)
+  return typeof(tn)(orthogonalize(ITensorNetwork(tn), edge; kwargs...))
 end
 
 # 
 # Truncation
 # 
 
-function truncate!(
+function truncate(
   ψ::AbstractTreeTensorNetwork; root_vertex::Tuple=default_root_vertex(ψ), kwargs...
 )
   for e in post_order_dfs_edges(ψ, root_vertex)
     # always orthogonalize towards source first to make truncations controlled
-    orthogonalize!(ψ, src(e))
-    truncate!(ψ, e; kwargs...)
-    set_ortho_center!(ψ, [dst(e)])
+    ψ = orthogonalize(ψ, src(e))
+    ψ = truncate(ψ, e; kwargs...)
+    ψ = set_ortho_center(ψ, [dst(e)])
   end
   return ψ
 end
 
 # For ambiguity error
-function truncate!(ψ::AbstractTreeTensorNetwork, edge::AbstractEdge; kwargs...)
-  return _truncate_edge!(ψ, edge; kwargs...)
-end
-
-function truncate(ψ::AbstractTreeTensorNetwork, args...; kwargs...)
-  return truncate!(copy(ψ), args...; kwargs...)
+function truncate(ψ::AbstractTreeTensorNetwork, edge::AbstractEdge; kwargs...)
+  return typeof(tn)(truncate(ITensorNetwork(tn), edge; kwargs...))
 end
 
 #
@@ -144,8 +130,8 @@ end
 
 # TODO: decide on contraction order: reverse dfs vertices or forward dfs edges?
 function contract(
-  ψ::AbstractTreeTensorNetwork, root_vertex::Tuple=default_root_vertex(ψ); kwargs...
-)
+  ψ::AbstractTreeTensorNetwork{V}, root_vertex::V=default_root_vertex(ψ); kwargs...
+) where {V}
   ψ = copy(ψ)
   # reverse post order vertices
   traversal_order = reverse(post_order_dfs_vertices(ψ, root_vertex))
@@ -153,7 +139,7 @@ function contract(
   # # forward post order edges
   # ψ = copy(ψ)
   # for e in post_order_dfs_edges(ψ, root_vertex)
-  #   contract!(ψ, e)
+  #   ψ = contract(ψ, e)
   # end
   # return ψ[root_vertex]
 end
@@ -169,15 +155,15 @@ function inner(
   # TODO: find the largest tensor and use it as
   # the `root_vertex`.
   for e in post_order_dfs_edges(ψ, root_vertex)
-    if has_vertex(ϕψ, 2, src(e)...)
-      ϕψ = contract(ϕψ, (2, src(e)...) => (1, src(e)...))
+    if has_vertex(ϕψ, (src(e), 2))
+      ϕψ = contract(ϕψ, (src(e), 2) => (src(e), 1))
     end
-    ϕψ = contract(ϕψ, (1, src(e)...) => (1, dst(e)...))
-    if has_vertex(ϕψ, 2, dst(e)...)
-      ϕψ = contract(ϕψ, (2, dst(e)...) => (1, dst(e)...))
+    ϕψ = contract(ϕψ, (src(e), 1) => (dst(e), 1))
+    if has_vertex(ϕψ, (dst(e), 2))
+      ϕψ = contract(ϕψ, (dst(e), 2) => (dst(e), 1))
     end
   end
-  return ϕψ[1, root_vertex...][]
+  return ϕψ[root_vertex, 1][]
 end
 
 function norm(ψ::AbstractTreeTensorNetwork)
@@ -243,17 +229,13 @@ function lognorm(ψ::AbstractTreeTensorNetwork)
   return 0.5 * real(lognorm2_ψ)
 end
 
-function logdot(ψ1::TTNT, ψ2::TTNT; kwargs...) where {TTNT<:AbstractTreeTensorNetwork}
-  return _log_or_not_dot(ψ1, ψ2, true; kwargs...)
-end
-
 function loginner(ψ1::TTNT, ψ2::TTNT; kwargs...) where {TTNT<:AbstractTreeTensorNetwork}
   return logdot(ψ1, ψ2; kwargs...)
 end
 
 # TODO: stick with this traversal or find optimal contraction sequence?
-function _log_or_not_dot(
-  ψ1::TTNT, ψ2::TTNT, loginner::Bool; root_vertex=default_root_vertex(ψ1, ψ2)
+function logdot(
+  ψ1::TTNT, ψ2::TTNT; root_vertex=default_root_vertex(ψ1, ψ2)
 )::Number where {TTNT<:AbstractTreeTensorNetwork}
   N = nv(ψ1)
   if nv(ψ2) != N
@@ -265,36 +247,21 @@ function _log_or_not_dot(
 
   O = ψ1dag[root_vertex] * ψ2[root_vertex]
 
-  if loginner
-    normO = norm(O)
-    log_inner_tot = log(normO)
-    O ./= normO
-  end
+  normO = norm(O)
+  log_inner_tot = log(normO)
+  O ./= normO
 
   for v in traversal_order[2:end]
     O = (O * ψ1dag[v]) * ψ2[v]
-
-    if loginner
-      normO = norm(O)
-      log_inner_tot += log(normO)
-      O ./= normO
-    end
+    normO = norm(O)
+    log_inner_tot += log(normO)
+    O ./= normO
   end
 
-  if loginner
-    if !isreal(O[]) || real(O[]) < 0
-      log_inner_tot += log(complex(O[]))
-    end
-    return log_inner_tot
+  if !isreal(O[]) || real(O[]) < 0
+    log_inner_tot += log(complex(O[]))
   end
-
-  dot_ψ1_ψ2 = O[]
-
-  if !isfinite(dot_ψ1_ψ2)
-    @warn "The inner product (or norm²) you are computing is very large ($dot_ψ1_ψ2). You should consider using `lognorm` or `loginner` instead, which will help avoid floating point errors. For example if you are trying to normalize your MPS/MPO `A`, the normalized MPS/MPO `B` would be given by `B = A ./ z` where `z = exp(lognorm(A) / length(A))`."
-  end
-
-  return dot_ψ1_ψ2
+  return log_inner_tot
 end
 
 function _add_maxlinkdims(ψs::AbstractTreeTensorNetwork...)
@@ -334,7 +301,7 @@ function Base.:+(
     dims_in = findall(e -> dst(e) == v, edges)
     dim_out = findfirst(e -> src(e) == v, edges)
 
-    ls = [Tuple(linkinds(only, ψ, e) for e in edges) for ψ in ψs]
+    ls = [Tuple(only(linkinds(ψ, e)) for e in edges) for ψ in ψs]
     ϕv, lv = directsum((ψs[i][v] => ls[i] for i in 1:length(ψs))...; tags=tags.(first(ls)))
     for din in dims_in
       link_space[edges[din]] = lv[din]
@@ -378,7 +345,7 @@ function permute(
       ψ̃, permute(ψ[v], filter(!isnothing, (ls[1], ss..., ls[2:end]...))), v
     )
   end
-  set_ortho_center!(ψ̃, ortho_center(ψ))
+  ψ̃ = set_ortho_center(ψ̃, ortho_center(ψ))
   return ψ̃
 end
 

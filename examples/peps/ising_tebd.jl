@@ -8,7 +8,7 @@ Random.seed!(1234)
 
 ITensors.disable_warn_order()
 
-dims = (8, 8)
+dims = (6, 6)
 n = prod(dims)
 g = named_grid(dims)
 
@@ -59,8 +59,7 @@ println("maxdim = $χ")
 @show ortho
 
 # Contraction sequence for exactly computing expectation values
-contract_edges = map(t -> (1, t...), collect(keys(cartesian_to_linear(dims))))
-inner_sequence = reduce((x, y) -> [x, y], contract_edges)
+inner_sequence = reduce((x, y) -> [x, y], vec(Tuple.(CartesianIndices(dims))))
 
 println("\nFirst run TEBD without orthogonalization")
 ψ = @time tebd(

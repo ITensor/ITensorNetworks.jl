@@ -1,15 +1,18 @@
 """
 ProjTTNOSum
 """
-mutable struct ProjTTNOSum
-  pm::Vector{ProjTTNO}
+mutable struct ProjTTNOSum{V}
+  pm::Vector{ProjTTNO{V}}
+  function ProjTTNOSum(pm::Vector{ProjTTNO{V}}) where {V}
+    return new{V}(pm)
+  end  
 end
 
 copy(P::ProjTTNOSum) = ProjTTNOSum(copy.(P.pm))
 
-ProjTTNOSum(ttnos::Vector{TTNO}) = ProjTTNOSum([ProjTTNO(M) for M in ttnos])
+ProjTTNOSum(ttnos::Vector{<:TTNO}) = ProjTTNOSum([ProjTTNO(M) for M in ttnos])
 
-ProjTTNOSum(Ms::TTNO...) = ProjTTNOSum([Ms...])
+ProjTTNOSum(Ms::TTNO{V}...) where {V} = ProjTTNOSum([Ms...])
 
 on_edge(P::ProjTTNOSum) = on_edge(P.pm[1])
 
@@ -53,8 +56,8 @@ end
 Base.size(P::ProjTTNOSum) = size(P.pm[1])
 
 function position!(
-  P::ProjTTNOSum, psi::TTNS, pos::Union{Vector{<:Tuple},NamedDimEdge{Tuple}}
-)
+  P::ProjTTNOSum{V}, psi::TTNS{V}, pos::Union{Vector{<:V},NamedEdge{V}}
+) where {V}
   for M in P.pm
     position!(M, psi, pos)
   end

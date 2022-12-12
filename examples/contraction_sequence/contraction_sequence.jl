@@ -1,3 +1,4 @@
+using NamedGraphs
 using ITensors
 using ITensorNetworks
 using Random
@@ -13,7 +14,7 @@ s = siteinds("S=1/2", g)
 χ = 10
 ψ = randomITensorNetwork(s; link_space=χ)
 
-tn = norm_network(ψ)
+tn = norm_sqr_network(ψ)
 
 # Contraction sequence for exactly computing expectation values
 # contract_edges = map(t -> (1, t...), collect(keys(cartesian_to_linear(dims))))
@@ -26,7 +27,7 @@ using OMEinsumContractionOrders
 
 println("greedy")
 seq_greedy = @time contraction_sequence(tn; alg="greedy")
-res_greedy = @time contract(tn; alg=res_greedy)
+res_greedy = @time contract(tn; sequence=seq_greedy)
 
 println("tree_sa")
 seq_tree_sa = @time contraction_sequence(tn; alg="tree_sa")

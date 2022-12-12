@@ -1,11 +1,15 @@
 """
 ProjTTNO
 """
-mutable struct ProjTTNO <: AbstractProjTTNO
-  pos::Union{Vector{<:Tuple},NamedDimEdge{Tuple}} # TODO: cleanest way to specify effective Hamiltonian position?
-  H::TTNO
-  environments::Dictionary{NamedDimEdge{Tuple},ITensor}
+mutable struct ProjTTNO{V} <: AbstractProjTTNO{V}
+  pos::Union{Vector{<:V},NamedEdge{V}} # TODO: cleanest way to specify effective Hamiltonian position?
+  H::TTNO{V}
+  environments::Dictionary{NamedEdge{V},ITensor}
+  function ProjTTNO(pos::Union{Vector{<:V},NamedEdge{V}}, H::TTNO{V}, environments::Dictionary{NamedEdge{V},ITensor}) where {V}
+    return new{V}(pos, H, environments)
+  end
 end
+
 function ProjTTNO(H::TTNO)
   return ProjTTNO(vertices(H), H, Dictionary{edgetype(H),ITensor}())
 end
@@ -18,7 +22,7 @@ function set_nsite!(P::ProjTTNO, nsite)
   return P
 end
 
-function make_environment!(P::ProjTTNO, psi::TTNS, e::NamedDimEdge{Tuple})::ITensor
+function make_environment!(P::ProjTTNO{V}, psi::TTNS{V}, e::NamedEdge{V})::ITensor where {V}
   # invalidate environment for opposite edge direction if necessary
   reverse(e) ∈ incident_edges(P) || unset!(P.environments, reverse(e))
   # do nothing if valid environment already present

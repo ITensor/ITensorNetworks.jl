@@ -1,4 +1,4 @@
-abstract type AbstractProjTTNO end
+abstract type AbstractProjTTNO{V} end
 
 copy(::AbstractProjTTNO) = error("Not implemented")
 
@@ -16,12 +16,12 @@ on_edge(P::AbstractProjTTNO) = isa(pos(P), edgetype(P))
 
 nsite(P::AbstractProjTTNO) = on_edge(P) ? 0 : length(pos(P))
 
-function sites(P::AbstractProjTTNO)
-  on_edge(P) && return eltype(underlying_graph(P))[]
+function sites(P::AbstractProjTTNO{V}) where {V}
+  on_edge(P) && return V[]
   return pos(P)
 end
 
-function incident_edges(P::AbstractProjTTNO)::Vector{NamedDimEdge{Tuple}}
+function incident_edges(P::AbstractProjTTNO{V})::Vector{NamedEdge{V}} where {V}
   on_edge(P) && return [pos(P), reverse(pos(P))]
   edges = [
     [edgetype(P)(n => v) for n in setdiff(neighbors(underlying_graph(P), v), sites(P))] for
@@ -30,7 +30,7 @@ function incident_edges(P::AbstractProjTTNO)::Vector{NamedDimEdge{Tuple}}
   return collect(Base.Iterators.flatten(edges))
 end
 
-function internal_edges(P::AbstractProjTTNO)::Vector{NamedDimEdge{Tuple}}
+function internal_edges(P::AbstractProjTTNO{V})::Vector{NamedEdge{V}} where {V}
   on_edge(P) && return edgetype(P)[]
   edges = [
     [edgetype(P)(v => n) for n in neighbors(underlying_graph(P), v) ∩ sites(P)] for
@@ -39,7 +39,7 @@ function internal_edges(P::AbstractProjTTNO)::Vector{NamedDimEdge{Tuple}}
   return collect(Base.Iterators.flatten(edges))
 end
 
-function environment(P::AbstractProjTTNO, edge::NamedDimEdge{Tuple})::ITensor
+function environment(P::AbstractProjTTNO{V}, edge::NamedEdge{V})::ITensor where {V}
   return P.environments[edge]
 end
 
@@ -125,9 +125,9 @@ function Base.size(P::AbstractProjTTNO)::Tuple{Int,Int}
 end
 
 function position!(
-  P::AbstractProjTTNO, psi::TTNS, pos::Union{Vector{<:Tuple},NamedDimEdge{Tuple}}
-)
-  # shift position
+  P::AbstractProjTTNO{V}, psi::TTNS{V}, pos::Union{Vector{<:V},NamedEdge{V}}
+) where {V}
+  # shift position; TODO: update for immutable struct
   P.pos = pos
   # invalidate environments corresponding to internal edges
   for e in internal_edges(P)
