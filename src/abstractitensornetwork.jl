@@ -5,6 +5,18 @@ abstract type AbstractITensorNetwork{V} <:
 data_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
 data_graph(graph::AbstractITensorNetwork) = not_implemented()
 
+# Graphs.jl overloads
+function weights(graph::AbstractITensorNetwork)
+  V = vertextype(graph)
+  es = Tuple.(edges(graph))
+  ws = Dictionary{Tuple{V,V},Float64}(es, undef)
+  for e in edges(graph)
+    w = log2(dim(commoninds(graph, e)))
+    ws[(src(e),dst(e))] = w
+  end
+  return ws
+end
+
 # Copy
 copy(tn::AbstractITensorNetwork) = not_implemented()
 
@@ -21,8 +33,8 @@ end
 edge_data(graph::AbstractITensorNetwork, args...) = edge_data(data_graph(graph), args...)
 
 underlying_graph(tn::AbstractITensorNetwork) = underlying_graph(data_graph(tn))
-function vertex_to_parent_vertex(tn::AbstractITensorNetwork)
-  return vertex_to_parent_vertex(underlying_graph(tn))
+function vertex_to_parent_vertex(tn::AbstractITensorNetwork, vertex)
+  return vertex_to_parent_vertex(underlying_graph(tn), vertex)
 end
 
 #
@@ -206,6 +218,7 @@ const map_inds_label_functions = [
   :settags,
   :sim,
   :swaptags,
+  :dag,
   # :replaceind,
   # :replaceinds,
   # :swapind,
@@ -226,19 +239,29 @@ dag(tn::AbstractITensorNetwork) = map_vertex_data(dag, tn)
 
 # TODO: should this make sure that internal indices
 # don't clash?
-function ⊗(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
-  return ⊔(tn1, tn2; kwargs...)
+function ⊗(
+  tn1::AbstractITensorNetwork,
+  tn2::AbstractITensorNetwork,
+  tn_tail::AbstractITensorNetwork...;
+  kwargs...,
+)
+  return ⊔(tn1, tn2, tn_tail...; kwargs...)
 end
 
-function ⊗(tn1::Pair{<:Any,<:AbstractITensorNetwork}, tn2::Pair{<:Any,<:AbstractITensorNetwork}; kwargs...)
-  return ⊔(tn1, tn2; kwargs...)
+function ⊗(
+  tn1::Pair{<:Any,<:AbstractITensorNetwork},
+  tn2::Pair{<:Any,<:AbstractITensorNetwork},
+  tn_tail::Pair{<:Any,<:AbstractITensorNetwork}...;
+  kwargs...,
+)
+  return ⊔(tn1, tn2, tn_tail...; kwargs...)
 end
 
 # TODO: how to define this lazily?
 #norm(tn::AbstractITensorNetwork) = sqrt(inner(tn, tn))
 
 function contract(tn::AbstractITensorNetwork; sequence=vertices(tn), kwargs...)
-  sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn)[v], sequence)
+  sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn, v), sequence)
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
 end
 
@@ -432,6 +455,39 @@ function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combine
   return combined_tn
 end
 
+function flatten_networks(
+  tn1::AbstractITensorNetwork,
+  tn2::AbstractITensorNetwork;
+  map_bra_linkinds=sim,
+  flatten=true,
+  combine_linkinds=true,
+  kwargs...,
+)
+  @assert issetequal(vertices(tn1), vertices(tn2))
+  tn1 = map_bra_linkinds(tn1; sites=[])
+  flattened_net = ⊗(tn1, tn2; kwargs...)
+  if flatten
+    for v in vertices(tn1)
+      flattened_net = contract(flattened_net, (v, 2) => (v, 1); merged_vertex=v)
+    end
+  end
+  if combine_linkinds
+    flattened_net = ITensorNetworks.combine_linkinds(flattened_net)
+  end
+  return flattened_net
+end
+
+function flatten_networks(
+  tn1::AbstractITensorNetwork,
+  tn2::AbstractITensorNetwork,
+  tn3::AbstractITensorNetwork,
+  tn_tail::AbstractITensorNetwork...;
+  kwargs...,
+)
+  return flatten_networks(flatten_networks(tn1, tn2; kwargs...), tn3, tn_tail...; kwargs...)
+end
+
+# TODO: Use or replace with `flatten_networks`
 function inner_network(
   tn1::AbstractITensorNetwork,
   tn2::AbstractITensorNetwork;
@@ -445,7 +501,6 @@ function inner_network(
   inner_net = ⊗(dag(tn1), tn2; kwargs...)
   if flatten
     for v in vertices(tn1)
-      # TODO: Combine the indices, optionally with `combine_linkinds`
       inner_net = contract(inner_net, (v, 2) => (v, 1); merged_vertex=v)
     end
   end

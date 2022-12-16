@@ -25,7 +25,7 @@ import .DataGraphs:
   edge_data,
   reverse_data_direction
 
-import Graphs: SimpleGraph, is_directed
+import Graphs: SimpleGraph, is_directed, weights
 
 import LinearAlgebra: svd, factorize, qr
 

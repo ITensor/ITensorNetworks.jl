@@ -32,7 +32,7 @@ function union(
   tn2::AbstractIndsNetwork;
   kwargs...,
 )
-  return IndsNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
+  return IndsNetwork(union(data_graph(tn1), data_graph(tn2); kwargs...))
 end
 
 function rename_vertices(
