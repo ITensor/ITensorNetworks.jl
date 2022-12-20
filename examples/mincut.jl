@@ -45,14 +45,11 @@ v1 = first(periphery(tn))
 nds = neighborhood_dists(tn, v1, nv(tn))
 d_and_i = findmax(vd -> vd[2], nds)
 v2 = nds[d_and_i[2]][1]
+@show v1, v2
+p1, p2 = mincut_partitions(tn, v1, v2)
+@show p1
+@show p2
 
-## p1, p2 = mincut_partitions(tn, (1, 1), (4, 1))
-## for v in p1
-##   rem_vertex!(tn
-## @show mincut_partitions(tn, (1, 1), (4, 1))
-
-using SymRCM
-# TODO: Implement for NamedGraph
-# https://github.com/sbromberger/LightGraphs.jl/pull/1128
-p = symrcm(adjacency_matrix(tn_flattened))
-# TODO: Implement permute_vertices
+display(adjacency_matrix(tn_flattened))
+tn_flattened_p = symrcm_permute(tn_flattened)
+display(adjacency_matrix(tn_flattened_p))
