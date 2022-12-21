@@ -1,7 +1,9 @@
 # TODO: Replace `AbstractITensorNetwork` with a trait `IsTree`.
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
 
-underlying_graph_type(G::Type{<:AbstractTreeTensorNetwork}) = underlying_graph_type(data_graph_type(G))
+function underlying_graph_type(G::Type{<:AbstractTreeTensorNetwork})
+  return underlying_graph_type(data_graph_type(G))
+end
 
 # 
 # Field access
@@ -21,7 +23,9 @@ end
 
 isortho(ψ::AbstractTreeTensorNetwork) = isone(length(ortho_center(ψ)))
 
-function set_ortho_center(ψ::AbstractTreeTensorNetwork{V}, new_center::Vector{<:V}) where {V}
+function set_ortho_center(
+  ψ::AbstractTreeTensorNetwork{V}, new_center::Vector{<:V}
+) where {V}
   return typeof(ψ)(itensor_network(ψ), new_center)
 end
 
@@ -220,7 +224,7 @@ function lognorm(ψ::AbstractTreeTensorNetwork)
   if isortho(ψ)
     return log(norm(ψ[only(ortho_center(ψ))]))
   end
-  lognorm2_ψ = logdot(ψ, ψ)
+  lognorm2_ψ = loginner(ψ, ψ)
   rtol = eps(real(scalartype(ψ))) * 10
   atol = rtol
   if !IsApprox.isreal(lognorm2_ψ, Approx(; rtol=rtol, atol=atol))
@@ -229,12 +233,12 @@ function lognorm(ψ::AbstractTreeTensorNetwork)
   return 0.5 * real(lognorm2_ψ)
 end
 
-function loginner(ψ1::TTNT, ψ2::TTNT; kwargs...) where {TTNT<:AbstractTreeTensorNetwork}
-  return logdot(ψ1, ψ2; kwargs...)
+function logdot(ψ1::TTNT, ψ2::TTNT; kwargs...) where {TTNT<:AbstractTreeTensorNetwork}
+  return loginner(ψ1, ψ2; kwargs...)
 end
 
 # TODO: stick with this traversal or find optimal contraction sequence?
-function logdot(
+function loginner(
   ψ1::TTNT, ψ2::TTNT; root_vertex=default_root_vertex(ψ1, ψ2)
 )::Number where {TTNT<:AbstractTreeTensorNetwork}
   N = nv(ψ1)
