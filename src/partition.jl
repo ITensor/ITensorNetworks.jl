@@ -131,6 +131,10 @@ function subgraphs(g::AbstractGraph, subgraph_vertices)
   return map(vs -> subgraph(g, vs), subgraph_vertices)
 end
 
+function partition(g::AbstractSimpleGraph, subgraph_vertices)
+  return partition(NamedGraph(g), subgraph_vertices)
+end
+
 """
     partition(g::AbstractGraph, subgraph_vertices::Vector)
 

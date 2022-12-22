@@ -17,6 +17,7 @@ using Suppressor
 # TODO: export from ITensors
 using ITensors: commontags, @Algorithm_str, Algorithm
 using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
+using Graphs.SimpleGraphs # AbstractSimpleGraph
 using NamedGraphs:
   AbstractNamedGraph,
   parent_graph,
