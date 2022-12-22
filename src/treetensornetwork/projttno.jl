@@ -1,13 +1,10 @@
 """
 ProjTTNO
 """
-mutable struct ProjTTNO{V} <: AbstractProjTTNO{V}
+struct ProjTTNO{V} <: AbstractProjTTNO{V}
   pos::Union{Vector{<:V},NamedEdge{V}} # TODO: cleanest way to specify effective Hamiltonian position?
   H::TTNO{V}
   environments::Dictionary{NamedEdge{V},ITensor}
-  function ProjTTNO(pos::Union{Vector{<:V},NamedEdge{V}}, H::TTNO{V}, environments::Dictionary{NamedEdge{V},ITensor}) where {V}
-    return new{V}(pos, H, environments)
-  end
 end
 
 function ProjTTNO(H::TTNO)
@@ -18,8 +15,12 @@ copy(P::ProjTTNO) = ProjTTNO(P.pos, copy(P.H), copy(P.environments))
 
 # trivial if we choose to specify position as above; only kept to allow using alongside
 # ProjMPO
-function set_nsite!(P::ProjTTNO, nsite)
+function set_nsite(P::ProjTTNO, nsite)
   return P
+end
+
+function shift_position(P::ProjTTNO, pos)
+  return ProjTTNO(pos, P.H, P.environments)
 end
 
 function make_environment!(P::ProjTTNO{V}, psi::TTNS{V}, e::NamedEdge{V})::ITensor where {V}

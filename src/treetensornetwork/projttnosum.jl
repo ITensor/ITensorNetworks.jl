@@ -1,11 +1,11 @@
 """
 ProjTTNOSum
 """
-mutable struct ProjTTNOSum{V}
+struct ProjTTNOSum{V}
   pm::Vector{ProjTTNO{V}}
   function ProjTTNOSum(pm::Vector{ProjTTNO{V}}) where {V}
     return new{V}(pm)
-  end  
+  end
 end
 
 copy(P::ProjTTNOSum) = ProjTTNOSum(copy.(P.pm))
@@ -18,11 +18,8 @@ on_edge(P::ProjTTNOSum) = on_edge(P.pm[1])
 
 nsite(P::ProjTTNOSum) = nsite(P.pm[1])
 
-function set_nsite!(Ps::ProjTTNOSum, nsite)
-  for P in Ps.pm
-    set_nsite!(P, nsite)
-  end
-  return Ps
+function set_nsite(Ps::ProjTTNOSum, nsite)
+  return ProjTTNOSum(map(M -> set_nsite(M, nsite), Ps.pm))
 end
 
 underlying_graph(P::ProjTTNOSum) = underlying_graph(P.pm[1])
@@ -55,10 +52,8 @@ end
 
 Base.size(P::ProjTTNOSum) = size(P.pm[1])
 
-function position!(
+function position(
   P::ProjTTNOSum{V}, psi::TTNS{V}, pos::Union{Vector{<:V},NamedEdge{V}}
 ) where {V}
-  for M in P.pm
-    position!(M, psi, pos)
-  end
+  ProjTTNOSum(map(M -> position(M, psi, pos), P.pm))
 end

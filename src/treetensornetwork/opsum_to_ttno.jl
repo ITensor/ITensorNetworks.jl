@@ -44,15 +44,15 @@ Base.zero(t::Scaled) = zero(typeof(t))
 # 
 
 """
-    finite_state_machine(os::OpSum{C}, sites::IndsNetwork{<:Index}, root_vertex::Tuple) where {C}
+    finite_state_machine(os::OpSum{C}, sites::IndsNetwork{V,<:Index}, root_vertex::V) where {C,V}
 
 Finite state machine generator for ITensors.OpSum Hamiltonian defined on a tree graph. The
 site Index graph must be a tree graph, and the chosen root  must be a leaf vertex of this
 tree. Returns a DataGraph of SparseArrayKit.SparseArrays
 """
 function finite_state_machine(
-  os::OpSum{C}, sites::IndsNetwork{V,<:Index}, root_vertex::Tuple
-) where {V,C}
+  os::OpSum{C}, sites::IndsNetwork{V,<:Index}, root_vertex::V
+) where {C,V}
   os = deepcopy(os)
   os = sorteachterm(os, sites, root_vertex)
   os = ITensors.sortmergeterms(os)
@@ -60,9 +60,7 @@ function finite_state_machine(
   ValType = ITensors.determineValType(ITensors.terms(os))
 
   # sparse symbolic representation of the TTNO Hamiltonian as a DataGraph of SparseArrays
-  sparseTTNO = DataGraph{V,SparseArray{Scaled{ValType,Prod{Op}}}}(
-    underlying_graph(sites)
-  )
+  sparseTTNO = DataGraph{V,SparseArray{Scaled{ValType,Prod{Op}}}}(underlying_graph(sites))
 
   # some things to keep track of
   vs = post_order_dfs_vertices(sites, root_vertex)                                          # store vertices in fixed ordering relative to root
@@ -119,7 +117,7 @@ function finite_state_machine(
       # if term starts at this site, add its coefficient as a site factor
       site_coef = one(C)
       if (isempty(dims_in) || all(T_inds[dims_in] .== -1)) &&
-        ITensors.argument(term) ∉ site_coef_done
+         ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
         push!(site_coef_done, ITensors.argument(term))
       end
@@ -177,14 +175,14 @@ function finite_state_machine(
 end
 
 """
-    fsmTTNO(os::OpSum{C}, sites::IndsNetwork{<:Index}, root_vertex::Tuple, kwargs...) where {C}
+    fsmTTNO(os::OpSum{C}, sites::IndsNetwork{V,<:Index}, root_vertex::V, kwargs...) where {C,V}
 
 Construct a dense TreeTensorNetworkOperator from sparse finite state machine
 represenatation, without compression.
 """
 function fsmTTNO(
-  os::OpSum{C}, sites::IndsNetwork{V,<:Index}, root_vertex::Tuple
-)::TTNO where {V,C}
+  os::OpSum{C}, sites::IndsNetwork{V,<:Index}, root_vertex::V
+)::TTNO where {C,V}
   ValType = ITensors.determineValType(ITensors.terms(os))
   # start from finite state machine
   fsm, edge_orders = finite_state_machine(os, sites, root_vertex)
@@ -217,14 +215,14 @@ end
 
 # this is broken for certain combinations of longer-range interactions, no idea why...
 """
-    svdTTNO(os::OpSum{C}, sites::IndsNetwork{<:Index}, root_vertex::Tuple, kwargs...) where {C}
+    svdTTNO(os::OpSum{C}, sites::IndsNetwork{V<:Index}, root_vertex::V, kwargs...) where {C,V}
 
 Construct a dense TreeTensorNetworkOperator from a symbolic OpSum representation of a
-Hamiltonian, compressin shared interaction channels.
+Hamiltonian, compressing shared interaction channels.
 """
 function svdTTNO(
-  os::OpSum{C}, sites::IndsNetwork{VT,<:Index}, root_vertex::Tuple; kwargs...
-)::TTNO where {VT,C}
+  os::OpSum{C}, sites::IndsNetwork{VT,<:Index}, root_vertex::VT; kwargs...
+)::TTNO where {C,VT}
   mindim::Int = get(kwargs, :mindim, 1)
   maxdim::Int = get(kwargs, :maxdim, 10000)
   cutoff::Float64 = get(kwargs, :cutoff, 1E-15)
@@ -234,7 +232,7 @@ function svdTTNO(
   # some things to keep track of
   vs = post_order_dfs_vertices(sites, root_vertex)                                          # store vertices in fixed ordering relative to root
   es = post_order_dfs_edges(sites, root_vertex)                                             # store edges in fixed ordering relative to root
-  ranks = Dict(v => degree(sites, v) for v in vs)                                    # rank of every TTNO tensor in network
+  ranks = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTNO tensor in network
   Vs = Dict(e => Matrix{ValType}(undef, 1, 1) for e in es)                                  # link isometries for SVD compression of TTNO
   leftmaps = Dict(e => Dict{Vector{Op},Int}() for e in es)                                  # map from term in Hamiltonian to edge left channel index for every edge
   rightmaps = Dict(e => Dict{Vector{Op},Int}() for e in es)                                 # map from term in Hamiltonian to edge right channel index for every edge
@@ -306,7 +304,7 @@ function svdTTNO(
       # if term starts at this site, add its coefficient as a site factor
       site_coef = one(C)
       if (isempty(dims_in) || all(T_inds[dims_in] .== -1)) &&
-        ITensors.argument(term) ∉ site_coef_done
+         ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
         push!(site_coef_done, ITensors.argument(term))
       end
@@ -339,9 +337,9 @@ function svdTTNO(
 
   # compress this tempTTNO representation into dense form
 
-  link_space = dictionary([
-    e => Index((isempty(rightmaps[e]) ? 0 : size(Vs[e], 2)) + 2, edge_tag(e)) for e in es
-  ])
+  link_space = dictionary(
+    [e => Index((isempty(rightmaps[e]) ? 0 : size(Vs[e], 2)) + 2, edge_tag(e)) for e in es]
+  )
 
   H = TTNO(sites)
 
@@ -430,7 +428,7 @@ function isfermionic(t::Vector{Op}, sites::IndsNetwork{V,<:Index}) where {V}
   return (p == -1)
 end
 
-# only(site(ops[1])) in ITensors breaks for tuple site labels, had to drop the only
+# only(site(ops[1])) in ITensors breaks for Tuple site labels, had to drop the only
 function computeSiteProd(sites::IndsNetwork{V,<:Index}, ops::Prod{Op})::ITensor where {V}
   v = ITensors.site(ops[1])
   T = op(sites[v], ITensors.which_op(ops[1]); ITensors.params(ops[1])...)
@@ -443,7 +441,9 @@ function computeSiteProd(sites::IndsNetwork{V,<:Index}, ops::Prod{Op})::ITensor 
 end
 
 # changed `isless_site` to use tree vertex ordering relative to root
-function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::Tuple) where {V}
+function sorteachterm(
+  os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V
+) where {V}
   os = copy(os)
   findpos(op::Op) = find_index_in_tree(op, sites, root_vertex)
   isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
@@ -519,7 +519,7 @@ Convert an OpSum object `os` to a TreeTensorNetworkOperator, with indices given 
 function TTNO(
   os::OpSum,
   sites::IndsNetwork{V,<:Index};
-  root_vertex::Tuple=default_root_vertex(sites),
+  root_vertex::V=default_root_vertex(sites),
   splitblocks=false,
   method::Symbol=:fsm, # default to construction from finite state machine until svdTTNO is fixed
   trunc=false,

@@ -15,7 +15,7 @@ function expect(
     sequence = contraction_sequence(inner_network(ψ, ψ; flatten=true))
   end
   normψ² = norm_sqr(ψ; sequence)
-  for v in vertices(ψ)
+  for v in sites
     O = ITensor(Op(op, v), s)
     Oψ = apply(O, ψ; cutoff, maxdim, ortho)
     res[v] = contract_inner(ψ, Oψ; sequence) / normψ²

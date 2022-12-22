@@ -79,8 +79,6 @@ import ITensors:
   linkdims,
   maxlinkdim,
   # projected operators
-  position!,
-  set_nsite!,
   product,
   nsite,
   # promotion and conversion

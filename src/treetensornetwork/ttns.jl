@@ -1,5 +1,5 @@
 """
-    TreeTensorNetworkState <: AbstractITensorNetwork
+    TreeTensorNetworkState{V} <: AbstractITensorNetwork{V}
 
 # Fields
 
@@ -18,7 +18,9 @@ struct TreeTensorNetworkState{V} <: AbstractTreeTensorNetwork{V}
   end
 end
 
-data_graph_type(G::Type{<:TreeTensorNetworkState}) = data_graph_type(fieldtype(G, :itensor_network))
+function data_graph_type(G::Type{<:TreeTensorNetworkState})
+  return data_graph_type(fieldtype(G, :itensor_network))
+end
 
 function copy(ψ::TreeTensorNetworkState)
   return TreeTensorNetworkState(copy(ψ.itensor_network), copy(ψ.ortho_center))
@@ -30,23 +32,20 @@ const TTNS = TreeTensorNetworkState
 itensor_network(ψ::TreeTensorNetworkState) = getfield(ψ, :itensor_network)
 
 # Required for `AbstractITensorNetwork` interface
-data_graph(ψ::TreeTensorNetworkState) = data_graph(ITensorNetwork(ψ))
+data_graph(ψ::TreeTensorNetworkState) = data_graph(itensor_network(ψ))
 
 # 
 # Constructor
 # 
 
-# catch-all for default ElType
-function TreeTensorNetworkState(g::AbstractGraph, args...; kwargs...)
-  return TreeTensorNetworkState(Float64, g, args...; kwargs...)
-end
-
 TreeTensorNetworkState(tn::ITensorNetwork, args...) = TreeTensorNetworkState{vertextype(tn)}(tn, args...)
 
-# can defer almost everything to ITensorNework constructor
-function TreeTensorNetworkState(
-  ::Type{ElT}, graph::AbstractGraph, args...; kwargs...
-) where {ElT<:Number}
+# catch-all for default ElType
+function (::Type{TTNT})(g::AbstractGraph, args...; kwargs...) where {TTNT<:TTNS}
+  return TTNT(Float64, g, args...; kwargs...)
+end
+
+function TreeTensorNetworkState(::Type{ElT}, graph::AbstractGraph, args...; kwargs...) where {ElT<:Number}
   itensor_network = ITensorNetwork(ElT, graph; kwargs...)
   return TreeTensorNetworkState(itensor_network, args...)
 end

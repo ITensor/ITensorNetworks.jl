@@ -2,7 +2,10 @@ abstract type AbstractProjTTNO{V} end
 
 copy(::AbstractProjTTNO) = error("Not implemented")
 
-set_nsite!(::AbstractProjTTNO, nsite) = error("Not implemented")
+set_nsite(::AbstractProjTTNO, nsite) = error("Not implemented")
+
+# silly constructor wrapper
+shift_position(::AbstractProjTTNO, pos) = error("Not implemented")
 
 make_environment!(::AbstractProjTTNO, psi, e) = error("Not implemented")
 
@@ -39,6 +42,7 @@ function internal_edges(P::AbstractProjTTNO{V})::Vector{NamedEdge{V}} where {V}
   return collect(Base.Iterators.flatten(edges))
 end
 
+environment(P::AbstractProjTTNO, edge::Pair) = environment(P, edgetype(P)(edge))
 function environment(P::AbstractProjTTNO{V}, edge::NamedEdge{V})::ITensor where {V}
   return P.environments[edge]
 end
@@ -124,11 +128,11 @@ function Base.size(P::AbstractProjTTNO)::Tuple{Int,Int}
   return (d, d)
 end
 
-function position!(
+function position(
   P::AbstractProjTTNO{V}, psi::TTNS{V}, pos::Union{Vector{<:V},NamedEdge{V}}
 ) where {V}
   # shift position; TODO: update for immutable struct
-  P.pos = pos
+  P = shift_position(P, pos)
   # invalidate environments corresponding to internal edges
   for e in internal_edges(P)
     unset!(P.environments, e)

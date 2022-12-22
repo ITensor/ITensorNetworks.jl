@@ -28,7 +28,7 @@ export grid,
 # NamedGraphs
 #
 
-export  named_binary_tree,
+export named_binary_tree,
   named_grid,
   is_tree,
   parent_vertex,
@@ -82,6 +82,8 @@ export AbstractITensorNetwork,
   TTNO,
   ProjTTNO,
   ProjTTNOSum,
+  set_nsite,
+  position,
   finite_state_machine,
   # contraction_sequences.jl
   contraction_sequence,

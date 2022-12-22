@@ -124,7 +124,7 @@ function truncate(
 end
 
 # For ambiguity error
-function truncate(ψ::AbstractTreeTensorNetwork, edge::AbstractEdge; kwargs...)
+function truncate(tn::AbstractTreeTensorNetwork, edge::AbstractEdge; kwargs...)
   return typeof(tn)(truncate(ITensorNetwork(tn), edge; kwargs...))
 end
 
@@ -341,7 +341,7 @@ end
 function permute(
   ψ::TTNT, ::Tuple{typeof(linkind),typeof(siteinds),typeof(linkind)}
 )::TTNT where {TTNT<:AbstractTreeTensorNetwork}
-  ψ̃ = TTNT(underlying_graph(ψ))
+  ψ̃ = copy(ψ)
   for v in vertices(ψ)
     ls = [only(linkinds(ψ, n => v)) for n in neighbors(ψ, v)] # TODO: won't work for multiple indices per link...
     ss = sort(Tuple(siteinds(ψ, v)); by=plev)

@@ -20,7 +20,9 @@ struct TreeTensorNetworkOperator{V} <: AbstractTreeTensorNetwork{V}
   end
 end
 
-data_graph_type(G::Type{<:TreeTensorNetworkOperator}) = data_graph_type(fieldtype(G, :itensor_network))
+function data_graph_type(G::Type{<:TreeTensorNetworkOperator})
+  return data_graph_type(fieldtype(G, :itensor_network))
+end
 
 function copy(ψ::TreeTensorNetworkOperator)
   return TreeTensorNetworkOperator(copy(ψ.itensor_network), copy(ψ.ortho_center))
@@ -32,7 +34,7 @@ const TTNO = TreeTensorNetworkOperator
 itensor_network(ψ::TreeTensorNetworkOperator) = getfield(ψ, :itensor_network)
 
 # Required for `AbstractITensorNetwork` interface
-data_graph(ψ::TreeTensorNetworkOperator) = data_graph(ITensorNetwork(ψ))
+data_graph(ψ::TreeTensorNetworkOperator) = data_graph(itensor_network(ψ))
 
 # 
 # Constructor
@@ -41,13 +43,11 @@ data_graph(ψ::TreeTensorNetworkOperator) = data_graph(ITensorNetwork(ψ))
 TreeTensorNetworkOperator(tn::ITensorNetwork, args...) = TreeTensorNetworkOperator{vertextype(tn)}(tn, args...)
 
 # catch-all for default ElType
-function TreeTensorNetworkOperator(graph::AbstractGraph, args...; kwargs...)
-  return TreeTensorNetworkOperator(Float64, graph, args...; kwargs...)
+function (::Type{TTNT})(g::AbstractGraph, args...; kwargs...) where {TTNT<:TTNO}
+  return TTNT(Float64, g, args...; kwargs...)
 end
 
-function TreeTensorNetworkOperator(
-  ::Type{ElT}, graph::AbstractGraph, args...; kwargs...
-) where {ElT<:Number}
+function TreeTensorNetworkOperator(::Type{ElT}, graph::AbstractGraph, args...; kwargs...) where {ElT<:Number}
   itensor_network = ITensorNetwork(ElT, graph; kwargs...)
   return TreeTensorNetworkOperator(itensor_network, args...)
 end
@@ -143,10 +143,10 @@ end
 # Conversion
 # 
 
-function convert(::Type{TTNS}, T::TTNO)
-  return TTNS(ITensorNetwork(T), ortho_center(T))
+function convert(::Type{<:TTNS}, T::TTNO)
+  return TTNS(itensor_network(T), ortho_center(T))
 end
 
-function convert(::Type{TTNO}, T::TTNS)
-  return TTNO(ITensorNetwork(T), ortho_center(T))
+function convert(::Type{<:TTNO}, T::TTNS)
+  return TTNO(itensor_network(T), ortho_center(T))
 end
