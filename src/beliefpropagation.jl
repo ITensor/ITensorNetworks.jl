@@ -1,5 +1,5 @@
-function construct_initial_mts(tn::ITensorNetwork, nvertices_per_subgraph::Integer; subgraph_kwargs=(;), kwargs...)
-  return construct_initial_mts(tn, subgraphs(tn, nvertices_per_subgraph; subgraph_kwargs...); kwargs...)
+function construct_initial_mts(tn::ITensorNetwork, nvertices_per_partition::Integer; partition_kwargs=(;), kwargs...)
+  return construct_initial_mts(tn, partition(tn; nvertices_per_partition, partition_kwargs...); kwargs...)
 end
 
 function construct_initial_mts(tn::ITensorNetwork, subgraphs::DataGraph; init)
@@ -13,7 +13,7 @@ function construct_initial_mts(tn::ITensorNetwork, subgraphs::DataGraph; init)
     tns_to_contract = ITensor[]
     for subgraph_neighbor in neighbors(subgraphs, subgraph)
       edge_inds = Index[]
-      for vertex in subgraphs[subgraph]
+      for vertex in vertices(subgraphs[subgraph])
         psiv = tn[vertex]
         for e in [edgetype(tn)(vertex => neighbor) for neighbor in neighbors(tn, vertex)]
             if (find_subgraph(dst(e), subgraphs) == subgraph_neighbor)
@@ -40,6 +40,10 @@ function update_mt(tn::ITensorNetwork, subgraph_vertices::Vector, mts::Vector{IT
     contract(contract_list; sequence=contraction_sequence(contract_list))
   end
   return normalize!(new_mt)
+end
+
+function update_mt(tn::ITensorNetwork, subgraph::ITensorNetwork, mts::Vector{ITensor}; kwargs...)
+  return update_mt(tn, vertices(subgraph), mts; kwargs...)
 end
 
 """
@@ -95,7 +99,7 @@ function get_single_site_expec(
     push!(num_tensors_to_contract, subgraphs[k => subgraph])
     push!(denom_tensors_to_contract, subgraphs[k => subgraph])
   end
-  for vertex in subgraphs[subgraph]
+  for vertex in vertices(subgraphs[subgraph])
     push!(num_tensors_to_contract, tnO[vertex])
     push!(denom_tensors_to_contract, tn[vertex])
   end
@@ -127,7 +131,7 @@ function get_two_site_expec(
       push!(denom_tensors_to_contract, subgraphs[k => subgraph1])
     end
 
-    for vertex in subgraphs[subgraph1]
+    for vertex in vertices(subgraphs[subgraph1])
       if (vertex != v1 && vertex != v2)
         push!(num_tensors_to_contract, deepcopy(psi[vertex]))
       else
@@ -152,7 +156,7 @@ function get_two_site_expec(
       end
     end
 
-    for vertex in subgraphs[subgraph1]
+    for vertex in vertices(subgraphs[subgraph1])
       if (vertex != v1)
         push!(num_tensors_to_contract, deepcopy(psi[vertex]))
       else
@@ -162,7 +166,7 @@ function get_two_site_expec(
       push!(denom_tensors_to_contract, deepcopy(psi[vertex]))
     end
 
-    for vertex in subgraphs[subgraph2]
+    for vertex in vertices(subgraphs[subgraph2])
       if (vertex != v2)
         push!(num_tensors_to_contract, deepcopy(psi[vertex]))
       else
@@ -266,7 +270,7 @@ function two_site_rdm_bp(
     end
   end
 
-  for vertex in subgraphs[subgraph1]
+  for vertex in vertices(subgraphs[subgraph1])
     if (vertex != v1 && vertex != v2)
       push!(tensors_to_contract, deepcopy(tn[vertex]))
     end
@@ -280,7 +284,7 @@ function two_site_rdm_bp(
       end
     end
 
-    for vertex in subgraphs[subgraph2]
+    for vertex in vertices(subgraphs[subgraph2])
       if (vertex != v2)
         push!(tensors_to_contract, deepcopy(tn[vertex]))
       end

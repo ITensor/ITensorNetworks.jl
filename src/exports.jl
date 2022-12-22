@@ -86,4 +86,4 @@ export AbstractITensorNetwork,
 export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
 
 # partition.jl
-export partition
+export partition, partition_vertices

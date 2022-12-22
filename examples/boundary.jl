@@ -8,7 +8,7 @@ tn = ITensorNetwork(named_grid((6, 3)); link_space=4)
 
 @visualize tn
 
-g = subgraphs(tn, nv(tn) ÷ 2)
+g = partition_vertices(tn; nvertices_per_partition=2)
 sub_vs_1, sub_vs_2 = g[1], g[2]
 
 @show (1, 1) ∈ sub_vs_1

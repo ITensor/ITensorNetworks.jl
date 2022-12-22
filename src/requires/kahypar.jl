@@ -13,7 +13,7 @@ KaHyPar.HyperGraph(g::Graph) = incidence_matrix(g)
 """
 function partition(
   ::Backend"KaHyPar",
-  g::Graph,
+  g::SimpleGraph,
   npartitions::Integer;
   objective="edge_cut",
   alg="kway",
@@ -29,5 +29,5 @@ function partition(
     )
   end
   partitions = @suppress KaHyPar.partition(g, npartitions; configuration, kwargs...)
-  return partitions .+ 1
+  return groupfind(partitions .+ 1)
 end

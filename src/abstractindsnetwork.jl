@@ -11,6 +11,9 @@ is_directed(::Type{<:AbstractIndsNetwork}) = false
 vertex_data(graph::AbstractIndsNetwork, args...) = vertex_data(data_graph(graph), args...)
 edge_data(graph::AbstractIndsNetwork, args...) = edge_data(data_graph(graph), args...)
 
+# TODO: Define a generic fallback for `AbstractDataGraph`?
+edge_data_type(::Type{<:AbstractIndsNetwork{V,I}}) where {V,I} = Vector{I}
+
 # 
 # Index access
 # 

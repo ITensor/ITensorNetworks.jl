@@ -5,6 +5,9 @@ abstract type AbstractITensorNetwork{V} <:
 data_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
 data_graph(graph::AbstractITensorNetwork) = not_implemented()
 
+# TODO: Define a generic fallback for `AbstractDataGraph`?
+edge_data_type(::Type{<:AbstractITensorNetwork}) = ITensor
+
 # Graphs.jl overloads
 function weights(graph::AbstractITensorNetwork)
   V = vertextype(graph)

@@ -5,12 +5,13 @@ using Test
 @testset "Test examples" begin
   example_files = [
     "README.jl",
+    "boundary.jl",
+    "distances.jl",
     "examples.jl",
+    "group_partition.jl",
+    "mincut.jl",
     "mps.jl",
     "peps.jl",
-    "distances.jl",
-    "mincut.jl",
-    "boundary.jl",
     "steiner_tree.jl",
     joinpath("belief_propagation", "bpexample.jl"),
     joinpath("peps", "ising_tebd.jl"),
