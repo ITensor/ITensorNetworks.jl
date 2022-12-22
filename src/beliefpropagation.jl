@@ -1,5 +1,5 @@
 function construct_initial_mts(tn::ITensorNetwork, nvertices_per_subgraph::Integer; subgraph_kwargs=(;), kwargs...)
-  return construct_initial_mts(tn, subgraphs(tn, nvertices_per_subgraph; subgraph_kwargs...); kwargs...)
+  return construct_initial_mts(tn, create_subgraphs(tn, nvertices_per_subgraph; subgraph_kwargs...); kwargs...)
 end
 
 function construct_initial_mts(tn::ITensorNetwork, subgraphs::DataGraph; init)
