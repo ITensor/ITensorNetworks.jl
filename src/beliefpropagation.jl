@@ -1,11 +1,17 @@
-function construct_initial_mts(tn::ITensorNetwork, nvertices_per_partition::Integer; partition_kwargs=(;), kwargs...)
-  return construct_initial_mts(tn, partition(tn; nvertices_per_partition, partition_kwargs...); kwargs...)
+function construct_initial_mts(
+  tn::ITensorNetwork, nvertices_per_partition::Integer; partition_kwargs=(;), kwargs...
+)
+  return construct_initial_mts(
+    tn, partition(tn; nvertices_per_partition, partition_kwargs...); kwargs...
+  )
 end
 
 function construct_initial_mts(tn::ITensorNetwork, subgraphs::DataGraph; init)
   # TODO: This is dropping the vertex data for some reason.
   # mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensor}(subgraphs)
-  mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensor}(directed_graph(underlying_graph(subgraphs)))
+  mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensor}(
+    directed_graph(underlying_graph(subgraphs))
+  )
   for v in vertices(mts)
     mts[v] = subgraphs[v]
   end
@@ -16,12 +22,17 @@ function construct_initial_mts(tn::ITensorNetwork, subgraphs::DataGraph; init)
       for vertex in vertices(subgraphs[subgraph])
         psiv = tn[vertex]
         for e in [edgetype(tn)(vertex => neighbor) for neighbor in neighbors(tn, vertex)]
-            if (find_subgraph(dst(e), subgraphs) == subgraph_neighbor)
+          if (find_subgraph(dst(e), subgraphs) == subgraph_neighbor)
             append!(edge_inds, commoninds(tn, e))
           end
         end
       end
-      mt = normalize!(itensor([init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(edge_inds)...))], edge_inds))
+      mt = normalize!(
+        itensor(
+          [init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(edge_inds)...))],
+          edge_inds,
+        ),
+      )
       mts[subgraph => subgraph_neighbor] = mt
     end
   end
@@ -31,7 +42,11 @@ end
 """
 DO a single update of a message tensor using the current subgraph and the incoming mts
 """
-function update_mt(tn::ITensorNetwork, subgraph_vertices::Vector, mts::Vector{ITensor}; contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal")
+function update_mt(
+  tn::ITensorNetwork,
+  subgraph_vertices::Vector,
+  mts::Vector{ITensor};
+  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
 )
   contract_list = [mts; [tn[v] for v in subgraph_vertices]]
   new_mt = if isone(length(contract_list))
@@ -42,7 +57,9 @@ function update_mt(tn::ITensorNetwork, subgraph_vertices::Vector, mts::Vector{IT
   return normalize!(new_mt)
 end
 
-function update_mt(tn::ITensorNetwork, subgraph::ITensorNetwork, mts::Vector{ITensor}; kwargs...)
+function update_mt(
+  tn::ITensorNetwork, subgraph::ITensorNetwork, mts::Vector{ITensor}; kwargs...
+)
   return update_mt(tn, vertices(subgraph), mts; kwargs...)
 end
 
@@ -52,7 +69,7 @@ Do an update of all message tensors for a given flat ITensornetwork and its part
 function update_all_mts(
   tn::ITensorNetwork,
   mts::DataGraph;
-  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal")
+  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
 )
   update_mts = copy(mts)
   for e in edges(mts)
@@ -73,7 +90,7 @@ function update_all_mts(
   tn::ITensorNetwork,
   mts::DataGraph,
   niters::Int;
-  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal")
+  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
 )
   for i in 1:niters
     mts = update_all_mts(tn, mts; contraction_sequence)
@@ -90,7 +107,8 @@ function get_single_site_expec(
   subgraphs::DataGraph,
   tnO::ITensorNetwork,
   v;
-  contraction_sequence::Function=tn -> ITensorNetworks.contraction_sequence(tn; alg="optimal")
+  contraction_sequence::Function=tn ->
+    ITensorNetworks.contraction_sequence(tn; alg="optimal"),
 )
   subgraph = find_subgraph(v, subgraphs)
   num_tensors_to_contract = ITensor[]
@@ -103,8 +121,12 @@ function get_single_site_expec(
     push!(num_tensors_to_contract, tnO[vertex])
     push!(denom_tensors_to_contract, tn[vertex])
   end
-  numerator = ITensors.contract(num_tensors_to_contract; sequence=contraction_sequence(num_tensors_to_contract))[]
-  denominator = ITensors.contract(denom_tensors_to_contract; sequence=contraction_sequence(denom_tensors_to_contract))[]
+  numerator = ITensors.contract(
+    num_tensors_to_contract; sequence=contraction_sequence(num_tensors_to_contract)
+  )[]
+  denominator = ITensors.contract(
+    denom_tensors_to_contract; sequence=contraction_sequence(denom_tensors_to_contract)
+  )[]
   return numerator / denominator
 end
 
@@ -117,7 +139,7 @@ function get_two_site_expec(
   psiO::ITensorNetwork,
   v1,
   v2;
-  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal")
+  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
 )
   subgraph1 = find_subgraph(v1, subgraphs)
   subgraph2 = find_subgraph(v2, subgraphs)
@@ -177,8 +199,12 @@ function get_two_site_expec(
     end
   end
 
-  numerator = ITensors.contract(num_tensors_to_contract; sequence=contraction_sequence(num_tensors_to_contract))[1]
-  denominator = ITensors.contract(denom_tensors_to_contract; sequence=contraction_sequence(denom_tensors_to_contract))[1]
+  numerator = ITensors.contract(
+    num_tensors_to_contract; sequence=contraction_sequence(num_tensors_to_contract)
+  )[1]
+  denominator = ITensors.contract(
+    denom_tensors_to_contract; sequence=contraction_sequence(denom_tensors_to_contract)
+  )[1]
   out = numerator / denominator
 
   return out
@@ -188,11 +214,7 @@ end
 Starting with initial guess for messagetensors, monitor the convergence of an observable on a single site v (which is emedded in tnO)
 """
 function iterate_single_site_expec(
-  tn::ITensorNetwork,
-  subgraphs::DataGraph,
-  niters::Int,
-  tnO::ITensorNetwork,
-  v,
+  tn::ITensorNetwork, subgraphs::DataGraph, niters::Int, tnO::ITensorNetwork, v
 )
   println(
     "Initial Guess for Observable on site " *
@@ -219,16 +241,13 @@ end
 Starting with initial guess for messagetensors, monitor the convergence of an observable on a pair of sites v1 and v2 (which is emedded in tnO)
 """
 function iterate_two_site_expec(
-  tn::ITensorNetwork,
-  subgraphs::DataGraph,
-  niters::Int,
-  tnO::ITensorNetwork,
-  v1,
-  v2,
+  tn::ITensorNetwork, subgraphs::DataGraph, niters::Int, tnO::ITensorNetwork, v1, v2
 )
   println(
     "Initial Guess for Observable on sites " *
-    string(v1) * " and " *string(v2) *
+    string(v1) *
+    " and " *
+    string(v2) *
     " is " *
     string(get_two_site_expec(tn, subgraphs, tnO, v1, v2)),
   )
@@ -239,7 +258,9 @@ function iterate_two_site_expec(
       "After iteration " *
       string(i) *
       " Belief propagation gives observable on site " *
-      string(v1) * " and " * string(v2) *
+      string(v1) *
+      " and " *
+      string(v2) *
       " is " *
       string(approx_O),
     )
@@ -265,7 +286,7 @@ function two_site_rdm_bp(
 
   connected_subgraphs = neighbors(subgraphs, subgraph1)
   for k in connected_subgraphs
-    if(k != subgraph2)
+    if (k != subgraph2)
       push!(tensors_to_contract, subgraphs[k => subgraph1])
     end
   end
@@ -276,7 +297,7 @@ function two_site_rdm_bp(
     end
   end
 
-  if(subgraph2 != subgraph1)
+  if (subgraph2 != subgraph1)
     connected_subgraphs2 = neighbors(subgraphs, subgraph2)
     for k in connected_subgraphs2
       if (k != subgraph1)
@@ -291,17 +312,25 @@ function two_site_rdm_bp(
     end
   end
 
-  psi1 = deepcopy(psi[v1])*prime!(dag(deepcopy(psi[v1])))
+  psi1 = deepcopy(psi[v1]) * prime!(dag(deepcopy(psi[v1])))
   for v in neighbors(psi, v1)
-    C = haskey(combiners,NamedEdge(v => v1)) ? combiners[NamedEdge(v => v1)] : combiners[NamedEdge(v1 => v)]
-    psi1 = psi1*C
+    C = if haskey(combiners, NamedEdge(v => v1))
+      combiners[NamedEdge(v => v1)]
+    else
+      combiners[NamedEdge(v1 => v)]
+    end
+    psi1 = psi1 * C
   end
   push!(tensors_to_contract, psi1)
 
-  psi2 = deepcopy(psi[v2])*prime!(dag(deepcopy(psi[v2])))
+  psi2 = deepcopy(psi[v2]) * prime!(dag(deepcopy(psi[v2])))
   for v in neighbors(psi, v2)
-    C = haskey(combiners,NamedEdge(v => v2)) ? combiners[NamedEdge(v => v2)] : combiners[NamedEdge(v2 => v)]
-    psi2 = psi2*C
+    C = if haskey(combiners, NamedEdge(v => v2))
+      combiners[NamedEdge(v => v2)]
+    else
+      combiners[NamedEdge(v2 => v)]
+    end
+    psi2 = psi2 * C
   end
   push!(tensors_to_contract, psi2)
 

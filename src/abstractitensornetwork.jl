@@ -1,5 +1,4 @@
-abstract type AbstractITensorNetwork{V} <:
-              AbstractDataGraph{V,ITensor,ITensor} end
+abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
 
 # Field access
 data_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
@@ -15,7 +14,7 @@ function weights(graph::AbstractITensorNetwork)
   ws = Dictionary{Tuple{V,V},Float64}(es, undef)
   for e in edges(graph)
     w = log2(dim(commoninds(graph, e)))
-    ws[(src(e),dst(e))] = w
+    ws[(src(e), dst(e))] = w
   end
   return ws
 end
@@ -27,7 +26,9 @@ copy(tn::AbstractITensorNetwork) = not_implemented()
 is_directed(::Type{<:AbstractITensorNetwork}) = false
 
 # Derived interface, may need to be overloaded
-underlying_graph_type(G::Type{<:AbstractITensorNetwork}) = underlying_graph_type(data_graph_type(G))
+function underlying_graph_type(G::Type{<:AbstractITensorNetwork})
+  return underlying_graph_type(data_graph_type(G))
+end
 
 # AbstractDataGraphs overloads
 function vertex_data(graph::AbstractITensorNetwork, args...)
@@ -44,11 +45,7 @@ end
 # Iteration
 #
 
-function union(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork;
-  kwargs...,
-)
+function union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
   tn = ITensorNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
   # Add any new edges that are introduced during the union
   for v1 in vertices(tn1)
@@ -61,10 +58,7 @@ function union(
   return tn
 end
 
-function rename_vertices(
-  f::Function,
-  tn::AbstractITensorNetwork,
-)
+function rename_vertices(f::Function, tn::AbstractITensorNetwork)
   return ITensorNetwork(rename_vertices(f, data_graph(tn)))
 end
 

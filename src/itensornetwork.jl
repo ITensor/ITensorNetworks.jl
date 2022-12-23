@@ -17,10 +17,16 @@ end
 data_graph(tn::ITensorNetwork) = getfield(tn, :data_graph)
 data_graph_type(TN::Type{<:ITensorNetwork}) = fieldtype(TN, :data_graph)
 
-underlying_graph_type(TN::Type{<:ITensorNetwork}) = fieldtype(data_graph_type(TN), :underlying_graph)
+function underlying_graph_type(TN::Type{<:ITensorNetwork})
+  return fieldtype(data_graph_type(TN), :underlying_graph)
+end
 
-ITensorNetwork{V}(data_graph::DataGraph{V}) where {V} = ITensorNetwork{V}(Private(), copy(data_graph))
-ITensorNetwork{V}(data_graph::DataGraph) where {V} = ITensorNetwork{V}(Private(), DataGraph{V}(data_graph))
+function ITensorNetwork{V}(data_graph::DataGraph{V}) where {V}
+  return ITensorNetwork{V}(Private(), copy(data_graph))
+end
+function ITensorNetwork{V}(data_graph::DataGraph) where {V}
+  return ITensorNetwork{V}(Private(), DataGraph{V}(data_graph))
+end
 
 ITensorNetwork(data_graph::DataGraph) = ITensorNetwork{vertextype(data_graph)}(data_graph)
 
@@ -94,7 +100,10 @@ function ITensorNetwork{V}(inds_network::IndsNetwork; kwargs...) where {V}
   end
   for v in vertices(tn)
     siteinds = get(inds_network, v, indtype(inds_network)[])
-    linkinds = [get(inds_network, edgetype(inds_network)(v, nv), indtype(inds_network)[]) for nv in neighbors(inds_network, v)]
+    linkinds = [
+      get(inds_network, edgetype(inds_network)(v, nv), indtype(inds_network)[]) for
+      nv in neighbors(inds_network, v)
+    ]
     setindex_preserve_graph!(tn, ITensor(siteinds, linkinds...), v)
   end
   return tn

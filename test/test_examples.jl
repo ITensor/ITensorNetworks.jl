@@ -29,7 +29,8 @@ using Test
       joinpath("partition", "kahypar_vs_metis.jl"),
       joinpath("partition", "partitioning.jl"),
     ]
-    @testset "Test $example_file (using KaHyPar, so no Windows support)" for example_file in example_files
+    @testset "Test $example_file (using KaHyPar, so no Windows support)" for example_file in
+                                                                             example_files
       @suppress include(joinpath(pkgdir(ITensorNetworks), "examples", example_file))
     end
   end

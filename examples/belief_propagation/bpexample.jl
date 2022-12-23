@@ -3,10 +3,7 @@ using ITensors
 using Metis
 using ITensorNetworks
 
-using ITensorNetworks:
-  construct_initial_mts,
-  update_all_mts,
-  get_single_site_expec
+using ITensorNetworks: construct_initial_mts, update_all_mts, get_single_site_expec
 
 n = 4
 dims = (n, n)

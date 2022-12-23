@@ -4,14 +4,14 @@ set_partitioning_backend!(Backend"KaHyPar"())
 KaHyPar.HyperGraph(g::SimpleGraph) = incidence_matrix(g)
 
 """
-    partition(::Backend"KaHyPar", g::Graph, npartiations::Integer; objective="edge_cut", alg="kway", kwargs...)
+    subgraph_vertices(::Backend"KaHyPar", g::Graph, npartiations::Integer; objective="edge_cut", alg="kway", kwargs...)
 
 - default_configuration => "cut_kKaHyPar_sea20.ini"
 - :edge_cut => "cut_kKaHyPar_sea20.ini"
 - :connectivity => "km1_kKaHyPar_sea20.ini"
 - imbalance::Number=0.03
 """
-function partition_vertices(
+function subgraph_vertices(
   ::Backend"KaHyPar",
   g::SimpleGraph,
   npartitions::Integer;

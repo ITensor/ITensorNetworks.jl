@@ -26,7 +26,7 @@ export grid,
 # NamedGraphs
 #
 
-export  named_binary_tree,
+export named_binary_tree,
   named_grid,
   is_tree,
   parent_vertex,
@@ -86,4 +86,4 @@ export AbstractITensorNetwork,
 export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
 
 # partition.jl
-export partition, partition_vertices
+export partition, partition_vertices, subgraphs, subgraph_vertices

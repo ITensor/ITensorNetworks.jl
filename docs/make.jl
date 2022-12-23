@@ -1,7 +1,9 @@
 using ITensorNetworks
 using Documenter
 
-DocMeta.setdocmeta!(ITensorNetworks, :DocTestSetup, :(using ITensorNetworks); recursive=true)
+DocMeta.setdocmeta!(
+  ITensorNetworks, :DocTestSetup, :(using ITensorNetworks); recursive=true
+)
 
 makedocs(;
   modules=[ITensorNetworks],

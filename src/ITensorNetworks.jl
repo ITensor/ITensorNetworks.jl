@@ -31,7 +31,11 @@ include("imports.jl")
 # TODO: Move to `DataGraphs.jl`
 edge_data_type(::AbstractNamedGraph) = Any
 isassigned(::AbstractNamedGraph, ::Any) = false
-iterate(::AbstractDataGraph) = error("Iterating data graphs is not yet defined. We may define it in the future as iterating through the vertex and edge data.")
+function iterate(::AbstractDataGraph)
+  return error(
+    "Iterating data graphs is not yet defined. We may define it in the future as iterating through the vertex and edge data.",
+  )
+end
 
 include("utils.jl")
 include("visualize.jl")
