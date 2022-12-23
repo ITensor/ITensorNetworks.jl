@@ -1,5 +1,4 @@
-abstract type AbstractIndsNetwork{V,I} <:
-              AbstractDataGraph{V,Vector{I},Vector{I}} end
+abstract type AbstractIndsNetwork{V,I} <: AbstractDataGraph{V,Vector{I},Vector{I}} end
 
 # Field access
 data_graph(graph::AbstractIndsNetwork) = not_implemented()
@@ -10,6 +9,9 @@ is_directed(::Type{<:AbstractIndsNetwork}) = false
 # AbstractDataGraphs overloads
 vertex_data(graph::AbstractIndsNetwork, args...) = vertex_data(data_graph(graph), args...)
 edge_data(graph::AbstractIndsNetwork, args...) = edge_data(data_graph(graph), args...)
+
+# TODO: Define a generic fallback for `AbstractDataGraph`?
+edge_data_type(::Type{<:AbstractIndsNetwork{V,I}}) where {V,I} = Vector{I}
 
 # 
 # Index access
@@ -27,18 +29,11 @@ function uniqueinds(is::AbstractIndsNetwork, edge::Pair)
   return uniqueinds(is, edgetype(is)(edge))
 end
 
-function union(
-  tn1::AbstractIndsNetwork,
-  tn2::AbstractIndsNetwork;
-  kwargs...,
-)
-  return IndsNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
+function union(tn1::AbstractIndsNetwork, tn2::AbstractIndsNetwork; kwargs...)
+  return IndsNetwork(union(data_graph(tn1), data_graph(tn2); kwargs...))
 end
 
-function rename_vertices(
-  f::Function,
-  tn::AbstractIndsNetwork,
-)
+function rename_vertices(f::Function, tn::AbstractIndsNetwork)
   return IndsNetwork(rename_vertices(f, data_graph(tn)))
 end
 

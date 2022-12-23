@@ -9,23 +9,21 @@ import Base:
   setindex!,
   show,
   isassigned,
+  iterate,
   union
 
 import NamedGraphs:
-  vertextype,
-  convert_vertextype,
-  vertex_to_parent_vertex,
-  rename_vertices,
-  disjoint_union
+  vertextype, convert_vertextype, vertex_to_parent_vertex, rename_vertices, disjoint_union
 
 import .DataGraphs:
   underlying_graph,
   underlying_graph_type,
   vertex_data,
   edge_data,
+  edge_data_type,
   reverse_data_direction
 
-import Graphs: SimpleGraph, is_directed
+import Graphs: SimpleGraph, is_directed, weights
 
 import LinearAlgebra: svd, factorize, qr
 

@@ -24,7 +24,7 @@ neighbor_edges = [v => nv for nv in neighbors(ψ, v)]
 @show [e => linkinds(ψ, e) for e in neighbor_edges]
 
 npartitions = 4
-partitions = partition(ψ, npartitions)
+partitions = partition(ψ; npartitions)
 
 @show partitions
 

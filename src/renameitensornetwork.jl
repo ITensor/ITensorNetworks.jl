@@ -19,5 +19,7 @@ end
 
 function rename_vertices_itn(psi::ITensorNetwork, name_map::Function)
   original_vertices = vertices(psi)
-  return rename_vertices_itn(psi, Dictionary(original_vertices, name_map.(original_vertices)))
+  return rename_vertices_itn(
+    psi, Dictionary(original_vertices, name_map.(original_vertices))
+  )
 end

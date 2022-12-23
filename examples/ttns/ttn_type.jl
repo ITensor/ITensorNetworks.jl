@@ -101,7 +101,9 @@ for e in post_order_dfs_edges(ψ_ortho, root_vertex)
 end
 
 @show √(
-  contract(norm_sqr_network(ψ_ortho); sequence=contraction_sequence(norm_sqr_network(ψ_ortho)))[]
+  contract(
+    norm_sqr_network(ψ_ortho); sequence=contraction_sequence(norm_sqr_network(ψ_ortho))
+  )[],
 )
 @show √(contract(norm_sqr_network(ψ); sequence=contraction_sequence(norm_sqr_network(ψ)))[])
 @show norm(ψ_ortho[root_vertex])

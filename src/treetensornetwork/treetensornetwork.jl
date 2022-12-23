@@ -1,7 +1,9 @@
 # TODO: Replace `AbstractITensorNetwork` with a trait `IsTree`.
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
 
-underlying_graph_type(G::Type{<:AbstractTreeTensorNetwork}) = underlying_graph_type(data_graph_type(G))
+function underlying_graph_type(G::Type{<:AbstractTreeTensorNetwork})
+  return underlying_graph_type(data_graph_type(G))
+end
 
 function default_root_vertex(ϕ::AbstractTreeTensorNetwork, ψ::AbstractTreeTensorNetwork)
   return first(vertices(ψ))
@@ -70,7 +72,9 @@ struct TreeTensorNetworkState{V} <: AbstractTreeTensorNetwork{V}
   end
 end
 
-data_graph_type(G::Type{<:TreeTensorNetworkState}) = data_graph_type(fieldtype(G, :itensor_network))
+function data_graph_type(G::Type{<:TreeTensorNetworkState})
+  return data_graph_type(fieldtype(G, :itensor_network))
+end
 
 function copy(ψ::TreeTensorNetworkState)
   return TreeTensorNetworkState(copy(ψ.itensor_network), copy(ψ.ortho_center))
@@ -82,7 +86,9 @@ const TTNS = TreeTensorNetworkState
 itensor_network(ψ::TreeTensorNetworkState) = getfield(ψ, :itensor_network)
 
 # Constructor
-TreeTensorNetworkState(tn::ITensorNetwork, args...) = TreeTensorNetworkState{vertextype(tn)}(tn, args...)
+function TreeTensorNetworkState(tn::ITensorNetwork, args...)
+  return TreeTensorNetworkState{vertextype(tn)}(tn, args...)
+end
 
 function TreeTensorNetworkState(inds_network::IndsNetwork, args...; kwargs...)
   return TreeTensorNetworkState(ITensorNetwork(inds_network; kwargs...), args...)

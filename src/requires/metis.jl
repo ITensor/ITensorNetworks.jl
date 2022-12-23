@@ -1,17 +1,19 @@
 set_partitioning_backend!(Backend"Metis"())
 
 """
-    partition(::Backend"Metis", g::AbstractGraph, npartitions::Integer; alg="recursive")
+    subgraph_vertices(::Backend"Metis", g::AbstractGraph, npartitions::Integer; alg="recursive")
 
 Partition the graph `G` in `n` parts.
 The partition algorithm is defined by the `alg` keyword:
  - :KWAY: multilevel k-way partitioning
  - :RECURSIVE: multilevel recursive bisection
 """
-function partition(::Backend"Metis", g::SimpleGraph, npartitions::Integer; alg="recursive", kwargs...)
+function subgraph_vertices(
+  ::Backend"Metis", g::SimpleGraph, npartitions::Integer; alg="recursive", kwargs...
+)
   metis_alg = metis_algs[alg]
   partitions = Metis.partition(g, npartitions; alg=metis_alg, kwargs...)
-  return Int.(partitions)
+  return groupfind(Int.(partitions))
 end
 
 ## #=

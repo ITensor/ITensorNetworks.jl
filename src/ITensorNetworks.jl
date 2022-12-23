@@ -17,14 +17,25 @@ using Suppressor
 # TODO: export from ITensors
 using ITensors: commontags, @Algorithm_str, Algorithm
 using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
+using Graphs.SimpleGraphs # AbstractSimpleGraph
 using NamedGraphs:
   AbstractNamedGraph,
   parent_graph,
   vertex_to_parent_vertex,
+  parent_vertices_to_vertices,
   not_implemented
-using DataGraphs: vertex_data_type
+using DataGraphs: edge_data_type, vertex_data_type
 
 include("imports.jl")
+
+# TODO: Move to `DataGraphs.jl`
+edge_data_type(::AbstractNamedGraph) = Any
+isassigned(::AbstractNamedGraph, ::Any) = false
+function iterate(::AbstractDataGraph)
+  return error(
+    "Iterating data graphs is not yet defined. We may define it in the future as iterating through the vertex and edge data.",
+  )
+end
 
 include("utils.jl")
 include("visualize.jl")
@@ -47,7 +58,6 @@ include("itensornetwork.jl")
 include("specialitensornetworks.jl")
 include("renameitensornetwork.jl")
 include("boundarymps.jl")
-include("subgraphs.jl")
 include("beliefpropagation.jl")
 include(joinpath("treetensornetwork", "treetensornetwork.jl"))
 
