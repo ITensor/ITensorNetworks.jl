@@ -1,7 +1,7 @@
 name = "ITensorNetworks"
 uuid = "2919e153-833c-4bdc-8836-1ea460a35fc7"
 authors = ["Matthew Fishman <mfishman@flatironinstitute.org> and contributors"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
