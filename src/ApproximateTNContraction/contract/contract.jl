@@ -831,103 +831,105 @@ end
 # contract_ig: the index group to be contracted next
 # ig_tree: an index group with a tree hierarchy 
 function approximate_contract(ctree::Vector; cutoff, maxdim, ansatz="mps", use_cache=true)
-  tn_leaves = get_leaves(ctree)
-  ctrees = topo_sort(ctree; leaves=tn_leaves)
-  ctree_to_igs, ctree_to_adj_tree, ctree_to_contract_igs, ig_to_linear_order = _approximate_contract_pre_process(
-    tn_leaves, ctrees
-  )
-  # mapping each contraction tree to a tensor network
-  ctree_to_tn_tree = Dict{Vector,Dict{Vector,OrthogonalITensor}}()
-  # accumulate norm
-  log_accumulated_norm = 0.0
-  for (ii, c) in enumerate(ctrees)
-    @info ii, "th tree approximation"
-    if ctree_to_igs[c] == []
-      @assert c == ctrees[end]
-      tn1 = get_child_tn(ctree_to_tn_tree, c[1])
-      tn2 = get_child_tn(ctree_to_tn_tree, c[2])
-      tn = vcat(tn1, tn2)
-      return get_tensors([optcontract(tn)]), log_accumulated_norm
-    end
-    # caching is not used here
-    if use_cache == false
-      tn1 = get_child_tn(ctree_to_tn_tree, c[1])
-      tn2 = get_child_tn(ctree_to_tn_tree, c[2])
-      inds_btree = ordered_igs_to_binary_tree(
-        ctree_to_adj_tree[c].children,
-        ctree_to_contract_igs[c],
-        ig_to_linear_order;
-        ansatz=ansatz,
+  @timeit timer "approximate_contract" begin
+    tn_leaves = get_leaves(ctree)
+    ctrees = topo_sort(ctree; leaves=tn_leaves)
+    ctree_to_igs, ctree_to_adj_tree, ctree_to_contract_igs, ig_to_linear_order = _approximate_contract_pre_process(
+      tn_leaves, ctrees
+    )
+    # mapping each contraction tree to a tensor network
+    ctree_to_tn_tree = Dict{Vector,Dict{Vector,OrthogonalITensor}}()
+    # accumulate norm
+    log_accumulated_norm = 0.0
+    for (ii, c) in enumerate(ctrees)
+      @info ii, "th tree approximation"
+      if ctree_to_igs[c] == []
+        @assert c == ctrees[end]
+        tn1 = get_child_tn(ctree_to_tn_tree, c[1])
+        tn2 = get_child_tn(ctree_to_tn_tree, c[2])
+        tn = vcat(tn1, tn2)
+        return get_tensors([optcontract(tn)]), log_accumulated_norm
+      end
+      # caching is not used here
+      if use_cache == false
+        tn1 = get_child_tn(ctree_to_tn_tree, c[1])
+        tn2 = get_child_tn(ctree_to_tn_tree, c[2])
+        inds_btree = ordered_igs_to_binary_tree(
+          ctree_to_adj_tree[c].children,
+          ctree_to_contract_igs[c],
+          ig_to_linear_order;
+          ansatz=ansatz,
+        )
+        ctree_to_tn_tree[c], log_root_norm = approximate_contract_ctree_to_tensor(
+          [tn1..., tn2...], inds_btree; cutoff=cutoff, maxdim=maxdim
+        )
+        log_accumulated_norm += log_root_norm
+        continue
+      end
+      # caching
+      # Note: cache_igs_right has a reversed ordering
+      center_igs, cache_igs_left, cache_igs_right = get_igs_cache_info(
+        [ctree_to_adj_tree[i].children for i in [c, c[1], c[2]]],
+        [ctree_to_contract_igs[i] for i in [c, c[1], c[2]]],
       )
-      ctree_to_tn_tree[c], log_root_norm = approximate_contract_ctree_to_tensor(
-        [tn1..., tn2...], inds_btree; cutoff=cutoff, maxdim=maxdim
+      if ansatz == "comb"
+        cache_binary_tree_left = line_to_tree([
+          line_to_tree(ig_to_linear_order[ig]) for ig in cache_igs_left
+        ])
+        cache_binary_tree_right = line_to_tree([
+          line_to_tree(ig_to_linear_order[ig]) for ig in cache_igs_right
+        ])
+      elseif ansatz == "mps"
+        left_order = vcat([ig_to_linear_order[ig] for ig in cache_igs_left]...)
+        cache_binary_tree_left = line_to_tree(left_order)
+        right_order = vcat([ig_to_linear_order[ig] for ig in reverse(cache_igs_right)]...)
+        cache_binary_tree_right = line_to_tree(reverse(right_order))
+      end
+      cached_tn_tree, uncached_tn, new_ig_left, new_ig_right = get_tn_cache_info(
+        ctree_to_tn_tree, c[1], c[2], [cache_binary_tree_left, cache_binary_tree_right]
+      )
+      if new_ig_right == nothing && new_ig_left == nothing
+        @info "Caching is not used in this approximation"
+        @assert length(cached_tn_tree) == 0
+      else
+        @info "Caching is used in this approximation", new_ig_left, new_ig_right
+      end
+      new_ig_to_binary_tree_pairs = Vector{Pair}()
+      new_igs = center_igs
+      new_ig_to_linear_order = ig_to_linear_order
+      if new_ig_left == nothing
+        new_igs = [cache_igs_left..., new_igs...]
+      else
+        new_ig_to_linear_order = merge(
+          new_ig_to_linear_order, Dict(new_ig_left => [new_ig_left.data])
+        )
+        new_igs = [new_ig_left, new_igs...]
+        push!(new_ig_to_binary_tree_pairs, new_ig_left.data => cache_binary_tree_left)
+      end
+      if new_ig_right == nothing
+        new_igs = [new_igs..., cache_igs_right...]
+      else
+        new_ig_to_linear_order = merge(
+          new_ig_to_linear_order, Dict(new_ig_right => [new_ig_right.data])
+        )
+        new_igs = [new_igs..., new_ig_right]
+        push!(new_ig_to_binary_tree_pairs, new_ig_right.data => cache_binary_tree_right)
+      end
+      inds_btree = ordered_igs_to_binary_tree(
+        new_igs, ctree_to_contract_igs[c], new_ig_to_linear_order; ansatz=ansatz
+      )
+      new_tn_tree, log_root_norm = approximate_contract_ctree_to_tensor(
+        uncached_tn, inds_btree; cutoff=cutoff, maxdim=maxdim
       )
       log_accumulated_norm += log_root_norm
-      continue
+      if length(new_ig_to_binary_tree_pairs) != 0
+        update_tn_tree_keys!(new_tn_tree, inds_btree, new_ig_to_binary_tree_pairs)
+      end
+      ctree_to_tn_tree[c] = merge(new_tn_tree, cached_tn_tree)
     end
-    # caching
-    # Note: cache_igs_right has a reversed ordering
-    center_igs, cache_igs_left, cache_igs_right = get_igs_cache_info(
-      [ctree_to_adj_tree[i].children for i in [c, c[1], c[2]]],
-      [ctree_to_contract_igs[i] for i in [c, c[1], c[2]]],
-    )
-    if ansatz == "comb"
-      cache_binary_tree_left = line_to_tree([
-        line_to_tree(ig_to_linear_order[ig]) for ig in cache_igs_left
-      ])
-      cache_binary_tree_right = line_to_tree([
-        line_to_tree(ig_to_linear_order[ig]) for ig in cache_igs_right
-      ])
-    elseif ansatz == "mps"
-      left_order = vcat([ig_to_linear_order[ig] for ig in cache_igs_left]...)
-      cache_binary_tree_left = line_to_tree(left_order)
-      right_order = vcat([ig_to_linear_order[ig] for ig in reverse(cache_igs_right)]...)
-      cache_binary_tree_right = line_to_tree(reverse(right_order))
-    end
-    cached_tn_tree, uncached_tn, new_ig_left, new_ig_right = get_tn_cache_info(
-      ctree_to_tn_tree, c[1], c[2], [cache_binary_tree_left, cache_binary_tree_right]
-    )
-    if new_ig_right == nothing && new_ig_left == nothing
-      @info "Caching is not used in this approximation"
-      @assert length(cached_tn_tree) == 0
-    else
-      @info "Caching is used in this approximation", new_ig_left, new_ig_right
-    end
-    new_ig_to_binary_tree_pairs = Vector{Pair}()
-    new_igs = center_igs
-    new_ig_to_linear_order = ig_to_linear_order
-    if new_ig_left == nothing
-      new_igs = [cache_igs_left..., new_igs...]
-    else
-      new_ig_to_linear_order = merge(
-        new_ig_to_linear_order, Dict(new_ig_left => [new_ig_left.data])
-      )
-      new_igs = [new_ig_left, new_igs...]
-      push!(new_ig_to_binary_tree_pairs, new_ig_left.data => cache_binary_tree_left)
-    end
-    if new_ig_right == nothing
-      new_igs = [new_igs..., cache_igs_right...]
-    else
-      new_ig_to_linear_order = merge(
-        new_ig_to_linear_order, Dict(new_ig_right => [new_ig_right.data])
-      )
-      new_igs = [new_igs..., new_ig_right]
-      push!(new_ig_to_binary_tree_pairs, new_ig_right.data => cache_binary_tree_right)
-    end
-    inds_btree = ordered_igs_to_binary_tree(
-      new_igs, ctree_to_contract_igs[c], new_ig_to_linear_order; ansatz=ansatz
-    )
-    new_tn_tree, log_root_norm = approximate_contract_ctree_to_tensor(
-      uncached_tn, inds_btree; cutoff=cutoff, maxdim=maxdim
-    )
-    log_accumulated_norm += log_root_norm
-    if length(new_ig_to_binary_tree_pairs) != 0
-      update_tn_tree_keys!(new_tn_tree, inds_btree, new_ig_to_binary_tree_pairs)
-    end
-    ctree_to_tn_tree[c] = merge(new_tn_tree, cached_tn_tree)
+    tn = vcat(collect(values(ctree_to_tn_tree[ctrees[end]]))...)
+    return get_tensors(tn), log_accumulated_norm
   end
-  tn = vcat(collect(values(ctree_to_tn_tree[ctrees[end]]))...)
-  return get_tensors(tn), log_accumulated_norm
 end
 
 # interlaced HOSVD using caching
