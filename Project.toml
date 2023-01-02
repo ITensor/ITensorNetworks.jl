@@ -1,7 +1,7 @@
 name = "ITensorNetworks"
 uuid = "2919e153-833c-4bdc-8836-1ea460a35fc7"
 authors = ["Matthew Fishman <mfishman@flatironinstitute.org> and contributors"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"

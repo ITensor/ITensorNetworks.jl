@@ -3,15 +3,15 @@
 #
 
 export grid,
-  edges,
-  vertices,
-  ne,
-  nv,
-  src,
   dst,
+  edges,
+  src,
   neighbors,
   inneighbors,
   induced_subgraph,
+  mincut,
+  ne,
+  nv,
   outneighbors,
   has_edge,
   has_vertex,
@@ -19,13 +19,14 @@ export grid,
   dfs_tree,
   edgetype,
   is_directed,
-  rem_vertex!
+  rem_vertex!,
+  vertices
 
 #
 # NamedGraphs
 #
 
-export  named_binary_tree,
+export named_binary_tree,
   named_grid,
   is_tree,
   parent_vertex,
@@ -61,6 +62,7 @@ export AbstractITensorNetwork,
   TreeTensorNetworkState,
   TTNS,
   data_graph,
+  flatten_networks,
   inner_network,
   norm_sqr_network,
   linkinds_combiners,
@@ -84,4 +86,4 @@ export AbstractITensorNetwork,
 export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
 
 # partition.jl
-export partition
+export partition, partition_vertices, subgraphs, subgraph_vertices

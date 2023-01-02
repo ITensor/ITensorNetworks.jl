@@ -61,4 +61,8 @@ Z̃ = contract(Z, (1, 1) => (2, 1));
 #+ eval=false
 
 using ITensorNetworks, Weave
-weave(joinpath(pkgdir(ITensorNetworks), "examples", "README.jl"); doctype="github", out_path=pkgdir(ITensorNetworks))
+weave(
+  joinpath(pkgdir(ITensorNetworks), "examples", "README.jl");
+  doctype="github",
+  out_path=pkgdir(ITensorNetworks),
+)

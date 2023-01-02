@@ -16,8 +16,7 @@ is_directed(::Type{<:IndsNetwork}) = false
 # When setting an edge with collections of `Index`, set the reverse direction
 # edge with the `dag`.
 function reverse_data_direction(
-  inds_network::IndsNetwork,
-  is::Union{Index,Tuple{Vararg{<:Index}},Vector{<:Index}},
+  inds_network::IndsNetwork, is::Union{Index,Tuple{Vararg{<:Index}},Vector{<:Index}}
 )
   return dag(is)
 end
@@ -31,30 +30,18 @@ function IndsNetwork(data_graph::DataGraph)
   return IndsNetwork{vertextype(data_graph)}(data_graph)
 end
 
-function IndsNetwork{V,I}(
-  g::AbstractNamedGraph,
-  link_space,
-  site_space,
-) where {V,I}
+function IndsNetwork{V,I}(g::AbstractNamedGraph, link_space, site_space) where {V,I}
   link_space_dictionary = link_space_map(V, I, g, link_space)
   site_space_dictionary = site_space_map(V, I, g, site_space)
   return IndsNetwork{V,I}(g, link_space_dictionary, site_space_dictionary)
 end
 
-function IndsNetwork{V}(
-  g::AbstractNamedGraph,
-  link_space,
-  site_space,
-) where {V}
+function IndsNetwork{V}(g::AbstractNamedGraph, link_space, site_space) where {V}
   I = indtype(link_space, site_space)
   return IndsNetwork{V,I}(g, link_space, site_space)
 end
 
-function IndsNetwork(
-  g::AbstractNamedGraph,
-  link_space,
-  site_space,
-)
+function IndsNetwork(g::AbstractNamedGraph, link_space, site_space)
   V = vertextype(g)
   return IndsNetwork{V}(g, links_space, site_space)
 end
@@ -100,7 +87,6 @@ _indtype(::Type{Nothing}) = Index
 _indtype(T::Type{<:AbstractDictionary}) = _indtype(eltype(T))
 _indtype(T::Type{<:AbstractVector}) = _indtype(eltype(T))
 
-
 function default_link_space(V::Type, g::AbstractNamedGraph)
   # TODO: Convert `g` to vertex type `V`
   E = edgetype(g)
@@ -112,29 +98,27 @@ function default_site_space(V::Type, g::AbstractNamedGraph)
 end
 
 function IndsNetwork{V,I}(
-  g::AbstractNamedGraph;
-  link_space=nothing,
-  site_space=nothing,
+  g::AbstractNamedGraph; link_space=nothing, site_space=nothing
 ) where {V,I}
   return IndsNetwork{V,I}(g, link_space, site_space)
 end
 
 function IndsNetwork{V}(
-  g::AbstractNamedGraph;
-  link_space=nothing,
-  site_space=nothing,
+  g::AbstractNamedGraph; link_space=nothing, site_space=nothing
 ) where {V}
   return IndsNetwork{V}(g, link_space, site_space)
 end
 
-function IndsNetwork(
-  g::AbstractNamedGraph;
-  kwargs...,
-)
+function IndsNetwork(g::AbstractNamedGraph; kwargs...)
   return IndsNetwork{vertextype(g)}(g; kwargs...)
 end
 
-function link_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, link_spaces::Dictionary{<:Any,Vector{Int}})
+function link_space_map(
+  V::Type,
+  I::Type{<:Index},
+  g::AbstractNamedGraph,
+  link_spaces::Dictionary{<:Any,Vector{Int}},
+)
   # TODO: Convert `g` to vertex type `V`
   # @assert vertextype(g) == V
   E = edgetype(g)
@@ -147,20 +131,34 @@ function link_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, link_s
   return linkinds_dictionary
 end
 
-function link_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, linkinds::AbstractDictionary{<:Any,Vector{<:Index}})
+function link_space_map(
+  V::Type,
+  I::Type{<:Index},
+  g::AbstractNamedGraph,
+  linkinds::AbstractDictionary{<:Any,Vector{<:Index}},
+)
   E = edgetype(g)
   return convert(Dictionary{E,Vector{I}}, linkinds)
 end
 
-function link_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, linkinds::AbstractDictionary{<:Any,<:Index})
+function link_space_map(
+  V::Type,
+  I::Type{<:Index},
+  g::AbstractNamedGraph,
+  linkinds::AbstractDictionary{<:Any,<:Index},
+)
   return link_space_map(V, I, g, map(l -> [l], linkinds))
 end
 
-function link_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, link_spaces::Dictionary{<:Any,Int})
+function link_space_map(
+  V::Type, I::Type{<:Index}, g::AbstractNamedGraph, link_spaces::Dictionary{<:Any,Int}
+)
   return link_space_map(V, I, g, map(link_space -> [link_space], link_spaces))
 end
 
-function link_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, link_spaces::Vector{Int})
+function link_space_map(
+  V::Type, I::Type{<:Index}, g::AbstractNamedGraph, link_spaces::Vector{Int}
+)
   return link_space_map(V, I, g, map(Returns(link_spaces), Indices(edges(g))))
 end
 
@@ -170,23 +168,47 @@ function link_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, link_s
   return link_space_map(V, I, g, [link_space])
 end
 
-function link_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, link_space::Nothing)
+function link_space_map(
+  V::Type, I::Type{<:Index}, g::AbstractNamedGraph, link_space::Nothing
+)
   # TODO: Make sure `edgetype(g)` is consistent with vertex type `V`
   return Dictionary{edgetype(g),Vector{I}}()
 end
 
 # TODO: Convert the dictionary according to `V` and `I`
-link_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, link_space::AbstractDictionary{<:Any,<:Vector{<:Index}}) = link_space
+function link_space_map(
+  V::Type,
+  I::Type{<:Index},
+  g::AbstractNamedGraph,
+  link_space::AbstractDictionary{<:Any,<:Vector{<:Index}},
+)
+  return link_space
+end
 
-function site_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, siteinds::AbstractDictionary{<:Any,Vector{<:Index}})
+function site_space_map(
+  V::Type,
+  I::Type{<:Index},
+  g::AbstractNamedGraph,
+  siteinds::AbstractDictionary{<:Any,Vector{<:Index}},
+)
   return convert(Dictionary{V,Vector{I}}, siteinds)
 end
 
-function site_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, siteinds::AbstractDictionary{<:Any,<:Index})
+function site_space_map(
+  V::Type,
+  I::Type{<:Index},
+  g::AbstractNamedGraph,
+  siteinds::AbstractDictionary{<:Any,<:Index},
+)
   return site_space_map(V, I, g, map(s -> [s], siteinds))
 end
 
-function site_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, site_spaces::AbstractDictionary{<:Any,Vector{Int}})
+function site_space_map(
+  V::Type,
+  I::Type{<:Index},
+  g::AbstractNamedGraph,
+  site_spaces::AbstractDictionary{<:Any,Vector{Int}},
+)
   siteinds_dictionary = Dictionary{V,Vector{I}}()
   for v in keys(site_spaces)
     s = [vertex_index(v, site_space) for site_space in site_spaces[v]]
@@ -203,18 +225,34 @@ end
 
 # Multiple site indices per vertex
 # TODO: How to distinguish from block indices?
-function site_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, site_spaces::Vector{Int})
+function site_space_map(
+  V::Type, I::Type{<:Index}, g::AbstractNamedGraph, site_spaces::Vector{Int}
+)
   return site_space_map(V, I, g, map(Returns(site_spaces), Indices(vertices(g))))
 end
 
-function site_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, site_spaces::AbstractDictionary{<:Any,Int})
+function site_space_map(
+  V::Type,
+  I::Type{<:Index},
+  g::AbstractNamedGraph,
+  site_spaces::AbstractDictionary{<:Any,Int},
+)
   return site_space_map(V, I, g, map(site_space -> [site_space], site_spaces))
 end
 
 # TODO: Convert the dictionary according to `V` and `I`
-site_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, site_space::AbstractDictionary{<:Any,<:Vector{<:Index}}) = site_space
+function site_space_map(
+  V::Type,
+  I::Type{<:Index},
+  g::AbstractNamedGraph,
+  site_space::AbstractDictionary{<:Any,<:Vector{<:Index}},
+)
+  return site_space
+end
 
-function site_space_map(V::Type, I::Type{<:Index}, g::AbstractNamedGraph, site_space::Nothing)
+function site_space_map(
+  V::Type, I::Type{<:Index}, g::AbstractNamedGraph, site_space::Nothing
+)
   return Dictionary{V,Vector{I}}()
 end
 
