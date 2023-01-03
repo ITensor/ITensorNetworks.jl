@@ -21,6 +21,7 @@ function optcontract(t_list::Vector)
     end
     @assert t_list isa Vector{OrthogonalITensor}
     t_list = get_tensors(t_list)
+    # @info "start contract, size is", size(t_list)
     # for t in t_list
     #   @info "size of t is", size(t)
     # end
@@ -30,6 +31,7 @@ function optcontract(t_list::Vector)
     @timeit timer "contract" begin
       output = contract(t_list; sequence=seq)
     end
+    # @info "finish contract"
     return OrthogonalITensor(output)
   end
 end
