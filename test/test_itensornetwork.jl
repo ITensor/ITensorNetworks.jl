@@ -80,3 +80,29 @@ end
   @test has_vertex(tn, ((2, 2), 1))
   @test has_vertex(tn, ((2, 2), 2))
 end
+
+@testset "Custom element type" for eltype in (Float32, Float64, ComplexF32, ComplexF64),
+  link_space in (nothing, 3),
+  g in (
+    grid((4,)),
+    named_grid((3, 3)),
+    siteinds("S=1/2", grid((4,))),
+    siteinds("S=1/2", named_grid((3, 3))),
+  )
+  ψ = ITensorNetwork(g; link_space) do v, inds...
+    return itensor(randn(eltype, dims(inds)...), inds...)
+  end
+  @test Base.eltype(ψ[first(vertices(ψ))]) == eltype
+  ψ = ITensorNetwork(g; link_space) do v, inds...
+    return itensor(randn(dims(inds)...), inds...)
+  end
+  @test Base.eltype(ψ[first(vertices(ψ))]) == Float64
+  ψ = randomITensorNetwork(eltype, g; link_space)
+  @test Base.eltype(ψ[first(vertices(ψ))]) == eltype
+  ψ = randomITensorNetwork(g; link_space)
+  @test Base.eltype(ψ[first(vertices(ψ))]) == Float64
+  ψ = ITensorNetwork(eltype, undef, g; link_space)
+  @test Base.eltype(ψ[first(vertices(ψ))]) == eltype
+  ψ = ITensorNetwork(undef, g)
+  @test Base.eltype(ψ[first(vertices(ψ))]) == Float64
+end
