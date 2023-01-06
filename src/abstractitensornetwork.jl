@@ -273,7 +273,8 @@ end
 # `Graphs.merge_vertices!` (https://github.com/mtfishman/ITensorNetworks.jl/issues/12)
 function contract(tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex=dst(edge))
   V = promote_type(vertextype(tn), typeof(merged_vertex))
-  tn = ITensorNetwork{V}(tn)
+  # TODO: Check `ITensorNetwork{V}`, shouldn't need a copy here.
+  tn = ITensorNetwork{V}(copy(tn))
   neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
@@ -366,7 +367,9 @@ function factorize(
 )
   # Promote vertex type
   V = promote_type(vertextype(tn), typeof(X_vertex), typeof(Y_vertex))
-  tn = ITensorNetwork{V}(tn)
+
+  # TODO: Check `ITensorNetwork{V}`, shouldn't need a copy here.
+  tn = ITensorNetwork{V}(copy(tn))
 
   neighbors_X = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   left_inds = uniqueinds(tn, edge)
@@ -389,6 +392,14 @@ function factorize(
   setindex_preserve_graph!(tn, Y, Y_vertex)
 
   return tn
+end
+
+function factorize(
+  tn::AbstractITensorNetwork,
+  edge::Pair;
+  kwargs...,
+)
+  return factorize(tn, edgetype(tn)(edge); kwargs...)
 end
 
 # For ambiguity error
