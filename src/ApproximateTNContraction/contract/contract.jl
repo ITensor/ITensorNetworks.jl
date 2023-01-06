@@ -58,7 +58,7 @@ function approximate_contract_ctree_to_tensor(
   cutoff,
   maxdim,
   maxsize=10^15,
-  algorithm="mincut-mps",
+  algorithm="mps",
 )
   uncontract_inds = noncommoninds(tn...)
   allinds = collect(Set(mapreduce(t -> collect(inds(t)), vcat, tn)))
@@ -640,9 +640,9 @@ end
 function ordered_igs_to_binary_tree_mps(
   left_igs, right_igs, contract_igs, ig_to_linear_order
 )
-  left_order = vcat([ig_to_linear_order[ig] for ig in left_igs]...)
-  right_order = vcat([ig_to_linear_order[ig] for ig in right_igs]...)
-  contract_order = vcat([ig_to_linear_order[ig] for ig in contract_igs]...)
+  left_order = get_leaves([ig_to_linear_order[ig] for ig in left_igs])
+  right_order = get_leaves([ig_to_linear_order[ig] for ig in right_igs])
+  contract_order = get_leaves([ig_to_linear_order[ig] for ig in contract_igs])
   if length(left_order) <= length(right_order)
     left_order = [left_order..., contract_order...]
   else

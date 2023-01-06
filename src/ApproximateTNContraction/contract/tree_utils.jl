@@ -64,6 +64,9 @@ end
 
 # example: [[[1,2], [3,4]], [[5,6], [7,8]]] = [[1,2], [3,4], [5,6], [7,8]]
 function get_leaves(tree::Vector)
+  if tree == []
+    return []
+  end
   if !(tree isa Vector{<:Vector})
     return [tree]
   end

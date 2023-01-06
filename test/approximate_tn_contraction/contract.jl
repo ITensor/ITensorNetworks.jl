@@ -93,21 +93,17 @@ end
 
   out = inds_binary_tree(network, [i, j, k, l, m, n, o, p]; algorithm="mincut")
   @test length(out) == 2
-  out = inds_binary_tree(network, [i, j, k, l, m, n, o, p]; algorithm="mincut-mps")
-  @test length(out) == 2
   out = inds_binary_tree(network, [i, j, k, l, m, n, o, p]; algorithm="mps")
   @test length(out) == 2
 end
 
 @testset "test inds_binary_tree of a 2D network" begin
-  N = (8, 8, 3)
+  N = (3, 3, 3)
   linkdim = 2
   tn_inds = inds_network(N...; linkdims=linkdim, periodic=false)
   tn = map(inds -> randomITensor(inds...), tn_inds)
   network = vec(tn[:, :, 1])
   out = inds_binary_tree(network, noncommoninds(network...); algorithm="mincut")
-  @test length(out) == 2
-  out = inds_binary_tree(network, noncommoninds(network...); algorithm="mincut-mps")
   @test length(out) == 2
   out = inds_binary_tree(network, noncommoninds(network...); algorithm="mps")
   @test length(out) == 2

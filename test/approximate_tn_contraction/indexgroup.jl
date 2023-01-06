@@ -12,34 +12,34 @@ using ITensorNetworks.ApproximateTNContraction:
   minswap_adjacency_tree,
   approximate_contract
 
-# @testset "test generate_adjacency_tree" begin
-#   N = (3, 3)
-#   tn_inds = inds_network(N...; linkdims=2, periodic=false)
-#   tn = vec(map(inds -> randomITensor(inds...), tn_inds))
-#   ctree = line_network(tn)
-#   tn_leaves = get_leaves(ctree)
-#   ctrees = topo_sort(ctree; leaves=tn_leaves)
-#   ctree_to_igs = Dict{Vector,Vector{IndexGroup}}()
-#   index_groups = get_index_groups(ctree)
-#   for c in vcat(tn_leaves, ctrees)
-#     ctree_to_igs[c] = neighbor_index_groups(c, index_groups)
-#   end
-#   ctree_to_ancestors = get_ancestors(ctree)
-#   adj_tree1 = generate_adjacency_tree(
-#     tn_leaves[4], ctree_to_ancestors[tn_leaves[4]], ctree_to_igs
-#   )
-#   adj_tree2 = generate_adjacency_tree(
-#     ctrees[2], ctree_to_ancestors[ctrees[2]], ctree_to_igs
-#   )
-#   for adj_tree in [adj_tree1, adj_tree1]
-#     @test length(adj_tree.children) == 3
-#     @test adj_tree.fixed_order = true
-#     c1, c2, c3 = adj_tree.children
-#     @test length(c1.children) == 1
-#     @test length(c2.children) == 2
-#     @test length(c3.children) == 1
-#   end
-# end
+@testset "test generate_adjacency_tree" begin
+  N = (3, 3)
+  tn_inds = inds_network(N...; linkdims=2, periodic=false)
+  tn = vec(map(inds -> randomITensor(inds...), tn_inds))
+  ctree = line_network(tn)
+  tn_leaves = get_leaves(ctree)
+  ctrees = topo_sort(ctree; leaves=tn_leaves)
+  ctree_to_igs = Dict{Vector,Vector{IndexGroup}}()
+  index_groups = get_index_groups(ctree)
+  for c in vcat(tn_leaves, ctrees)
+    ctree_to_igs[c] = neighbor_index_groups(c, index_groups)
+  end
+  ctree_to_ancestors = get_ancestors(ctree)
+  adj_tree1 = generate_adjacency_tree(
+    tn_leaves[4], ctree_to_ancestors[tn_leaves[4]], ctree_to_igs
+  )
+  adj_tree2 = generate_adjacency_tree(
+    ctrees[2], ctree_to_ancestors[ctrees[2]], ctree_to_igs
+  )
+  for adj_tree in [adj_tree1, adj_tree1]
+    @test length(adj_tree.children) == 3
+    @test adj_tree.fixed_order = true
+    c1, c2, c3 = adj_tree.children
+    @test length(c1.children) == 1
+    @test length(c2.children) == 2
+    @test length(c3.children) == 1
+  end
+end
 
 # @testset "test minswap_adjacency_tree!" begin
 #   i = IndexGroup([Index(2, "i")])
@@ -74,5 +74,6 @@ using ITensorNetworks.ApproximateTNContraction:
   tn_inds = inds_network(N...; linkdims=2, periodic=false)
   tn = vec(map(inds -> randomITensor(inds...), tn_inds))
   ctree = line_network(tn)
-  approximate_contract(ctree; cutoff=1e-5, maxdim=20)
+  approximate_contract(ctree; cutoff=1e-5, maxdim=20, ansatz="mps")
+  approximate_contract(ctree; cutoff=1e-5, maxdim=20, ansatz="comb")
 end

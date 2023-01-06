@@ -1,41 +1,49 @@
+using ITensorNetworks: ITensorNetwork
 
 # a large number to prevent this edge being a cut
-MAX_WEIGHT = 100000
+MAX_WEIGHT = 1e32
 
-function inds_binary_tree(
-  network::Vector{ITensor}, inds_groups::Vector{<:Vector}; kwargs...
+function _build_pseudo_network(
+  network::Vector{ITensor}, outinds::Union{Nothing,Vector{<:Index}}
 )
-  tng = TensorNetworkGraph(network, vectorize(inds_groups))
-  function get_sub_tree(inds)
-    @assert all(ind -> ind isa Index, inds)
-    if length(inds) == 1
-      return inds
-    end
-    inds = [[i] for i in inds]
-    return inds_binary_tree!(tng, inds; kwargs...)
+  # create a pseudo_tn (a tn without any data inside) whose outinds weights are MAX_WEIGHT
+  out_to_pseudo_ind = Dict{Index,Index}()
+  for ind in outinds
+    out_to_pseudo_ind[ind] = Index(MAX_WEIGHT, ind.tags)
   end
-  inds_groups = [get_sub_tree(inds) for inds in inds_groups]
-  if length(inds_groups) <= 2
-    return inds_groups
+  pseudo_network = Vector{ITensor}()
+  for t in network
+    inds1 = [i for i in inds(t) if !(i in outinds)]
+    inds2 = [out_to_pseudo_ind[i] for i in inds(t) if i in outinds]
+    newt = ITensor(inds1..., inds2...)
+    push!(pseudo_network, newt)
   end
-  return inds_binary_tree!(tng, inds_groups; kwargs...)
+  return pseudo_network, out_to_pseudo_ind
 end
 
-function inds_binary_tree!(tng::TensorNetworkGraph, outinds::Vector; algorithm="mincut")
-  @assert algorithm in ["mincut", "mincut-mps", "mps"]
-  @assert all(ind -> ind in keys(tng.out_edge_dict), outinds)
+function inds_binary_tree(
+  network::Vector{ITensor}, outinds::Union{Nothing,Vector{<:Index}}; algorithm="mincut"
+)
+  if outinds == nothing
+    outinds = noncommoninds(network...)
+  end
+  if length(outinds) == 1
+    return outinds
+  end
+  p_network, out_to_pseudo_ind = _build_pseudo_network(network, outinds)
+  return _inds_binary_tree(network => p_network, out_to_pseudo_ind; algorithm=algorithm)
+end
+
+function _inds_binary_tree(
+  network_pair::Pair{Vector{ITensor},Vector{ITensor}},
+  out_to_pseudo_ind::Dict{Index,Index};
+  algorithm="mincut",
+)
+  @assert algorithm in ["mincut", "mps"]
   if algorithm == "mincut"
-    return mincut_inds!(tng, outinds)
-  elseif algorithm == "mincut-mps"
-    inds_tree = mincut_inds!(tng, outinds)
-    linear_tree = linearize(inds_tree, tng)
-    out_inds = linear_tree[1]
-    for i in 2:length(linear_tree)
-      out_inds = [out_inds, linear_tree[i]]
-    end
-    return out_inds
+    return _mincut_inds(network_pair, out_to_pseudo_ind)
   elseif algorithm == "mps"
-    return line_to_tree(inds_linear_order!(tng, outinds))
+    return line_to_tree(_inds_linear_order(network_pair, out_to_pseudo_ind))
   end
 end
 
@@ -48,219 +56,130 @@ function inds_linear_order(
   if length(outinds) == 1
     return outinds
   end
-  tng = TensorNetworkGraph(network, outinds)
-  grouped_uncontracted_inds = [[i] for i in outinds]
-  return inds_linear_order!(tng, grouped_uncontracted_inds)
+  p_network, out_to_pseudo_ind = _build_pseudo_network(network, outinds)
+  return _inds_linear_order(network => p_network, out_to_pseudo_ind)
 end
 
-function inds_linear_order!(tng::TensorNetworkGraph, outinds::Vector)
+function _inds_linear_order(
+  network_pair::Pair{Vector{ITensor},Vector{ITensor}}, out_to_pseudo_ind::Dict{Index,Index}
+)
+  outinds = collect(keys(out_to_pseudo_ind))
+  outinds = [[i] for i in outinds]
   @assert length(outinds) >= 1
-  # base case here, for the case length(outinds) == 2, we still need to do the update
+  if length(outinds) <= 2
+    return outinds
+  end
+  new_edge = new_edge_mincut(
+    network_pair, out_to_pseudo_ind, collect(powerset(outinds, 1, 1))
+  )
+  new_edge = new_edge[1]
+  linear_order = [new_edge]
+  while length(outinds) > 2
+    splitinds = [[new_edge, i] for i in outinds if i != new_edge]
+    new_edge = new_edge_mincut(network_pair, out_to_pseudo_ind, splitinds)
+    push!(linear_order, new_edge[2])
+    outinds = setdiff(outinds, new_edge)
+    outinds = vcat([new_edge], outinds)
+  end
+  last_index = [i for i in outinds if i != new_edge]
+  @assert length(last_index) == 1
+  push!(linear_order, last_index[1])
+  return linear_order
+end
+
+function _mincut_inds(
+  network_pair::Pair{Vector{ITensor},Vector{ITensor}}, out_to_pseudo_ind::Dict{Index,Index}
+)
+  outinds = collect(keys(out_to_pseudo_ind))
+  outinds = [[i] for i in outinds]
+  return __mincut_inds(network_pair, out_to_pseudo_ind, outinds)
+end
+
+function __mincut_inds(
+  network_pair::Pair{Vector{ITensor},Vector{ITensor}},
+  out_to_pseudo_ind::Dict{Index,Index},
+  outinds::Vector{<:Vector},
+)
+  @assert length(outinds) >= 1
   if length(outinds) == 1
     return outinds[1]
   end
   if length(outinds) == 2
     return outinds
   end
-  new_edge, minval = new_edge_mincut(tng, collect(powerset(outinds, 1, 1)))
-  new_edge = new_edge[1]
-  # outinds = update!(tng, outinds, new_edge, minval)
-  # first_ind = new_edge
-  linear_order = [new_edge]
-  while length(outinds) > 2
-    splitinds = [[new_edge, i] for i in outinds if i != new_edge]
-    new_edge, minval = new_edge_mincut(tng, splitinds)
-    outinds = update!(tng, outinds, new_edge, minval)
-    # first_ind = new_edge
-    push!(linear_order, new_edge[2])
-  end
-  splitinds = [[new_edge, i] for i in outinds if i != new_edge]
-  @assert length(splitinds) == 1
-  push!(linear_order, splitinds[1][2])
-  return linear_order
+  new_edge = new_edge_mincut(
+    network_pair, out_to_pseudo_ind, collect(powerset(outinds, 2, 2))
+  )
+  outinds = setdiff(outinds, new_edge)
+  outinds = vcat([new_edge], outinds)
+  return __mincut_inds(network_pair, out_to_pseudo_ind, outinds)
 end
 
-function inds_binary_tree(
-  network::Vector{ITensor}, outinds::Union{Nothing,Vector{<:Index}}; algorithm="mincut"
+function new_edge_mincut(
+  network_pair::Pair{Vector{ITensor},Vector{ITensor}},
+  out_to_pseudo_ind::Dict{Index,Index},
+  split_inds_list::Vector,
 )
-  if outinds == nothing
-    outinds = noncommoninds(network...)
-  end
-  if length(outinds) == 1
-    return outinds
-  end
-  if algorithm == "sequential-mps"
-    out_inds = [outinds[1]]
-    for i in 2:length(outinds)
-      out_inds = [out_inds, [outinds[i]]]
+  outinds = collect(keys(out_to_pseudo_ind))
+  p_outinds = collect(values(out_to_pseudo_ind))
+  mincuts, pseudo_mincuts, dists = [], [], []
+  for split_inds in split_inds_list
+    if length(split_inds) == 2
+      push!(
+        dists,
+        distance(network_pair.first, vectorize(split_inds[1]), vectorize(split_inds[2])),
+      )
+    else
+      push!(dists, 0.0)
     end
-    return out_inds
+    split_inds = vectorize(split_inds)
+    p_split_inds = [out_to_pseudo_ind[i] for i in split_inds]
+    push!(mincuts, mincut_value(network_pair.first, split_inds, outinds)[3])
+    push!(pseudo_mincuts, mincut_value(network_pair.second, p_split_inds, p_outinds)[3])
   end
-  tng = TensorNetworkGraph(network, outinds)
-  grouped_uncontracted_inds = [[i] for i in outinds]
-  return inds_binary_tree!(tng, grouped_uncontracted_inds; algorithm=algorithm)
+  indices_min = [i for i in 1:length(mincuts) if mincuts[i] == min(mincuts...)]
+  selected_pseudo_mincuts = [pseudo_mincuts[i] for i in indices_min]
+  indices_min = [
+    i for i in indices_min if pseudo_mincuts[i] == min(selected_pseudo_mincuts...)
+  ]
+  dists_min = [dists[i] for i in indices_min]
+  _, index = findmin(dists_min)
+  i = indices_min[index]
+  new_edge = split_inds_list[i]
+  return new_edge
 end
 
-#TODO: rewrite this function
-#TODO: pick one end deterministically
-function linearize(inds_tree::Vector, tng::TensorNetworkGraph)
-  get_dist(edge, distances) = distances.dists[tng.inner_edge_dict[edge][1]]
-  function get_boundary_dists(line, source)
-    first, last = line[1], line[end]
-    ds = dijkstra_shortest_paths(tng.graph, source, tng.weights)
-    return get_dist(first, ds), get_dist(last, ds)
-  end
+function distance(network::Vector{ITensor}, inds1::Vector{<:Index}, inds2::Vector{<:Index})
+  new_t1 = ITensor(inds1...)
+  new_t2 = ITensor(inds2...)
+  tn = ITensorNetwork([network..., new_t1, new_t2])
+  ds = dijkstra_shortest_paths(tn, length(network) + 1, weights(tn))
+  return ds.dists[length(network) + 2]
+end
 
-  if length(inds_tree) == 1
-    return inds_tree
-  end
-  left = linearize(inds_tree[1], tng)
-  right = linearize(inds_tree[2], tng)
-  if length(left) == 1 && length(right) == 1
-    return [left, right]
-  end
-  if length(left) == 1
-    source = tng.inner_edge_dict[left][1]
-    dist_first, dist_last = get_boundary_dists(right, source)
-    if dist_last < dist_first
-      right = reverse(right)
-    end
-    return [left, right...]
-  end
-  if length(right) == 1
-    source = tng.inner_edge_dict[right][1]
-    dist_first, dist_last = get_boundary_dists(left, source)
-    if dist_last > dist_first
-      left = reverse(left)
-    end
-    return [left..., right]
-  end
-  s1, s2 = tng.inner_edge_dict[left[1]][1], tng.inner_edge_dict[left[end]][1]
-  dist1_first, dist1_last = get_boundary_dists(right, s1)
-  dist2_first, dist2_last = get_boundary_dists(right, s2)
-  if min(dist1_first, dist1_last) < min(dist2_first, dist2_last)
-    left = reverse(left)
-    if dist1_last < dist1_first
-      right = reverse(right)
-    end
-  else
-    if dist2_last < dist2_first
-      right = reverse(right)
-    end
-  end
-  return [left..., right...]
+function mincut_value(
+  network::Vector{ITensor}, source_inds::Vector{<:Index}, out_inds::Vector{<:Index}
+)
+  terminal_inds = setdiff(out_inds, source_inds)
+  new_t1 = ITensor(source_inds...)
+  new_t2 = ITensor(terminal_inds...)
+  tn = ITensorNetwork([network..., new_t1, new_t2])
+  return GraphsFlows.mincut(tn, length(network) + 1, length(network) + 2, weights(tn))
 end
 
 function mincut_subnetwork(
-  network::Vector{ITensor}, sourceinds::Vector, uncontract_inds::Vector
+  network::Vector{ITensor}, source_inds::Vector{<:Index}, out_inds::Vector{<:Index}
 )
   @timeit timer "mincut_subnetwork" begin
-    if length(sourceinds) == length(uncontract_inds)
+    if length(source_inds) == length(out_inds)
       return network
     end
-    tng = TensorNetworkGraph(network)
-    grouped_sourceinds = [[ind] for ind in sourceinds]
-    part1, part2, mincut = mincut_value(tng, grouped_sourceinds)
+    p_network, out_to_pseudo_ind = _build_pseudo_network(network, out_inds)
+    p_source_inds = [out_to_pseudo_ind[i] for i in source_inds]
+    p_out_inds = [out_to_pseudo_ind[i] for i in out_inds]
+    part1, part2, val = mincut_value(p_network, p_source_inds, p_out_inds)
     @assert length(part1) > 1
     @assert length(part2) > 1
     return [network[i] for i in part1 if i <= length(network)]
   end
-end
-
-function mincut_inds!(tng::TensorNetworkGraph, outinds::Vector)
-  @assert length(outinds) >= 1
-  # base case here, for the case length(outinds) == 2, we still need to do the update
-  if length(outinds) == 1
-    return outinds[1]
-  end
-  new_edge, minval = new_edge_mincut(tng, collect(powerset(outinds, 2, 2)))
-  outinds = update!(tng, outinds, new_edge, minval)
-  return mincut_inds!(tng, outinds)
-end
-
-function mincut_inds(tng::TensorNetworkGraph, uncontract_inds::Vector)
-  @timeit timer "mincut_inds" begin
-    tng = copy(tng)
-    uncontract_inds = copy(uncontract_inds)
-    return mincut_inds!(tng, uncontract_inds)
-  end
-end
-
-# update the graph
-function update!(tng::TensorNetworkGraph, uncontract_inds::Vector, new_edge::Vector, minval)
-  add_vertex!(tng.graph)
-  last_vertex = size(tng.graph)[1]
-  u1, w_u1 = tng.out_edge_dict[new_edge[1]]
-  u2, w_u2 = tng.out_edge_dict[new_edge[2]]
-  Graphs.add_edge!(tng.graph, u1, last_vertex)
-  Graphs.add_edge!(tng.graph, u2, last_vertex)
-  Graphs.add_edge!(tng.graph, last_vertex, u1)
-  Graphs.add_edge!(tng.graph, last_vertex, u2)
-  new_weights = zeros(last_vertex, last_vertex)
-  new_weights[1:(last_vertex - 1), 1:(last_vertex - 1)] = tng.weights
-  #if not setting to MAX_WEIGHT would affect later tree selections
-  new_weights[u1, last_vertex] = MAX_WEIGHT
-  new_weights[u2, last_vertex] = MAX_WEIGHT
-  new_weights[last_vertex, u1] = MAX_WEIGHT
-  new_weights[last_vertex, u2] = MAX_WEIGHT
-  # update the dict
-  tng.inner_edge_dict[new_edge[1]] = (u1, last_vertex, MAX_WEIGHT)#w_u1)
-  tng.inner_edge_dict[new_edge[2]] = (u2, last_vertex, MAX_WEIGHT)#w_u2)
-  delete!(tng.out_edge_dict, new_edge[1])
-  delete!(tng.out_edge_dict, new_edge[2])
-  tng.out_edge_dict[new_edge] = (last_vertex, minval)
-  # update uncontract_inds
-  uncontract_inds = setdiff(uncontract_inds, new_edge)
-  uncontract_inds = vcat([new_edge], uncontract_inds)
-  tng.weights = new_weights
-  return uncontract_inds
-end
-
-# TODO: rewrite this function
-function new_edge_mincut(tng::TensorNetworkGraph, split_inds_list::Vector)
-  mincuts = [mincut_value(tng, split_inds)[3] for split_inds in split_inds_list]
-  split_sizes = [
-    sum([tng.out_edge_dict[ind][2] for ind in split_inds]) for split_inds in split_inds_list
-  ]
-  dists = [distance(tng, inds...) for inds in split_inds_list]
-  weights = [min(mincuts[i], split_sizes[i]) for i in 1:length(mincuts)]
-  indices_min = [i for i in 1:length(mincuts) if weights[i] == min(weights...)]
-  cuts_min = [mincuts[i] for i in indices_min]
-  indices_min = [i for i in indices_min if mincuts[i] == min(cuts_min...)]
-  dists_min = [dists[i] for i in indices_min]
-  _, index = findmin(dists_min)
-  i = indices_min[index]
-  minval = weights[i]
-  new_edge = split_inds_list[i]
-  return new_edge, minval
-end
-
-function mincut_value(tng::TensorNetworkGraph, split_inds::Vector)
-  tng = copy(tng)
-  # add two vertices to the graph to model the s and t
-  add_vertices!(tng.graph, 2)
-  t = size(tng.graph)[1]
-  s = t - 1
-  new_weights = zeros(t, t)
-  new_weights[1:(t - 2), 1:(t - 2)] = tng.weights
-  for ind in split_inds
-    u, _ = tng.out_edge_dict[ind]
-    Graphs.add_edge!(tng.graph, u, s)
-    Graphs.add_edge!(tng.graph, s, u)
-    new_weights[u, s] = MAX_WEIGHT
-    new_weights[s, u] = MAX_WEIGHT
-  end
-  terminal_inds = setdiff(noncommoninds(tng), split_inds)
-  for ind in terminal_inds
-    u, _ = tng.out_edge_dict[ind]
-    Graphs.add_edge!(tng.graph, u, t)
-    Graphs.add_edge!(tng.graph, t, u)
-    new_weights[u, t] = MAX_WEIGHT
-    new_weights[t, u] = MAX_WEIGHT
-  end
-  # this t and s sequence makes sure part1 is the largest subgraph yielding mincut
-  part2, part1, flow = GraphsFlows.mincut(
-    tng.graph, t, s, new_weights, EdmondsKarpAlgorithm()
-  )
-  return part1, part2, flow
 end
