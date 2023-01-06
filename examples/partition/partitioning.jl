@@ -5,8 +5,8 @@ using ITensorUnicodePlots
 using KaHyPar
 using Suppressor
 
-dims = (4, 4)
-g = hypercubic_lattice_graph(dims)
+system_dims = (4, 4)
+g = hypercubic_lattice_graph(system_dims)
 
 s = siteinds("S=1/2", g)
 

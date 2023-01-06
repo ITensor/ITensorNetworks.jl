@@ -24,7 +24,7 @@ using NamedGraphs:
   vertex_to_parent_vertex,
   parent_vertices_to_vertices,
   not_implemented
-using DataGraphs: edge_data_type, vertex_data_type
+using DataGraphs: IsUnderlyingGraph, edge_data_type, vertex_data_type
 
 include("imports.jl")
 
