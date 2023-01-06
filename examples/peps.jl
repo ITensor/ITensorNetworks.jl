@@ -15,8 +15,8 @@ function heisenberg(g::AbstractGraph)
   return os
 end
 
-dims = (3, 3)
-g = named_grid(dims)
+system_dims = (3, 3)
+g = named_grid(system_dims)
 s = siteinds("S=1/2", g)
 
 ℋ = heisenberg(g)

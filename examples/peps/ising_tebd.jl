@@ -8,14 +8,14 @@ Random.seed!(1234)
 
 ITensors.disable_warn_order()
 
-dims = (6, 6)
-n = prod(dims)
-g = named_grid(dims)
+system_dims = (6, 6)
+n = prod(system_dims)
+g = named_grid(system_dims)
 
 h = 2.0
 
 @show h
-@show dims
+@show system_dims
 
 s = siteinds("S=1/2", g)
 
@@ -23,7 +23,7 @@ s = siteinds("S=1/2", g)
 # DMRG comparison
 #
 
-g_dmrg = rename_vertices(g, cartesian_to_linear(dims))
+g_dmrg = rename_vertices(g, cartesian_to_linear(system_dims))
 ℋ_dmrg = ising(g_dmrg; h)
 s_dmrg = [only(s[v]) for v in vertices(s)]
 H_dmrg = MPO(ℋ_dmrg, s_dmrg)
@@ -33,7 +33,7 @@ E_dmrg, ψ_dmrg = dmrg(
   H_dmrg, ψ_dmrg_init; nsweeps=20, maxdim=[fill(10, 10); 20], cutoff=1e-8
 )
 @show E_dmrg
-Z_dmrg = reshape(expect(ψ_dmrg, "Z"), dims)
+Z_dmrg = reshape(expect(ψ_dmrg, "Z"), system_dims)
 
 display(Z_dmrg)
 display(heatmap(Z_dmrg))
@@ -59,7 +59,7 @@ println("maxdim = $χ")
 @show ortho
 
 # Contraction sequence for exactly computing expectation values
-inner_sequence = reduce((x, y) -> [x, y], vec(Tuple.(CartesianIndices(dims))))
+inner_sequence = reduce((x, y) -> [x, y], vec(Tuple.(CartesianIndices(system_dims))))
 
 println("\nFirst run TEBD without orthogonalization")
 ψ = @time tebd(
@@ -81,6 +81,6 @@ E = @time expect(ℋ, ψ; sequence=inner_sequence)
 
 println("\nMeasure magnetization")
 Z_dict = @time expect("Z", ψ; sequence=inner_sequence)
-Z = [Z_dict[Tuple(I)] for I in CartesianIndices(dims)]
+Z = [Z_dict[Tuple(I)] for I in CartesianIndices(system_dims)]
 display(Z)
 display(heatmap(Z))

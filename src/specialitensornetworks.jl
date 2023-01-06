@@ -3,7 +3,7 @@ RETURN A TENSOR NETWORK WITH COPY TENSORS ON EACH VERTEX.
 Note that passing a link_space will mean the indices of the resulting network don't match those of the input indsnetwork
 """
 function delta_network(eltype::Type, s::IndsNetwork; link_space=nothing)
-  return ITensorNetwork((v, inds...) -> δ(eltype, inds...), s; link_space)
+  return ITensorNetwork((v, inds...) -> delta(eltype, inds...), s; link_space)
 end
 
 function delta_network(s::IndsNetwork; link_space=nothing)
@@ -50,7 +50,7 @@ function ising_network(eltype::Type, s::IndsNetwork, beta::Number; szverts=nothi
 end
 
 function ising_network(s::IndsNetwork, beta::Number; szverts=nothing)
-  return ising_network(typeof(beta), s; szverts)
+  return ising_network(typeof(beta), s, beta; szverts)
 end
 
 """
