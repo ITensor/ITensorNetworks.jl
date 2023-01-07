@@ -6,7 +6,7 @@ using ITensorNetworks.ApproximateTNContraction:
   inds_binary_tree,
   tree_embedding,
   approximate_contract
-using ITensorNetworks.ApproximateTNContraction: timer, ising_partition
+using ITensorNetworks.ApproximateTNContraction: timer
 
 include("utils.jl")
 
@@ -150,7 +150,6 @@ end
   for v in vertices(network)
     tn[v...] = network[v...]
   end
-  # tn = ising_partition(N, linkdim)
 
   ITensors.set_warn_order(100)
   maxdim = linkdim^N[2]

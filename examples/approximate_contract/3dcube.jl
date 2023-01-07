@@ -1,8 +1,7 @@
 using ITensors, TimerOutputs
 using NamedGraphs
-using ITensorNetworks: contraction_sequence, ITensorNetwork
-using ITensorNetworks.ApproximateTNContraction: approximate_contract, line_to_tree
-using ITensorNetworks.ApproximateTNContraction: timer, inds_network, ising_partition
+using ITensorNetworks: contraction_sequence, ITensorNetwork, ising_network
+using ITensorNetworks.ApproximateTNContraction: approximate_contract, line_to_tree, timer
 
 function contract_log_norm(tn, seq)
   if seq isa Vector
@@ -56,8 +55,11 @@ end
 function bench_3d_cube(N; num_iter, cutoff, maxdim, ansatz, use_cache, ortho, env_line_size)
   ITensors.set_warn_order(100)
   reset_timer!(timer)
-  linkdim = 2
-  tn = ising_partition(N, linkdim)
+  network = ising_network(named_grid(N), 0.3)
+  tn = Array{ITensor,length(N)}(undef, N...)
+  for v in vertices(network)
+    tn[v...] = network[v...]
+  end
   if ortho == true
     @info "orthogonalize tn towards the first vertex"
     itn = ITensorNetwork(named_grid(N); link_space=2)
@@ -125,8 +127,8 @@ end
 bench_3d_cube(
   (3, 3, 3);
   num_iter=2,
-  cutoff=1e-8,
-  maxdim=16,
+  cutoff=1e-10,
+  maxdim=32,
   ansatz="mps",
   use_cache=true,
   ortho=false,
