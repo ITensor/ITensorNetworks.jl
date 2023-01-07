@@ -9,7 +9,6 @@ end
 
 include("tree_utils.jl")
 include("index_group.jl")
-include("tensornetwork_graph.jl")
 include("mincut_tree.jl")
 include("tree_embedding.jl")
 

@@ -6,7 +6,7 @@ using ITensorNetworks.ApproximateTNContraction:
   inds_binary_tree,
   tree_embedding,
   approximate_contract
-using ITensorNetworks.ApproximateTNContraction: timer, inds_network, Models, ising_partition
+using ITensorNetworks.ApproximateTNContraction: timer, ising_partition
 
 include("utils.jl")
 
@@ -56,8 +56,11 @@ end
   N = (5, 3)
   linkdim = 3
   cutoff = 1e-15
-  tn_inds = inds_network(N...; linkdims=linkdim, periodic=false)
-  tn = map(inds -> randomITensor(inds...), tn_inds)
+  network = randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  tn = Array{ITensor,length(N)}(undef, N...)
+  for v in vertices(network)
+    tn[v...] = network[v...]
+  end
   x, A = tn[:, 1], tn[:, 2]
   out_true = contract(MPO(A), MPS(x); cutoff=cutoff, maxdim=linkdim * linkdim)
   out2, log_norm = approximate_contract([A, x]; cutoff=cutoff, maxdim=linkdim * linkdim)
@@ -100,8 +103,11 @@ end
 @testset "test inds_binary_tree of a 2D network" begin
   N = (3, 3, 3)
   linkdim = 2
-  tn_inds = inds_network(N...; linkdims=linkdim, periodic=false)
-  tn = map(inds -> randomITensor(inds...), tn_inds)
+  network = randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  tn = Array{ITensor,length(N)}(undef, N...)
+  for v in vertices(network)
+    tn[v...] = network[v...]
+  end
   network = vec(tn[:, :, 1])
   out = inds_binary_tree(network, noncommoninds(network...); algorithm="mincut")
   @test length(out) == 2
@@ -139,8 +145,11 @@ end
   N = (8, 8)
   linkdim = 2
   cutoff = 1e-15
-  tn_inds = inds_network(N...; linkdims=linkdim, periodic=false)
-  tn = map(inds -> randomITensor(inds...), tn_inds)
+  network = randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  tn = Array{ITensor,length(N)}(undef, N...)
+  for v in vertices(network)
+    tn[v...] = network[v...]
+  end
   # tn = ising_partition(N, linkdim)
 
   ITensors.set_warn_order(100)
@@ -163,16 +172,17 @@ end
   N = (8, 8)
   linkdim = 10
   cutoff = 1e-15
-  tn_inds = inds_network(N...; linkdims=linkdim, periodic=false)
-
+  network = randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  tn = Array{ITensor,length(N)}(undef, N...)
+  for v in vertices(network)
+    tn[v...] = network[v...]
+  end
   dim = 20
   # warmup
-  tn = map(inds -> randomITensor(inds...), tn_inds)
   ITensors.set_warn_order(100)
   benchmark_peps_contraction(tn; cutoff=cutoff, maxdim=dim)
 
   reset_timer!(timer)
-  tn = map(inds -> randomITensor(inds...), tn_inds)
   ITensors.set_warn_order(100)
   benchmark_peps_contraction(tn; cutoff=cutoff, maxdim=dim)
   show(timer)

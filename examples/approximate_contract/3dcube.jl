@@ -123,10 +123,10 @@ end
 
 # exact_contract((5, 5, 5))
 bench_3d_cube(
-  (3, 10, 10);
+  (3, 3, 3);
   num_iter=2,
   cutoff=1e-8,
-  maxdim=256,
+  maxdim=16,
   ansatz="mps",
   use_cache=true,
   ortho=false,

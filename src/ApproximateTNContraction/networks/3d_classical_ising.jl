@@ -42,6 +42,9 @@ function isingTensor(inds::Vector)
 end
 
 function ising_partition(N, d=2)
-  tn_inds = inds_network(N...; linkdims=d, periodic=false)
-  return map(inds -> isingTensor(inds), tn_inds)
+  tn = ITensorNetwork(named_grid(N); link_space=d)
+  for v in vertices(tn)
+    tn[v] = isingTensor(inds(tn[v]))
+  end
+  return Vector{ITensor}(tn)
 end

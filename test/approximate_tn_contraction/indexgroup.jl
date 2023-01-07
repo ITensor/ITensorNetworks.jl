@@ -1,8 +1,8 @@
 using ITensors
+using ITensorNetworks
 using ITensorNetworks.ApproximateTNContraction:
   IndexGroup, get_index_groups, get_leaves, neighbor_index_groups
 using ITensorNetworks.ApproximateTNContraction:
-  inds_network,
   line_network,
   IndexAdjacencyTree,
   topo_sort,
@@ -14,8 +14,7 @@ using ITensorNetworks.ApproximateTNContraction:
 
 @testset "test generate_adjacency_tree" begin
   N = (3, 3)
-  tn_inds = inds_network(N...; linkdims=2, periodic=false)
-  tn = vec(map(inds -> randomITensor(inds...), tn_inds))
+  tn = Vector{ITensor}(randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=2))
   ctree = line_network(tn)
   tn_leaves = get_leaves(ctree)
   ctrees = topo_sort(ctree; leaves=tn_leaves)
@@ -71,8 +70,7 @@ end
 
 @testset "test approximate_contract" begin
   N = (4, 4)
-  tn_inds = inds_network(N...; linkdims=2, periodic=false)
-  tn = vec(map(inds -> randomITensor(inds...), tn_inds))
+  tn = Vector{ITensor}(randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=2))
   ctree = line_network(tn)
   approximate_contract(ctree; cutoff=1e-5, maxdim=20, ansatz="mps")
   approximate_contract(ctree; cutoff=1e-5, maxdim=20, ansatz="comb")
