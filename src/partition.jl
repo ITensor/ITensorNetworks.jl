@@ -281,3 +281,13 @@ function partition(
 )
   return partition(g, subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...))
 end
+
+#First group the vertices of g according to some function and then perform a partition of g
+function group_partition_vertices(
+  g::AbstractGraph, f::Function; npartitions=nothing, nvertices_per_partition=nothing, kwargs...
+)
+  vertex_groups = group(f, vertices(g))
+  Z_p = partition(partition(g, vertex_groups); npartitions, nvertices_per_partition, kwargs...)
+  return [reduce(vcat, (vertices(Z_p[vp][v]) for v in vertices(Z_p[vp]))) for vp in vertices(Z_p)]
+end
+
