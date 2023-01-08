@@ -37,7 +37,8 @@ export named_binary_tree,
   incident_edges,
   comb_tree,
   named_comb_tree,
-  subgraph
+  subgraph,
+  mincut_partitions
 
 #
 # DataGraphs
@@ -87,3 +88,6 @@ export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
 
 # partition.jl
 export partition, partition_vertices, subgraphs, subgraph_vertices
+
+# mincut.jl
+export inds_binary_tree, inds_mps_order

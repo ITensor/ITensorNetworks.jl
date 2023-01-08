@@ -1,10 +1,12 @@
 module ITensorNetworks
 
+using Combinatorics
 using Compat
 using DataGraphs
 using Dictionaries
 using DocStringExtensions
 using Graphs
+using GraphsFlows
 using ITensors
 using ITensors.ContractionSequenceOptimization
 using ITensors.ITensorVisualizationCore
@@ -55,6 +57,7 @@ include("expect.jl")
 include("models.jl")
 include("tebd.jl")
 include("itensornetwork.jl")
+include("mincut.jl")
 include("specialitensornetworks.jl")
 include("renameitensornetwork.jl")
 include("boundarymps.jl")
