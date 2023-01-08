@@ -105,7 +105,7 @@ function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector)
   #Need to get these 'boundary edges' in the right direction, probably should raise as an issue to be done on NamedGraphs end
   env_tensors = ITensor[mts[v] for v in [dst(e) ∈ subgraphs ? e : reverse(e)  for e in boundary_edges(mts, subgraphs)]]
   
-  return vcat(env_tensors, [tn[v] for v in setdiff(verts ,flatten([vertices(mts[s]) for s in subgraphs]))])
+  return vcat(env_tensors, [tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)])
 end
 
 #Function to calculate the contraction of a tensor network centred on the vertices verts. Using message tensors.
@@ -125,4 +125,15 @@ function compute_message_tensors(tn::ITensorNetwork; niters = 10, nvertices_per_
   mts = construct_initial_mts(tn, Z; kwargs...)
   mts = update_all_mts(tn, mts, niters)
   return mts
+end
+
+#Check env is the correct environment for the subset of vertices of tn
+function assert_correct_environment(tn::ITensorNetwork, env::Vector{ITensor}, verts::Vector)
+
+  env_indices = uniqueinds(flatten([inds(e) for e in env]))
+  #Find indices which don't have a duplicate, messy but commoninds(Vector{ITensor} doesn't work)
+  outer_env_indices= env_indices[filter(n -> n!= 0, [count(i -> (i==env_indices[j]), env_indices) == 1 ? j : 0 for j = 1:length(env_indices)])]
+  outer_verts_indices = flatten([commoninds(tn, e) for e in boundary_edges(tn, verts)])
+
+  return issetequal(outer_env_indices, outer_verts_indices)
 end
