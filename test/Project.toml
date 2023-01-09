@@ -2,6 +2,7 @@
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
+Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 GraphsFlows = "06909019-6f44-4949-96fc-b9d9aaa02889"
 ITensorUnicodePlots = "73163f41-4a9e-479f-8353-73bf94dbd758"
