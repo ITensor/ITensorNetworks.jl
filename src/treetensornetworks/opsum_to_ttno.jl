@@ -567,11 +567,11 @@ function TTNO(o::Scaled{C,Op}, s::IndsNetwork; kwargs...) where {C}
   return TTNO(OpSum{C}() + o, s; kwargs...)
 end
 
-function TTNO(o::Sum{Op}, s::IndsNetwork; kwargs...) where {C}
+function TTNO(o::Sum{Op}, s::IndsNetwork; kwargs...)
   return TTNO(OpSum{Float64}() + o, s; kwargs...)
 end
 
-function TTNO(o::Prod{Op}, s::IndsNetwork; kwargs...) where {C}
+function TTNO(o::Prod{Op}, s::IndsNetwork; kwargs...)
   return TTNO(OpSum{Float64}() + o, s; kwargs...)
 end
 
