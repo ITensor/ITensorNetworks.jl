@@ -34,7 +34,6 @@ import ITensors:
   # contraction
   contract,
   orthogonalize,
-  orthogonalize!,
   isortho,
   inner,
   loginner,
@@ -42,7 +41,6 @@ import ITensors:
   lognorm,
   expect,
   # truncation
-  truncate!,
   truncate,
   replacebond!,
   replacebond,

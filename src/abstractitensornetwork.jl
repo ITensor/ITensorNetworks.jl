@@ -342,11 +342,11 @@ function tags(tn::AbstractITensorNetwork, edge)
   return commontags(is)
 end
 
-function svd!(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-  return svd!(tn, edgetype(tn)(edge))
+function svd(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return svd(tn, edgetype(tn)(edge))
 end
 
-function svd!(
+function svd(
   tn::AbstractITensorNetwork,
   edge::AbstractEdge;
   U_vertex=src(edge),
@@ -356,10 +356,11 @@ function svd!(
   v_tags=tags(tn, edge),
   kwargs...,
 )
+  tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
   U, S, V = svd(tn[src(edge)], left_inds; lefttags=u_tags, right_tags=v_tags, kwargs...)
 
-  rem_vertex!(tn, src(edge)) # TODO: avoid this if we can?
+  rem_vertex!(tn, src(edge))
   add_vertex!(tn, U_vertex)
   tn[U_vertex] = U
 
@@ -372,11 +373,7 @@ function svd!(
   return tn
 end
 
-function svd(tn::AbstractITensorNetwork, edge; kwargs...)
-  return svd!(copy(tn), edge; kwargs...)
-end
-
-function qr!(
+function qr(
   tn::AbstractITensorNetwork,
   edge::AbstractEdge;
   Q_vertex=src(edge),
@@ -384,10 +381,11 @@ function qr!(
   tags=tags(tn, edge),
   kwargs...,
 )
+  tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
   Q, R = factorize(tn[src(edge)], left_inds; tags, kwargs...)
 
-  rem_vertex!(tn, src(edge)) # TODO: avoid this if we can?
+  rem_vertex!(tn, src(edge))
   add_vertex!(tn, Q_vertex)
   tn[Q_vertex] = Q
 
@@ -397,11 +395,7 @@ function qr!(
   return tn
 end
 
-function qr(tn::AbstractITensorNetwork, edge; kwargs...)
-  return qr!(copy(tn), edge; kwargs...)
-end
-
-function factorize!(
+function factorize(
   tn::AbstractITensorNetwork,
   edge::AbstractEdge;
   X_vertex=src(edge),
@@ -417,7 +411,7 @@ function factorize!(
   left_inds = uniqueinds(tn, edge)
   X, Y = factorize(tn[src(edge)], left_inds; tags, kwargs...)
 
-  rem_vertex!(tn, src(edge)) # TODO: avoid this if we can?
+  rem_vertex!(tn, src(edge))
   add_vertex!(tn, X_vertex)
   add_vertex!(tn, Y_vertex)
 
@@ -436,16 +430,13 @@ function factorize!(
   return tn
 end
 
-function factorize(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  return factorize!(copy(tn), edge; kwargs...)
-end
-
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function _orthogonalize_edge!(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  # factorize!(tn, edge; kwargs...)
+function _orthogonalize_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+  # tn = factorize(tn, edge; kwargs...)
   # # TODO: Implement as `only(common_neighbors(tn, src(edge), dst(edge)))`
   # new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
   # return contract(tn, new_vertex => dst(edge))
+  tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
   ltags = tags(tn, edge)
   X, Y = factorize(tn[src(edge)], left_inds; tags=ltags, ortho="left", kwargs...)
@@ -454,31 +445,28 @@ function _orthogonalize_edge!(tn::AbstractITensorNetwork, edge::AbstractEdge; kw
   return tn
 end
 
-function orthogonalize!(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  return _orthogonalize_edge!(tn, edge; kwargs...)
+function orthogonalize(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+  return _orthogonalize_edge(tn, edge; kwargs...)
 end
 
-function orthogonalize!(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-  return orthogonalize!(tn, edgetype(tn)(edge); kwargs...)
+function orthogonalize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return orthogonalize(tn, edgetype(tn)(edge); kwargs...)
 end
 
 # Orthogonalize an ITensorNetwork towards a source vertex, treating
 # the network as a tree spanned by a spanning tree.
 # TODO: Rename `tree_orthogonalize`.
-function orthogonalize!(ψ::AbstractITensorNetwork, source_vertex)
+function orthogonalize(ψ::AbstractITensorNetwork, source_vertex)
   spanning_tree_edges = post_order_dfs_edges(bfs_tree(ψ, source_vertex), source_vertex)
   for e in spanning_tree_edges
-    orthogonalize!(ψ, e)
+    ψ = orthogonalize(ψ, e)
   end
   return ψ
 end
 
-function orthogonalize(tn::AbstractITensorNetwork, args...; kwargs...)
-  return orthogonalize!(copy(tn), args...; kwargs...)
-end
-
 # TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function _truncate_edge!(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+  tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
   ltags = tags(tn, edge)
   U, S, V = svd(tn[src(edge)], left_inds; lefttags=ltags, ortho="left", kwargs...)
@@ -487,16 +475,12 @@ function _truncate_edge!(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs.
   return tn
 end
 
-function truncate!(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  return _truncate_edge!(tn, edge; kwargs...)
+function truncate(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+  return _truncate_edge(tn, edge; kwargs...)
 end
 
-function truncate!(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-  return truncate!(tn, edgetype(tn)(edge); kwargs...)
-end
-
-function truncate(tn::AbstractITensorNetwork, edge; kwargs...)
-  return truncate!(copy(tn), edge; kwargs...)
+function truncate(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return truncate(tn, edgetype(tn)(edge); kwargs...)
 end
 
 function Base.:*(c::Number, ψ::AbstractITensorNetwork)

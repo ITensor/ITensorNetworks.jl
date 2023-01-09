@@ -131,7 +131,7 @@ end
 function position(
   P::AbstractProjTTNO{V}, psi::TTNS{V}, pos::Union{Vector{<:V},NamedEdge{V}}
 ) where {V}
-  # shift position; TODO: update for immutable struct
+  # shift position
   P = shift_position(P, pos)
   # invalidate environments corresponding to internal edges
   for e in internal_edges(P)
