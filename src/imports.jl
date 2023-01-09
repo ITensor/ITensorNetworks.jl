@@ -9,6 +9,7 @@ import Base:
   setindex!,
   show,
   isassigned,
+  iterate,
   union
 
 import NamedGraphs:
@@ -24,9 +25,10 @@ import .DataGraphs:
   underlying_graph_type,
   vertex_data,
   edge_data,
+  edge_data_type,
   reverse_data_direction
 
-import Graphs: SimpleGraph, is_directed
+import Graphs: SimpleGraph, is_directed, weights
 
 import LinearAlgebra: svd, factorize, qr, normalize, normalize!
 

@@ -1,9 +1,23 @@
-abstract type AbstractITensorNetwork{V} <:
-              AbstractDataGraph{V,ITensor,ITensor} end
+abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
 
 # Field access
 data_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
 data_graph(graph::AbstractITensorNetwork) = not_implemented()
+
+# TODO: Define a generic fallback for `AbstractDataGraph`?
+edge_data_type(::Type{<:AbstractITensorNetwork}) = ITensor
+
+# Graphs.jl overloads
+function weights(graph::AbstractITensorNetwork)
+  V = vertextype(graph)
+  es = Tuple.(edges(graph))
+  ws = Dictionary{Tuple{V,V},Float64}(es, undef)
+  for e in edges(graph)
+    w = log2(dim(commoninds(graph, e)))
+    ws[(src(e), dst(e))] = w
+  end
+  return ws
+end
 
 # Copy
 copy(tn::AbstractITensorNetwork) = not_implemented()
@@ -12,7 +26,9 @@ copy(tn::AbstractITensorNetwork) = not_implemented()
 is_directed(::Type{<:AbstractITensorNetwork}) = false
 
 # Derived interface, may need to be overloaded
-underlying_graph_type(G::Type{<:AbstractITensorNetwork}) = underlying_graph_type(data_graph_type(G))
+function underlying_graph_type(G::Type{<:AbstractITensorNetwork})
+  return underlying_graph_type(data_graph_type(G))
+end
 
 # AbstractDataGraphs overloads
 function vertex_data(graph::AbstractITensorNetwork, args...)
@@ -21,28 +37,21 @@ end
 edge_data(graph::AbstractITensorNetwork, args...) = edge_data(data_graph(graph), args...)
 
 underlying_graph(tn::AbstractITensorNetwork) = underlying_graph(data_graph(tn))
-function vertex_to_parent_vertex(tn::AbstractITensorNetwork, args...)
-  return vertex_to_parent_vertex(underlying_graph(tn), args...)
+function vertex_to_parent_vertex(tn::AbstractITensorNetwork, vertex)
+  return vertex_to_parent_vertex(underlying_graph(tn), vertex)
 end
 
 #
 # Iteration
 #
 
-# TODO: discuss if this is the desired behavior
-Base.eachindex(tn::AbstractITensorNetwork) = vertices(tn)
-Base.iterate(tn::AbstractITensorNetwork) = iterate(vertex_data(tn))
-Base.iterate(tn::AbstractITensorNetwork, state) = iterate(vertex_data(tn), state)
+# TODO: iteration
 
 # TODO: different `map` functionalities as defined for ITensors.AbstractMPS
 
 # TODO: broadcasting
 
-function union(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork;
-  kwargs...,
-)
+function union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
   tn = ITensorNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
   # Add any new edges that are introduced during the union
   for v1 in vertices(tn1)
@@ -55,10 +64,7 @@ function union(
   return tn
 end
 
-function rename_vertices(
-  f::Function,
-  tn::AbstractITensorNetwork,
-)
+function rename_vertices(f::Function, tn::AbstractITensorNetwork)
   return ITensorNetwork(rename_vertices(f, data_graph(tn)))
 end
 
@@ -247,6 +253,7 @@ const map_inds_label_functions = [
   :settags,
   :sim,
   :swaptags,
+  :dag,
   # :replaceind,
   # :replaceinds,
   # :swapind,
@@ -285,19 +292,29 @@ dag(tn::AbstractITensorNetwork) = map_vertex_data(dag, tn)
 
 # TODO: should this make sure that internal indices
 # don't clash?
-function ⊗(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
-  return ⊔(tn1, tn2; kwargs...)
+function ⊗(
+  tn1::AbstractITensorNetwork,
+  tn2::AbstractITensorNetwork,
+  tn_tail::AbstractITensorNetwork...;
+  kwargs...,
+)
+  return ⊔(tn1, tn2, tn_tail...; kwargs...)
 end
 
-function ⊗(tn1::Pair{<:Any,<:AbstractITensorNetwork}, tn2::Pair{<:Any,<:AbstractITensorNetwork}; kwargs...)
-  return ⊔(tn1, tn2; kwargs...)
+function ⊗(
+  tn1::Pair{<:Any,<:AbstractITensorNetwork},
+  tn2::Pair{<:Any,<:AbstractITensorNetwork},
+  tn_tail::Pair{<:Any,<:AbstractITensorNetwork}...;
+  kwargs...,
+)
+  return ⊔(tn1, tn2, tn_tail...; kwargs...)
 end
 
 # TODO: how to define this lazily?
 #norm(tn::AbstractITensorNetwork) = sqrt(inner(tn, tn))
 
 function contract(tn::AbstractITensorNetwork; sequence=vertices(tn), kwargs...)
-  sequence_linear_index = deepmap(vertex_to_parent_vertex(tn), sequence)
+  sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn, v), sequence)
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
 end
 
@@ -312,7 +329,8 @@ end
 # `Graphs.merge_vertices!` (https://github.com/mtfishman/ITensorNetworks.jl/issues/12)
 function contract(tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex=dst(edge))
   V = promote_type(vertextype(tn), typeof(merged_vertex))
-  tn = ITensorNetwork{V}(tn)
+  # TODO: Check `ITensorNetwork{V}`, shouldn't need a copy here.
+  tn = ITensorNetwork{V}(copy(tn))
   neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
@@ -405,7 +423,9 @@ function factorize(
 )
   # Promote vertex type
   V = promote_type(vertextype(tn), typeof(X_vertex), typeof(Y_vertex))
-  tn = ITensorNetwork{V}(tn)
+
+  # TODO: Check `ITensorNetwork{V}`, shouldn't need a copy here.
+  tn = ITensorNetwork{V}(copy(tn))
 
   neighbors_X = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   left_inds = uniqueinds(tn, edge)
@@ -428,6 +448,14 @@ function factorize(
   setindex_preserve_graph!(tn, Y, Y_vertex)
 
   return tn
+end
+
+function factorize(
+  tn::AbstractITensorNetwork,
+  edge::Pair;
+  kwargs...,
+)
+  return factorize(tn, edgetype(tn)(edge); kwargs...)
 end
 
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
@@ -517,6 +545,39 @@ function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combine
   return combined_tn
 end
 
+function flatten_networks(
+  tn1::AbstractITensorNetwork,
+  tn2::AbstractITensorNetwork;
+  map_bra_linkinds=sim,
+  flatten=true,
+  combine_linkinds=true,
+  kwargs...,
+)
+  @assert issetequal(vertices(tn1), vertices(tn2))
+  tn1 = map_bra_linkinds(tn1; sites=[])
+  flattened_net = ⊗(tn1, tn2; kwargs...)
+  if flatten
+    for v in vertices(tn1)
+      flattened_net = contract(flattened_net, (v, 2) => (v, 1); merged_vertex=v)
+    end
+  end
+  if combine_linkinds
+    flattened_net = ITensorNetworks.combine_linkinds(flattened_net)
+  end
+  return flattened_net
+end
+
+function flatten_networks(
+  tn1::AbstractITensorNetwork,
+  tn2::AbstractITensorNetwork,
+  tn3::AbstractITensorNetwork,
+  tn_tail::AbstractITensorNetwork...;
+  kwargs...,
+)
+  return flatten_networks(flatten_networks(tn1, tn2; kwargs...), tn3, tn_tail...; kwargs...)
+end
+
+# TODO: Use or replace with `flatten_networks`
 function inner_network(
   tn1::AbstractITensorNetwork,
   tn2::AbstractITensorNetwork;
@@ -530,7 +591,6 @@ function inner_network(
   inner_net = ⊗(dag(tn1), tn2; kwargs...)
   if flatten
     for v in vertices(tn1)
-      # TODO: Combine the indices, optionally with `combine_linkinds`
       inner_net = contract(inner_net, (v, 2) => (v, 1); merged_vertex=v)
     end
   end

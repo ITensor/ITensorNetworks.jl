@@ -52,9 +52,9 @@ end
 
 # construct from given state (map)
 function TreeTensorNetworkState(
-  ::Type{ElT}, is::IndsNetwork, states, args...
+  ::Type{ElT}, is::IndsNetwork, initstate, args...
 ) where {ElT<:Number}
-  itensor_network = ITensorNetwork(ElT, is, states)
+  itensor_network = ITensorNetwork(ElT, is, initstate)
   return TreeTensorNetworkState(itensor_network, args...)
 end
 

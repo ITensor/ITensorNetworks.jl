@@ -3,15 +3,15 @@
 #
 
 export grid,
-  edges,
-  vertices,
-  ne,
-  nv,
-  src,
   dst,
+  edges,
+  src,
   neighbors,
   inneighbors,
   induced_subgraph,
+  mincut,
+  ne,
+  nv,
   outneighbors,
   has_edge,
   has_vertex,
@@ -20,6 +20,7 @@ export grid,
   edgetype,
   is_directed,
   rem_vertex!,
+  vertices,
   post_order_dfs_vertices,
   edge_path,
   vertex_path
@@ -62,6 +63,7 @@ export AbstractITensorNetwork,
   itensors,
   reverse_bfs_edges,
   data_graph,
+  flatten_networks,
   inner_network,
   norm_network,
   factorize!,
@@ -104,7 +106,7 @@ export AbstractITensorNetwork,
 export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
 
 # partition.jl
-export partition
+export partition, partition_vertices, subgraphs, subgraph_vertices
 
 # utility.jl
 export relabel_sites

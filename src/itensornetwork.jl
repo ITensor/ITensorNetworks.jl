@@ -67,30 +67,79 @@ function ITensorNetwork{V}(ts::Vector{ITensor}) where {V}
 end
 
 #
-# Construction from Graphs
+# Construction from underyling named graph
 #
 
-# catch-all for default ElType
-function (::Type{ITNT})(g::AbstractGraph, args...; kwargs...) where {ITNT<:ITensorNetwork}
-  return ITNT(Float64, g, args...; kwargs...)
+function ITensorNetwork{V}(
+  eltype::Type, undef::UndefInitializer, graph::AbstractNamedGraph; kwargs...
+) where {V}
+  return ITensorNetwork{V}(eltype, undef, IndsNetwork{V}(graph; kwargs...))
+end
+
+function ITensorNetwork{V}(eltype::Type, graph::AbstractNamedGraph; kwargs...) where {V}
+  return ITensorNetwork{V}(eltype, IndsNetwork{V}(graph; kwargs...))
 end
 
 function ITensorNetwork{V}(
-  ::Type{ElT}, g::AbstractNamedGraph; kwargs...
-) where {V,ElT<:Number}
-  return ITensorNetwork{V}(ElT, IndsNetwork{V}(g; kwargs...))
+  undef::UndefInitializer, graph::AbstractNamedGraph; kwargs...
+) where {V}
+  return ITensorNetwork{V}(undef, IndsNetwork{V}(graph; kwargs...))
+end
+
+function ITensorNetwork{V}(graph::AbstractNamedGraph; kwargs...) where {V}
+  return ITensorNetwork{V}(IndsNetwork{V}(graph; kwargs...))
 end
 
 function ITensorNetwork(
-  ::Type{ElT}, graph::AbstractNamedGraph; kwargs...
-) where {ElT<:Number}
-  return ITensorNetwork{vertextype(graph)}(ElT, graph; kwargs...)
+  eltype::Type, undef::UndefInitializer, graph::AbstractNamedGraph; kwargs...
+)
+  return ITensorNetwork{vertextype(graph)}(eltype, undef, graph; kwargs...)
+end
+
+function ITensorNetwork(eltype::Type, graph::AbstractNamedGraph; kwargs...)
+  return ITensorNetwork{vertextype(graph)}(eltype, graph; kwargs...)
+end
+
+function ITensorNetwork(undef::UndefInitializer, graph::AbstractNamedGraph; kwargs...)
+  return ITensorNetwork{vertextype(graph)}(undef, graph; kwargs...)
+end
+
+function ITensorNetwork(graph::AbstractNamedGraph; kwargs...)
+  return ITensorNetwork{vertextype(graph)}(graph; kwargs...)
 end
 
 function ITensorNetwork(
-  ::Type{ElT}, g::Graphs.SimpleGraphs.AbstractSimpleGraph; kwargs...
-) where {ElT<:Number}
-  return ITensorNetwork(ElT, IndsNetwork(g; kwargs...))
+  itensor_constructor::Function, underlying_graph::AbstractNamedGraph; kwargs...
+)
+  return ITensorNetwork(itensor_constructor, IndsNetwork(underlying_graph; kwargs...))
+end
+
+#
+# Construction from underyling simple graph
+#
+
+function ITensorNetwork(
+  eltype::Type, undef::UndefInitializer, graph::AbstractSimpleGraph; kwargs...
+)
+  return ITensorNetwork(eltype, undef, NamedGraph(graph); kwargs...)
+end
+
+function ITensorNetwork(eltype::Type, graph::AbstractSimpleGraph; kwargs...)
+  return ITensorNetwork(eltype, NamedGraph(graph); kwargs...)
+end
+
+function ITensorNetwork(undef::UndefInitializer, graph::AbstractSimpleGraph; kwargs...)
+  return ITensorNetwork(undef, NamedGraph(graph); kwargs...)
+end
+
+function ITensorNetwork(graph::AbstractSimpleGraph; kwargs...)
+  return ITensorNetwork(NamedGraph(graph); kwargs...)
+end
+
+function ITensorNetwork(
+  itensor_constructor::Function, underlying_graph::AbstractSimpleGraph; kwargs...
+)
+  return ITensorNetwork(itensor_constructor, NamedGraph(underlying_graph); kwargs...)
 end
 
 #
@@ -98,8 +147,36 @@ end
 #
 
 function ITensorNetwork{V}(
-  ::Type{ElT}, inds_network::IndsNetwork; kwargs...
-) where {V,ElT<:Number}
+  eltype::Type, undef::UndefInitializer, inds_network::IndsNetwork; kwargs...
+) where {V}
+  return ITensorNetwork{V}(inds_network; kwargs...) do v, inds...
+    return ITensor(eltype, undef, inds...)
+  end
+end
+
+function ITensorNetwork{V}(eltype::Type, inds_network::IndsNetwork; kwargs...) where {V}
+  return ITensorNetwork{V}(inds_network; kwargs...) do v, inds...
+    return ITensor(eltype, inds...)
+  end
+end
+
+function ITensorNetwork{V}(
+  undef::UndefInitializer, inds_network::IndsNetwork; kwargs...
+) where {V}
+  return ITensorNetwork{V}(inds_network; kwargs...) do v, inds...
+    return ITensor(undef, inds...)
+  end
+end
+
+function ITensorNetwork{V}(inds_network::IndsNetwork; kwargs...) where {V}
+  return ITensorNetwork{V}(inds_network; kwargs...) do v, inds...
+    return ITensor(inds...)
+  end
+end
+
+function ITensorNetwork{V}(
+  itensor_constructor::Function, inds_network::IndsNetwork; kwargs...
+) where {V}
   # Graphs.jl uses `zero` to create a graph of the same type
   # without any vertices or edges.
   inds_network_merge = typeof(inds_network)(underlying_graph(inds_network); kwargs...)
@@ -117,20 +194,53 @@ function ITensorNetwork{V}(
       get(inds_network, edgetype(inds_network)(v, nv), indtype(inds_network)[]) for
       nv in neighbors(inds_network, v)
     ]
-    setindex_preserve_graph!(tn, ITensor(ElT, siteinds, linkinds...), v)
+    setindex_preserve_graph!(tn, itensor_constructor(v, siteinds, linkinds...), v)
   end
   return tn
 end
 
-function ITensorNetwork(
-  ::Type{ElT}, inds_network::IndsNetwork; kwargs...
-) where {ElT<:Number}
-  return ITensorNetwork{vertextype(inds_network)}(ElT, inds_network; kwargs...)
+function ITensorNetwork(inds_network::IndsNetwork; kwargs...)
+  return ITensorNetwork{vertextype(inds_network)}(inds_network; kwargs...)
 end
 
-#
-# Construction from IndsNetwork and state map
-#
+function ITensorNetwork(
+  eltype::Type, undef::UndefInitializer, inds_network::IndsNetwork; kwargs...
+)
+  return ITensorNetwork{vertextype(inds_network)}(eltype, undef, inds_network; kwargs...)
+end
+
+function ITensorNetwork(eltype::Type, inds_network::IndsNetwork; kwargs...)
+  return ITensorNetwork{vertextype(inds_network)}(eltype, inds_network; kwargs...)
+end
+
+function ITensorNetwork(undef::UndefInitializer, inds_network::IndsNetwork; kwargs...)
+  return ITensorNetwork{vertextype(inds_network)}(undef, inds_network; kwargs...)
+end
+
+function ITensorNetwork(itensor_constructor::Function, inds_network::IndsNetwork; kwargs...)
+  return ITensorNetwork{vertextype(inds_network)}(
+    itensor_constructor, inds_network; kwargs...
+  )
+end
+
+# TODO: Deprecate in favor of version above? Or use keyword argument?
+# This can be handled by `ITensorNetwork((v, inds...) -> state(inds...), inds_network)`
+function ITensorNetwork(eltype::Type, is::IndsNetwork, initstate::Function)
+  ψ = ITensorNetwork(eltype, is)
+  for v in vertices(ψ)
+    ψ[v] = convert_eltype(eltype, state(initstate(v), only(is[v])))
+  end
+  ψ = insert_links(ψ, edges(is))
+  return ψ
+end
+
+function ITensorNetwork(eltype::Type, is::IndsNetwork, initstate::Union{String,Integer})
+  return ITensorNetwork(eltype, is, v -> initstate)
+end
+
+function ITensorNetwork(is::IndsNetwork, initstate::Union{String,Integer,Function})
+  return ITensorNetwork(Number, is, initstate)
+end
 
 function insert_links(ψ::ITensorNetwork, edges::Vector=edges(ψ); cutoff=1e-15)
   for e in edges
@@ -141,25 +251,4 @@ function insert_links(ψ::ITensorNetwork, edges::Vector=edges(ψ); cutoff=1e-15)
     ψ[dst(e)] = ψᵥ₂
   end
   return ψ
-end
-
-function ITensorNetwork(::Type{ElT}, is::IndsNetwork, states_map) where {ElT<:Number}
-  ψ = ITensorNetwork(is)
-  for v in vertices(ψ)
-    ψ[v] = convert_eltype(ElT, state(only(is[v]), states_map[v]))
-  end
-  ψ = insert_links(ψ, edges(is))
-  return ψ
-end
-
-function ITensorNetwork(
-  ::Type{ElT}, is::IndsNetwork, state::Union{String,Integer}
-) where {ElT<:Number}
-  states_map = dictionary([v => state for v in vertices(is)])
-  return ITensorNetwork(ElT, is, states_map)
-end
-
-function ITensorNetwork(::Type{ElT}, is::IndsNetwork, state::Function) where {ElT<:Number}
-  states_map = dictionary([v => state(v) for v in vertices(is)])
-  return ITensorNetwork(ElT, is, states_map)
 end

@@ -7,8 +7,8 @@ Random.seed!(1234)
 
 ITensors.disable_warn_order()
 
-dims = (2, 3)
-g = named_grid(dims)
+system_dims = (2, 3)
+g = named_grid(system_dims)
 s = siteinds("S=1/2", g)
 
 χ = 10
@@ -17,7 +17,7 @@ s = siteinds("S=1/2", g)
 tn = norm_sqr_network(ψ)
 
 # Contraction sequence for exactly computing expectation values
-# contract_edges = map(t -> (1, t...), collect(keys(cartesian_to_linear(dims))))
+# contract_edges = map(t -> (1, t...), collect(keys(cartesian_to_linear(system_dims))))
 # inner_sequence = reduce((x, y) -> [x, y], contract_edges)
 
 println("optimal")

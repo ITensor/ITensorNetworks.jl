@@ -5,9 +5,14 @@ using Test
 @testset "Test examples" begin
   example_files = [
     "README.jl",
+    "boundary.jl",
+    "distances.jl",
     "examples.jl",
+    "group_partition.jl",
+    "mincut.jl",
     "mps.jl",
     "peps.jl",
+    "steiner_tree.jl",
     joinpath("belief_propagation", "bpexample.jl"),
     joinpath("peps", "ising_tebd.jl"),
     joinpath("ttns", "comb_tree.jl"),
@@ -24,7 +29,8 @@ using Test
       joinpath("partition", "kahypar_vs_metis.jl"),
       joinpath("partition", "partitioning.jl"),
     ]
-    @testset "Test $example_file (using KaHyPar, so no Windows support)" for example_file in example_files
+    @testset "Test $example_file (using KaHyPar, so no Windows support)" for example_file in
+                                                                             example_files
       @suppress include(joinpath(pkgdir(ITensorNetworks), "examples", example_file))
     end
   end
