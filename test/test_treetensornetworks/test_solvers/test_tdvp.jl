@@ -1,6 +1,6 @@
 using ITensors
 using ITensorNetworks
-using KrylovKit
+using KrylovKit: exponentiate
 using Observers
 using Random
 using Test

@@ -1,6 +1,7 @@
 using DifferentialEquations
 using ITensors
 using ITensorNetworks
+using KrylovKit: exponentiate
 
 function ode_solver(
   H::TimeDependentSum,

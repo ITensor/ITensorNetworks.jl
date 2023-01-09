@@ -1,12 +1,19 @@
 using DifferentialEquations
 using ITensors
 using ITensorNetworks
-using KrylovKit
+using KrylovKit: exponentiate
 using LinearAlgebra
 using Test
 
-include(joinpath(pkgdir(ITensorNetworks), "examples", "03_models.jl"))
-include(joinpath(pkgdir(ITensorNetworks), "examples", "03_solvers.jl"))
+const ttn_solvers_examples_dir = joinpath(
+  pkgdir(ITensorNetworks),
+  "examples",
+  "treetensornetworks",
+  "solvers",
+)
+
+include(joinpath(ttn_solvers_examples_dir, "03_models.jl"))
+include(joinpath(ttn_solvers_examples_dir, "03_solvers.jl"))
 
 # Functions need to be defined in global scope (outside
 # of the @testset macro)
