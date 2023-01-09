@@ -32,7 +32,7 @@ import Graphs: SimpleGraph, is_directed, weights
 
 import KrylovKit: eigsolve, linsolve
 
-import LinearAlgebra: factorize, normalize, normalize!, qr, svd,
+import LinearAlgebra: factorize, normalize, normalize!, qr, svd
 
 import ITensors:
   # contraction
