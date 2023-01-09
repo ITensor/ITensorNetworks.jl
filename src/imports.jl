@@ -13,7 +13,12 @@ import Base:
   union
 
 import NamedGraphs:
-  vertextype, convert_vertextype, vertex_to_parent_vertex, rename_vertices, disjoint_union
+  vertextype,
+  convert_vertextype,
+  vertex_to_parent_vertex,
+  rename_vertices,
+  disjoint_union,
+  incident_edges
 
 import .DataGraphs:
   underlying_graph,
@@ -27,15 +32,22 @@ import Graphs: SimpleGraph, is_directed, weights
 
 import KrylovKit: eigsolve, linsolve
 
-import LinearAlgebra: svd, factorize, qr
+import LinearAlgebra: factorize, normalize, normalize!, qr, svd
 
 import ITensors:
   # contraction
   contract,
   orthogonalize,
+  isortho,
   inner,
+  loginner,
   norm,
+  lognorm,
   expect,
+  # truncation
+  truncate,
+  replacebond!,
+  replacebond,
   # site and link indices
   siteind,
   siteinds,
@@ -58,7 +70,22 @@ import ITensors:
   settags,
   tags,
   # dag
-  dag
+  dag,
+  # permute
+  permute,
+  #commoninds
+  check_hascommoninds,
+  hascommoninds,
+  # linkdims
+  linkdim,
+  linkdims,
+  maxlinkdim,
+  # projected operators
+  product,
+  nsite,
+  # promotion and conversion
+  promote_itensor_eltype,
+  scalartype
 
 using ITensors.ContractionSequenceOptimization: deepmap
 

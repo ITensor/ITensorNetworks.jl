@@ -17,7 +17,10 @@ export grid,
   edgetype,
   is_directed,
   rem_vertex!,
-  vertices
+  vertices,
+  post_order_dfs_vertices,
+  edge_path,
+  vertex_path
 
 # NamedGraphs
 export named_binary_tree,
@@ -45,17 +48,33 @@ export AbstractITensorNetwork,
   randomITensorNetwork,
   ⊗,
   itensors,
-  tensor_product,
-  TreeTensorNetworkState,
-  TTNS,
+  reverse_bfs_edges,
   data_graph,
   flatten_networks,
   inner_network,
+  norm_network,
+  factorize!,
   norm_sqr_network,
   linkinds_combiners,
   combine_linkinds,
   subgraphs,
   reverse_bfs_edges,
+  # treetensornetwork
+  default_root_vertex,
+  ortho_center,
+  set_ortho_center,
+  TreeTensorNetworkState,
+  TTNS,
+  randomTTNS,
+  productTTNS,
+  TreeTensorNetworkOperator,
+  TTNO,
+  ProjTTNO,
+  ProjTTNOSum,
+  ProjTTNOApply,
+  set_nsite,
+  position,
+  finite_state_machine,
   # contraction_sequences.jl
   contraction_sequence,
   # utils.jl
@@ -63,6 +82,7 @@ export AbstractITensorNetwork,
   # namedgraphs.jl
   rename_vertices,
   # models.jl
+  heisenberg,
   ising,
   # opsum.jl
   group_terms,
@@ -80,6 +100,9 @@ export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
 
 # ITensorNetworks: partition.jl
 export partition, partition_vertices, subgraphs, subgraph_vertices
+
+# ITensorNetworks: utility.jl
+export relabel_sites
 
 # KrylovKit
 export eigsolve, linsolve
