@@ -30,7 +30,9 @@ import .DataGraphs:
 
 import Graphs: SimpleGraph, is_directed, weights
 
-import LinearAlgebra: svd, factorize, qr, normalize, normalize!
+import KrylovKit: eigsolve, linsolve
+
+import LinearAlgebra: factorize, normalize, normalize!, qr, svd,
 
 import ITensors:
   # contraction

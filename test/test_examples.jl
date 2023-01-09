@@ -15,10 +15,10 @@ using Test
     "steiner_tree.jl",
     joinpath("belief_propagation", "bpexample.jl"),
     joinpath("peps", "ising_tebd.jl"),
-    joinpath("ttns", "comb_tree.jl"),
-    joinpath("ttns", "spanning_tree.jl"),
-    joinpath("ttns", "ttn_basics.jl"),
-    joinpath("ttns", "ttn_type.jl"),
+    joinpath("treetensornetworks", "comb_tree.jl"),
+    joinpath("treetensornetworks", "spanning_tree.jl"),
+    joinpath("treetensornetworks", "ttn_basics.jl"),
+    joinpath("treetensornetworks", "ttn_type.jl"),
   ]
   @testset "Test $example_file" for example_file in example_files
     @suppress include(joinpath(pkgdir(ITensorNetworks), "examples", example_file))

@@ -1,7 +1,4 @@
-#
 # Graphs
-#
-
 export grid,
   dst,
   edges,
@@ -25,10 +22,7 @@ export grid,
   edge_path,
   vertex_path
 
-#
 # NamedGraphs
-#
-
 export named_binary_tree,
   named_grid,
   is_tree,
@@ -42,20 +36,13 @@ export named_binary_tree,
   named_comb_tree,
   subgraph
 
-#
 # DataGraphs
-#
-
 export DataGraph, vertex_data, edge_data, underlying_graph
 
-#
-# ITensorNetworks
-#
-
-# indsnetwork.jl
+# ITensorNetworks: indsnetwork.jl
 export IndsNetwork, union_all_inds
 
-# itensornetwork.jl
+# ITensorNetworks: itensornetwork.jl
 export AbstractITensorNetwork,
   ITensorNetwork,
   randomITensorNetwork,
@@ -100,13 +87,22 @@ export AbstractITensorNetwork,
   # opsum.jl
   group_terms,
   # tebd.jl
-  tebd
+  tebd,
+  # treetensornetwork/solvers.jl
+  TimeDependentSum,
+  dmrg_x,
+  tdvp,
+  to_vec
 
-# lattices.jl
+# ITensorNetworks: lattices.jl
+# TODO: DELETE
 export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
 
-# partition.jl
+# ITensorNetworks: partition.jl
 export partition, partition_vertices, subgraphs, subgraph_vertices
 
-# utility.jl
+# ITensorNetworks: utility.jl
 export relabel_sites
+
+# KrylovKit
+export eigsolve, linsolve
