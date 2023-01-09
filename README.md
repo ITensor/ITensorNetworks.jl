@@ -2,9 +2,6 @@
 
 A package to provide general network data structures and tools to use with ITensors.jl.
 
-This particular branch contains a draft of the extensions needed to implement sweeping
-algorithms for tree tensor networks.
-
 ## Installation
 
 You can install this package through the Julia package manager:
