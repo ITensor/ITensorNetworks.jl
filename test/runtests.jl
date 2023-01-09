@@ -1,14 +1,16 @@
 using Test
 using ITensorNetworks
 
-test_path = joinpath(pkgdir(ITensorNetworks), "test")
-test_files = filter(
-  file -> startswith(file, "test_") && endswith(file, ".jl"), readdir(test_path)
-)
-@testset "ITensorNetworks.jl" begin
-  @testset "$filename" for filename in test_files
-    println("Running $filename")
-    include(joinpath(test_path, filename))
+@testset "ITensorNetworks.jl, test directory $dirname" for dirname in [
+    ".",
+    joinpath("test_treetensornetwork", "test_solvers"),
+  ]
+  test_path = joinpath(pkgdir(ITensorNetworks), "test", dirname)
+  test_files = filter(readdir(test_path)) do file
+    startswith(file, "test_") && endswith(file, ".jl")
+  end
+  @testset "Test file $filename" for filename in test_files
+    include(joinpath(test_path, dirname, filename))
   end
 end
 

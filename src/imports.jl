@@ -25,6 +25,8 @@ import .DataGraphs:
 
 import Graphs: SimpleGraph, is_directed, weights
 
+import KrylovKit: eigsolve, linsolve
+
 import LinearAlgebra: svd, factorize, qr
 
 import ITensors:
