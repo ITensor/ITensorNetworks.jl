@@ -1,7 +1,8 @@
-using Test
-using ITensorNetworks
+using Dictionaries
 using ITensors
+using ITensorNetworks
 using Random
+using Test
 
 @testset "OpSum to TTNO" begin
   # small comb tree
