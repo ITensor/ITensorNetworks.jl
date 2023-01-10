@@ -234,7 +234,11 @@ function ITensorNetwork(eltype::Type, is::IndsNetwork, initstate::Function)
   return ψ
 end
 
-function ITensorNetwork(is::IndsNetwork, initstate::Function)
+function ITensorNetwork(eltype::Type, is::IndsNetwork, initstate::Union{String,Integer})
+  return ITensorNetwork(eltype, is, v -> initstate)
+end
+
+function ITensorNetwork(is::IndsNetwork, initstate::Union{String,Integer,Function})
   return ITensorNetwork(Number, is, initstate)
 end
 

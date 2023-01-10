@@ -19,7 +19,7 @@ is_directed(::Type{<:IndsNetwork}) = false
 # When setting an edge with collections of `Index`, set the reverse direction
 # edge with the `dag`.
 function reverse_data_direction(
-  inds_network::IndsNetwork, is::Union{Index,Tuple{Vararg{<:Index}},Vector{<:Index}}
+  inds_network::IndsNetwork, is::Union{Index,Tuple{Vararg{Index}},Vector{<:Index}}
 )
   return dag(is)
 end

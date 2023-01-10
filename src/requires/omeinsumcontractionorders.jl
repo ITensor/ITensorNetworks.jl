@@ -1,7 +1,7 @@
 # OMEinsumContractionOrders wrapper for ITensors
 # Slicing is not supported, because it might require extra work to slice an `ITensor` correctly.
 
-const ITensorList = Union{Vector{<:ITensor},Tuple{Vararg{<:ITensor}}}
+const ITensorList = Union{Vector{ITensor},Tuple{Vararg{ITensor}}}
 
 # TODO: Replace with `inds(A::ITensor)` or `collect(inds(A::ITensor))`
 getid(index::Index) = index

@@ -1,6 +1,6 @@
+using Dictionaries
 using ITensors
 using ITensorNetworks
-using Dictionaries
 using Random
 using Test
 
