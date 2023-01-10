@@ -746,13 +746,10 @@ function get_tn_cache_sub_info(
 end
 
 function get_tn_cache_info(
-  ctree_to_tn_tree::Dict{Vector,Dict{Vector,OrthogonalITensor}},
-  ctree_1::Vector,
-  ctree_2::Vector,
-  cache_binary_trees::Vector,
+  ctree_to_tn_tree, ctree_1::Vector, ctree_2::Vector, cache_binary_trees::Vector
 )
   @timeit timer "get_tn_cache_info" begin
-    if haskey(ctree_to_tn_tree, ctree_1)
+    if haskey(ctree_to_tn_tree, ctree_1) && ctree_to_tn_tree[ctree_1] isa Dict
       tn_tree_1 = ctree_to_tn_tree[ctree_1]
       cached_tn_tree1, uncached_tn1, new_igs_1 = get_tn_cache_sub_info(
         tn_tree_1, cache_binary_trees
@@ -762,7 +759,7 @@ function get_tn_cache_info(
       uncached_tn1 = get_child_tn(ctree_to_tn_tree, ctree_1)
       new_igs_1 = [nothing, nothing]
     end
-    if haskey(ctree_to_tn_tree, ctree_2)
+    if haskey(ctree_to_tn_tree, ctree_2) && ctree_to_tn_tree[ctree_2] isa Dict
       tn_tree_2 = ctree_to_tn_tree[ctree_2]
       cached_tn_tree2, uncached_tn2, new_igs_2 = get_tn_cache_sub_info(
         tn_tree_2, cache_binary_trees
@@ -813,14 +810,53 @@ function update_tn_tree_keys!(tn_tree, inds_btree, pairs::Vector{Pair})
   end
 end
 
-function get_child_tn(
-  ctree_to_tn_tree::Dict{Vector,Dict{Vector,OrthogonalITensor}}, ctree::Vector
-)
+function get_child_tn(ctree_to_tn_tree, ctree::Vector)
   if !haskey(ctree_to_tn_tree, ctree)
     @assert ctree isa Vector{ITensor}
     return orthogonal_tensors(ctree)
+  elseif ctree_to_tn_tree[ctree] isa Vector{OrthogonalITensor}
+    return ctree_to_tn_tree[ctree]
   else
     return vcat(collect(values(ctree_to_tn_tree[ctree]))...)
+  end
+end
+
+_index_less(a::Index, b::Index) = tags(a)[1] < tags(b)[1]
+
+function orthogonalize!(ctree_to_tn_tree::Dict, environments::Vector, c::Vector)
+  @info "start orthogonalize with env size", length(environments)
+  @timeit timer "orthogonalize" begin
+    index = nothing
+    if c[1] in environments
+      index = 1
+    elseif c[2] in environments
+      index = 2
+    end
+    if index == nothing
+      return nothing
+    end
+    network = vcat([get_child_tn(ctree_to_tn_tree, env) for env in environments]...)
+    network = get_tensors(network)
+    source_tensor = get_child_tn(ctree_to_tn_tree, c[index])[end].tensor
+    v = findfirst(i -> i == source_tensor, network)
+    orth_tn = orthogonalize(ITensorNetwork(network), v)
+    tensor_to_ortho_tensor = Dict{ITensor,ITensor}()
+    for i in 1:length(network)
+      inds1 = sort(inds(orth_tn[i]); lt=_index_less)
+      inds2 = sort(inds(network[i]); lt=_index_less)
+      inds1_tags = [tags(i) for i in inds1]
+      inds2_tags = [tags(i) for i in inds2]
+      @assert inds1_tags == inds2_tags
+      new_tensor = replaceinds(orth_tn[i], inds1, inds2)
+      tensor_to_ortho_tensor[network[i]] = new_tensor
+    end
+    for env in environments
+      ortho_tensors = Vector{OrthogonalITensor}([
+        OrthogonalITensor(tensor_to_ortho_tensor[t.tensor]) for
+        t in get_child_tn(ctree_to_tn_tree, env)
+      ])
+      ctree_to_tn_tree[env] = ortho_tensors
+    end
   end
 end
 
@@ -831,18 +867,28 @@ end
 # ig: index group
 # contract_ig: the index group to be contracted next
 # ig_tree: an index group with a tree hierarchy 
-function approximate_contract(ctree::Vector; cutoff, maxdim, ansatz="mps", use_cache=true)
+function approximate_contract(
+  ctree::Vector; cutoff, maxdim, ansatz="mps", use_cache=true, orthogonalize=false
+)
   @timeit timer "approximate_contract" begin
     tn_leaves = get_leaves(ctree)
+    environments = tn_leaves
     ctrees = topo_sort(ctree; leaves=tn_leaves)
     ctree_to_igs, ctree_to_adj_tree, ctree_to_contract_igs, ig_to_linear_order = _approximate_contract_pre_process(
       tn_leaves, ctrees
     )
     # mapping each contraction tree to a tensor network
-    ctree_to_tn_tree = Dict{Vector,Dict{Vector,OrthogonalITensor}}()
+    ctree_to_tn_tree = Dict{
+      Vector,Union{Dict{Vector,OrthogonalITensor},Vector{OrthogonalITensor}}
+    }()
     # accumulate norm
     log_accumulated_norm = 0.0
     for (ii, c) in enumerate(ctrees)
+      @info "orthogonalize", orthogonalize
+      if orthogonalize == true
+        orthogonalize!(ctree_to_tn_tree, environments, c)
+        environments = setdiff(environments, c)
+      end
       @info ii, "th tree approximation"
       if ctree_to_igs[c] == []
         @assert c == ctrees[end]
