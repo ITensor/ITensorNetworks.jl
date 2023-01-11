@@ -13,7 +13,7 @@ g = named_grid(dims)
 s = siteinds("S=1/2", g)
 chi = 2
 
-Random.seed!(1234)
+Random.seed!(5467)
 
 #bra
 ψ = randomITensorNetwork(s; link_space=chi)
@@ -35,7 +35,7 @@ sz_bp =
 println("Simple Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp))
 
 #Now do General Belief Propagation to Measure Sz on Site v
-nsites = 2
+nsites = 4
 vertex_groups = group_partition_vertices(ψψ, v -> v[1]; nvertices_per_partition=nsites)
 mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
 sz_bp =
