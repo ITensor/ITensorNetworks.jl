@@ -79,13 +79,13 @@ function subgraph_vertices(
   kwargs...,
 )
   #Both Metis and KaHyPar cannot handle the edge case npartitions = 1, so we will fix it here for now
-  if(_npartitions(g, npartitions, nvertices_per_partition) != 1)
+  if (_npartitions(g, npartitions, nvertices_per_partition) != 1)
     return subgraph_vertices(
-      Backend(backend), g, _npartitions(g, npartitions, nvertices_per_partition); kwargs...)
+      Backend(backend), g, _npartitions(g, npartitions, nvertices_per_partition); kwargs...
+    )
   else
-    return group(v ->1 ,collect(vertices(g)))
+    return group(v -> 1, collect(vertices(g)))
   end
-  
 end
 
 function subgraph_vertices(
@@ -287,12 +287,22 @@ function partition(
   return partition(g, subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...))
 end
 
-#First group the vertices of g according to some function and then perform a partition of g
+"""
+Group the vertices of g according to some function and then perform a partition into npartions/ nvertices_per_partition
+"""
+#This seems a bit specific. Perhaps there is a more general way to do this? Like define a sequence of functions/ partitionings which can be iteratively applied to the graph 
 function group_partition_vertices(
-  g::AbstractGraph, f::Function; npartitions=nothing, nvertices_per_partition=nothing, kwargs...
+  g::AbstractGraph,
+  f::Function;
+  npartitions=nothing,
+  nvertices_per_partition=nothing,
+  kwargs...,
 )
   vertex_groups = group(f, vertices(g))
-  Z_p = partition(partition(g, vertex_groups); npartitions, nvertices_per_partition, kwargs...)
-  return [reduce(vcat, (vertices(Z_p[vp][v]) for v in vertices(Z_p[vp]))) for vp in vertices(Z_p)]
+  Z_p = partition(
+    partition(g, vertex_groups); npartitions, nvertices_per_partition, kwargs...
+  )
+  return [
+    reduce(vcat, (vertices(Z_p[vp][v]) for v in vertices(Z_p[vp]))) for vp in vertices(Z_p)
+  ]
 end
-

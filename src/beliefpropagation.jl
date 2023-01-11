@@ -6,7 +6,9 @@ function construct_initial_mts(
   )
 end
 
-function construct_initial_mts(tn::ITensorNetwork, subgraphs::DataGraph; init=(I...) -> @compat allequal(I) ? 1 : 0)
+function construct_initial_mts(
+  tn::ITensorNetwork, subgraphs::DataGraph; init=(I...) -> @compat allequal(I) ? 1 : 0
+)
   # TODO: This is dropping the vertex data for some reason.
   # mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensor}(subgraphs)
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensor}(
@@ -49,8 +51,12 @@ function update_mt(
   contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
 )
   contract_list = [mts; [tn[v] for v in subgraph_vertices]]
-  
-  new_mt = isone(length(contract_list)) ? copy(only(contract_list)) : contract(contract_list; sequence=contraction_sequence(contract_list))
+
+  new_mt = if isone(length(contract_list))
+    copy(only(contract_list))
+  else
+    contract(contract_list; sequence=contraction_sequence(contract_list))
+  end
   return normalize!(new_mt)
 end
 
@@ -70,7 +76,9 @@ function update_all_mts(
 )
   update_mts = copy(mts)
   for e in edges(mts)
-    environment_tensors = ITensor[mts[e_in] for e_in in setdiff(boundary_edges(mts, src(e), dir=:in), [reverse(e)])]
+    environment_tensors = ITensor[
+      mts[e_in] for e_in in setdiff(boundary_edges(mts, src(e); dir=:in), [reverse(e)])
+    ]
     update_mts[src(e) => dst(e)] = update_mt(
       tn, mts[src(e)], environment_tensors; contraction_sequence
     )
@@ -96,26 +104,40 @@ Specifically, the contraction of the environment tensors and tn[vertices] will b
 """
 function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector)
   subgraphs = unique([find_subgraph(v, mts) for v in verts])
-  env_tensors =  ITensor[mts[e] for e in boundary_edges(mts, subgraphs; dir = :in)]
-  return vcat(env_tensors, [tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)])
+  env_tensors = ITensor[mts[e] for e in boundary_edges(mts, subgraphs; dir=:in)]
+  return vcat(
+    env_tensors,
+    [tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)],
+  )
 end
 
 """
 Calculate the contraction of a tensor network centred on the vertices verts. Using message tensors.
 Defaults to using tn[verts] as the local network but can be overriden
 """
-function calculate_contraction(tn::ITensorNetwork, mts::DataGraph, verts::Vector; verts_tensors = ITensor[tn[v] for v in verts], contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"))
+function calculate_contraction(
+  tn::ITensorNetwork,
+  mts::DataGraph,
+  verts::Vector;
+  verts_tensors=ITensor[tn[v] for v in verts],
+  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
+)
   environment_tensors = get_environment(tn, mts, verts)
   tensors_to_contract = vcat(environment_tensors, verts_tensors)
-  return contract(tensors_to_contract; sequence = contraction_sequence(tensors_to_contract))
+  return contract(tensors_to_contract; sequence=contraction_sequence(tensors_to_contract))
 end
 
 """
 Simulaneously initialise and update message tensors of a tensornetwork
 """
-function compute_message_tensors(tn::ITensorNetwork; niters = 10, nvertices_per_partition = 1, vertex_groups = nothing, kwargs...)
-
-  Z = vertex_groups == nothing ? partition(tn; nvertices_per_partition = nvertices_per_partition) : partition(tn, vertex_groups)
+function compute_message_tensors(
+  tn::ITensorNetwork; niters=10, nvertices_per_partition=1, vertex_groups=nothing, kwargs...
+)
+  Z = if vertex_groups == nothing
+    partition(tn; nvertices_per_partition=nvertices_per_partition)
+  else
+    partition(tn, vertex_groups)
+  end
 
   mts = construct_initial_mts(tn, Z; kwargs...)
   mts = update_all_mts(tn, mts, niters)
@@ -126,7 +148,6 @@ end
 Check env is the correct environment for the subset of vertices of tn
 """
 function assert_correct_environment(tn::ITensorNetwork, env::Vector{ITensor}, verts::Vector)
-
   outer_verts_indices = flatten([commoninds(tn, e) for e in boundary_edges(tn, verts)])
   return issetequal(noncommoninds(env...), outer_verts_indices)
 end
