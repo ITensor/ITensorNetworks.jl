@@ -452,6 +452,16 @@ function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combine
   return combined_tn
 end
 
+function split_index(tn::AbstractITensorNetwork, edges_to_split)
+  tn = copy(tn)
+  for e in edges_to_split
+    inds = commoninds(tn[src(e)], tn[dst(e)])
+    replaceind!(tn[dst(e)], inds..., prime(inds)...)
+  end
+
+  return tn
+end
+
 function flatten_networks(
   tn1::AbstractITensorNetwork,
   tn2::AbstractITensorNetwork;

@@ -59,7 +59,6 @@ include("specialitensornetworks.jl")
 include("renameitensornetwork.jl")
 include("boundarymps.jl")
 include("beliefpropagation.jl")
-include("physics.jl")
 include(joinpath("treetensornetwork", "treetensornetwork.jl"))
 
 include("exports.jl")
