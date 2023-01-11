@@ -30,36 +30,35 @@ function exact_contract(N)
   return contract_log_norm(tn, seq)
 end
 
-function build_tntree(tn, N; strategy, env_size)
-  @assert strategy in ["element", "line"]
-  if strategy == "element"
-    tn = vec(tn)
-    return line_network(tn)
-  end
-  line_index = 1
-  num_lines = N[2] * N[3]
+function build_tntree(tn, N; env_size)
+  @assert length(N) == length(env_size)
+  n = [Integer(N[i] / env_size[i]) for i in 1:length(N)]
   tntree = nothing
-  while line_index <= N[2] * N[3]
-    partition = Vector{ITensor}()
-    @info "partition"
-    for _ in 1:env_size
-      if line_index <= num_lines
-        @info "line_index", line_index
-        push!(partition, tn[:, line_index]...)
-        line_index += 1
+  for k in 1:n[3]
+    for j in 1:n[2]
+      for i in 1:n[1]
+        ii = (i - 1) * env_size[1]
+        jj = (j - 1) * env_size[2]
+        kk = (k - 1) * env_size[3]
+        sub_tn = tn[
+          (ii + 1):(ii + env_size[1]),
+          (jj + 1):(jj + env_size[2]),
+          (kk + 1):(kk + env_size[3]),
+        ]
+        sub_tn = vec(sub_tn)
+        if tntree == nothing
+          tntree = sub_tn
+        else
+          tntree = [tntree, sub_tn]
+        end
       end
-    end
-    if tntree == nothing
-      tntree = partition
-    else
-      tntree = [tntree, partition]
     end
   end
   return tntree
 end
 
 function bench_3d_cube(
-  N; num_iter, cutoff, maxdim, ansatz, snake, use_cache, ortho, strategy, env_size
+  N; num_iter, cutoff, maxdim, ansatz, snake, use_cache, ortho, env_size
 )
   ITensors.set_warn_order(100)
   reset_timer!(timer)
@@ -95,8 +94,7 @@ function bench_3d_cube(
       tn[:, rangej, k] = tn[:, 1:N[2], k]
     end
   end
-  tn = reshape(tn, (N[1], N[2] * N[3]))
-  tntree = build_tntree(tn, N; strategy=strategy, env_size=env_size)
+  tntree = build_tntree(tn, N; env_size=env_size)
   out_list = []
   for _ in 1:num_iter
     out, log_acc_norm = approximate_contract(
@@ -139,6 +137,5 @@ bench_3d_cube(
   snake=false,
   use_cache=true,
   ortho=false,
-  strategy="line",
-  env_size=1,
+  env_size=(2, 2, 1),
 )
