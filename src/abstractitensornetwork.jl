@@ -45,6 +45,12 @@ end
 # Iteration
 #
 
+# TODO: iteration
+
+# TODO: different `map` functionalities as defined for ITensors.AbstractMPS
+
+# TODO: broadcasting
+
 function union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
   tn = ITensorNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
   # Add any new edges that are introduced during the union
@@ -103,6 +109,36 @@ end
 
 # Convenience wrapper
 itensors(tn::AbstractITensorNetwork) = Vector{ITensor}(tn)
+
+#
+# Promotion and conversion
+#
+
+function LinearAlgebra.promote_leaf_eltypes(tn::AbstractITensorNetwork)
+  return LinearAlgebra.promote_leaf_eltypes(itensors(tn))
+end
+
+function ITensors.promote_itensor_eltype(tn::AbstractITensorNetwork)
+  return LinearAlgebra.promote_leaf_eltypes(tn)
+end
+
+ITensors.scalartype(tn::AbstractITensorNetwork) = LinearAlgebra.promote_leaf_eltypes(tn)
+
+# TODO: eltype(::AbstractITensorNetwork) (cannot behave the same as eltype(::ITensors.AbstractMPS))
+
+# TODO: mimic ITensors.AbstractMPS implementation using map
+function ITensors.convert_leaf_eltype(eltype::Type, tn::AbstractITensorNetwork)
+  tn = copy(tn)
+  vertex_data(tn) .= convert_eltype.(Ref(eltype), vertex_data(tn))
+  return tn
+end
+
+# TODO: mimic ITensors.AbstractMPS implementation using map
+function NDTensors.convert_scalartype(eltype::Type{<:Number}, tn::AbstractITensorNetwork)
+  tn = copy(tn)
+  vertex_data(tn) .= ITensors.adapt.(Ref(eltype), vertex_data(tn))
+  return tn
+end
 
 #
 # Conversion to Graphs
@@ -185,11 +221,13 @@ end
 function replaceinds(tn::AbstractITensorNetwork, is_is′::Pair{<:IndsNetwork,<:IndsNetwork})
   tn = copy(tn)
   is, is′ = is_is′
-  # TODO: Check that `is` and `is′` have the same vertices and edges.
+  @assert underlying_graph(is) == underlying_graph(is′)
   for v in vertices(is)
+    isassigned(is, v) || continue
     setindex_preserve_graph!(tn, replaceinds(tn[v], is[v] => is′[v]), v)
   end
   for e in edges(is)
+    isassigned(is, e) || continue
     for v in (src(e), dst(e))
       setindex_preserve_graph!(tn, replaceinds(tn[v], is[e] => is′[e]), v)
     end
@@ -208,7 +246,7 @@ const map_inds_label_functions = [
   :setprime,
   :noprime,
   :replaceprime,
-  :swapprime,
+  # :swapprime, # TODO: add @test_broken as a reminder
   :addtags,
   :removetags,
   :replacetags,
@@ -226,6 +264,24 @@ for f in map_inds_label_functions
   @eval begin
     function $f(n::Union{IndsNetwork,AbstractITensorNetwork}, args...; kwargs...)
       return map_inds($f, n, args...; kwargs...)
+    end
+
+    function $f(
+      ffilter::typeof(linkinds),
+      n::Union{IndsNetwork,AbstractITensorNetwork},
+      args...;
+      kwargs...,
+    )
+      return map_inds($f, n, args...; sites=[], kwargs...)
+    end
+
+    function $f(
+      ffilter::typeof(siteinds),
+      n::Union{IndsNetwork,AbstractITensorNetwork},
+      args...;
+      kwargs...,
+    )
+      return map_inds($f, n, args...; links=[], kwargs...)
     end
   end
 end
@@ -273,7 +329,8 @@ end
 # `Graphs.merge_vertices!` (https://github.com/mtfishman/ITensorNetworks.jl/issues/12)
 function contract(tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex=dst(edge))
   V = promote_type(vertextype(tn), typeof(merged_vertex))
-  tn = ITensorNetwork{V}(tn)
+  # TODO: Check `ITensorNetwork{V}`, shouldn't need a copy here.
+  tn = ITensorNetwork{V}(copy(tn))
   neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
@@ -366,7 +423,9 @@ function factorize(
 )
   # Promote vertex type
   V = promote_type(vertextype(tn), typeof(X_vertex), typeof(Y_vertex))
-  tn = ITensorNetwork{V}(tn)
+
+  # TODO: Check `ITensorNetwork{V}`, shouldn't need a copy here.
+  tn = ITensorNetwork{V}(copy(tn))
 
   neighbors_X = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   left_inds = uniqueinds(tn, edge)
@@ -391,12 +450,27 @@ function factorize(
   return tn
 end
 
-# For ambiguity error
+function factorize(
+  tn::AbstractITensorNetwork,
+  edge::Pair;
+  kwargs...,
+)
+  return factorize(tn, edgetype(tn)(edge); kwargs...)
+end
+
+# For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
 function _orthogonalize_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  tn = factorize(tn, edge; kwargs...)
-  # TODO: Implement as `only(common_neighbors(tn, src(edge), dst(edge)))`
-  new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
-  return contract(tn, new_vertex => dst(edge))
+  # tn = factorize(tn, edge; kwargs...)
+  # # TODO: Implement as `only(common_neighbors(tn, src(edge), dst(edge)))`
+  # new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
+  # return contract(tn, new_vertex => dst(edge))
+  tn = copy(tn)
+  left_inds = uniqueinds(tn, edge)
+  ltags = tags(tn, edge)
+  X, Y = factorize(tn[src(edge)], left_inds; tags=ltags, ortho="left", kwargs...)
+  tn[src(edge)] = X
+  tn[dst(edge)] *= Y
+  return tn
 end
 
 function orthogonalize(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
@@ -416,6 +490,25 @@ function orthogonalize(ψ::AbstractITensorNetwork, source_vertex)
     ψ = orthogonalize(ψ, e)
   end
   return ψ
+end
+
+# TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
+function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+  tn = copy(tn)
+  left_inds = uniqueinds(tn, edge)
+  ltags = tags(tn, edge)
+  U, S, V = svd(tn[src(edge)], left_inds; lefttags=ltags, ortho="left", kwargs...)
+  tn[src(edge)] = U
+  tn[dst(edge)] *= (S * V)
+  return tn
+end
+
+function truncate(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+  return _truncate_edge(tn, edge; kwargs...)
+end
+
+function truncate(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return truncate(tn, edgetype(tn)(edge); kwargs...)
 end
 
 function Base.:*(c::Number, ψ::AbstractITensorNetwork)
@@ -571,6 +664,91 @@ function visualize(
     vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
   end
   return visualize(Vector{ITensor}(tn), args...; vertex_labels, kwargs...)
+end
+
+# 
+# Link dimensions
+# 
+
+function maxlinkdim(tn::AbstractITensorNetwork)
+  md = 1
+  for e in edges(tn)
+    md = max(md, linkdim(tn, e))
+  end
+  return md
+end
+
+function linkdim(tn::AbstractITensorNetwork, edge::Pair)
+  return linkdim(tn, edgetype(tn)(edge))
+end
+
+function linkdim(tn::AbstractITensorNetwork{V}, edge::AbstractEdge{V}) where {V}
+  ls = linkinds(tn, edge)
+  return prod([isnothing(l) ? 1 : dim(l) for l in ls])
+end
+
+function linkdims(tn::AbstractITensorNetwork{V}) where {V}
+  ld = DataGraph{V,Any,Int}(copy(underlying_graph(tn)))
+  for e in edges(ld)
+    ld[e] = linkdim(tn, e)
+  end
+  return ld
+end
+
+# 
+# Common index checking
+# 
+
+function hascommoninds(
+  ::typeof(siteinds), A::AbstractITensorNetwork{V}, B::AbstractITensorNetwork{V}
+) where {V}
+  for v in vertices(A)
+    !hascommoninds(siteinds(A, v), siteinds(B, v)) && return false
+  end
+  return true
+end
+
+function check_hascommoninds(
+  ::typeof(siteinds), A::AbstractITensorNetwork{V}, B::AbstractITensorNetwork{V}
+) where {V}
+  N = nv(A)
+  if nv(B) ≠ N
+    throw(
+      DimensionMismatch(
+        "$(typeof(A)) and $(typeof(B)) have mismatched number of vertices $N and $(nv(B))."
+      ),
+    )
+  end
+  for v in vertices(A)
+    !hascommoninds(siteinds(A, v), siteinds(B, v)) && error(
+      "$(typeof(A)) A and $(typeof(B)) B must share site indices. On vertex $v, A has site indices $(siteinds(A, v)) while B has site indices $(siteinds(B, v)).",
+    )
+  end
+  return nothing
+end
+
+function hassameinds(
+  ::typeof(siteinds), A::AbstractITensorNetwork{V}, B::AbstractITensorNetwork{V}
+) where {V}
+  nv(A) ≠ nv(B) && return false
+  for v in vertices(A)
+    !ITensors.hassameinds(siteinds(A, v), siteinds(B, v)) && return false
+  end
+  return true
+end
+
+# 
+# Site combiners
+# 
+
+# TODO: will be broken, fix this
+function site_combiners(tn::AbstractITensorNetwork{V}) where {V}
+  Cs = DataGraph{V,ITensor}(copy(underlying_graph(tn)))
+  for v in vertices(tn)
+    s = siteinds(tn, v)
+    Cs[v] = combiner(s; tags=commontags(s))
+  end
+  return Cs
 end
 
 ## # TODO: should this make sure that internal indices
