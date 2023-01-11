@@ -824,22 +824,29 @@ end
 _index_less(a::Index, b::Index) = tags(a)[1] < tags(b)[1]
 
 function orthogonalize!(ctree_to_tn_tree::Dict, environments::Vector, c::Vector)
-  @info "start orthogonalize with env size", length(environments)
   @timeit timer "orthogonalize" begin
-    index = nothing
+    index = []
     if c[1] in environments
-      index = 1
+      push!(index, 1)
     elseif c[2] in environments
-      index = 2
+      push!(index, 2)
     end
-    if index == nothing
+    if index == []
       return nothing
     end
+    environments = setdiff(environments, c)
+    if length(environments) == 0
+      return nothing
+    end
+    @info "start orthogonalize with env size", length(environments)
     network = vcat([get_child_tn(ctree_to_tn_tree, env) for env in environments]...)
     network = get_tensors(network)
-    source_tensor = get_child_tn(ctree_to_tn_tree, c[index])[end].tensor
-    v = findfirst(i -> i == source_tensor, network)
-    orth_tn = orthogonalize(ITensorNetwork(network), v)
+    env_boundary = get_child_tn(ctree_to_tn_tree, c[index[1]])
+    source_tensor = env_boundary[1].tensor
+    @assert !(source_tensor in network)
+    push!(network, source_tensor)
+    ctree_to_tn_tree[c[index[1]]] = env_boundary[2:end]
+    orth_tn = orthogonalize(ITensorNetwork(network), length(network))
     tensor_to_ortho_tensor = Dict{ITensor,ITensor}()
     for i in 1:length(network)
       inds1 = sort(inds(orth_tn[i]); lt=_index_less)
@@ -857,6 +864,10 @@ function orthogonalize!(ctree_to_tn_tree::Dict, environments::Vector, c::Vector)
       ])
       ctree_to_tn_tree[env] = ortho_tensors
     end
+    push!(
+      ctree_to_tn_tree[c[index[1]]],
+      OrthogonalITensor(tensor_to_ortho_tensor[source_tensor]),
+    )
   end
 end
 
