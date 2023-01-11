@@ -7,7 +7,7 @@ function dmrg_x_solver(PH, t, psi0; kwargs...)
   return U_max, nothing
 end
 
-function dmrg_x(PH, psi0::MPS; reverse_step=false, kwargs...)
+function dmrg_x(PH, psi0::IsTreeState; reverse_step=false, kwargs...)
   t = Inf
   psi = tdvp(dmrg_x_solver, PH, t, psi0; reverse_step, kwargs...)
   return psi

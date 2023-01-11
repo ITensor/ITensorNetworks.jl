@@ -12,6 +12,7 @@ using IsApprox
 using ITensors
 using ITensors.ContractionSequenceOptimization
 using ITensors.ITensorVisualizationCore
+using IterTools
 using KrylovKit: KrylovKit
 using NamedGraphs
 using Observers
@@ -90,6 +91,8 @@ include(joinpath("treetensornetworks", "abstractprojttno.jl"))
 include(joinpath("treetensornetworks", "projttno.jl"))
 include(joinpath("treetensornetworks", "projttnosum.jl"))
 include(joinpath("treetensornetworks", "projttno_apply.jl"))
+# Compatibility of ITensors.MPS/MPO with tree sweeping routines
+include(joinpath("treetensornetworks", "solvers", "tree_patch.jl"))
 # Compatibility of ITensor observer and Observers
 # TODO: Delete this
 include(joinpath("treetensornetworks", "solvers", "update_observer.jl"))
@@ -106,10 +109,11 @@ include(joinpath("treetensornetworks", "solvers", "tdvp.jl"))
 include(joinpath("treetensornetworks", "solvers", "dmrg.jl"))
 include(joinpath("treetensornetworks", "solvers", "dmrg_x.jl"))
 include(joinpath("treetensornetworks", "solvers", "projmpo_apply.jl"))
-include(joinpath("treetensornetworks", "solvers", "contract_mpo_mps.jl"))
+include(joinpath("treetensornetworks", "solvers", "contract_operator_state.jl"))
 include(joinpath("treetensornetworks", "solvers", "projmps2.jl"))
 include(joinpath("treetensornetworks", "solvers", "projmpo_mps2.jl"))
 include(joinpath("treetensornetworks", "solvers", "linsolve.jl"))
+include(joinpath("treetensornetworks", "solvers", "tree_sweeping.jl"))
 
 include("exports.jl")
 

@@ -1,5 +1,11 @@
 function tdvp_step(
-  order::TDVPOrder, solver, PH, time_step::Number, psi::MPS; current_time=0.0, kwargs...
+  order::TDVPOrder,
+  solver,
+  PH,
+  time_step::Number,
+  psi::IsTreeState;
+  current_time=0.0,
+  kwargs...,
 )
   orderings = ITensorNetworks.orderings(order)
   sub_time_steps = ITensorNetworks.sub_time_steps(order)
@@ -18,34 +24,28 @@ isforward(direction::Base.ForwardOrdering) = true
 isforward(direction::Base.ReverseOrdering) = false
 isreverse(direction) = !isforward(direction)
 
-function sweep_bonds(direction::Base.ForwardOrdering, n::Int; ncenter::Int)
-  return 1:(n - ncenter + 1)
-end
-
-function sweep_bonds(direction::Base.ReverseOrdering, n::Int; ncenter::Int)
-  return reverse(sweep_bonds(Base.Forward, n; ncenter))
-end
-
-is_forward_done(direction::Base.ForwardOrdering, b, n; ncenter) = (b + ncenter - 1 == n)
-is_forward_done(direction::Base.ReverseOrdering, b, n; ncenter) = false
-is_reverse_done(direction::Base.ForwardOrdering, b, n; ncenter) = false
-is_reverse_done(direction::Base.ReverseOrdering, b, n; ncenter) = (b == 1)
-function is_half_sweep_done(direction, b, n; ncenter)
-  return is_forward_done(direction, b, n; ncenter) ||
-         is_reverse_done(direction, b, n; ncenter)
+# very much draft, interface to be discussed
+function _get_sweep_generator(kwargs)
+  sweep_generator = get(kwargs, :sweep_generator, nothing)
+  isnothing(sweep_generator) || return sweep_type
+  nsite::Int = get(kwargs, :nsite, 2)
+  nsite == 1 && return one_site_sweep
+  nsite == 2 && return two_site_sweep
+  return error("Unsupported value $nsite for nsite keyword argument.")
 end
 
 function tdvp_sweep(
-  direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS; kwargs...
+  direction::Base.Ordering, solver, PH, time_step::Number, psi::IsTreeState; kwargs...
 )
   PH = copy(PH)
   psi = copy(psi)
-  if length(psi) == 1
+  if nv(psi) == 1
     error(
       "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
-  nsite::Int = get(kwargs, :nsite, 2)
+  sweep_generator = _get_sweep_generator(kwargs)
+  root_vertex = get(kwargs, :root_vertex, default_root_vertex(underlying_graph(PH)))
   reverse_step::Bool = get(kwargs, :reverse_step, true)
   normalize::Bool = get(kwargs, :normalize, false)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
@@ -59,36 +59,18 @@ function tdvp_sweep(
   cutoff::Real = get(kwargs, :cutoff, 1E-16)
   noise::Real = get(kwargs, :noise, 0.0)
 
-  N = length(psi)
-  set_nsite!(PH, nsite)
-  if isforward(direction)
-    if !isortho(psi) || orthocenter(psi) != 1
-      orthogonalize!(psi, 1)
-    end
-    @assert isortho(psi) && orthocenter(psi) == 1
-    position!(PH, psi, 1)
-  elseif isreverse(direction)
-    if !isortho(psi) || orthocenter(psi) != N - nsite + 1
-      orthogonalize!(psi, N - nsite + 1)
-    end
-    @assert(isortho(psi) && (orthocenter(psi) == N - nsite + 1))
-    position!(PH, psi, N - nsite + 1)
-  end
   maxtruncerr = 0.0
   info = nothing
-  for b in sweep_bonds(direction, N; ncenter=nsite)
-    current_time, maxtruncerr, spec, info = tdvp_site_update!(
+  for sweep_step in sweep_generator(direction, underlying_graph(PH), root_vertex, reverse_step; state=psi, kwargs...)
+    psi, PH, current_time, maxtruncerr, spec, info = tdvp_local_update(
       solver,
       PH,
       psi,
-      b;
-      nsite,
-      reverse_step,
+      sweep_step;
       current_time,
       outputlevel,
-      time_step,
+      time_step, # TODO: handle time_step prefactor here?
       normalize,
-      direction,
       noise,
       which_decomp,
       svd_alg,
@@ -98,10 +80,8 @@ function tdvp_sweep(
       maxtruncerr,
     )
     if outputlevel >= 2
-      if nsite == 1
-        @printf("Sweep %d, direction %s, bond (%d,) \n", sw, direction, b)
-      elseif nsite == 2
-        @printf("Sweep %d, direction %s, bond (%d,%d) \n", sw, direction, b, b + 1)
+      if time_direction(sweep_step) == +1
+        @printf("Sweep %d, direction %s, position (%s,) \n", sw, direction, pos(step))
       end
       print("  Truncated using")
       @printf(" cutoff=%.1E", cutoff)
@@ -111,122 +91,85 @@ function tdvp_sweep(
       println()
       if spec != nothing
         @printf(
-          "  Trunc. err=%.2E, bond dimension %d\n", spec.truncerr, dim(linkind(psi, b))
+          "  Trunc. err=%.2E, bond dimension %d\n",
+          spec.truncerr,
+          linkdim(psi, edgetype(psi)(pos(step)...))
         )
       end
       flush(stdout)
     end
-    update!(
-      observer;
-      psi,
-      bond=b,
-      sweep=sw,
-      half_sweep=isforward(direction) ? 1 : 2,
-      spec,
-      outputlevel,
-      half_sweep_is_done=is_half_sweep_done(direction, b, N; ncenter=nsite),
-      current_time,
-      info,
-    )
+    # very much draft, observer interface to be discussed...
+    if time_direction(sweep_step) == +1
+      obs_update!(
+        observer,
+        psi,
+        pos(sweep_step);
+        sweep=sw,
+        half_sweep=isforward(direction) ? 1 : 2,
+        spec,
+        outputlevel,
+        current_time,
+        info,
+      )
+    end
   end
   # Just to be sure:
   normalize && normalize!(psi)
   return psi, PH, TDVPInfo(maxtruncerr)
 end
 
-function tdvp_site_update!(
-  solver,
-  PH,
-  psi,
-  b;
-  nsite,
-  reverse_step,
-  current_time,
-  outputlevel,
-  time_step,
-  normalize,
-  direction,
-  noise,
-  which_decomp,
-  svd_alg,
-  cutoff,
-  maxdim,
-  mindim,
-  maxtruncerr,
-)
-  return tdvp_site_update!(
-    Val(nsite),
-    Val(reverse_step),
-    solver,
-    PH,
-    psi,
-    b;
-    current_time,
-    outputlevel,
-    time_step,
-    normalize,
-    direction,
-    noise,
-    which_decomp,
-    svd_alg,
-    cutoff,
-    maxdim,
-    mindim,
-    maxtruncerr,
-  )
+# draft for unification of different nsite and time direction updates
+
+function _extract_tensor(psi::IsTreeState, pos::Vector)
+  return psi, prod(psi[v] for v in pos)
 end
 
-function tdvp_site_update!(
-  nsite_val::Val{1},
-  reverse_step_val::Val{false},
-  solver,
-  PH,
-  psi,
-  b;
-  current_time,
-  outputlevel,
-  time_step,
-  normalize,
-  direction,
-  noise,
-  which_decomp,
-  svd_alg,
-  cutoff,
-  maxdim,
-  mindim,
-  maxtruncerr,
-)
-  N = length(psi)
-  nsite = 1
-  # Do 'forwards' evolution step
-  set_nsite!(PH, nsite)
-  position!(PH, psi, b)
-  phi1 = psi[b]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
-  current_time += time_step
-  normalize && (phi1 /= norm(phi1))
+function _extract_tensor(psi::IsTreeState, e::NamedEdge)
+  left_inds = uniqueinds(psi, e)
+  U, S, V = svd(psi[src(e)], left_inds; lefttags=tags(psi, e), righttags=tags(psi, e))
+  psi[src(e)] = U
+  return psi, S * V
+end
+
+# sort of multi-site replacebond!; TODO: use dense TTNS constructor instead
+function _insert_tensor(psi::IsTreeState, phi::ITensor, pos::Vector; kwargs...)
+  which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
+  normalize::Bool = get(kwargs, :normalize, false)
+  eigen_perturbation = get(kwargs, :eigen_perturbation, nothing)
   spec = nothing
-  psi[b] = phi1
-  if !is_half_sweep_done(direction, b, N; ncenter=nsite)
-    # Move ortho center
-    Δ = (isforward(direction) ? +1 : -1)
-    orthogonalize!(psi, b + Δ)
+  for (v, vnext) in IterTools.partition(pos, 2, 1)
+    e = edgetype(psi)(v, vnext)
+    indsTe = inds(psi[v])
+    L, phi, spec = factorize(
+      phi, indsTe; which_decomp, tags=tags(psi, e), eigen_perturbation, kwargs...
+    )
+    psi[v] = L
+    eigen_perturbation = nothing # TODO: fix this
   end
-  return current_time, maxtruncerr, spec, info
+  psi[last(pos)] = phi
+  psi = set_ortho_center(psi, [last(pos)])
+  @assert isortho(psi) && only(ortho_center(psi)) == last(pos)
+  normalize && (psi[last(pos)] ./= norm(psi[last(pos)]))
+  return psi, spec # TODO: return maxtruncerr, will not be correct in cases where insertion executes multiple factorizations
 end
 
-function tdvp_site_update!(
-  nsite_val::Val{1},
-  reverse_step_val::Val{true},
+function _insert_tensor(
+  psi::IsTreeState, phi::ITensor, e::NamedEdge; kwargs...
+)
+  psi[dst(e)] *= phi
+  psi = set_ortho_center(psi, [dst(e)])
+  return psi, nothing
+end
+
+function tdvp_local_update(
   solver,
   PH,
   psi,
-  b;
+  sweep_step;
   current_time,
   outputlevel,
   time_step,
   normalize,
-  direction,
   noise,
   which_decomp,
   svd_alg,
@@ -235,184 +178,32 @@ function tdvp_site_update!(
   mindim,
   maxtruncerr,
 )
-  N = length(psi)
-  nsite = 1
-  # Do 'forwards' evolution step
-  set_nsite!(PH, nsite)
-  position!(PH, psi, b)
-  phi1 = psi[b]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  psi = orthogonalize(psi, current_ortho(sweep_step)) # choose the one that is closest to previous ortho center?
+  psi, phi = _extract_tensor(psi, pos(sweep_step))
+  time_step = time_direction(sweep_step) * time_step
+  PH = set_nsite(PH, nsite(sweep_step))
+  PH = position(PH, psi, pos(sweep_step))
+  phi, info = solver(PH, time_step, phi; current_time, outputlevel)
   current_time += time_step
-  normalize && (phi1 /= norm(phi1))
-  spec = nothing
-  psi[b] = phi1
-  if !is_half_sweep_done(direction, b, N; ncenter=nsite)
-    # Do backwards evolution step
-    b1 = (isforward(direction) ? b + 1 : b)
-    Δ = (isforward(direction) ? +1 : -1)
-    uinds = uniqueinds(phi1, psi[b + Δ])
-    U, S, V = svd(phi1, uinds)
-    psi[b] = U
-    phi0 = S * V
-    if isforward(direction)
-      ITensors.setleftlim!(psi, b)
-    elseif isreverse(direction)
-      ITensors.setrightlim!(psi, b)
-    end
-    set_nsite!(PH, nsite - 1)
-    position!(PH, psi, b1)
-    phi0, info = solver(PH, -time_step, phi0; current_time, outputlevel)
-    current_time -= time_step
-    normalize && (phi0 ./= norm(phi0))
-    psi[b + Δ] = phi0 * psi[b + Δ]
-    if isforward(direction)
-      ITensors.setrightlim!(psi, b + Δ + 1)
-    elseif isreverse(direction)
-      ITensors.setleftlim!(psi, b + Δ - 1)
-    end
-    set_nsite!(PH, nsite)
-  end
-  return current_time, maxtruncerr, spec, info
-end
-
-function tdvp_site_update!(
-  nsite_val::Val{2},
-  reverse_step_val::Val{false},
-  solver,
-  PH,
-  psi,
-  b;
-  current_time,
-  outputlevel,
-  time_step,
-  normalize,
-  direction,
-  noise,
-  which_decomp,
-  svd_alg,
-  cutoff,
-  maxdim,
-  mindim,
-  maxtruncerr,
-)
-  N = length(psi)
-  nsite = 2
-  # Do 'forwards' evolution step
-  set_nsite!(PH, nsite)
-  position!(PH, psi, b)
-  phi1 = psi[b] * psi[b + 1]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
-  current_time += time_step
-  normalize && (phi1 /= norm(phi1))
-  spec = nothing
-  ortho = isforward(direction) ? "left" : "right"
+  normalize && (phi /= norm(phi))
   drho = nothing
+  ortho = "left"
   if noise > 0.0 && isforward(direction)
-    drho = noise * noiseterm(PH, phi, ortho)
+    drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
   end
-  spec = replacebond!(
+  psi, spec = _insert_tensor(
     psi,
-    b,
-    phi1;
+    phi,
+    pos(sweep_step);
     maxdim,
     mindim,
     cutoff,
     eigen_perturbation=drho,
-    ortho=ortho,
+    ortho,
     normalize,
     which_decomp,
     svd_alg,
   )
-  maxtruncerr = max(maxtruncerr, spec.truncerr)
-  return current_time, maxtruncerr, spec, info
-end
-
-function tdvp_site_update!(
-  nsite_val::Val{2},
-  reverse_step_val::Val{true},
-  solver,
-  PH,
-  psi,
-  b;
-  current_time,
-  outputlevel,
-  time_step,
-  normalize,
-  direction,
-  noise,
-  which_decomp,
-  svd_alg,
-  cutoff,
-  maxdim,
-  mindim,
-  maxtruncerr,
-)
-  N = length(psi)
-  nsite = 2
-  # Do 'forwards' evolution step
-  set_nsite!(PH, nsite)
-  position!(PH, psi, b)
-  phi1 = psi[b] * psi[b + 1]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
-  current_time += time_step
-  normalize && (phi1 /= norm(phi1))
-  spec = nothing
-  ortho = isforward(direction) ? "left" : "right"
-  drho = nothing
-  if noise > 0.0 && isforward(direction)
-    drho = noise * noiseterm(PH, phi, ortho)
-  end
-  spec = replacebond!(
-    psi,
-    b,
-    phi1;
-    maxdim,
-    mindim,
-    cutoff,
-    eigen_perturbation=drho,
-    ortho=ortho,
-    normalize,
-    which_decomp,
-    svd_alg,
-  )
-  maxtruncerr = max(maxtruncerr, spec.truncerr)
-  if !is_half_sweep_done(direction, b, N; ncenter=nsite)
-    # Do backwards evolution step
-    b1 = (isforward(direction) ? b + 1 : b)
-    Δ = (isforward(direction) ? +1 : -1)
-    phi0 = psi[b1]
-    set_nsite!(PH, nsite - 1)
-    position!(PH, psi, b1)
-    phi0, info = solver(PH, -time_step, phi0; current_time, outputlevel)
-    current_time -= time_step
-    normalize && (phi0 ./= norm(phi0))
-    psi[b1] = phi0
-    set_nsite!(PH, nsite)
-  end
-  return current_time, maxtruncerr, spec, info
-end
-
-function tdvp_site_update!(
-  ::Val{nsite},
-  ::Val{reverse_step},
-  solver,
-  PH,
-  psi,
-  b;
-  current_time,
-  outputlevel,
-  time_step,
-  normalize,
-  direction,
-  noise,
-  which_decomp,
-  svd_alg,
-  cutoff,
-  maxdim,
-  mindim,
-  maxtruncerr,
-) where {nsite,reverse_step}
-  return error(
-    "`tdvp` with `nsite=$nsite` and `reverse_step=$reverse_step` not implemented."
-  )
+  maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
+  return psi, PH, current_time, maxtruncerr, spec, info
 end

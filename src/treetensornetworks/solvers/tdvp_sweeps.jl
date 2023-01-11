@@ -4,14 +4,14 @@ function process_sweeps(s::Sweeps)
   )
 end
 
-function tdvp(H, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
+function tdvp(H, t::Number, psi0::IsTreeState, sweeps::Sweeps; kwargs...)
   return tdvp(H, t, psi0; process_sweeps(sweeps)..., kwargs...)
 end
 
-function tdvp(solver, H, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
+function tdvp(solver, H, t::Number, psi0::IsTreeState, sweeps::Sweeps; kwargs...)
   return tdvp(solver, H, t, psi0; process_sweeps(sweeps)..., kwargs...)
 end
 
-function dmrg(H, psi0::MPS, sweeps::Sweeps; kwargs...)
+function dmrg(H, psi0::IsTreeState, sweeps::Sweeps; kwargs...)
   return dmrg(H, psi0; process_sweeps(sweeps)..., kwargs...)
 end
