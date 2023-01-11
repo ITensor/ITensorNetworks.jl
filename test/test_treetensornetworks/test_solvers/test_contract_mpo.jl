@@ -51,8 +51,8 @@ using Test
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
 end
 
-function asMPO(M::MPS, sites)
-  M_ = MPO(length(sites))
+function asMPS(M::MPO, sites)
+  M_ = MPS(length(sites))
   for n in eachindex(sites)
     M_[n] = M[n]
   end
@@ -68,13 +68,10 @@ end
   # The function `apply` does not work correctly with the mapping-MPO-to-MPS trick.
   M1 = replaceprime(M1, 1=>2, 0=>1)
 
-  M2_ = MPS(length(sites))
-  for n in eachindex(sites)
-    M2_[n] = M2[n]
-  end
+  M2_ = asMPS(M2, sites)
 
-  M12_ref = contract(M1, M2; alg="naive")
-  M12 = asMPO(contract(M1, M2_; alg="fit"), sites)
+  M12_ref = asMPS(contract(M1, M2; alg="naive"), sites)
+  M12 = contract(M1, M2_; alg="fit")
 
   @test M12_ref ≈ M12
 end
