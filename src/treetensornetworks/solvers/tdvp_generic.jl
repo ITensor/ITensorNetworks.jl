@@ -42,7 +42,7 @@ function process_sweeps(; kwargs...)
   return (; maxdim, mindim, cutoff, noise)
 end
 
-function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
+function tdvp(solver, PH, t::Number, psi0::IsTreeState; kwargs...)
   reverse_step = get(kwargs, :reverse_step, true)
 
   nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
@@ -124,37 +124,37 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
 end
 
 """
-    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
-    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
+    tdvp(H::MPS,psi0::MPO,t::Number; kwargs...)
+    tdvp(H::TTNS,psi0::TTNO,t::Number; kwargs...)
 
 Use the time dependent variational principle (TDVP) algorithm
 to compute `exp(t*H)*psi0` using an efficient algorithm based
-on alternating optimization of the MPS tensors and local Krylov
+on alternating optimization of the state tensors and local Krylov
 exponentiation of H.
                     
 Returns:
-* `psi::MPS` - time-evolved MPS
+* `psi` - time-evolved state
 
 Optional keyword arguments:
 * `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
 * `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
-function tdvp(solver, H::MPO, t::Number, psi0::MPS; kwargs...)
+function tdvp(solver, H::IsTreeOperator, t::Number, psi0::IsTreeState; kwargs...)
   check_hascommoninds(siteinds, H, psi0)
   check_hascommoninds(siteinds, H, psi0')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
-  PH = ProjMPO(H)
+  PH = proj_operator(H)
   return tdvp(solver, PH, t, psi0; kwargs...)
 end
 
-function tdvp(solver, t::Number, H, psi0::MPS; kwargs...)
+function tdvp(solver, t::Number, H, psi0::IsTreeState; kwargs...)
   return tdvp(solver, H, t, psi0; kwargs...)
 end
 
-function tdvp(solver, H, psi0::MPS, t::Number; kwargs...)
+function tdvp(solver, H, psi0::IsTreeState, t::Number; kwargs...)
   return tdvp(solver, H, t, psi0; kwargs...)
 end
 
@@ -177,12 +177,14 @@ each step of the algorithm when optimizing the MPS.
 Returns:
 * `psi::MPS` - time-evolved MPS
 """
-function tdvp(solver, Hs::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
+function tdvp(
+  solver, Hs::Vector{<:IsTreeOperator}, t::Number, psi0::IsTreeState; kwargs...
+)
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)
     check_hascommoninds(siteinds, H, psi0')
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
-  PHs = ProjMPOSum(Hs)
+  PHs = proj_operator_sum(Hs)
   return tdvp(solver, PHs, t, psi0; kwargs...)
 end
