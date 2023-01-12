@@ -1,38 +1,38 @@
 """
-ProjTTNOSum
+ProjTTNSum
 """
-struct ProjTTNOSum{V}
-  pm::Vector{ProjTTNO{V}}
-  function ProjTTNOSum(pm::Vector{ProjTTNO{V}}) where {V}
+struct ProjTTNSum{V}
+  pm::Vector{ProjTTN{V}}
+  function ProjTTNSum(pm::Vector{ProjTTN{V}}) where {V}
     return new{V}(pm)
   end
 end
 
-copy(P::ProjTTNOSum) = ProjTTNOSum(copy.(P.pm))
+copy(P::ProjTTNSum) = ProjTTNSum(copy.(P.pm))
 
-ProjTTNOSum(ttnos::Vector{<:TTNO}) = ProjTTNOSum([ProjTTNO(M) for M in ttnos])
+ProjTTNSum(ttnos::Vector{<:TTN}) = ProjTTNSum([ProjTTN(M) for M in ttnos])
 
-ProjTTNOSum(Ms::TTNO{V}...) where {V} = ProjTTNOSum([Ms...])
+ProjTTNSum(Ms::TTN{V}...) where {V} = ProjTTNSum([Ms...])
 
-on_edge(P::ProjTTNOSum) = on_edge(P.pm[1])
+on_edge(P::ProjTTNSum) = on_edge(P.pm[1])
 
-nsite(P::ProjTTNOSum) = nsite(P.pm[1])
+nsite(P::ProjTTNSum) = nsite(P.pm[1])
 
-function set_nsite(Ps::ProjTTNOSum, nsite)
-  return ProjTTNOSum(map(M -> set_nsite(M, nsite), Ps.pm))
+function set_nsite(Ps::ProjTTNSum, nsite)
+  return ProjTTNSum(map(M -> set_nsite(M, nsite), Ps.pm))
 end
 
-underlying_graph(P::ProjTTNOSum) = underlying_graph(P.pm[1])
+underlying_graph(P::ProjTTNSum) = underlying_graph(P.pm[1])
 
-Base.length(P::ProjTTNOSum) = length(P.pm[1])
+Base.length(P::ProjTTNSum) = length(P.pm[1])
 
-sites(P::ProjTTNOSum) = sites(P.pm[1])
+sites(P::ProjTTNSum) = sites(P.pm[1])
 
-incident_edges(P::ProjTTNOSum) = incident_edges(P.pm[1])
+incident_edges(P::ProjTTNSum) = incident_edges(P.pm[1])
 
-internal_edges(P::ProjTTNOSum) = internal_edges(P.pm[1])
+internal_edges(P::ProjTTNSum) = internal_edges(P.pm[1])
 
-function product(P::ProjTTNOSum, v::ITensor)::ITensor
+function product(P::ProjTTNSum, v::ITensor)::ITensor
   Pv = product(P.pm[1], v)
   for n in 2:length(P.pm)
     Pv += product(P.pm[n], v)
@@ -40,7 +40,7 @@ function product(P::ProjTTNOSum, v::ITensor)::ITensor
   return Pv
 end
 
-function Base.eltype(P::ProjTTNOSum)
+function Base.eltype(P::ProjTTNSum)
   elT = eltype(P.pm[1])
   for n in 2:length(P.pm)
     elT = promote_type(elT, eltype(P.pm[n]))
@@ -48,12 +48,12 @@ function Base.eltype(P::ProjTTNOSum)
   return elT
 end
 
-(P::ProjTTNOSum)(v::ITensor) = product(P, v)
+(P::ProjTTNSum)(v::ITensor) = product(P, v)
 
-Base.size(P::ProjTTNOSum) = size(P.pm[1])
+Base.size(P::ProjTTNSum) = size(P.pm[1])
 
 function position(
-  P::ProjTTNOSum{V}, psi::TTNS{V}, pos::Union{Vector{<:V},NamedEdge{V}}
+  P::ProjTTNSum{V}, psi::TTN{V}, pos::Union{Vector{<:V},NamedEdge{V}}
 ) where {V}
-  ProjTTNOSum(map(M -> position(M, psi, pos), P.pm))
+  ProjTTNSum(map(M -> position(M, psi, pos), P.pm))
 end

@@ -131,7 +131,7 @@ function _extract_tensor(psi::IsTreeState, e::NamedEdge)
   return psi, S * V
 end
 
-# sort of multi-site replacebond!; TODO: use dense TTNS constructor instead
+# sort of multi-site replacebond!; TODO: use dense TTN constructor instead
 function _insert_tensor(psi::IsTreeState, phi::ITensor, pos::Vector; kwargs...)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   normalize::Bool = get(kwargs, :normalize, false)

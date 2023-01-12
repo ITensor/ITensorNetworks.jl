@@ -4,7 +4,7 @@ using ITensorNetworks
 using Random
 using Test
 
-@testset "OpSum to TTNO" begin
+@testset "OpSum to TTN" begin
   # small comb tree
   tooth_lengths = fill(2, 3)
   c = named_comb_tree(tooth_lengths)
@@ -28,8 +28,8 @@ using Test
   Hlr += -4, "Z", (1, 1), "Z", (2, 2)
 
   @testset "Finite state machine" begin
-    # get TTNO Hamiltonian directly
-    Hfsm = TTNO(H, is; root_vertex=root_vertex, method=:fsm, cutoff=1e-10)
+    # get TTN Hamiltonian directly
+    Hfsm = TTN(H, is; root_vertex=root_vertex, method=:fsm, cutoff=1e-10)
     # get corresponding MPO Hamiltonian
     Hline = MPO(relabel_sites(H, vmap), sites)
     # compare resulting dense Hamiltonians
@@ -40,7 +40,7 @@ using Test
     @test Tttno ≈ Tmpo rtol = 1e-6
 
     # same thing for longer range interactions
-    Hfsm_lr = TTNO(Hlr, is; root_vertex=root_vertex, method=:fsm, cutoff=1e-10)
+    Hfsm_lr = TTN(Hlr, is; root_vertex=root_vertex, method=:fsm, cutoff=1e-10)
     Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
     @disable_warn_order begin
       Tttno_lr = prod(Hline_lr)
@@ -50,8 +50,8 @@ using Test
   end
 
   @testset "Svd approach" begin
-    # get TTNO Hamiltonian directly
-    Hsvd = TTNO(H, is; root_vertex=root_vertex, method=:svd, cutoff=1e-10)
+    # get TTN Hamiltonian directly
+    Hsvd = TTN(H, is; root_vertex=root_vertex, method=:svd, cutoff=1e-10)
     # get corresponding MPO Hamiltonian
     Hline = MPO(relabel_sites(H, vmap), sites)
     # compare resulting dense Hamiltonians
@@ -62,7 +62,7 @@ using Test
     @test Tttno ≈ Tmpo rtol = 1e-6
 
     # this breaks for longer range interactions
-    Hsvd_lr = TTNO(Hlr, is; root_vertex=root_vertex, method=:svd, cutoff=1e-10)
+    Hsvd_lr = TTN(Hlr, is; root_vertex=root_vertex, method=:svd, cutoff=1e-10)
     Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
     @disable_warn_order begin
       Tttno_lr = prod(Hline_lr)

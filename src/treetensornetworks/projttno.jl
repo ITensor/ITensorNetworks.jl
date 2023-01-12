@@ -1,29 +1,29 @@
 """
-ProjTTNO
+ProjTTN
 """
-struct ProjTTNO{V} <: AbstractProjTTNO{V}
+struct ProjTTN{V} <: AbstractProjTTN{V}
   pos::Union{Vector{<:V},NamedEdge{V}} # TODO: cleanest way to specify effective Hamiltonian position?
-  H::TTNO{V}
+  H::TTN{V}
   environments::Dictionary{NamedEdge{V},ITensor}
 end
 
-function ProjTTNO(H::TTNO)
-  return ProjTTNO(vertices(H), H, Dictionary{edgetype(H),ITensor}())
+function ProjTTN(H::TTN)
+  return ProjTTN(vertices(H), H, Dictionary{edgetype(H),ITensor}())
 end
 
-copy(P::ProjTTNO) = ProjTTNO(P.pos, copy(P.H), copy(P.environments))
+copy(P::ProjTTN) = ProjTTN(P.pos, copy(P.H), copy(P.environments))
 
 # trivial if we choose to specify position as above; only kept to allow using alongside
 # ProjMPO
-function set_nsite(P::ProjTTNO, nsite)
+function set_nsite(P::ProjTTN, nsite)
   return P
 end
 
-function shift_position(P::ProjTTNO, pos)
-  return ProjTTNO(pos, P.H, P.environments)
+function shift_position(P::ProjTTN, pos)
+  return ProjTTN(pos, P.H, P.environments)
 end
 
-function make_environment!(P::ProjTTNO{V}, psi::TTNS{V}, e::NamedEdge{V})::ITensor where {V}
+function make_environment!(P::ProjTTN{V}, psi::TTN{V}, e::NamedEdge{V})::ITensor where {V}
   # invalidate environment for opposite edge direction if necessary
   reverse(e) ∈ incident_edges(P) || unset!(P.environments, reverse(e))
   # do nothing if valid environment already present

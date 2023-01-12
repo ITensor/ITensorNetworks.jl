@@ -1,27 +1,27 @@
-struct ProjTTNOApply{V} <: AbstractProjTTNO{V}
+struct ProjTTNApply{V} <: AbstractProjTTN{V}
   pos::Union{Vector{<:V},NamedEdge{V}}
-  psi0::TTNS{V}
-  H::TTNO{V}
+  psi0::TTN{V}
+  H::TTN{V}
   environments::Dictionary{NamedEdge{V},ITensor}
 end
 
-function ProjTTNOApply(psi0::TTNS, H::TTNO)
-  return ProjTTNOApply(vertextype(H)[], psi0, H, Dictionary{edgetype(H),ITensor}())
+function ProjTTNApply(psi0::TTN, H::TTN)
+  return ProjTTNApply(vertextype(H)[], psi0, H, Dictionary{edgetype(H),ITensor}())
 end
 
-function copy(P::ProjTTNOApply)
-  return ProjTTNOApply(P.pos, copy(P.psi0), copy(P.H), copy(P.environments))
+function copy(P::ProjTTNApply)
+  return ProjTTNApply(P.pos, copy(P.psi0), copy(P.H), copy(P.environments))
 end
 
-function set_nsite(P::ProjTTNOApply, nsite)
+function set_nsite(P::ProjTTNApply, nsite)
   return P
 end
 
-function shift_position(P::ProjTTNOApply, pos)
-  return ProjTTNOApply(pos, P.psi0, P.H, P.environments)
+function shift_position(P::ProjTTNApply, pos)
+  return ProjTTNApply(pos, P.psi0, P.H, P.environments)
 end
 
-function make_environment!(P::ProjTTNOApply{V}, psi::TTNS{V}, e::NamedEdge{V})::ITensor where {V}
+function make_environment!(P::ProjTTNApply{V}, psi::TTN{V}, e::NamedEdge{V})::ITensor where {V}
   # invalidate environment for opposite edge direction if necessary
   reverse(e) ∈ incident_edges(P) || unset!(P.environments, reverse(e))
   # do nothing if valid environment already present

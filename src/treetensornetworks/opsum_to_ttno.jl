@@ -1,4 +1,4 @@
-# convert ITensors.OpSum to TreeTensorNetworkOperator
+# convert ITensors.OpSum to TreeTensorNetwork
 
 # TODO: fix symbolic SVD compression for certain combinations of long-range interactions!
 
@@ -59,19 +59,19 @@ function finite_state_machine(
 
   ValType = ITensors.determineValType(ITensors.terms(os))
 
-  # sparse symbolic representation of the TTNO Hamiltonian as a DataGraph of SparseArrays
-  sparseTTNO = DataGraph{V,SparseArray{Scaled{ValType,Prod{Op}}}}(underlying_graph(sites))
+  # sparse symbolic representation of the TTN Hamiltonian as a DataGraph of SparseArrays
+  sparseTTN = DataGraph{V,SparseArray{Scaled{ValType,Prod{Op}}}}(underlying_graph(sites))
 
   # some things to keep track of
   vs = post_order_dfs_vertices(sites, root_vertex)                                          # store vertices in fixed ordering relative to root
   es = post_order_dfs_edges(sites, root_vertex)                                             # store edges in fixed ordering relative to root
-  ranks = Dict(v => degree(sites, v) for v in vs)                                    # rank of every TTNO tensor in network
+  ranks = Dict(v => degree(sites, v) for v in vs)                                    # rank of every TTN tensor in network
   linkmaps = Dict(e => Dict{Prod{Op},Int}() for e in es)                                    # map from term in Hamiltonian to edge channel index for every edge
   site_coef_done = Prod{Op}[]                                                               # list of Hamiltonian terms for which the coefficient has been added to a site factor
-  edge_orders = DataGraph{V,Vector{edgetype(sites)}}(underlying_graph(sites))               # relate indices of sparse TTNO tensor to incident graph edges for each site
+  edge_orders = DataGraph{V,Vector{edgetype(sites)}}(underlying_graph(sites))               # relate indices of sparse TTN tensor to incident graph edges for each site
 
   for v in vs
-    # collect all nontrivial entries of the TTNO tensor at vertex v
+    # collect all nontrivial entries of the TTN tensor at vertex v
     entries = Tuple{MVector{ranks[v],Int},Scaled{C,Prod{Op}}}[]                             # MVector might be overkill...
 
     # for every vertex, find all edges that contain this vertex
@@ -169,20 +169,20 @@ function finite_state_machine(
       T[idT_end_inds...] = 1 * Prod([Op("Id", v)])
       idT_end_inds[din] = 1 # reset
     end
-    sparseTTNO[v] = T
+    sparseTTN[v] = T
   end
-  return sparseTTNO, edge_orders
+  return sparseTTN, edge_orders
 end
 
 """
-    fsmTTNO(os::OpSum{C}, sites::IndsNetwork{V,<:Index}, root_vertex::V, kwargs...) where {C,V}
+    fsmTTN(os::OpSum{C}, sites::IndsNetwork{V,<:Index}, root_vertex::V, kwargs...) where {C,V}
 
-Construct a dense TreeTensorNetworkOperator from sparse finite state machine
+Construct a dense TreeTensorNetwork from sparse finite state machine
 represenatation, without compression.
 """
-function fsmTTNO(
+function fsmTTN(
   os::OpSum{C}, sites::IndsNetwork{V,<:Index}, root_vertex::V
-)::TTNO where {C,V}
+)::TTN where {C,V}
   ValType = ITensors.determineValType(ITensors.terms(os))
   # start from finite state machine
   fsm, edge_orders = finite_state_machine(os, sites, root_vertex)
@@ -196,7 +196,7 @@ function fsmTTNO(
     return link_space[e]
   end
   # compress finite state machine into dense form
-  H = TTNO(sites)
+  H = TTN(sites)
   for v in vertices(sites)
     linkinds = [get_linkind!(link_space, e) for e in edge_orders[v]]
     linkdims = dim.(linkinds)
@@ -215,14 +215,14 @@ end
 
 # this is broken for certain combinations of longer-range interactions, no idea why...
 """
-    svdTTNO(os::OpSum{C}, sites::IndsNetwork{V<:Index}, root_vertex::V, kwargs...) where {C,V}
+    svdTTN(os::OpSum{C}, sites::IndsNetwork{V<:Index}, root_vertex::V, kwargs...) where {C,V}
 
-Construct a dense TreeTensorNetworkOperator from a symbolic OpSum representation of a
+Construct a dense TreeTensorNetwork from a symbolic OpSum representation of a
 Hamiltonian, compressing shared interaction channels.
 """
-function svdTTNO(
+function svdTTN(
   os::OpSum{C}, sites::IndsNetwork{VT,<:Index}, root_vertex::VT; kwargs...
-)::TTNO where {C,VT}
+)::TTN where {C,VT}
   mindim::Int = get(kwargs, :mindim, 1)
   maxdim::Int = get(kwargs, :maxdim, 10000)
   cutoff::Float64 = get(kwargs, :cutoff, 1E-15)
@@ -232,16 +232,16 @@ function svdTTNO(
   # some things to keep track of
   vs = post_order_dfs_vertices(sites, root_vertex)                                          # store vertices in fixed ordering relative to root
   es = post_order_dfs_edges(sites, root_vertex)                                             # store edges in fixed ordering relative to root
-  ranks = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTNO tensor in network
-  Vs = Dict(e => Matrix{ValType}(undef, 1, 1) for e in es)                                  # link isometries for SVD compression of TTNO
+  ranks = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
+  Vs = Dict(e => Matrix{ValType}(undef, 1, 1) for e in es)                                  # link isometries for SVD compression of TTN
   leftmaps = Dict(e => Dict{Vector{Op},Int}() for e in es)                                  # map from term in Hamiltonian to edge left channel index for every edge
   rightmaps = Dict(e => Dict{Vector{Op},Int}() for e in es)                                 # map from term in Hamiltonian to edge right channel index for every edge
   leftbond_coefs = Dict(e => ITensors.MatElem{ValType}[] for e in es)                       # bond coefficients for left edge channels
   site_coef_done = Prod{Op}[]                                                               # list of terms for which the coefficient has been added to a site factor
   bond_coef_done = Dict(v => Prod{Op}[] for v in vs)                                        # list of terms for which the coefficient has been added to a bond matrix for each vertex
 
-  # temporary symbolic representation of TTNO Hamiltonian
-  tempTTNO = Dict(v => Tuple{MVector{ranks[v],Int},Scaled{C,Prod{Op}}}[] for v in vs)
+  # temporary symbolic representation of TTN Hamiltonian
+  tempTTN = Dict(v => Tuple{MVector{ranks[v],Int},Scaled{C,Prod{Op}}}[] for v in vs)
 
   # build compressed finite state machine representation
   for v in vs
@@ -318,9 +318,9 @@ function svdTTNO(
       end
       # save indices and value of symbolic tensor entry
       el = (MVector{ranks[v]}(T_inds), site_coef * Prod(onsite))
-      push!(tempTTNO[v], el)
+      push!(tempTTN[v], el)
     end
-    ITensors.remove_dups!(tempTTNO[v])
+    ITensors.remove_dups!(tempTTN[v])
     # handle symbolic truncation (still something wrong with this)
     for din in dims_in
       if !isempty(leftbond_coefs[edges[din]])
@@ -335,13 +335,13 @@ function svdTTNO(
     end
   end
 
-  # compress this tempTTNO representation into dense form
+  # compress this tempTTN representation into dense form
 
   link_space = dictionary(
     [e => Index((isempty(rightmaps[e]) ? 0 : size(Vs[e], 2)) + 2, edge_tag(e)) for e in es]
   )
 
-  H = TTNO(sites)
+  H = TTN(sites)
 
   for v in vs # can I merge this with previous loop? no, need all need the Vs...
 
@@ -358,7 +358,7 @@ function svdTTNO(
 
     H[v] = ITensor()
 
-    for (T_inds, t) in tempTTNO[v]
+    for (T_inds, t) in tempTTN[v]
       (abs(coefficient(t)) > eps()) || continue
       T = zeros(ValType, linkdims...)
       ct = convert(ValType, coefficient(t))
@@ -479,7 +479,7 @@ function sorteachterm(
         ITensors.which_op(t[n]), only(sites[ITensors.site(t[n])])
       )
       if !ITensors.using_auto_fermion() && (parity == -1) && (currsite < prevsite)
-        error("No verified fermion support for automatic TTNO constructor!") # no verified support, just throw error
+        error("No verified fermion support for automatic TTN constructor!") # no verified support, just throw error
         # Put local piece of Jordan-Wigner string emanating
         # from fermionic operators to the right
         # (Remaining F operators will be put in by svdMPO)
@@ -488,7 +488,7 @@ function sorteachterm(
       prevsite = currsite
 
       if fermionic
-        error("No verified fermion support for automatic TTNO constructor!") # no verified support, just throw error
+        error("No verified fermion support for automatic TTN constructor!") # no verified support, just throw error
         parity = -parity
       else
         # Ignore bosonic operators in perm
@@ -497,7 +497,7 @@ function sorteachterm(
       end
     end
     if parity == -1
-      error("Parity-odd fermionic terms not yet supported by AutoTTNO")
+      error("Parity-odd fermionic terms not yet supported by AutoTTN")
     end
 
     # Keep only fermionic op positions (non-zero entries)
@@ -511,20 +511,20 @@ function sorteachterm(
 end
 
 """
-    TTNO(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
-    TTNO(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
+    TTN(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
+    TTN(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
        
-Convert an OpSum object `os` to a TreeTensorNetworkOperator, with indices given by `sites`.
+Convert an OpSum object `os` to a TreeTensorNetwork, with indices given by `sites`.
 """
-function TTNO(
+function TTN(
   os::OpSum,
   sites::IndsNetwork{V,<:Index};
   root_vertex::V=default_root_vertex(sites),
   splitblocks=false,
-  method::Symbol=:fsm, # default to construction from finite state machine until svdTTNO is fixed
+  method::Symbol=:fsm, # default to construction from finite state machine until svdTTN is fixed
   trunc=false,
   kwargs...,
-)::TTNO where {V}
+)::TTN where {V}
   length(ITensors.terms(os)) == 0 && error("OpSum has no terms")
   is_tree(sites) || error("Site index graph must be a tree.")
   is_leaf(sites, root_vertex) || error("Tree root must be a leaf vertex.")
@@ -534,17 +534,17 @@ function TTNO(
   os = ITensors.sortmergeterms(os) # not exported
 
   if hasqns(first(first(vertex_data(sites))))
-    error("No verified quantum number support for automatic TTNO constructor!") # no verified support, just throw error
+    error("No verified quantum number support for automatic TTN constructor!") # no verified support, just throw error
   end
   if method == :svd
     @warn "Symbolic SVD compression not working for long-range interactions." # add warning until this is fixed
-    T = svdTTNO(os, sites, root_vertex; kwargs...)
+    T = svdTTN(os, sites, root_vertex; kwargs...)
   elseif method == :fsm
-    T = fsmTTNO(os, sites, root_vertex)
+    T = fsmTTN(os, sites, root_vertex)
   end
   # add option for numerical truncation, but throw warning as this can fail sometimes
   if trunc
-    @warn "Naive numerical truncation of TTNO Hamiltonian may fail for larger systems."
+    @warn "Naive numerical truncation of TTN Hamiltonian may fail for larger systems."
     # see https://github.com/ITensor/ITensors.jl/issues/526
     lognormT = lognorm(T)
     T /= exp(lognormT / nv(T)) # TODO: fix broadcasting for in-place assignment
@@ -559,31 +559,31 @@ function TTNO(
 end
 
 # Conversion from other formats
-function TTNO(o::Op, s::IndsNetwork; kwargs...)
-  return TTNO(OpSum{Float64}() + o, s; kwargs...)
+function TTN(o::Op, s::IndsNetwork; kwargs...)
+  return TTN(OpSum{Float64}() + o, s; kwargs...)
 end
 
-function TTNO(o::Scaled{C,Op}, s::IndsNetwork; kwargs...) where {C}
-  return TTNO(OpSum{C}() + o, s; kwargs...)
+function TTN(o::Scaled{C,Op}, s::IndsNetwork; kwargs...) where {C}
+  return TTN(OpSum{C}() + o, s; kwargs...)
 end
 
-function TTNO(o::Sum{Op}, s::IndsNetwork; kwargs...)
-  return TTNO(OpSum{Float64}() + o, s; kwargs...)
+function TTN(o::Sum{Op}, s::IndsNetwork; kwargs...)
+  return TTN(OpSum{Float64}() + o, s; kwargs...)
 end
 
-function TTNO(o::Prod{Op}, s::IndsNetwork; kwargs...)
-  return TTNO(OpSum{Float64}() + o, s; kwargs...)
+function TTN(o::Prod{Op}, s::IndsNetwork; kwargs...)
+  return TTN(OpSum{Float64}() + o, s; kwargs...)
 end
 
-function TTNO(o::Scaled{C,Prod{Op}}, s::IndsNetwork; kwargs...) where {C}
-  return TTNO(OpSum{C}() + o, s; kwargs...)
+function TTN(o::Scaled{C,Prod{Op}}, s::IndsNetwork; kwargs...) where {C}
+  return TTN(OpSum{C}() + o, s; kwargs...)
 end
 
-function TTNO(o::Sum{Scaled{C,Op}}, s::IndsNetwork; kwargs...) where {C}
-  return TTNO(OpSum{C}() + o, s; kwargs...)
+function TTN(o::Sum{Scaled{C,Op}}, s::IndsNetwork; kwargs...) where {C}
+  return TTN(OpSum{C}() + o, s; kwargs...)
 end
 
 # Catch-all for leaf eltype specification
-function TTNO(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
-  return NDTensors.convert_scalartype(eltype, TTNO(os, sites; kwargs...))
+function TTN(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
+  return NDTensors.convert_scalartype(eltype, TTN(os, sites; kwargs...))
 end
