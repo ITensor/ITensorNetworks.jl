@@ -125,7 +125,7 @@ end
 
 """
     tdvp(H::MPS,psi0::MPO,t::Number; kwargs...)
-    tdvp(H::TTNS,psi0::TTNO,t::Number; kwargs...)
+    tdvp(H::TTN,psi0::TTN,t::Number; kwargs...)
 
 Use the time dependent variational principle (TDVP) algorithm
 to compute `exp(t*H)*psi0` using an efficient algorithm based

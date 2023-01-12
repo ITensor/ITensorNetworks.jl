@@ -85,7 +85,7 @@ end
   @test krylov_err < 1e-3
 end
 
-@testset "TTNS: Time dependent Hamiltonian" begin
+@testset "TTN: Time dependent Hamiltonian" begin
   tooth_lengths = fill(2, 3)
   root_vertex = (3, 2)
   c = named_comb_tree(tooth_lengths)
@@ -105,9 +105,9 @@ end
   ℋ₁₀ = ITensorNetworks.heisenberg(c; J1=J₁, J2=0.0)
   ℋ₂₀ = ITensorNetworks.heisenberg(c; J1=0.0, J2=J₂)
   ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
-  H⃗₀ = [TTNO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
+  H⃗₀ = [TTN(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 
-  ψ₀ = TTNS(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
+  ψ₀ = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
 
   ψₜ_ode = tdvp(ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite)
 

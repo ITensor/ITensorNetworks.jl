@@ -11,10 +11,11 @@ import ITensors:
   siteinds,
   position!
 
-const IsTreeState = Union{MPS,TTNS}
-const IsTreeOperator = Union{MPO,TTNO}
-const IsTreeProjOperator = Union{AbstractProjMPO,AbstractProjTTNO}
-const IsTreeProjOperatorSum = Union{ProjMPOSum,ProjTTNOSum}
+const IsTreeState = Union{MPS,TTN}
+const IsTreeOperator = Union{MPO,TTN}
+const IsTree = Union{MPS,MPO,TTN}
+const IsTreeProjOperator = Union{AbstractProjMPO,AbstractProjTTN}
+const IsTreeProjOperatorSum = Union{ProjMPOSum,ProjTTNSum}
 
 # number of vertices and edges
 nv(psi::AbstractMPS) = length(psi)
@@ -34,11 +35,11 @@ edgetype(::MPS) = NamedEdge{Int}
 
 # catch-all constructors for projected operators
 proj_operator(O::MPO) = ProjMPO(O)
-proj_operator(O::TTNO) = ProjTTNO(O)
+proj_operator(O::TTN) = ProjTTN(O)
 proj_operator_sum(Os::Vector{MPO}) = ProjMPOSum(Os)
-proj_operator_sum(Os::Vector{<:TTNO}) = ProjTTNOSum(Os)
+proj_operator_sum(Os::Vector{<:TTN}) = ProjTTNSum(Os)
 proj_operator_apply(psi0::MPS, O::MPO) = ProjMPOApply(psi0, O)
-proj_operator_apply(psi0::TTNS, O::TTNO) = ProjTTNOApply(psi0, O)
+proj_operator_apply(psi0::TTN, O::TTN) = ProjTTNApply(psi0, O)
 
 # ortho lims as range versus ortho center as list of graph vertices
 ortho_center(psi::MPS) = ortho_lims(psi)
@@ -84,6 +85,6 @@ function obs_update!(observer::ObserverLike, psi::MPS, pos::NamedEdge; kwargs...
   return error("This should never be called!") # debugging...
 end
 
-function obs_update!(observer::ObserverLike, psi::TTNS, pos; kwargs...)
+function obs_update!(observer::ObserverLike, psi::TTN, pos; kwargs...)
   return update!(observer; psi, pos, kwargs...)
 end

@@ -51,23 +51,23 @@ using Test
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
 end
 
-@testset "Contract TTNO" begin
+@testset "Contract TTN" begin
   tooth_lengths = fill(2, 3)
   root_vertex = (3, 2)
   c = named_comb_tree(tooth_lengths)
 
   s = siteinds("S=1/2", c)
-  psi = normalize!(randomTTNS(s; link_space=8))
+  psi = normalize!(randomTTN(s; link_space=8))
 
   os = ITensorNetworks.heisenberg(c; J1=1, J2=1)
-  H = TTNO(os, s)
+  H = TTN(os, s)
 
   # Test basic usage with default parameters
   Hpsi = apply(H, psi; alg="fit")
   @test_broken inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5 # broken when rebasing local draft on remote main, fix this
 
   #
-  # Change "top" indices of TTNO to be a different set
+  # Change "top" indices of TTN to be a different set
   #
   t = siteinds("S=1/2", c)
   psit = deepcopy(psi)

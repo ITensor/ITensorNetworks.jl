@@ -52,11 +52,11 @@ function ITensors.contract(
 end
 
 # extra ITensors overloads for tree tensor networks
-function ITensors.contract(A::TTNO, ψ::TTNS; alg="fit", kwargs...)
+function ITensors.contract(A::TTN, ψ::TTN; alg="fit", kwargs...)
   return contract(ITensors.Algorithm(alg), A, ψ; kwargs...)
 end
 
-function ITensors.apply(A::TTNO, ψ::TTNS; kwargs...)
+function ITensors.apply(A::TTN, ψ::TTN; kwargs...)
   Aψ = contract(A, ψ; kwargs...)
   return replaceprime(Aψ, 1 => 0)
 end

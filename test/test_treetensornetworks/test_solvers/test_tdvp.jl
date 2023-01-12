@@ -474,9 +474,9 @@ end
 
     os = ITensorNetworks.heisenberg(c)
 
-    H = TTNO(os, s)
+    H = TTN(os, s)
 
-    ψ0 = normalize!(randomTTNS(s; link_space=10))
+    ψ0 = normalize!(randomTTN(s; link_space=10))
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
@@ -518,11 +518,11 @@ end
       os2 += "Sz", src(e), "Sz", dst(e)
     end
 
-    H1 = TTNO(os1, s)
-    H2 = TTNO(os2, s)
+    H1 = TTN(os1, s)
+    H2 = TTN(os2, s)
     Hs = [H1, H2]
 
-    ψ0 = normalize!(randomTTNS(s; link_space=10))
+    ψ0 = normalize!(randomTTN(s; link_space=10))
 
     ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
 
@@ -556,9 +556,9 @@ end
 
     os = ITensorNetworks.heisenberg(c)
 
-    H = TTNO(os, s)
+    H = TTN(os, s)
 
-    ψ0 = normalize!(randomTTNS(s; link_space=10))
+    ψ0 = normalize!(randomTTN(s; link_space=10))
 
     function solver(PH, t, psi0; kwargs...)
       solver_kwargs = (;
@@ -601,12 +601,12 @@ end
     s = siteinds("S=1/2", c)
 
     os = ITensorNetworks.heisenberg(c)
-    H = TTNO(os, s)
+    H = TTN(os, s)
     HM = contract(H)
 
     Ut = exp(-im * tau * HM)
 
-    psi = TTNS(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    psi = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
     psix = contract(psi)
 
     Sz_tdvp = Float64[]
@@ -651,7 +651,7 @@ end
     s = siteinds("S=1/2", c)
 
     os = ITensorNetworks.heisenberg(c)
-    H = TTNO(os, s)
+    H = TTN(os, s)
 
     gates = ITensor[]
     for e in edges(c)
@@ -666,7 +666,7 @@ end
     end
     append!(gates, reverse(gates))
 
-    psi = TTNS(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    psi = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
     phi = copy(psi)
     c = (2, 1)
 
@@ -709,7 +709,7 @@ end
       end
     end
 
-    phi = TTNS(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    phi = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
 
     phi = tdvp(
       H,
@@ -736,9 +736,9 @@ end
     s = siteinds("S=1/2", c)
 
     os = ITensorNetworks.heisenberg(c)
-    H = TTNO(os, s)
+    H = TTN(os, s)
 
-    psi = normalize!(randomTTNS(s; link_space=2))
+    psi = normalize!(randomTTN(s; link_space=2))
 
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
@@ -763,7 +763,7 @@ end
   #   s = siteinds("S=1/2", c; conserve_qns=true)
 
   #   os = ITensorNetworks.heisenberg(c)
-  #   H = TTNO(os, s)
+  #   H = TTN(os, s)
 
   #   c = (2, 2)
 

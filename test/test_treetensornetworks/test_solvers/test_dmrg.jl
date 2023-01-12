@@ -53,9 +53,9 @@ end
 
   os = ITensorNetworks.heisenberg(c)
 
-  H = TTNO(os, s)
+  H = TTN(os, s)
 
-  psi = randomTTNS(s; link_space=20)
+  psi = randomTTN(s; link_space=20)
 
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
