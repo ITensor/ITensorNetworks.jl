@@ -4,11 +4,19 @@ using ITensorNetworks: contraction_sequence, ITensorNetwork, ising_network
 using ITensorNetworks.ApproximateTNContraction:
   approximate_contract, line_to_tree, timer, line_network
 
+INDEX = 0
+
 function contract_log_norm(tn, seq)
+  global INDEX
   if seq isa Vector
+    if length(seq) == 1
+      return seq[1]
+    end
     t1 = contract_log_norm(tn, seq[1])
     t2 = contract_log_norm(tn, seq[2])
     @info size(t1[1]), size(t2[1])
+    INDEX += 1
+    @info "INDEX", INDEX
     out = t1[1] * t2[1]
     nrm = norm(out)
     out /= nrm
@@ -20,19 +28,24 @@ function contract_log_norm(tn, seq)
 end
 
 function exact_contract(N)
-  ITensors.set_warn_order(100)
+  ITensors.set_warn_order(1000)
   reset_timer!(timer)
   linkdim = 2
-  tn = vec(ising_partition(N, linkdim))
-  # contraction_sequence(tn; alg="kahypar_bipartite", sc_target=30)
-  seq = line_to_tree([i for i in 1:prod(N)])
+  network = ising_network(named_grid(N), 0.3)
+  tn = Array{ITensor,length(N)}(undef, N...)
+  for v in vertices(network)
+    tn[v...] = network[v...]
+  end
+  tn = vec(tn)
+  seq = contraction_sequence(tn; alg="kahypar_bipartite", sc_target=36)
+  @info seq
   tn = [(i, 0.0) for i in tn]
   return contract_log_norm(tn, seq)
 end
 
 function build_tntree(tn, N; env_size)
   @assert length(N) == length(env_size)
-  n = [Integer(N[i] / env_size[i]) for i in 1:length(N)]
+  n = [ceil(Int, N[i] / env_size[i]) for i in 1:length(N)]
   tntree = nothing
   for k in 1:n[3]
     for j in 1:n[2]
@@ -40,11 +53,10 @@ function build_tntree(tn, N; env_size)
         ii = (i - 1) * env_size[1]
         jj = (j - 1) * env_size[2]
         kk = (k - 1) * env_size[3]
-        sub_tn = tn[
-          (ii + 1):(ii + env_size[1]),
-          (jj + 1):(jj + env_size[2]),
-          (kk + 1):(kk + env_size[3]),
-        ]
+        ii_end = min(ii + env_size[1], N[1])
+        jj_end = min(jj + env_size[2], N[2])
+        kk_end = min(kk + env_size[3], N[3])
+        sub_tn = tn[(ii + 1):ii_end, (jj + 1):jj_end, (kk + 1):kk_end]
         sub_tn = vec(sub_tn)
         if tntree == nothing
           tntree = sub_tn
@@ -55,6 +67,45 @@ function build_tntree(tn, N; env_size)
     end
   end
   return tntree
+end
+
+function build_recursive_tntree(tn, N; env_size)
+  @assert env_size == (3, 3, 1)
+  tn_tree1 = vec(tn[1:3, 1:3, 1])
+  tn_tree1 = [vec(tn[1:3, 1:3, 2]), tn_tree1]
+  tn_tree1 = [vec(tn[1:3, 1:3, 3]), tn_tree1]
+
+  tn_tree2 = vec(tn[1:3, 4:6, 1])
+  tn_tree2 = [vec(tn[1:3, 4:6, 2]), tn_tree2]
+  tn_tree2 = [vec(tn[1:3, 4:6, 3]), tn_tree2]
+
+  tn_tree3 = vec(tn[4:6, 1:3, 1])
+  tn_tree3 = [vec(tn[4:6, 1:3, 2]), tn_tree3]
+  tn_tree3 = [vec(tn[4:6, 1:3, 3]), tn_tree3]
+
+  tn_tree4 = vec(tn[4:6, 4:6, 1])
+  tn_tree4 = [vec(tn[4:6, 4:6, 2]), tn_tree4]
+  tn_tree4 = [vec(tn[4:6, 4:6, 3]), tn_tree4]
+
+  tn_tree5 = vec(tn[1:3, 1:3, 6])
+  tn_tree5 = [vec(tn[1:3, 1:3, 5]), tn_tree5]
+  tn_tree5 = [vec(tn[1:3, 1:3, 4]), tn_tree5]
+
+  tn_tree6 = vec(tn[1:3, 4:6, 6])
+  tn_tree6 = [vec(tn[1:3, 4:6, 5]), tn_tree6]
+  tn_tree6 = [vec(tn[1:3, 4:6, 4]), tn_tree6]
+
+  tn_tree7 = vec(tn[4:6, 1:3, 6])
+  tn_tree7 = [vec(tn[4:6, 1:3, 5]), tn_tree7]
+  tn_tree7 = [vec(tn[4:6, 1:3, 4]), tn_tree7]
+
+  tn_tree8 = vec(tn[4:6, 4:6, 6])
+  tn_tree8 = [vec(tn[4:6, 4:6, 5]), tn_tree8]
+  tn_tree8 = [vec(tn[4:6, 4:6, 4]), tn_tree8]
+  return [
+    [[tn_tree1, tn_tree2], [tn_tree3, tn_tree4]],
+    [[tn_tree5, tn_tree6], [tn_tree7, tn_tree8]],
+  ]
 end
 
 function bench_3d_cube(
