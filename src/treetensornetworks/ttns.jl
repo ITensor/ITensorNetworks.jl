@@ -18,44 +18,44 @@ struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
   end
 end
 
-function data_graph_type(G::Type{<:TreeTensorNetwork})
+const TTN = TreeTensorNetwork
+
+function data_graph_type(G::Type{<:TTN})
   return data_graph_type(fieldtype(G, :itensor_network))
 end
 
-function copy(ψ::TreeTensorNetwork)
-  return TreeTensorNetwork(copy(ψ.itensor_network), copy(ψ.ortho_center))
+function copy(ψ::TTN)
+  return TTN(copy(ψ.itensor_network), copy(ψ.ortho_center))
 end
 
-const TTN = TreeTensorNetwork
-
 # Field access
-itensor_network(ψ::TreeTensorNetwork) = getfield(ψ, :itensor_network)
+itensor_network(ψ::TTN) = getfield(ψ, :itensor_network)
 
 # Required for `AbstractITensorNetwork` interface
-data_graph(ψ::TreeTensorNetwork) = data_graph(itensor_network(ψ))
+data_graph(ψ::TTN) = data_graph(itensor_network(ψ))
 
 # 
 # Constructor
 # 
 
-TreeTensorNetwork(tn::ITensorNetwork, args...) = TreeTensorNetwork{vertextype(tn)}(tn, args...)
+TTN(tn::ITensorNetwork, args...) = TTN{vertextype(tn)}(tn, args...)
 
 # catch-all for default ElType
-function (::Type{TTNT})(g::AbstractGraph, args...; kwargs...) where {TTNT<:TTN}
-  return TTNT(Float64, g, args...; kwargs...)
+function TTN(g::AbstractGraph, args...; kwargs...)
+  return TTN(Float64, g, args...; kwargs...)
 end
 
-function TreeTensorNetwork(::Type{ElT}, graph::AbstractGraph, args...; kwargs...) where {ElT<:Number}
-  itensor_network = ITensorNetwork(ElT, graph; kwargs...)
-  return TreeTensorNetwork(itensor_network, args...)
+function TTN(eltype::Type{<:Number}, graph::AbstractGraph, args...; kwargs...)
+  itensor_network = ITensorNetwork(eltype, graph; kwargs...)
+  return TTN(itensor_network, args...)
 end
 
 # construct from given state (map)
-function TreeTensorNetwork(
-  ::Type{ElT}, is::IndsNetwork, initstate, args...
+function TTN(
+  ::Type{ElT}, is::AbstractIndsNetwork, initstate, args...
 ) where {ElT<:Number}
   itensor_network = ITensorNetwork(ElT, is, initstate)
-  return TreeTensorNetwork(itensor_network, args...)
+  return TTN(itensor_network, args...)
 end
 
 # TODO: randomcircuitTTN?
@@ -71,8 +71,9 @@ end
 #
 
 function TTN(
-  ::Type{ElT}, sites::IndsNetwork, ops::Dictionary; kwargs...
+  ::Type{ElT}, sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork}, ops::Dictionary; kwargs...
 ) where {ElT<:Number}
+  s = first(sites_map) # TODO: Use the sites_map
   N = nv(sites)
   os = Prod{Op}()
   for v in vertices(sites)
@@ -88,13 +89,15 @@ function TTN(
 end
 
 function TTN(
-  ::Type{ElT}, sites::IndsNetwork, fops::Function; kwargs...
+  ::Type{ElT}, sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork}, fops::Function; kwargs...
 ) where {ElT<:Number}
+  sites = first(sites_map) # TODO: Use the sites_map
   ops = Dictionary(vertices(sites), map(v -> fops(v), vertices(sites)))
   return TTN(ElT, sites, ops; kwargs...)
 end
 
-function TTN(::Type{ElT}, sites::IndsNetwork, op::String; kwargs...) where {ElT<:Number}
+function TTN(::Type{ElT}, sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork}, op::String; kwargs...) where {ElT<:Number}
+  sites = first(sites_map) # TODO: Use the sites_map
   ops = Dictionary(vertices(sites), fill(op, nv(sites)))
   return TTN(ElT, sites, ops; kwargs...)
 end
