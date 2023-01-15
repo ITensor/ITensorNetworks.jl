@@ -1,15 +1,13 @@
 using Test
+using Glob
 using ITensorNetworks
 
-test_path = joinpath(pkgdir(ITensorNetworks), "test")
-test_files = filter(
-  file -> startswith(file, "test_") && endswith(file, ".jl"), readdir(test_path)
-)
-
-@testset "ITensorNetworks.jl" begin
-  @testset "$filename" for filename in test_files
-    println("Running $filename")
-    include(joinpath(test_path, filename))
+# https://discourse.julialang.org/t/rdir-search-recursive-for-files-with-a-given-name-pattern/75605/12
+@testset "ITensorNetworks.jl, test directory $root" for (root, dirs, files) in walkdir(joinpath(pkgdir(ITensorNetworks), "test"))
+  test_files = filter!(f -> occursin(Glob.FilenameMatch("test_*.jl"), f), files)
+  @testset "Test file $test_file" for test_file in test_files
+    println("Running test file $test_file")
+    @time include(joinpath(root, test_file))
   end
 
   for filename in ["approximate_tn_contraction/runtests.jl"]

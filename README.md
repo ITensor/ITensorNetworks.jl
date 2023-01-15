@@ -312,5 +312,9 @@ This file was generated with [weave.jl](https://github.com/JunoLab/Weave.jl) wit
 
 ```julia
 using ITensorNetworks, Weave
-weave(joinpath(pkgdir(ITensorNetworks), "examples", "README.jl"); doctype="github", out_path=pkgdir(ITensorNetworks))
+weave(
+  joinpath(pkgdir(ITensorNetworks), "examples", "README.jl");
+  doctype="github",
+  out_path=pkgdir(ITensorNetworks),
+)
 ```

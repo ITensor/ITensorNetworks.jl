@@ -19,7 +19,7 @@ edge_data_type(::Type{<:AbstractIndsNetwork{V,I}}) where {V,I} = Vector{I}
 
 function uniqueinds(is::AbstractIndsNetwork, edge::AbstractEdge)
   inds = IndexSet(get(is, src(edge), Index[]))
-  for ei in setdiff(incident_edges(is, src(edge)...), [edge])
+  for ei in setdiff(incident_edges(is, src(edge)), [edge])
     inds = unioninds(inds, get(is, ei, Index[]))
   end
   return inds

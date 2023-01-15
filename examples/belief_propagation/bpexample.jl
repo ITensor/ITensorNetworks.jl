@@ -6,9 +6,9 @@ using ITensorNetworks
 using ITensorNetworks: construct_initial_mts, update_all_mts, get_single_site_expec
 
 n = 4
-dims = (n, n)
-g = named_grid(dims)
-# g = named_comb_tree(dims)
+system_dims = (n, n)
+g = named_grid(system_dims)
+# g = named_comb_tree(system_dims)
 s = siteinds("S=1/2", g)
 chi = 2
 
@@ -19,7 +19,7 @@ combiners = linkinds_combiners(ψψ)
 ψψ = combine_linkinds(ψψ, combiners)
 
 # Apply Sz to site v
-v = one.(dims)
+v = one.(system_dims)
 Oψ = copy(ψ)
 Oψ[v] = apply(op("Sz", s[v]), ψ[v])
 ψOψ = inner_network(ψ, Oψ; flatten=true, map_bra_linkinds=prime)
