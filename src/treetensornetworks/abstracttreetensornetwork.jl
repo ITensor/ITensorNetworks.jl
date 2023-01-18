@@ -1,4 +1,3 @@
-# TODO: Replace `AbstractITensorNetwork` with a trait `IsTree`.
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
 
 const AbstractTTN = AbstractTreeTensorNetwork

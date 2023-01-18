@@ -10,53 +10,61 @@ function contract_solver(; kwargs...)
   return solver
 end
 
-function ITensors.contract(
-  ::ITensors.Algorithm"fit",
-  A::IsTreeOperator,
-  psi0::ST;
-  init_state=psi0,
+function contract(
+  ::Algorithm"fit",
+  tn1::AbstractTTN,
+  tn2::AbstractTTN;
+  init,
   nsweeps=1,
-  kwargs...,
-)::ST where {ST<:IsTreeState}
-  n = nv(A)
-  n != nv(psi0) && throw(
-    DimensionMismatch("Number of sites operator ($n) and state ($(nv(psi0))) do not match"),
+  solver_kwargs...,
+)
+  n = nv(tn1)
+  n != nv(tn2) && throw(
+    DimensionMismatch("Number of sites operator ($n) and state ($(nv(tn2))) do not match"),
   )
   if n == 1
-    v = only(vertices(psi0))
-    return ST([A[v] * psi0[v]])
+    v = only(vertices(tn2))
+    return typeof(tn2)([tn1[v] * tn2[v]])
   end
 
-  check_hascommoninds(siteinds, A, psi0)
+  # check_hascommoninds(siteinds, tn1, tn2)
 
-  # In case A and psi0 have the same link indices
-  A = sim(linkinds, A)
+  # In case `tn1` and `tn2` have the same internal indices
+  tn1 = sim(linkinds, tn1)
 
-  # Fix site and link inds of init_state
-  init_state = deepcopy(init_state)
-  init_state = sim(linkinds, init_state)
-  for v in vertices(psi0)
-    replaceinds!(
-      init_state[v], siteinds(init_state, v), uniqueinds(siteinds(A, v), siteinds(psi0, v))
-    )
-  end
+  # In case `init` and `tn2` have the same internal indices
+  init = sim(linkinds, init)
+
+  # Fix site and link inds of init
+  ## init = deepcopy(init)
+  ## init = sim(linkinds, init)
+  ## for v in vertices(tn2)
+  ##   replaceinds!(
+  ##     init[v], siteinds(init, v), uniqueinds(siteinds(tn1, v), siteinds(tn2, v))
+  ##   )
+  ## end
 
   t = Inf
   reverse_step = false
-  PH = proj_operator_apply(psi0, A)
+  PH = proj_operator_apply(tn2, tn1)
   psi = tdvp(
-    contract_solver(; kwargs...), PH, t, init_state; nsweeps, reverse_step, kwargs...
+    contract_solver(; solver_kwargs...), PH, t, init; nsweeps, reverse_step, kwargs...
   )
 
   return psi
 end
 
-# extra ITensors overloads for tree tensor networks
-function ITensors.contract(A::TTN, ψ::TTN; alg="fit", kwargs...)
-  return contract(ITensors.Algorithm(alg), A, ψ; kwargs...)
+"""
+Overload of `ITensors.contract`.
+"""
+function contract(tn1::AbstractTTN, tn2::AbstractTTN; alg="fit", kwargs...)
+  return contract(Algorithm(alg), tn1, tn2; kwargs...)
 end
 
-function ITensors.apply(A::TTN, ψ::TTN; kwargs...)
-  Aψ = contract(A, ψ; kwargs...)
-  return replaceprime(Aψ, 1 => 0)
+"""
+Overload of `ITensors.apply`.
+"""
+function apply(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
+  tn12 = contract(tn1, tn2; kwargs...)
+  return replaceprime(tn12, 1 => 0)
 end

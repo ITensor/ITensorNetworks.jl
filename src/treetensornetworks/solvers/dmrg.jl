@@ -1,5 +1,5 @@
 function eigsolve_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
+  function solver(H, t, init; kws...)
     howmany = 1
     which = get(kwargs, :solver_which_eigenvalue, :SR)
     solver_kwargs = (;
@@ -9,21 +9,21 @@ function eigsolve_solver(; kwargs...)
       maxiter=get(kwargs, :solver_maxiter, 1),
       verbosity=get(kwargs, :solver_verbosity, 0),
     )
-    vals, vecs, info = eigsolve(H, psi0, howmany, which; solver_kwargs...)
+    vals, vecs, info = eigsolve(H, init, howmany, which; solver_kwargs...)
     psi = vecs[1]
     return psi, info
   end
   return solver
 end
 
-function dmrg(H, psi0::IsTreeState; kwargs...)
+function dmrg(H, init::AbstractTTN; kwargs...)
   t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   reverse_step = false
-  psi = tdvp(eigsolve_solver(; kwargs...), H, t, psi0; reverse_step, kwargs...)
+  psi = tdvp(eigsolve_solver(; kwargs...), H, t, init; reverse_step, kwargs...)
   return psi
 end
 
 # Alias for DMRG
-function eigsolve(H, psi0::IsTreeState; kwargs...)
-  return dmrg(H, psi0; kwargs...)
+function eigsolve(H, init::AbstractTTN; kwargs...)
+  return dmrg(H, init; kwargs...)
 end

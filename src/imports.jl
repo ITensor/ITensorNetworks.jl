@@ -36,6 +36,7 @@ import LinearAlgebra: factorize, normalize, normalize!, qr, svd
 
 import ITensors:
   # contraction
+  apply,
   contract,
   orthogonalize,
   isortho,

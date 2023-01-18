@@ -1,5 +1,5 @@
 function exponentiate_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
+  function solver(H, t, init; kws...)
     solver_kwargs = (;
       ishermitian=get(kwargs, :ishermitian, true),
       issymmetric=get(kwargs, :issymmetric, true),
@@ -9,14 +9,14 @@ function exponentiate_solver(; kwargs...)
       verbosity=get(kwargs, :solver_outputlevel, 0),
       eager=true,
     )
-    psi, info = exponentiate(H, t, psi0; solver_kwargs...)
+    psi, info = exponentiate(H, t, init; solver_kwargs...)
     return psi, info
   end
   return solver
 end
 
 function applyexp_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
+  function solver(H, t, init; kws...)
     tol_per_unit_time = get(kwargs, :solver_tol, 1E-8)
     solver_kwargs = (;
       maxiter=get(kwargs, :solver_krylovdim, 30),
@@ -24,7 +24,7 @@ function applyexp_solver(; kwargs...)
     )
     #applyexp tol is absolute, compute from tol_per_unit_time:
     tol = abs(t) * tol_per_unit_time
-    psi, info = applyexp(H, t, psi0; tol, solver_kwargs..., kws...)
+    psi, info = applyexp(H, t, init; tol, solver_kwargs..., kws...)
     return psi, info
   end
   return solver
@@ -43,14 +43,14 @@ function tdvp_solver(; kwargs...)
   end
 end
 
-function tdvp(H, t::Number, psi0::IsTreeState; kwargs...)
-  return tdvp(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
+function tdvp(H, t::Number, init::AbstractTTN; kwargs...)
+  return tdvp(tdvp_solver(; kwargs...), H, t, init; kwargs...)
 end
 
-function tdvp(t::Number, H, psi0::IsTreeState; kwargs...)
-  return tdvp(H, t, psi0; kwargs...)
+function tdvp(t::Number, H, init::AbstractTTN; kwargs...)
+  return tdvp(H, t, init; kwargs...)
 end
 
-function tdvp(H, psi0::IsTreeState, t::Number; kwargs...)
-  return tdvp(H, t, psi0; kwargs...)
+function tdvp(H, init::AbstractTTN, t::Number; kwargs...)
+  return tdvp(H, t, init; kwargs...)
 end
