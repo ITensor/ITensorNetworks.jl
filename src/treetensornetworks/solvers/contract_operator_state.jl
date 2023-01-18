@@ -46,7 +46,7 @@ function contract(
 
   t = Inf
   reverse_step = false
-  PH = proj_operator_apply(tn2, tn1)
+  PH = ProjTTNApply(tn2, tn1)
   psi = tdvp(
     contract_solver(; solver_kwargs...), PH, t, init; nsweeps, reverse_step, kwargs...
   )

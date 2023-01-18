@@ -144,7 +144,7 @@ function tdvp(solver, H::AbstractTTN, t::Number, psi0::AbstractTTN; kwargs...)
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
-  PH = proj_operator(H)
+  PH = ProjTTN(H)
   return tdvp(solver, PH, t, psi0; kwargs...)
 end
 
@@ -183,6 +183,6 @@ function tdvp(
     check_hascommoninds(siteinds, H, psi0')
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
-  PHs = proj_operator_sum(Hs)
+  PHs = ProjTTNSum(Hs)
   return tdvp(solver, PHs, t, psi0; kwargs...)
 end
