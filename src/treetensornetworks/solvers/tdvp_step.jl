@@ -50,7 +50,7 @@ function tdvp_sweep(
   normalize::Bool = get(kwargs, :normalize, false)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
-  observer = get(kwargs, :observer!, NoObserver())
+  observer = get(kwargs, :observer!, nothing)
   outputlevel = get(kwargs, :outputlevel, 0)
   sw = get(kwargs, :sweep, 1)
   current_time = get(kwargs, :current_time, 0.0)
@@ -98,12 +98,10 @@ function tdvp_sweep(
       end
       flush(stdout)
     end
-    # very much draft, observer interface to be discussed...
     if time_direction(sweep_step) == +1
-      obs_update!(
-        observer,
+      update!(observer;
         psi,
-        pos(sweep_step);
+        bond=minimum(pos(sweep_step)),
         sweep=sw,
         half_sweep=isforward(direction) ? 1 : 2,
         spec,

@@ -16,6 +16,9 @@ function eigsolve_solver(; kwargs...)
   return solver
 end
 
+"""
+Overload of `ITensors.dmrg`.
+"""
 function dmrg(H, init::AbstractTTN; kwargs...)
   t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   reverse_step = false
@@ -23,7 +26,9 @@ function dmrg(H, init::AbstractTTN; kwargs...)
   return psi
 end
 
-# Alias for DMRG
+"""
+Overload of `KrylovKit.eigsolve`.
+"""
 function eigsolve(H, init::AbstractTTN; kwargs...)
   return dmrg(H, init; kwargs...)
 end

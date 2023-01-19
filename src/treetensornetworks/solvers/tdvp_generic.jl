@@ -57,8 +57,8 @@ function tdvp(solver, PH, t::Number, psi0::AbstractTTN; kwargs...)
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
     kwargs, :write_when_maxdim_exceeds, nothing
   )
-  observer = get(kwargs, :observer!, NoObserver())
-  step_observer = get(kwargs, :step_observer!, NoObserver())
+  observer = get(kwargs, :observer!, nothing)
+  step_observer = get(kwargs, :step_observer!, nothing)
   outputlevel::Int = get(kwargs, :outputlevel, 0)
 
   psi = copy(psi0)

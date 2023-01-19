@@ -57,7 +57,7 @@ end
   c = named_comb_tree(tooth_lengths)
 
   s = siteinds("S=1/2", c)
-  psi = normalize!(randomTTN(s; link_space=8))
+  psi = normalize!(random_ttn(s; link_space=8))
 
   os = ITensorNetworks.heisenberg(c; J1=1, J2=1)
   H = TTN(os, s)

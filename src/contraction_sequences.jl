@@ -1,11 +1,11 @@
 function contraction_sequence(tn::Vector{ITensor}; alg="optimal", kwargs...)
-  return contraction_sequence(Algorithm(alg), tn; kwargs...)
+  return deepmap(Key, contraction_sequence(Algorithm(alg), tn; kwargs...))
 end
 
 function contraction_sequence(tn::AbstractITensorNetwork; kwargs...)
   seq_linear_index = contraction_sequence(Vector{ITensor}(tn); kwargs...)
   # TODO: use Functors.fmap
-  return deepmap(n -> vertices(tn)[n], seq_linear_index)
+  return deepmap(n -> Key(vertices(tn)[n]), seq_linear_index)
 end
 
 function contraction_sequence(::Algorithm"optimal", tn::Vector{ITensor})

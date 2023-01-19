@@ -313,6 +313,22 @@ end
 # TODO: how to define this lazily?
 #norm(tn::AbstractITensorNetwork) = sqrt(inner(tn, tn))
 
+function isapprox(
+  x::AbstractITensorNetwork,
+  y::AbstractITensorNetwork;
+  atol::Real=0,
+  rtol::Real=Base.rtoldefault(
+    LinearAlgebra.promote_leaf_eltypes(x), LinearAlgebra.promote_leaf_eltypes(y), atol
+  ),
+)
+  error("Not implemented")
+  d = norm(x - y)
+  if !isfinite(d)
+    error("In `isapprox(x::AbstractITensorNetwork, y::AbstractITensorNetwork)`, `norm(x - y)` is not finite")
+  end
+  return d <= max(atol, rtol * max(norm(x), norm(y)))
+end
+
 function contract(tn::AbstractITensorNetwork; sequence=vertices(tn), kwargs...)
   sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn, v), sequence)
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
@@ -737,6 +753,23 @@ function site_combiners(tn::AbstractITensorNetwork{V}) where {V}
     Cs[v] = combiner(s; tags=commontags(s))
   end
   return Cs
+end
+
+function insert_missing_internal_inds(tn::AbstractITensorNetwork, edges; internal_inds_space=trivial_space(tn))
+  tn = copy(tn)
+  for e in edges
+    if !hascommoninds(tn[src(e)], tn[dst(e)])
+      iₑ = Index(internal_inds_space, edge_tag(e))
+      X = onehot(iₑ => 1)
+      tn[src(e)] *= X
+      tn[dst(e)] *= dag(X)
+    end
+  end
+  return tn
+end
+
+function insert_missing_internal_inds(tn::AbstractITensorNetwork; internal_inds_space=trivial_space(tn))
+  return insert_internal_inds(tn, edges(tn); internal_inds_space)
 end
 
 ## # TODO: should this make sure that internal indices
