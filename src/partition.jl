@@ -78,14 +78,14 @@ function subgraph_vertices(
   backend=current_partitioning_backend(),
   kwargs...,
 )
-  #Both Metis and KaHyPar cannot handle the edge case npartitions = 1, so we will fix it here for now
-  if (_npartitions(g, npartitions, nvertices_per_partition) != 1)
-    return subgraph_vertices(
-      Backend(backend), g, _npartitions(g, npartitions, nvertices_per_partition); kwargs...
-    )
-  else
+  #Metis cannot handle the edge case npartitions = 1, so we will fix it here for now
+  if (_npartitions(g, npartitions, nvertices_per_partition) == 1)
     return group(v -> 1, collect(vertices(g)))
   end
+
+  return subgraph_vertices(
+      Backend(backend), g, _npartitions(g, npartitions, nvertices_per_partition); kwargs...
+    )
 end
 
 function subgraph_vertices(
