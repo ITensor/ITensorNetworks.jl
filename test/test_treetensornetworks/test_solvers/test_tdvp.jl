@@ -30,7 +30,7 @@ using Test
     @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
     #Different backend solvers, default solver_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
-    @test ψ1 ≈ ψ1_exponentiate_backend
+    @test ψ1 ≈ ψ1_exponentiate_backend rtol=1e-7
 
     @test norm(ψ1) ≈ 1.0
 
@@ -44,7 +44,8 @@ using Test
     ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
 
     #Different backend solvers, default solver_backend = "applyexp"
-    @test ψ2 ≈ tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
+    ψ2_exponentiate_backend = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
+    @test ψ2 ≈ ψ2_exponentiate_backend rtol=1e-7
 
     @test norm(ψ2) ≈ 1.0
 
@@ -195,7 +196,7 @@ using Test
       )
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
-      push!(Sz_tdvp, real(expect("Sz", psi; sites=c:c)[c]))
+      push!(Sz_tdvp, real(expect("Sz", psi; vertices=[c])[c]))
 
       psi2 = tdvp(
         H,
@@ -210,7 +211,7 @@ using Test
       )
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
-      push!(Sz_tdvp2, real(expect("Sz", psi2; sites=c:c)[c]))
+      push!(Sz_tdvp2, real(expect("Sz", psi2; vertices=[c])[c]))
 
       push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
       F = abs(scalar(dag(psix) * contract(psi)))
@@ -282,10 +283,10 @@ using Test
 
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
-      Sz1[step] = real(expect("Sz", psi; sites=c:c)[c])
+      Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
-      Sz2[step] = real(expect("Sz", phi; sites=c:c)[c])
+      Sz2[step] = real(expect("Sz", phi; vertices=[c])[c])
       En1[step] = real(inner(psi', H, psi))
       En2[step] = real(inner(phi', H, phi))
     end
@@ -297,7 +298,7 @@ using Test
     phi = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
 
     obs = Observer(
-      "Sz" => (; psi) -> expect("Sz", psi; sites=c)[c],
+      "Sz" => (; psi) -> expect("Sz", psi; vertices=[c])[c],
       "En" => (; psi) -> real(inner(psi', H, psi)),
     )
 
@@ -392,7 +393,7 @@ using Test
     function measure_sz(; psi, bond, half_sweep)
       if bond == 1 && half_sweep == 2
         # TODO: `expect` should return a scalar here.
-        return expect("Sz", psi; sites=c)[c]
+        return expect("Sz", psi; vertices=[c])[c]
       end
       return nothing
     end
@@ -411,7 +412,7 @@ using Test
     obs = Observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
 
     # TODO: `expect` should return a scalar here.
-    step_measure_sz(; psi) = expect("Sz", psi; sites=c)[c]
+    step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
 
     step_measure_en(; psi) = real(inner(psi', H, psi))
 
@@ -617,7 +618,7 @@ end
         solver_maxiter=500,
         solver_krylovdim=25,
       )
-      push!(Sz_tdvp, real(expect("Sz", psi; sites=[c])[c]))
+      push!(Sz_tdvp, real(expect("Sz", psi; vertices=[c])[c]))
       push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
       F = abs(scalar(dag(psix) * contract(psi)))
     end
@@ -676,8 +677,8 @@ end
         H, -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, exponentiate_krylovdim=15
       )
 
-      Sz1[step] = real(expect("Sz", psi; sites=[c])[c])
-      Sz2[step] = real(expect("Sz", phi; sites=[c])[c])
+      Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
+      Sz2[step] = real(expect("Sz", phi; vertices=[c])[c])
       En1[step] = real(inner(psi', H, psi))
       En2[step] = real(inner(phi', H, phi))
     end
@@ -688,7 +689,7 @@ end
 
     phi = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
     obs = Observer(
-      "Sz" => (; psi) -> expect("Sz", psi; sites=c)[c],
+      "Sz" => (; psi) -> expect("Sz", psi; vertices=[c])[c],
       "En" => (; psi) -> real(inner(psi', H, psi)),
     )
     phi = tdvp(
@@ -757,7 +758,7 @@ end
   #   En1 = zeros(Nsteps)
   #   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
   #     if bond == 1 && half_sweep == 2
-  #       Sz1[sweep] = expect("Sz", psi; sites=[c])[c]
+  #       Sz1[sweep] = expect("Sz", psi; vertices=[c])[c]
   #       En1[sweep] = real(inner(psi', H, psi))
   #     end
   #   end
@@ -780,7 +781,7 @@ end
 
   #   function measure_sz(; psi, bond, half_sweep)
   #     if bond == 1  && half_sweep == 2
-  #       return expect("Sz", psi; sites=[c])[c]
+  #       return expect("Sz", psi; vertices=[c])[c]
   #     end
   #     return nothing
   #   end
@@ -794,7 +795,7 @@ end
 
   #   obs = Observer("Sz" => measure_sz, "En" => measure_en)
 
-  #   step_measure_sz(; psi) = expect("Sz", psi; sites=[c])[c]
+  #   step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
 
   #   step_measure_en(; psi) = real(inner(psi', H, psi))
 

@@ -54,7 +54,7 @@ end
 
   if conserve_qns
     # QN conservation for non-path graphs is currently broken
-    @test_throws ErrorException TTN(ITensorNetworks.heisenberg(c; h), s)
+    @test_broken TTN(ITensorNetworks.heisenberg(c; h), s)
     continue
   end
 

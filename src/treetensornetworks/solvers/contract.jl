@@ -14,10 +14,11 @@ function contract(
   ::Algorithm"fit",
   tn1::AbstractTTN,
   tn2::AbstractTTN;
-  init,
+  init=random_ttn(flatten_external_indsnetwork(tn1, tn2); link_space=trivial_space(tn1)),
   nsweeps=1,
-  solver_kwargs...,
+  kwargs...,
 )
+  @warn """`contract(::AbstractTTN, ::AbstractTTN; alg="fit")` is currently broken, you will likely get incorrect results."""
   n = nv(tn1)
   n != nv(tn2) && throw(
     DimensionMismatch("Number of sites operator ($n) and state ($(nv(tn2))) do not match"),
@@ -48,7 +49,7 @@ function contract(
   reverse_step = false
   PH = ProjTTNApply(tn2, tn1)
   psi = tdvp(
-    contract_solver(; solver_kwargs...), PH, t, init; nsweeps, reverse_step, kwargs...
+    contract_solver(; kwargs...), PH, t, init; nsweeps, reverse_step, kwargs...
   )
 
   return psi

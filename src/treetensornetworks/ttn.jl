@@ -76,11 +76,16 @@ end
 
 function random_mps(
   external_inds::Vector{<:Index};
+  states=nothing,
   internal_inds_space=trivial_space(external_inds),
 )
   # TODO: Implement in terms of general
   # `random_ttn` constructor
-  tn_mps = randomMPS(external_inds; linkdims=internal_inds_space)
+  tn_mps = if isnothing(states)
+    randomMPS(external_inds; linkdims=internal_inds_space)
+  else
+    randomMPS(external_inds, states; linkdims=internal_inds_space)
+  end
   return TTN([tn_mps[v] for v in eachindex(tn_mps)])
 end
 

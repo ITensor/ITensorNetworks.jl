@@ -39,3 +39,5 @@ trivial_space(T::Type{<:Vector}) = _trivial_space(T)
 
 trivial_space(x::Index) = _trivial_space(x)
 trivial_space(x::Vector{<:Index}) = _trivial_space(x)
+trivial_space(x::ITensor) = trivial_space(inds(x))
+trivial_space(x::Tuple{Vararg{Index}}) = trivial_space(first(x))
