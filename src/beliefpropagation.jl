@@ -102,12 +102,19 @@ end
 Given a subet of vertices of a given Tensor Network and the Message Tensors for that network, return a Dictionary with the involved subgraphs as keys and the vector of tensors associated with that subgraph as values
 Specifically, the contraction of the environment tensors and tn[vertices] will be a scalar.
 """
-function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector)
+#CAN SWITCH DIR TO GET OUTGOING ENVIRONMENT BUT THIS WON'T BE QUITE RIGHT IF WE ARE DOING GENERAL BELIEF PROPAGATION
+function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir = :in)
+
   subgraphs = unique([find_subgraph(v, mts) for v in verts])
+
+  if(dir == :out)
+    return get_environment(tn, mts, setdiff(vertices(tn), verts))
+  end
+
   env_tensors = ITensor[mts[e] for e in boundary_edges(mts, subgraphs; dir=:in)]
   return vcat(
     env_tensors,
-    [tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)],
+    ITensor[tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)],
   )
 end
 
