@@ -45,3 +45,5 @@ end
 contract(P::ProjMPO_MPS2, v::ITensor) = contract(P.PH, v)
 
 proj_mps(P::ProjMPO_MPS2) = [proj_mps(m) for m in P.Ms]
+
+underlying_graph(P::ProjMPO_MPS2) = chain_lattice_graph(length(P.PH.H)) # tree patch
