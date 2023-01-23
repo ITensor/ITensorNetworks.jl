@@ -534,7 +534,18 @@ function TTN(
   os = ITensors.sortmergeterms(os) # not exported
 
   if hasqns(first(first(vertex_data(sites))))
-    error("No verified quantum number support for automatic TTN constructor!") # no verified support, just throw error
+    if !is_path_graph(sites)
+      error("OpSum → TTN constructor for QN conserving tensor networks only works for path/linear graphs right now.")
+    end
+    # Use `ITensors.MPO` for now until general TTN constructor
+    # works for QNs.
+    # TODO: Check it is a path graph and get a linear arrangement!
+    sites_linear_vertices = [only(sites[v]) for v in vertices(sites)]
+    vertices_to_linear_vertices = Dictionary(vertices(sites), eachindex(vertices(sites)))
+    os_linear_vertices = replace_vertices(os, vertices_to_linear_vertices)
+    mpo = MPO(os_linear_vertices, sites_linear_vertices)
+    tn = TTN(Dictionary(vertices(sites), [mpo[v] for v in 1:nv(sites)]))
+    return tn
   end
   if method == :svd
     @warn "Symbolic SVD compression not working for long-range interactions." # add warning until this is fixed
@@ -556,6 +567,10 @@ function TTN(
     T = ITensors.splitblocks(linkinds, T) # TODO: make this work
   end
   return T
+end
+
+function mpo(os::OpSum, external_inds::Vector; kwargs...)
+  return TTN(os, path_indsnetwork(external_inds); kwargs...)
 end
 
 # Conversion from other formats

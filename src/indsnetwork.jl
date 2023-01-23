@@ -58,7 +58,7 @@ end
 
 @traitfn function IndsNetwork(g::G, link_space, site_space) where {G; IsUnderlyingGraph{G}}
   V = vertextype(g)
-  return IndsNetwork{V}(g, links_space, site_space)
+  return IndsNetwork{V}(g, link_space, site_space)
 end
 
 # Core constructor, others should convert
@@ -85,6 +85,21 @@ function IndsNetwork{V,I}(
   site_space::Dictionary{<:Any,<:Vector{<:Index}},
 ) where {V,I}
   return IndsNetwork{V,I}(NamedGraph(g), link_space, site_space)
+end
+
+# Construct from collections of indices
+
+function path_indsnetwork(external_inds::Vector{<:Vector{<:Index}})
+  g = named_path_graph(length(external_inds))
+  is = IndsNetwork(g)
+  for v in eachindex(external_inds)
+    is[v] = external_inds[v]
+  end
+  return is
+end
+
+function path_indsnetwork(external_inds::Vector{<:Index})
+  return path_indsnetwork(map(i -> [i], external_inds))
 end
 
 # TODO: Replace with a trait of the same name.

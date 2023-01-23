@@ -17,30 +17,32 @@ using Test
     os += "Sz", j, "Sz", j + 1
   end
 
-  H = MPO(os, s)
+  H = mpo(os, s)
 
-  psi = randomMPS(s; linkdims=20)
+  psi = random_mps(s; internal_inds_space=20)
 
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
 
-  # ITensors.dmrg
-  e2, psi2 = dmrg(H, psi; nsweeps, maxdim, normalize=false, outputlevel=0)
+  # Compare to `ITensors.MPO` version of `dmrg`
+  H_mpo = MPO([H[v] for v in 1:nv(H)])
+  psi_mps = MPS([psi[v] for v in 1:nv(psi)])
+  e2, psi2 = dmrg(H_mpo, psi_mps; nsweeps, maxdim, normalize=false, outputlevel=0)
 
   ## sweeps = Sweeps(nsweeps) # number of sweeps is 5
   ## maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
   ## cutoff!(sweeps, cutoff)
 
-  psi = ITensorNetworks.dmrg(
+  psi = dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
   )
-  @test inner(psi', H, psi) ≈ inner(psi2', H, psi2)
+  @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
 
   # Alias for `ITensorNetworks.dmrg`
   psi = eigsolve(
     H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
   )
-  @test inner(psi', H, psi) ≈ inner(psi2', H, psi2)
+  @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
 end
 
 @testset "Tree DMRG" for nsite in [1, 2]
@@ -55,18 +57,18 @@ end
 
   H = TTN(os, s)
 
-  psi = randomTTN(s; link_space=20)
+  psi = random_ttn(s; link_space=20)
 
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
   sweeps = Sweeps(nsweeps) # number of sweeps is 5
   maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
   cutoff!(sweeps, cutoff)
-  psi = ITensorNetworks.dmrg(
+  psi = dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
   )
 
-  # compare to ITensors.dmrg
+  # Compare to `ITensors.MPO` version of `dmrg`
   linear_order = [4, 1, 2, 5, 3, 6]
   vmap = Dictionary(vertices(s)[linear_order], 1:length(linear_order))
   sline = only.(collect(vertex_data(s)))[linear_order]

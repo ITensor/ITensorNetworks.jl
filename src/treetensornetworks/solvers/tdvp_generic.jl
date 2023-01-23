@@ -42,7 +42,7 @@ function process_sweeps(; kwargs...)
   return (; maxdim, mindim, cutoff, noise)
 end
 
-function tdvp(solver, PH, t::Number, psi0::IsTreeState; kwargs...)
+function tdvp(solver, PH, t::Number, psi0::AbstractTTN; kwargs...)
   reverse_step = get(kwargs, :reverse_step, true)
 
   nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
@@ -57,8 +57,8 @@ function tdvp(solver, PH, t::Number, psi0::IsTreeState; kwargs...)
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
     kwargs, :write_when_maxdim_exceeds, nothing
   )
-  observer = get(kwargs, :observer!, NoObserver())
-  step_observer = get(kwargs, :step_observer!, NoObserver())
+  observer = get(kwargs, :observer!, nothing)
+  step_observer = get(kwargs, :step_observer!, nothing)
   outputlevel::Int = get(kwargs, :outputlevel, 0)
 
   psi = copy(psi0)
@@ -115,8 +115,6 @@ function tdvp(solver, PH, t::Number, psi0::IsTreeState; kwargs...)
     isdone = false
     if !isnothing(checkdone)
       isdone = checkdone(; psi, sweep=sw, outputlevel, kwargs...)
-    elseif observer isa ITensors.AbstractObserver
-      isdone = checkdone!(observer; psi, sweep=sw, outputlevel)
     end
     isdone && break
   end
@@ -140,21 +138,21 @@ Optional keyword arguments:
 * `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
-function tdvp(solver, H::IsTreeOperator, t::Number, psi0::IsTreeState; kwargs...)
+function tdvp(solver, H::AbstractTTN, t::Number, psi0::AbstractTTN; kwargs...)
   check_hascommoninds(siteinds, H, psi0)
   check_hascommoninds(siteinds, H, psi0')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
-  PH = proj_operator(H)
+  PH = ProjTTN(H)
   return tdvp(solver, PH, t, psi0; kwargs...)
 end
 
-function tdvp(solver, t::Number, H, psi0::IsTreeState; kwargs...)
+function tdvp(solver, t::Number, H, psi0::AbstractTTN; kwargs...)
   return tdvp(solver, H, t, psi0; kwargs...)
 end
 
-function tdvp(solver, H, psi0::IsTreeState, t::Number; kwargs...)
+function tdvp(solver, H, psi0::AbstractTTN, t::Number; kwargs...)
   return tdvp(solver, H, t, psi0; kwargs...)
 end
 
@@ -178,13 +176,13 @@ Returns:
 * `psi::MPS` - time-evolved MPS
 """
 function tdvp(
-  solver, Hs::Vector{<:IsTreeOperator}, t::Number, psi0::IsTreeState; kwargs...
+  solver, Hs::Vector{<:AbstractTTN}, t::Number, psi0::AbstractTTN; kwargs...
 )
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)
     check_hascommoninds(siteinds, H, psi0')
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
-  PHs = proj_operator_sum(Hs)
+  PHs = ProjTTNSum(Hs)
   return tdvp(solver, PHs, t, psi0; kwargs...)
 end

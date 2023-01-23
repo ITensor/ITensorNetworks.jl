@@ -47,7 +47,7 @@ function ITensors.apply(
   o⃗::Vector{ITensor},
   ψ::AbstractITensorNetwork;
   cutoff,
-  maxdim,
+  maxdim=typemax(Int),
   normalize=false,
   ortho=false,
 )

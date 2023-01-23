@@ -118,6 +118,10 @@ function LinearAlgebra.promote_leaf_eltypes(tn::AbstractITensorNetwork)
   return LinearAlgebra.promote_leaf_eltypes(itensors(tn))
 end
 
+function trivial_space(tn::AbstractITensorNetwork)
+  return trivial_space(tn[first(vertices(tn))])
+end
+
 function ITensors.promote_itensor_eltype(tn::AbstractITensorNetwork)
   return LinearAlgebra.promote_leaf_eltypes(tn)
 end
@@ -133,11 +137,16 @@ function ITensors.convert_leaf_eltype(eltype::Type, tn::AbstractITensorNetwork)
   return tn
 end
 
-# TODO: mimic ITensors.AbstractMPS implementation using map
+# TODO: Mimic ITensors.AbstractMPS implementation using map
+# TODO: Implement using `adapt`
 function NDTensors.convert_scalartype(eltype::Type{<:Number}, tn::AbstractITensorNetwork)
   tn = copy(tn)
   vertex_data(tn) .= ITensors.adapt.(Ref(eltype), vertex_data(tn))
   return tn
+end
+
+function Base.complex(tn::AbstractITensorNetwork)
+  return NDTensors.convert_scalartype(complex(LinearAlgebra.promote_leaf_eltypes(tn)), tn)
 end
 
 #
@@ -168,7 +177,10 @@ function IndsNetwork(tn::AbstractITensorNetwork)
   return is
 end
 
-function siteinds(tn::AbstractITensorNetwork)
+# Alias
+indsnetwork(tn::AbstractITensorNetwork) = IndsNetwork(tn)
+
+function external_indsnetwork(tn::AbstractITensorNetwork)
   is = IndsNetwork(underlying_graph(tn))
   for v in vertices(tn)
     is[v] = uniqueinds(tn, v)
@@ -176,13 +188,36 @@ function siteinds(tn::AbstractITensorNetwork)
   return is
 end
 
-function linkinds(tn::AbstractITensorNetwork)
+# For backwards compatibility
+# TODO: Delete this
+siteinds(tn::AbstractITensorNetwork) = external_indsnetwork(tn)
+
+# External indsnetwork of the flattened network, with vertices
+# mapped back to `tn1`.
+function flatten_external_indsnetwork(
+  tn1::AbstractITensorNetwork,
+  tn2::AbstractITensorNetwork,
+)
+  is = external_indsnetwork(sim(tn1; sites=[]) ⊗ tn2)
+  flattened_is = IndsNetwork(underlying_graph(tn1))
+  for v in vertices(flattened_is)
+    # setindex_preserve_graph!(flattened_is, unioninds(is[v, 1], is[v, 2]), v)
+    flattened_is[v] = unioninds(is[v, 1], is[v, 2])
+  end
+  return flattened_is
+end
+
+function internal_indsnetwork(tn::AbstractITensorNetwork)
   is = IndsNetwork(underlying_graph(tn))
   for e in edges(tn)
     is[e] = commoninds(tn, e)
   end
   return is
 end
+
+# For backwards compatibility
+# TODO: Delete this
+linkinds(tn::AbstractITensorNetwork) = internal_indsnetwork(tn)
 
 #
 # Index access
@@ -312,6 +347,22 @@ end
 
 # TODO: how to define this lazily?
 #norm(tn::AbstractITensorNetwork) = sqrt(inner(tn, tn))
+
+function isapprox(
+  x::AbstractITensorNetwork,
+  y::AbstractITensorNetwork;
+  atol::Real=0,
+  rtol::Real=Base.rtoldefault(
+    LinearAlgebra.promote_leaf_eltypes(x), LinearAlgebra.promote_leaf_eltypes(y), atol
+  ),
+)
+  error("Not implemented")
+  d = norm(x - y)
+  if !isfinite(d)
+    error("In `isapprox(x::AbstractITensorNetwork, y::AbstractITensorNetwork)`, `norm(x - y)` is not finite")
+  end
+  return d <= max(atol, rtol * max(norm(x), norm(y)))
+end
 
 function contract(tn::AbstractITensorNetwork; sequence=vertices(tn), kwargs...)
   sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn, v), sequence)
@@ -750,6 +801,23 @@ function site_combiners(tn::AbstractITensorNetwork{V}) where {V}
     Cs[v] = combiner(s; tags=commontags(s))
   end
   return Cs
+end
+
+function insert_missing_internal_inds(tn::AbstractITensorNetwork, edges; internal_inds_space=trivial_space(tn))
+  tn = copy(tn)
+  for e in edges
+    if !hascommoninds(tn[src(e)], tn[dst(e)])
+      iₑ = Index(internal_inds_space, edge_tag(e))
+      X = onehot(iₑ => 1)
+      tn[src(e)] *= X
+      tn[dst(e)] *= dag(X)
+    end
+  end
+  return tn
+end
+
+function insert_missing_internal_inds(tn::AbstractITensorNetwork; internal_inds_space=trivial_space(tn))
+  return insert_internal_inds(tn, edges(tn); internal_inds_space)
 end
 
 ## # TODO: should this make sure that internal indices

@@ -1,5 +1,6 @@
 module ITensorNetworks
 
+using AbstractTrees
 using Compat
 using DataGraphs
 using Dictionaries
@@ -10,6 +11,7 @@ using IsApprox
 using ITensors
 using ITensors.ContractionSequenceOptimization
 using ITensors.ITensorVisualizationCore
+using ITensors.LazyApply
 using IterTools
 using KrylovKit: KrylovKit
 using NamedGraphs
@@ -56,6 +58,7 @@ function iterate(::AbstractDataGraph)
   )
 end
 
+include("observers.jl")
 include("utils.jl")
 include("visualize.jl")
 include("graphs.jl")
@@ -65,7 +68,7 @@ include("lattices.jl")
 include("abstractindsnetwork.jl")
 include("indextags.jl")
 include("indsnetwork.jl")
-include("opsum.jl") # Requires IndsNetwork
+include("opsum.jl")
 include("sitetype.jl")
 include("abstractitensornetwork.jl")
 include("contraction_sequences.jl")
@@ -86,14 +89,6 @@ include(joinpath("treetensornetworks", "projttns", "abstractprojttn.jl"))
 include(joinpath("treetensornetworks", "projttns", "projttn.jl"))
 include(joinpath("treetensornetworks", "projttns", "projttnsum.jl"))
 include(joinpath("treetensornetworks", "projttns", "projttn_apply.jl"))
-# Compatibility of ITensors.MPS/MPO with tree sweeping routines
-include(joinpath("treetensornetworks", "solvers", "tree_patch.jl"))
-# Compatibility of ITensor observer and Observers
-# TODO: Delete this
-include(joinpath("treetensornetworks", "solvers", "update_observer.jl"))
-# Utilities for making it easier
-# to define solvers (like ODE solvers)
-# for TDVP
 include(joinpath("treetensornetworks", "solvers", "solver_utils.jl"))
 include(joinpath("treetensornetworks", "solvers", "applyexp.jl"))
 include(joinpath("treetensornetworks", "solvers", "tdvporder.jl"))
@@ -103,10 +98,7 @@ include(joinpath("treetensornetworks", "solvers", "tdvp_generic.jl"))
 include(joinpath("treetensornetworks", "solvers", "tdvp.jl"))
 include(joinpath("treetensornetworks", "solvers", "dmrg.jl"))
 include(joinpath("treetensornetworks", "solvers", "dmrg_x.jl"))
-include(joinpath("treetensornetworks", "solvers", "projmpo_apply.jl"))
-include(joinpath("treetensornetworks", "solvers", "contract_operator_state.jl"))
-include(joinpath("treetensornetworks", "solvers", "projmps2.jl"))
-include(joinpath("treetensornetworks", "solvers", "projmpo_mps2.jl"))
+include(joinpath("treetensornetworks", "solvers", "contract.jl"))
 include(joinpath("treetensornetworks", "solvers", "linsolve.jl"))
 include(joinpath("treetensornetworks", "solvers", "tree_sweeping.jl"))
 
