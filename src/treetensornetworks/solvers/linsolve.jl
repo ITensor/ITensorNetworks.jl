@@ -22,9 +22,9 @@ Keyword arguments:
 
 Overload of `KrylovKit.linsolve`.
 """
-function linsolve(A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; kwargs...)
+function linsolve(A::AbstractTTN, b::AbstractTTN, x₀::AbstractTTN, a₀::Number=0, a₁::Number=1; kwargs...)
   function linsolve_solver(
-    P::ProjMPO_MPS2,
+    P,
     t,
     x₀;
     ishermitian=false,
@@ -46,7 +46,11 @@ function linsolve(A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; kwa
     return x, nothing
   end
 
+  error("`linsolve` for TTN not yet implemented.")
+
   t = Inf
-  P = ProjMPO_MPS2(A, b)
+  # TODO: Define `itensornetwork_cache`
+  # TODO: Define `linsolve_cache`
+  P = linsolve_cache(itensornetwork_cache(x₀', A, x₀), itensornetwork_cache(x₀', b))
   return tdvp(linsolve_solver, P, t, x₀; reverse_step=false, kwargs...)
 end

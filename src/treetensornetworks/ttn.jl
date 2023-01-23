@@ -58,12 +58,35 @@ function TTN(
   return TTN(itensor_network, args...)
 end
 
-# TODO: randomcircuitTTN?
-function randomTTN(args...; kwargs...)
+# Constructor from a collection of ITensors.
+# TODO: Support other collections like `Dictionary`,
+# interface for custom vertex names.
+function TTN(ts::ITensorCollection)
+  return TTN(ITensorNetwork(ts))
+end
+
+# TODO: Implement `random_circuit_ttn` for non-trivial
+# bond dimensions and correlations.
+function random_ttn(args...; kwargs...)
   T = TTN(args...; kwargs...)
   randn!.(vertex_data(T))
   normalize!.(vertex_data(T))
   return T
+end
+
+function random_mps(
+  external_inds::Vector{<:Index};
+  states=nothing,
+  internal_inds_space=trivial_space(external_inds),
+)
+  # TODO: Implement in terms of general
+  # `random_ttn` constructor
+  tn_mps = if isnothing(states)
+    randomMPS(external_inds; linkdims=internal_inds_space)
+  else
+    randomMPS(external_inds, states; linkdims=internal_inds_space)
+  end
+  return TTN([tn_mps[v] for v in eachindex(tn_mps)])
 end
 
 #
@@ -101,6 +124,35 @@ function TTN(::Type{ElT}, sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNe
   ops = Dictionary(vertices(sites), fill(op, nv(sites)))
   return TTN(ElT, sites, ops; kwargs...)
 end
+
+# Special constructors
+
+function mps(external_inds::Vector{<:Index}; states)
+  return mps(map(i -> [i], external_inds); states)
+end
+
+function mps(external_inds::Vector{<:Vector{<:Index}}; states)
+  g = named_path_graph(length(external_inds))
+  tn = ITensorNetwork(g)
+  for v in vertices(tn)
+    tn[v] = state(only(external_inds[v]), states(v))
+  end
+  tn = insert_missing_internal_inds(tn, edges(g); internal_inds_space=trivial_space(indtype(external_inds)))
+  return TTN(tn)
+end
+
+## function mps(external_inds::Vector{<:Index}; states)
+##   is = path_indsnetwork(external_inds)
+##   tn = TTN(underlying_graph(is))
+##   tn = insert_missing_internal_inds(tn, trivial_space(indtype(is)))
+##   for v in vertices(tn)
+##     @show v
+##     @show tn[v]
+##     tn[v] *= state(only(is[v]), states(v))
+##     @show tn[v]
+##   end
+##   return tn
+## end
 
 ## function productTTN(args...; kwargs...)
 ##   return TTN(args...; link_space=1, kwargs...)

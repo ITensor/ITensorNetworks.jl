@@ -273,8 +273,8 @@ julia> @visualize Z;
 
 julia> contraction_sequence(Z)
 2-element Vector{Vector}:
- [(1, 1), (1, 2)]
- Any[(2, 1), Any[(2, 2), [(3, 1), (3, 2)]]]
+ Key{Tuple{Int64, Int64}}[Key((1, 1)), Key((1, 2))]
+ Any[Key((2, 1)), Any[Key((2, 2)), Key{Tuple{Int64, Int64}}[Key((3, 1)), Key((3, 2))]]]
 
 julia> Z̃ = contract(Z, (1, 1) => (2, 1));
 

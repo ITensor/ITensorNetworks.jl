@@ -8,6 +8,7 @@ import Base:
   hvncat,
   setindex!,
   show,
+  isapprox,
   isassigned,
   iterate,
   union
@@ -34,9 +35,13 @@ import KrylovKit: eigsolve, linsolve
 
 import LinearAlgebra: factorize, normalize, normalize!, qr, svd
 
+import Observers: update!
+
 import ITensors:
   # contraction
+  apply,
   contract,
+  dmrg,
   orthogonalize,
   isortho,
   inner,
