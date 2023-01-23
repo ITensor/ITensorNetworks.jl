@@ -154,7 +154,7 @@ function inner(
   ψ::AbstractTTN;
   root_vertex=default_root_vertex(ϕ, ψ),
 )
-  ϕᴴ = sim(dag(ψ); sites=[])
+  ϕᴴ = sim(dag(ϕ); sites=[])
   ψ = sim(ψ; sites=[])
   ϕψ = ϕᴴ ⊗ ψ
   # TODO: find the largest tensor and use it as
