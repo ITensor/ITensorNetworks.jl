@@ -1,9 +1,9 @@
 using ITensorNetworks
-using ITensorNetworks: create_contraction_tree, leaf_node, non_leaf_edges, edge_bipartition
+using ITensorNetworks: contraction_sequence_to_graph, leaf_node, non_leaf_edges, edge_bipartition
 using Test
 using ITensors
 
-@testset "contractiontreetograph" begin
+@testset "contraction_sequence_to_graph" begin
 
     n =3
     dims = (n,n)
@@ -15,7 +15,7 @@ using ITensors
 
     seq = contraction_sequence(ψψ);
 
-    g_seq = create_contraction_tree(seq)
+    g_seq = contraction_sequence_to_graph(seq)
 
     #Get all leaf nodes (should match number of tensors in original network)
     #why does vertices(g_seq)[leaf_node(g_seq, vertices(g_seq))) .== true] not work?"""

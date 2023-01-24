@@ -6,7 +6,7 @@ Edges connect vertices which are child/ parent and also define a bi-partition"""
 
 
 """Function to take a sequence (returned by ITensorNetworks.contraction_sequence) and construct a graph g which represents it (see above)"""
-function create_contraction_tree(contract_sequence)
+function contraction_sequence_to_graph(contract_sequence)
     #Collect all the leaves
     leaves = collect(Leaves(contract_sequence))
     #Build empty graph
