@@ -1,7 +1,8 @@
 using ITensorNetworks
-using ITensorNetworks: contraction_sequence_to_graph, leaf_node, non_leaf_edges, edge_bipartition
+using ITensorNetworks: contraction_sequence_to_graph, internal_edges, contraction_tree_leaf_bipartition, distance_to_leaf, leaf_vertices
 using Test
 using ITensors
+using NamedGraphs
 
 @testset "contraction_sequence_to_graph" begin
 
@@ -18,53 +19,26 @@ using ITensors
     g_seq = contraction_sequence_to_graph(seq)
 
     #Get all leaf nodes (should match number of tensors in original network)
-    #why does vertices(g_seq)[leaf_node(g_seq, vertices(g_seq))) .== true] not work?"""
-    g_seq_leaves = vertices(g_seq)[findall(==(1), [leaf_node(g_seq,v) for v in vertices(g_seq)])]
+    g_seq_leaves = leaf_vertices(g_seq)
 
     @test length(g_seq_leaves) == n*n
 
-    g_seq_internal_edges = non_leaf_edges(g_seq)
+    for eb in internal_edges(g_seq)
+      vs = contraction_tree_leaf_bipartition(g_seq, eb)
+      @test length(vs) == 2
+      @test Set([v.I for v in  vcat(vs[1],vs[2])]) == Set(vertices(ψψ))
 
-    internal_edge_test = 0
-    #Check all internal edges define a correct bi-partition
-    for eb in g_seq_internal_edges
-      es = edge_bipartition(g_seq, eb)
-      if(length(es) != 2)
-        internal_edge_test += 1
-      end
-
-      es =  vcat(es[1],es[2])
-
-      if(Set([e.I for e in es]) != Set(vertices(ψψ)))
-        internal_edge_test += 1
-      end
     end
-
-    @test internal_edge_test == 0
-
     #Check all internal vertices define a correct tripartition and all leaf vertices define a bipartition (tensor on that leafs vs tensor on rest of tree)
-    vertex_test = 0
     for v in vertices(g_seq)
-      if(!leaf_node(g_seq, v))
-        if(length(v) != 3)
-          vertex_test += 1
-        end
-        vs =  vcat(v[1], v[2], v[3])
-        if(Set([vsi.I for vsi in vs]) != Set(vertices(ψψ)))
-          vertex_test += 1
-        end
+      if(!is_leaf(g_seq, v))
+        @test length(v) == 3
+        @test Set([vsi.I for vsi in vcat(v[1], v[2], v[3])]) == Set(vertices(ψψ))
       else
-        if(length(v) != 2)
-          vertex_test += 1
-        end
-        vs =  vcat(v[1], v[2])
-        if(Set([vsi.I for vsi in vs]) != Set(vertices(ψψ)))
-          vertex_test += 1
-        end
+        @test length(v) == 2
+        @test Set([vsi.I for vsi in vcat(v[1], v[2])]) == Set(vertices(ψψ))
       end
 
     end
-
-    @test vertex_test == 0
     
   end
