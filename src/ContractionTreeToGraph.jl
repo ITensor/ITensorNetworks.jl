@@ -109,12 +109,12 @@ function edge_bipartition(g::AbstractGraph, e)
     return left_bipartition, right_bipartition
 end
 
-"""Given a contraction node, get the keys from all its neighbouring leaves"""
+"""Given a contraction node, get the keys living on all its neighbouring leaves"""
 function external_node_keys(g::AbstractGraph, v)
     return [Base.Iterators.flatten(v[findall(==(1), [length(vi) == 1 for vi in v])])...]
 end
 
-"""Given a contraction node, get all keys which are not from a neighbouring leaf"""
+"""Given a contraction node, get all keys which are not living on a neighbouring leaf"""
 function external_contraction_node_ext_keys(g::AbstractGraph, v)
     return [Base.Iterators.flatten(v[findall(==(1), [length(vi) != 1 for vi in v])])...]
 end
