@@ -1,4 +1,6 @@
-using ITensors, ITensorNetworks
+using ITensors
+using ITensorNetworks:
+  _binary_tree_partition_inds, _mps_partition_inds_order, _mincut_partitions
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")
@@ -12,20 +14,22 @@ using ITensors, ITensorNetworks
 
   T = randomITensor(i, j, k, l, m, n, o, p)
   M = MPS(T, (i, j, k, l, m, n, o, p); cutoff=1e-5, maxdim=500)
-  network = M[:]
-  out = inds_binary_tree(network, [i, j, k, l, m, n, o, p]; algorithm="mincut")
+  tn = ITensorNetwork(M[:])
+  out = _binary_tree_partition_inds(
+    tn, [i, j, k, l, m, n, o, p]; maximally_unbalanced=false
+  )
   @test length(out) == 2
-  out = inds_binary_tree(network, [i, j, k, l, m, n, o, p]; algorithm="mps")
+  out = _binary_tree_partition_inds(tn, [i, j, k, l, m, n, o, p]; maximally_unbalanced=true)
   @test length(out) == 2
-  out = inds_mps_order(network, [o, p, i, j, k, l, m, n])
+  out = _mps_partition_inds_order(tn, [o, p, i, j, k, l, m, n])
   @test out in [[i, j, k, l, m, n, o, p], [p, o, n, m, l, k, j, i]]
-  p1, p2 = mincut_partitions(network, [k, l], [m, n])
+  p1, p2 = _mincut_partitions(tn, [k, l], [m, n])
   # When MPS bond dimensions are large, the partition will not across internal inds
   @test (length(p1) == 0) || (length(p2) == 0)
 
   M = MPS(T, (i, j, k, l, m, n, o, p); cutoff=1e-5, maxdim=2)
-  network = M[:]
-  p1, p2 = mincut_partitions(network, [k, l], [m, n])
+  tn = ITensorNetwork(M[:])
+  p1, p2 = _mincut_partitions(tn, [k, l], [m, n])
   # When MPS bond dimensions are small, the partition will across internal inds
   @test sort(p1) == [1, 2, 3, 4]
   @test sort(p2) == [5, 6, 7, 8]
@@ -39,9 +43,13 @@ end
   for v in vertices(network)
     tn[v...] = network[v...]
   end
-  network = vec(tn[:, :, 1])
-  out = inds_binary_tree(network, noncommoninds(network...); algorithm="mincut")
+  tn = ITensorNetwork(vec(tn[:, :, 1]))
+  out = _binary_tree_partition_inds(
+    tn, noncommoninds(Vector{ITensor}(tn)...); maximally_unbalanced=false
+  )
   @test length(out) == 2
-  out = inds_binary_tree(network, noncommoninds(network...); algorithm="mps")
+  out = _binary_tree_partition_inds(
+    tn, noncommoninds(Vector{ITensor}(tn)...); maximally_unbalanced=true
+  )
   @test length(out) == 2
 end

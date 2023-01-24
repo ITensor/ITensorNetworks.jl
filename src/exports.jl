@@ -103,9 +103,6 @@ export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
 # ITensorNetworks: partition.jl
 export partition, partition_vertices, subgraphs, subgraph_vertices
 
-# mincut.jl
-export inds_binary_tree, inds_mps_order
-
 # ITensorNetworks: utility.jl
 export relabel_sites
 
