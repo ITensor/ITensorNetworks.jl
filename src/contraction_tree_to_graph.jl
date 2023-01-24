@@ -7,14 +7,8 @@ Edges connect vertices which are child/ parent and also define a bi-partition"""
 
 """Function to take a sequence (returned by ITensorNetworks.contraction_sequence) and construct a graph g which represents it (see above)"""
 function contraction_sequence_to_graph(contract_sequence)
-    #Collect all the leaves
-    leaves = collect(Leaves(contract_sequence))
-    #Build empty graph
-    g = NamedGraph()
-    #Construct the left branch
-    spawn_child_branch(contract_sequence[1], g, leaves)
-    #Construct the right branch
-    spawn_child_branch(contract_sequence[2], g, leaves)
+    
+    g = fill_contraction_sequence_graph_vertices(contract_sequence)
 
     #Now we have the vertices we need to figure out the edges
     for v in vertices(g)
@@ -35,67 +29,36 @@ function contraction_sequence_to_graph(contract_sequence)
     return g
 end
 
+
+function fill_contraction_sequence_graph_vertices(contract_sequence)
+    g = NamedGraph()
+    leaves = collect(Leaves(contract_sequence))
+    fill_contraction_sequence_graph_vertices!(g, contract_sequence[1], leaves)
+    fill_contraction_sequence_graph_vertices!(g, contract_sequence[2], leaves)
+    return g
+end
+  
 """Given a contraction sequence which is a subsequence of some larger sequence which is being built on current_g and has leaves `leaves`
 Spawn `contract sequence' as a vertex on `current_g' and continue on with its children """
-function spawn_child_branch(contract_sequence, current_g, leaves)
-    #Check if sequence is at leaf point
+function fill_contraction_sequence_graph_vertices!(g, contract_sequence, leaves)
     if(isa(contract_sequence, Array))
-        #If not it  will spawn two children
         group1 = collect(Leaves(contract_sequence[1]))
         group2 = collect(Leaves(contract_sequence[2]))
         remaining_verts = setdiff(leaves, vcat(group1, group2))
-        add_vertex!(current_g, (group1, group2, remaining_verts))
-        spawn_child_branch(contract_sequence[1], current_g, leaves)
-        spawn_child_branch(contract_sequence[2], current_g, leaves)
+        add_vertex!(g, (group1, group2, remaining_verts))
+        fill_contraction_sequence_graph_vertices!(g, contract_sequence[1], leaves)
+        fill_contraction_sequence_graph_vertices!(g, contract_sequence[2], leaves)
     else
-        #If it is it is just a vertex
-        add_vertex!(current_g, ([contract_sequence], setdiff(leaves, [contract_sequence])))
+        add_vertex!(g, ([contract_sequence], setdiff(leaves, [contract_sequence])))
     end
 end
 
-"""Utility functions for the graphical representation of a contraction sequence
-Perhaps it should be a specific object or type of tree?!"""
-
-"""Determine if a node is a leaf"""
-function leaf_node(g::AbstractGraph, v)
-    return length(neighbors(g, v)) == 1
-end
-
-"""Determine if an edge involves a leaf (at src or dst)"""
-function leaf_edge(g::AbstractGraph, e)
-    return leaf_node(g, src(e)) || leaf_node(g, dst(e))
-end 
-
-"""Determine if a node has no neighbours which are leaves"""
-function no_leaf_neighbours(g::AbstractGraph, v)
-    for vn in neighbors(g, v)
-        if(leaf_node(g, vn))
-            return false
-        end
-    end
-    return true
-end
-
-"""Get all edges which do not involve a leaf
-(why does edges(g)[contraction_edge(g, edges(g)) .== true] not work?)"""
-function non_leaf_edges(g::AbstractGraph)
-    return edges(g)[findall(==(1), [!leaf_edge(g,e) for e in edges(g)])]
-end
-
-"""Get all nodes which aren't leaves and don't have leaf neighbours (these represent internal points in the contraction sequence)"""
-function internal_nodes(g::AbstractGraph)
-    return vertices(g)[findall(==(1), [no_leaf_neighbours(g, v) && !leaf_node(g, v) for v in vertices(g)])]
-end
-
-"""Get all nodes which have leaf neighbours but aren't leaves themselves (these represent start/ end points of a contraction sequence)"""
-function external_nodes(g::AbstractGraph)
-    return vertices(g)[findall(==(1), [!no_leaf_neighbours(g, v) && !leaf_node(g,v)  for v in vertices(g)])]
-end
+"""Utility functions for the graphical representation of a contraction sequence"""
 
 """Get the vertex bi-partition that a given edge between non-leaf nodes represents"""
-function edge_bipartition(g::AbstractGraph, e)
+function contraction_tree_leaf_bipartition(g::AbstractGraph, e)
 
-    if(leaf_edge(g, e))
+    if(is_leaf_edge(g, e))
         println("ERROR: EITHER THE SOURCE OR THE VERTEX IS A LEAF SO EDGE DOESN'T REALLY REPRESENT A BI-PARTITION")
     end
 
