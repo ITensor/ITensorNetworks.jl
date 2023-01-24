@@ -10,7 +10,7 @@ function create_contraction_tree(contract_sequence)
     #Collect all the leaves
     leaves = collect(Leaves(contract_sequence))
     #Build empty graph
-    g = DataGraph()
+    g = NamedGraph()
     #Construct the left branch
     spawn_child_branch(contract_sequence[1], g, leaves)
     #Construct the right branch
@@ -36,10 +36,10 @@ function create_contraction_tree(contract_sequence)
 end
 
 """Given a contraction sequence which is a subsequence of some larger sequence which is being built on current_g and has leaves `leaves`
-Spawn the children on `current_g' """
+Spawn `contract sequence' as a vertex on `current_g' and continue on with its children """
 function spawn_child_branch(contract_sequence, current_g, leaves)
     #Check if sequence is at leaf point
-    if(length(contract_sequence) != 1)
+    if(isa(contract_sequence, Array))
         #If not it  will spawn two children
         group1 = collect(Leaves(contract_sequence[1]))
         group2 = collect(Leaves(contract_sequence[2]))
@@ -53,18 +53,21 @@ function spawn_child_branch(contract_sequence, current_g, leaves)
     end
 end
 
+"""Utility functions for the graphical representation of a contraction sequence
+Perhaps it should be a specific object or type of tree?!"""
+
 """Determine if a node is a leaf"""
-function leaf_node(g::DataGraph, v)
+function leaf_node(g::AbstractGraph, v)
     return length(neighbors(g, v)) == 1
 end
 
 """Determine if an edge involves a leaf (at src or dst)"""
-function leaf_edge(g::DataGraph, e)
+function leaf_edge(g::AbstractGraph, e)
     return leaf_node(g, src(e)) || leaf_node(g, dst(e))
 end 
 
 """Determine if a node has no neighbours which are leaves"""
-function no_leaf_neighbours(g::DataGraph, v)
+function no_leaf_neighbours(g::AbstractGraph, v)
     for vn in neighbors(g, v)
         if(leaf_node(g, vn))
             return false
@@ -75,22 +78,22 @@ end
 
 """Get all edges which do not involve a leaf
 (why does edges(g)[contraction_edge(g, edges(g)) .== true] not work?)"""
-function non_leaf_edges(g)
+function non_leaf_edges(g::AbstractGraph)
     return edges(g)[findall(==(1), [!leaf_edge(g,e) for e in edges(g)])]
 end
 
 """Get all nodes which aren't leaves and don't have leaf neighbours (these represent internal points in the contraction sequence)"""
-function internal_nodes(g)
+function internal_nodes(g::AbstractGraph)
     return vertices(g)[findall(==(1), [no_leaf_neighbours(g, v) && !leaf_node(g, v) for v in vertices(g)])]
 end
 
 """Get all nodes which have leaf neighbours but aren't leaves themselves (these represent start/ end points of a contraction sequence)"""
-function external_nodes(g)
+function external_nodes(g::AbstractGraph)
     return vertices(g)[findall(==(1), [!no_leaf_neighbours(g, v) && !leaf_node(g,v)  for v in vertices(g)])]
 end
 
 """Get the vertex bi-partition that a given edge between non-leaf nodes represents"""
-function edge_bipartition(g::DataGraph, e)
+function edge_bipartition(g::AbstractGraph, e)
 
     if(leaf_edge(g, e))
         println("ERROR: EITHER THE SOURCE OR THE VERTEX IS A LEAF SO EDGE DOESN'T REALLY REPRESENT A BI-PARTITION")
@@ -107,11 +110,11 @@ function edge_bipartition(g::DataGraph, e)
 end
 
 """Given a contraction node, get the keys from all its neighbouring leaves"""
-function external_node_keys(g::DataGraph, v)
+function external_node_keys(g::AbstractGraph, v)
     return [Base.Iterators.flatten(v[findall(==(1), [length(vi) == 1 for vi in v])])...]
 end
 
 """Given a contraction node, get all keys which are not from a neighbouring leaf"""
-function external_contraction_node_ext_keys(g::DataGraph, v)
+function external_contraction_node_ext_keys(g::AbstractGraph, v)
     return [Base.Iterators.flatten(v[findall(==(1), [length(vi) != 1 for vi in v])])...]
 end
