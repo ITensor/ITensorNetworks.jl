@@ -1,7 +1,7 @@
 using Graphs, GraphsFlows, Combinatorics, SimpleWeightedGraphs
 using GraphRecipes, Plots
 using OMEinsumContractionOrders
-using ITensorNetworks: contraction_sequence
+using ITensorNetworks: contraction_sequence, TTN, IndsNetwork
 
 function Base.show(io::IO, tensor::ITensor)
   return print(io, string(inds(tensor)))
@@ -14,9 +14,8 @@ include("tree_embedding.jl")
 
 function optcontract(t_list::Vector)
   @timeit timer "optcontract" begin
-    # TODO: make this support orthotensor
     if length(t_list) == 0
-      return ITensor(1.0)
+      return OrthogonalITensor(ITensor(1.0))
     end
     @assert t_list isa Vector{OrthogonalITensor}
     t_list = get_tensors(t_list)
@@ -25,7 +24,7 @@ function optcontract(t_list::Vector)
     #   @info "size of t is", size(t)
     # end
     @timeit timer "contraction_sequence" begin
-      seq = contraction_sequence(t_list; alg="greedy")
+      seq = contraction_sequence(t_list; alg="sa_bipartite")
     end
     @timeit timer "contract" begin
       output = contract(t_list; sequence=seq)
@@ -57,7 +56,8 @@ function approximate_contract_ctree_to_tensor(
   cutoff,
   maxdim,
   maxsize=10^15,
-  algorithm="mps",
+  ansatz="mps",
+  algorithm="density_matrix",
 )
   uncontract_inds = noncommoninds(tn...)
   allinds = collect(Set(mapreduce(t -> collect(inds(t)), vcat, tn)))
@@ -80,16 +80,20 @@ function approximate_contract_ctree_to_tensor(
   #   tn = Vector{ITensor}(vcat(deltas, tnprime))
   # end
   if inds_btree == nothing
-    inds_btree = inds_binary_tree(get_tensors(tn), nothing; algorithm=algorithm)
+    inds_btree = inds_binary_tree(get_tensors(tn), nothing; algorithm=ansatz)
   end
-  # tree_approximation(tn, inds_btree; cutoff=cutoff, maxdim=maxdim)
-  embedding = tree_embedding(tn, inds_btree)
+  embedding = tree_embedding(tn, inds_btree; algorithm=algorithm)
   tn = Vector{OrthogonalITensor}(vcat(collect(values(embedding))...))
   i2 = noncommoninds(tn...)
   @assert (length(uncontract_inds) == length(i2))
-  @timeit timer "tree_approximation_cache" begin
-    return tree_approximation_cache(
-      embedding, inds_btree; cutoff=cutoff, maxdim=maxdim, maxsize=maxsize
+  @timeit timer "tree_approximation" begin
+    return tree_approximation(
+      embedding,
+      inds_btree;
+      cutoff=cutoff,
+      maxdim=maxdim,
+      maxsize=maxsize,
+      algorithm=algorithm,
     )
   end
 end
@@ -823,6 +827,15 @@ end
 
 _index_less(a::Index, b::Index) = tags(a)[1] < tags(b)[1]
 
+function _replaceinds(t1::ITensor, t2::ITensor)
+  inds1 = sort(inds(t1); lt=_index_less)
+  inds2 = sort(inds(t2); lt=_index_less)
+  inds1_tags = [tags(i) for i in inds1]
+  inds2_tags = [tags(i) for i in inds2]
+  @assert inds1_tags == inds2_tags
+  return replaceinds(t1, inds1, inds2)
+end
+
 function orthogonalize!(ctree_to_tn_tree::Dict, environments::Vector, c::Vector)
   @timeit timer "orthogonalize" begin
     index = []
@@ -849,12 +862,7 @@ function orthogonalize!(ctree_to_tn_tree::Dict, environments::Vector, c::Vector)
     orth_tn = orthogonalize(ITensorNetwork(network), length(network))
     tensor_to_ortho_tensor = Dict{ITensor,ITensor}()
     for i in 1:length(network)
-      inds1 = sort(inds(orth_tn[i]); lt=_index_less)
-      inds2 = sort(inds(network[i]); lt=_index_less)
-      inds1_tags = [tags(i) for i in inds1]
-      inds2_tags = [tags(i) for i in inds2]
-      @assert inds1_tags == inds2_tags
-      new_tensor = replaceinds(orth_tn[i], inds1, inds2)
+      new_tensor = _replaceinds(orth_tn[i], network[i])
       tensor_to_ortho_tensor[network[i]] = new_tensor
     end
     for env in environments
@@ -879,7 +887,13 @@ end
 # contract_ig: the index group to be contracted next
 # ig_tree: an index group with a tree hierarchy 
 function approximate_contract(
-  ctree::Vector; cutoff, maxdim, ansatz="mps", use_cache=true, orthogonalize=false
+  ctree::Vector;
+  cutoff,
+  maxdim,
+  ansatz="mps",
+  use_cache=true,
+  orthogonalize=false,
+  algorithm="density_matrix",
 )
   @timeit timer "approximate_contract" begin
     tn_leaves = get_leaves(ctree)
@@ -919,7 +933,7 @@ function approximate_contract(
           ansatz=ansatz,
         )
         ctree_to_tn_tree[c], log_root_norm = approximate_contract_ctree_to_tensor(
-          [tn1..., tn2...], inds_btree; cutoff=cutoff, maxdim=maxdim
+          [tn1..., tn2...], inds_btree; cutoff=cutoff, maxdim=maxdim, algorithm=algorithm
         )
         log_accumulated_norm += log_root_norm
         continue
@@ -977,24 +991,121 @@ function approximate_contract(
         new_igs, ctree_to_contract_igs[c], new_ig_to_linear_order; ansatz=ansatz
       )
       new_tn_tree, log_root_norm = approximate_contract_ctree_to_tensor(
-        uncached_tn, inds_btree; cutoff=cutoff, maxdim=maxdim
+        uncached_tn, inds_btree; cutoff=cutoff, maxdim=maxdim, algorithm=algorithm
       )
       log_accumulated_norm += log_root_norm
       if length(new_ig_to_binary_tree_pairs) != 0
         update_tn_tree_keys!(new_tn_tree, inds_btree, new_ig_to_binary_tree_pairs)
       end
       ctree_to_tn_tree[c] = merge(new_tn_tree, cached_tn_tree)
+      # release the memory
+      delete!(ctree_to_tn_tree, c[1])
+      delete!(ctree_to_tn_tree, c[2])
     end
     tn = vcat(collect(values(ctree_to_tn_tree[ctrees[end]]))...)
     return get_tensors(tn), log_accumulated_norm
   end
 end
 
-# interlaced HOSVD using caching
-function tree_approximation_cache(
+function tree_approximation(
+  embedding::Dict,
+  inds_btree::Vector;
+  cutoff=1e-15,
+  maxdim=10000,
+  maxsize=10000,
+  algorithm="density_matrix",
+)
+  @assert algorithm in ["density_matrix", "density_matrix_contract_first", "svd"]
+  if algorithm == "density_matrix"
+    return tree_approximation_density_matrix(
+      embedding, inds_btree; cutoff=cutoff, maxdim=maxdim, maxsize=maxsize
+    )
+  end
+  if algorithm == "density_matrix_contract_first"
+    @info "density_matrix_contract_first"
+    btree_to_contracted_tn = Dict{Vector,Vector{OrthogonalITensor}}()
+    for (btree, ts) in embedding
+      btree_to_contracted_tn[btree] = [optcontract(ts)]
+    end
+    return tree_approximation_density_matrix(
+      btree_to_contracted_tn, inds_btree; cutoff=cutoff, maxdim=maxdim, maxsize=maxsize
+    )
+  end
+  if algorithm == "svd"
+    return tree_approximation_svd(
+      embedding, inds_btree; cutoff=cutoff, maxdim=maxdim, maxsize=maxsize
+    )
+  end
+end
+
+function tree_approximation_svd(
   embedding::Dict, inds_btree::Vector; cutoff=1e-15, maxdim=10000, maxsize=10000
 )
-  @info "start tree_approximation_cache", inds_btree
+  @info "start tree_approximation_svd", inds_btree
+  @info "cutoff", cutoff, "maxdim", maxdim
+  network = Vector{ITensor}()
+  btree_to_order = Dict{Vector,Int}()
+  root_vertex = nothing
+  for (btree, ts) in embedding
+    # use dense to convert Diag type to dense for QR decomposition TODO: raise an error in ITensors
+    push!(network, dense(optcontract(ts).tensor))
+    btree_to_order[btree] = length(network)
+    if btree == inds_btree
+      root_vertex = length(network)
+    end
+  end
+  @assert root_vertex != nothing
+  ttn = TTN(ITensorNetwork(network))
+  @timeit timer "truncate" begin
+    truncate_ttn = truncate(ttn; cutoff=cutoff, maxdim=maxdim, root_vertex=root_vertex)
+  end
+  out_network = [truncate_ttn[i] for i in 1:length(network)]
+  inds1 = sort(uncontractinds(out_network); lt=_index_less)
+  inds2 = sort(uncontractinds(network); lt=_index_less)
+  out_network = replaceinds(out_network, Dict(zip(inds1, inds2)))
+  root_norm = norm(out_network[root_vertex])
+  out_network[root_vertex] /= root_norm
+  ctree_to_tensor = Dict{Vector,OrthogonalITensor}()
+  for node in topo_sort(inds_btree; type=Vector{<:Vector})
+    children_tensors = []
+    if !(node[1] isa Vector{<:Vector})
+      push!(children_tensors, OrthogonalITensor(out_network[btree_to_order[node[1]]]))
+    end
+    if !(node[2] isa Vector{<:Vector})
+      push!(children_tensors, OrthogonalITensor(out_network[btree_to_order[node[2]]]))
+    end
+    t = OrthogonalITensor(out_network[btree_to_order[node]])
+    if children_tensors == []
+      ctree_to_tensor[node] = t
+    else
+      ctree_to_tensor[node] = optcontract([t, children_tensors...])
+    end
+  end
+  return ctree_to_tensor, log(root_norm)
+end
+
+function _randomized_svd(t::ITensor, linds, rinds; maxdim)
+  cutoff = 1e-16
+  @info "randomized svd", "cutoff", cutoff, "maxdim", maxdim
+  rand_dim = maxdim + 20
+  new_index = Index(Integer(rand_dim), "rand_dim")
+  rand_mat = randomITensor(rinds..., new_index)
+  rand_t = contract(t, rand_mat)
+  Q, _ = factorize(rand_t, linds...; which_decomp="qr", ortho="left")
+  rand_t = contract(t, Q)
+  Q, _ = factorize(rand_t, rinds...; which_decomp="qr", ortho="left")
+  rand_t = contract(t, Q)
+  Q, _ = factorize(rand_t, linds...; which_decomp="qr", ortho="left")
+  rand_mat = contract(t, Q)
+  U, diag, _ = svd(rand_mat, rinds...; maxdim=maxdim, cutoff=cutoff, alg="qr_iteration")
+  return diag, U
+end
+
+# interlaced HOSVD using density matrix and caching
+function tree_approximation_density_matrix(
+  embedding::Dict, inds_btree::Vector; cutoff=1e-15, maxdim=10000, maxsize=10000
+)
+  @info "start tree_approximation_density matrix", inds_btree
   ctree_to_tensor = Dict{Vector,OrthogonalITensor}()
   # initialize sim_dict
   network = vcat(collect(values(embedding))...)
@@ -1039,13 +1150,19 @@ function tree_approximation_cache(
     net = [subenvtensor, netket..., subnet1..., subnet2...]
     tnormal = optcontract(net)
     dim2 = floor(maxsize / (space(ind1_pair[1]) * space(ind2_pair[1])))
-    dim = min(maxdim, dim2)
+    max_dim = min(maxdim, dim2)
     t00 = time()
     @info "eigen input size", size(tnormal.tensor)
     @timeit timer "eigen" begin
-      diag, U = eigen(
-        tnormal.tensor, linds, rinds; cutoff=cutoff, maxdim=dim, ishermitian=true
-      )
+      left_size = prod([dim(a) for a in linds])
+      right_size = prod([dim(a) for a in rinds])
+      if left_size < max_dim * 5 || right_size < max_dim * 5
+        diag, U = eigen(
+          tnormal.tensor, linds, rinds; cutoff=cutoff, maxdim=max_dim, ishermitian=true
+        )
+      else
+        diag, U = _randomized_svd(tnormal.tensor, linds, rinds; maxdim=max_dim)
+      end
     end
     t11 = time() - t00
     @info "size of U", size(U), "size of diag", size(diag), "costs", t11

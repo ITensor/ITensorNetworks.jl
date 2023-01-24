@@ -114,7 +114,7 @@ end
 # 
 
 function truncate(
-  ψ::AbstractTTN; root_vertex::Tuple=default_root_vertex(ψ), kwargs...
+  ψ::AbstractTTN; root_vertex::Union{Int,Tuple}=default_root_vertex(ψ), kwargs...
 )
   for e in post_order_dfs_edges(ψ, root_vertex)
     # always orthogonalize towards source first to make truncations controlled

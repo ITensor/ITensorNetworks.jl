@@ -109,7 +109,7 @@ function build_recursive_tntree(tn, N; env_size)
 end
 
 function bench_3d_cube(
-  N; num_iter, cutoff, maxdim, ansatz, snake, use_cache, ortho, env_size
+  N; num_iter, cutoff, maxdim, ansatz, algorithm, snake, use_cache, ortho, env_size
 )
   ITensors.set_warn_order(100)
   reset_timer!(timer)
@@ -119,25 +119,25 @@ function bench_3d_cube(
     tn[v...] = network[v...]
   end
   # if ortho == true
-  #   @info "orthogonalize tn towards the first vertex"
-  #   itn = ITensorNetwork(named_grid(N); link_space=2)
-  #   for i in 1:N[1]
-  #     for j in 1:N[2]
-  #       for k in 1:N[3]
-  #         itn[i, j, k] = tn[i, j, k]
-  #       end
+  # @info "orthogonalize tn towards the first vertex"
+  # itn = ITensorNetwork(named_grid(N); link_space=2)
+  # for i in 1:N[1]
+  #   for j in 1:N[2]
+  #     for k in 1:N[3]
+  #       itn[i, j, k] = tn[i, j, k]
   #     end
   #   end
-  #   itn = orthogonalize(itn, (1, 1, 1))
-  #   @info itn[1, 1, 1]
-  #   @info itn[1, 1, 1].tensor
-  #   for i in 1:N[1]
-  #     for j in 1:N[2]
-  #       for k in 1:N[3]
-  #         tn[i, j, k] = itn[i, j, k]
-  #       end
+  # end
+  # itn = orthogonalize(itn, (1, 1, 1))
+  # @info itn[1, 1, 1]
+  # @info itn[1, 1, 1].tensor
+  # for i in 1:N[1]
+  #   for j in 1:N[2]
+  #     for k in 1:N[3]
+  #       tn[i, j, k] = itn[i, j, k]
   #     end
   #   end
+  # end
   # end
   if snake == true
     for k in 1:N[3]
@@ -153,6 +153,7 @@ function bench_3d_cube(
       cutoff=cutoff,
       maxdim=maxdim,
       ansatz=ansatz,
+      algorithm=algorithm,
       use_cache=use_cache,
       orthogonalize=ortho,
     )
@@ -168,6 +169,7 @@ function bench_3d_cube(
       cutoff=cutoff,
       maxdim=maxdim,
       ansatz=ansatz,
+      algorithm=algorithm,
       use_cache=use_cache,
       orthogonalize=ortho,
     )
@@ -179,14 +181,16 @@ function bench_3d_cube(
 end
 
 # exact_contract((5, 5, 5))
-bench_3d_cube(
+# TODO: (6, 6, 6), env_size=(2, 1, 1) is buggy (cutoff=1e-12, maxdim=256, ansatz="comb", algorithm="density_matrix",)
+@time bench_3d_cube(
   (6, 6, 6);
   num_iter=2,
-  cutoff=1e-8,
-  maxdim=32,
+  cutoff=1e-12,
+  maxdim=320,
   ansatz="mps",
+  algorithm="density_matrix",
   snake=false,
   use_cache=true,
   ortho=false,
-  env_size=(2, 2, 1),
+  env_size=(3, 1, 1),
 )

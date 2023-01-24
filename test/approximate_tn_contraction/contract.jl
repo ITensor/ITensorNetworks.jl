@@ -2,7 +2,7 @@ using ITensors, TimerOutputs
 using ITensorNetworks.ApproximateTNContraction:
   get_tensors,
   OrthogonalITensor,
-  tree_approximation_cache,
+  tree_approximation,
   inds_binary_tree,
   tree_embedding,
   approximate_contract
@@ -46,7 +46,7 @@ include("utils.jl")
     [[[i], [j]], [[k], [l]]] => [ABCD],
     [[[[i], [j]], [[k], [l]]], [m]] => [ABCDE],
   ])
-  out, log_norm = tree_approximation_cache(embedding, btree)
+  out, log_norm = tree_approximation(embedding, btree; algorithm="svd")
   out[btree].tensor *= exp(log_norm)
   out = get_tensors(collect(values(out)))
   @test isapprox(contract(out...), contract(get_tensors(tensors)...))
@@ -126,7 +126,7 @@ end
   network = M[:]
   out1 = contract(network...)
   inds_btree = inds_binary_tree(network, [i, j, k, l, m]; algorithm="mincut")
-  tnet_dict = tree_embedding(network, inds_btree)
+  tnet_dict = tree_embedding(network, inds_btree; algorithm="mincut")
   network2 = vcat(collect(values(tnet_dict))...)
   out2 = contract(network2...)
   i1 = noncommoninds(network...)
