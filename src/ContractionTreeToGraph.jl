@@ -1,8 +1,8 @@
 
-"""The main object here is `g' a Datagraph which represents a graphical version of a contraction sequence.
+"""The main object here is `g' a NamedGraph which represents a graphical version of a contraction sequence.
 It's vertices describe a partition between the leaves of the sequence (will be labelled with an n = 1 or n = 3 element tuple, where each element of the tuple describes the leaves in one of those partition)
 n = 1 implies the vertex is actually a leaf.
-Edges connect vertices which are child/ parent"""
+Edges connect vertices which are child/ parent and also define a bi-partition"""
 
 
 """Function to take a sequence (returned by ITensorNetworks.contraction_sequence) and construct a graph g which represents it (see above)"""
