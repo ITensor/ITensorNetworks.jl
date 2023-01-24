@@ -1,13 +1,13 @@
 # Utilities for making it easier
 # to define solvers (like ODE solvers)
 # for TDVP
-
 """
     to_vec(x)
-Transform `x` into a `Vector`, and return the vector, and a closure which inverts the
+
+Transform `x` into a `Vector`. Returns the vector and a closure which inverts the
 transformation.
 
-Modeled after FiniteDifferences.to_vec:
+Modeled after `FiniteDifferences.to_vec`:
 
 https://github.com/JuliaDiff/FiniteDifferences.jl/blob/main/src/to_vec.jl
 """
@@ -28,7 +28,7 @@ struct TimeDependentSum{S,T}
   f::Vector{S}
   H0::T
 end
-TimeDependentSum(f::Vector, H0::IsTreeProjOperatorSum) = TimeDependentSum(f, H0.pm)
+TimeDependentSum(f::Vector, H0::ProjTTNSum) = TimeDependentSum(f, H0.pm)
 Base.length(H::TimeDependentSum) = length(H.f)
 
 function Base.:*(c::Number, H::TimeDependentSum)

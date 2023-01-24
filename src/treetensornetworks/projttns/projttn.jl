@@ -1,27 +1,29 @@
-struct ProjTTNOApply{V} <: AbstractProjTTNO{V}
-  pos::Union{Vector{<:V},NamedEdge{V}}
-  psi0::TTNS{V}
-  H::TTNO{V}
+"""
+ProjTTN
+"""
+struct ProjTTN{V} <: AbstractProjTTN{V}
+  pos::Union{Vector{<:V},NamedEdge{V}} # TODO: cleanest way to specify effective Hamiltonian position?
+  H::TTN{V}
   environments::Dictionary{NamedEdge{V},ITensor}
 end
 
-function ProjTTNOApply(psi0::TTNS, H::TTNO)
-  return ProjTTNOApply(vertextype(H)[], psi0, H, Dictionary{edgetype(H),ITensor}())
+function ProjTTN(H::TTN)
+  return ProjTTN(vertices(H), H, Dictionary{edgetype(H),ITensor}())
 end
 
-function copy(P::ProjTTNOApply)
-  return ProjTTNOApply(P.pos, copy(P.psi0), copy(P.H), copy(P.environments))
-end
+copy(P::ProjTTN) = ProjTTN(P.pos, copy(P.H), copy(P.environments))
 
-function set_nsite(P::ProjTTNOApply, nsite)
+# trivial if we choose to specify position as above; only kept to allow using alongside
+# ProjMPO
+function set_nsite(P::ProjTTN, nsite)
   return P
 end
 
-function shift_position(P::ProjTTNOApply, pos)
-  return ProjTTNOApply(pos, P.psi0, P.H, P.environments)
+function shift_position(P::ProjTTN, pos)
+  return ProjTTN(pos, P.H, P.environments)
 end
 
-function make_environment!(P::ProjTTNOApply{V}, psi::TTNS{V}, e::NamedEdge{V})::ITensor where {V}
+function make_environment!(P::ProjTTN{V}, psi::TTN{V}, e::NamedEdge{V})::ITensor where {V}
   # invalidate environment for opposite edge direction if necessary
   reverse(e) ∈ incident_edges(P) || unset!(P.environments, reverse(e))
   # do nothing if valid environment already present
@@ -30,7 +32,7 @@ function make_environment!(P::ProjTTNOApply{V}, psi::TTNS{V}, e::NamedEdge{V})::
   else
     if is_leaf(underlying_graph(P), src(e))
       # leaves are easy
-      env = P.psi0[src(e)] * P.H[src(e)] * dag(psi[src(e)])
+      env = psi[src(e)] * P.H[src(e)] * dag(prime(psi[src(e)]))
     else
       # construct by contracting neighbors
       neighbor_envs = ITensor[]
@@ -40,7 +42,7 @@ function make_environment!(P::ProjTTNOApply{V}, psi::TTNS{V}, e::NamedEdge{V})::
       # manually heuristic for contraction order: two environments, site tensors, then
       # other environments
       frst, scnd, rst = _separate_first_two(neighbor_envs)
-      itensor_map = vcat(P.psi0[src(e)], frst, scnd, P.H[src(e)], dag(psi[src(e)]), rst)
+      itensor_map = vcat(psi[src(e)], frst, scnd, P.H[src(e)], dag(prime(psi[src(e)])), rst)
       # TODO: actually use optimal contraction sequence here
       env = reduce(*, itensor_map)
     end

@@ -36,7 +36,7 @@ end
 
 function measure_sz(; psi, bond, half_sweep)
   if bond == 1 && half_sweep == 2
-    return expect(psi, "Sz"; sites=N ÷ 2)
+    return expect(psi, "Sz"; vertices=[N ÷ 2])
   end
   return nothing
 end

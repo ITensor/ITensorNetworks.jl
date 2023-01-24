@@ -6,7 +6,7 @@ using ITensorUnicodePlots
 
 g = named_binary_tree(3)
 s = siteinds("S=1/2", g)
-ψ = TTNS(s; link_space=3)
+ψ = TTN(s; link_space=3)
 
 for v in vertices(ψ)
   ψ[v] = randn!(ψ[v])

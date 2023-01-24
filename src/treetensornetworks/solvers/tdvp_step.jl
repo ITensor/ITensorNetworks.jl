@@ -3,7 +3,7 @@ function tdvp_step(
   solver,
   PH,
   time_step::Number,
-  psi::IsTreeState;
+  psi::AbstractTTN;
   current_time=0.0,
   kwargs...,
 )
@@ -35,7 +35,7 @@ function _get_sweep_generator(kwargs)
 end
 
 function tdvp_sweep(
-  direction::Base.Ordering, solver, PH, time_step::Number, psi::IsTreeState; kwargs...
+  direction::Base.Ordering, solver, PH, time_step::Number, psi::AbstractTTN; kwargs...
 )
   PH = copy(PH)
   psi = copy(psi)
@@ -50,7 +50,7 @@ function tdvp_sweep(
   normalize::Bool = get(kwargs, :normalize, false)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
-  observer = get(kwargs, :observer!, NoObserver())
+  observer = get(kwargs, :observer!, nothing)
   outputlevel = get(kwargs, :outputlevel, 0)
   sw = get(kwargs, :sweep, 1)
   current_time = get(kwargs, :current_time, 0.0)
@@ -98,12 +98,10 @@ function tdvp_sweep(
       end
       flush(stdout)
     end
-    # very much draft, observer interface to be discussed...
     if time_direction(sweep_step) == +1
-      obs_update!(
-        observer,
+      update!(observer;
         psi,
-        pos(sweep_step);
+        bond=minimum(pos(sweep_step)),
         sweep=sw,
         half_sweep=isforward(direction) ? 1 : 2,
         spec,
@@ -120,19 +118,19 @@ end
 
 # draft for unification of different nsite and time direction updates
 
-function _extract_tensor(psi::IsTreeState, pos::Vector)
+function _extract_tensor(psi::AbstractTTN, pos::Vector)
   return psi, prod(psi[v] for v in pos)
 end
 
-function _extract_tensor(psi::IsTreeState, e::NamedEdge)
+function _extract_tensor(psi::AbstractTTN, e::NamedEdge)
   left_inds = uniqueinds(psi, e)
   U, S, V = svd(psi[src(e)], left_inds; lefttags=tags(psi, e), righttags=tags(psi, e))
   psi[src(e)] = U
   return psi, S * V
 end
 
-# sort of multi-site replacebond!; TODO: use dense TTNS constructor instead
-function _insert_tensor(psi::IsTreeState, phi::ITensor, pos::Vector; kwargs...)
+# sort of multi-site replacebond!; TODO: use dense TTN constructor instead
+function _insert_tensor(psi::AbstractTTN, phi::ITensor, pos::Vector; kwargs...)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   normalize::Bool = get(kwargs, :normalize, false)
   eigen_perturbation = get(kwargs, :eigen_perturbation, nothing)
@@ -154,7 +152,7 @@ function _insert_tensor(psi::IsTreeState, phi::ITensor, pos::Vector; kwargs...)
 end
 
 function _insert_tensor(
-  psi::IsTreeState, phi::ITensor, e::NamedEdge; kwargs...
+  psi::AbstractTTN, phi::ITensor, e::NamedEdge; kwargs...
 )
   psi[dst(e)] *= phi
   psi = set_ortho_center(psi, [dst(e)])

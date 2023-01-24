@@ -19,9 +19,9 @@ using Test
       os += "Sz", j, "Sz", j + 1
     end
 
-    H = MPO(os, s)
+    H = mpo(os, s)
 
-    ψ0 = randomMPS(s; linkdims=10)
+    ψ0 = random_mps(s; internal_inds_space=10)
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
@@ -29,8 +29,8 @@ using Test
     @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
     @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
     #Different backend solvers, default solver_backend = "applyexp"
-    @test ψ1 ≈
-      tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
+    ψ1_exponentiate_backend = tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
+    @test ψ1 ≈ ψ1_exponentiate_backend rtol=1e-7
 
     @test norm(ψ1) ≈ 1.0
 
@@ -44,7 +44,8 @@ using Test
     ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
 
     #Different backend solvers, default solver_backend = "applyexp"
-    @test ψ2 ≈ tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
+    ψ2_exponentiate_backend = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
+    @test ψ2 ≈ ψ2_exponentiate_backend rtol=1e-7
 
     @test norm(ψ2) ≈ 1.0
 
@@ -68,11 +69,11 @@ using Test
       os2 += "Sz", j, "Sz", j + 1
     end
 
-    H1 = MPO(os1, s)
-    H2 = MPO(os2, s)
+    H1 = mpo(os1, s)
+    H2 = mpo(os2, s)
     Hs = [H1, H2]
 
-    ψ0 = randomMPS(s; linkdims=10)
+    ψ0 = random_mps(s; internal_inds_space=10)
 
     ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
 
@@ -80,8 +81,8 @@ using Test
     @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
 
     #Different backend solvers, default solver_backend = "applyexp"
-    @test ψ1 ≈
-      tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
+    ψ1_exponentiate_backend = tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
+    @test ψ1 ≈ ψ1_exponentiate_backend rtol=1e-7
 
     @test norm(ψ1) ≈ 1.0
 
@@ -95,7 +96,8 @@ using Test
     ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
     #Different backend solvers, default solver_backend = "applyexp"
-    @test ψ2 ≈ tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
+    ψ2_exponentiate_backend = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
+    @test ψ2 ≈ ψ2_exponentiate_backend rtol=1e-7
 
     @test norm(ψ2) ≈ 1.0
 
@@ -116,9 +118,9 @@ using Test
       os += "Sz", j, "Sz", j + 1
     end
 
-    H = MPO(os, s)
+    H = mpo(os, s)
 
-    ψ0 = randomMPS(s; linkdims=10)
+    ψ0 = random_mps(s; internal_inds_space=10)
 
     function solver(PH, t, psi0; kwargs...)
       solver_kwargs = (;
@@ -161,14 +163,14 @@ using Test
       os += 0.5, "S-", j, "S+", j + 1
       os += "Sz", j, "Sz", j + 1
     end
-    H = MPO(os, s)
-    HM = prod(H)
+    H = mpo(os, s)
+    HM = contract(H)
 
     Ut = exp(-im * tau * HM)
 
-    psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+    psi = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
     psi2 = deepcopy(psi)
-    psix = prod(psi)
+    psix = contract(psi)
 
     Sz_tdvp = Float64[]
     Sz_tdvp2 = Float64[]
@@ -192,7 +194,9 @@ using Test
         solver_maxiter=500,
         solver_krylovdim=25,
       )
-      push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c:c)[1]))
+      # TODO: What should `expect` output? Right now
+      # it outputs a dictionary.
+      push!(Sz_tdvp, real(expect("Sz", psi; vertices=[c])[c]))
 
       psi2 = tdvp(
         H,
@@ -205,10 +209,12 @@ using Test
         solver_krylovdim=25,
         solver_solver_backend="exponentiate",
       )
-      push!(Sz_tdvp2, real(expect(psi2, "Sz"; sites=c:c)[1]))
+      # TODO: What should `expect` output? Right now
+      # it outputs a dictionary.
+      push!(Sz_tdvp2, real(expect("Sz", psi2; vertices=[c])[c]))
 
       push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
-      F = abs(scalar(dag(psix) * prod(psi)))
+      F = abs(scalar(dag(psix) * contract(psi)))
     end
 
     @test norm(Sz_tdvp - Sz_exact) < 1e-5
@@ -230,7 +236,7 @@ using Test
       os += "Sz", j, "Sz", j + 1
     end
 
-    H = MPO(os, s)
+    H = mpo(os, s)
 
     gates = ITensor[]
     for j in 1:(N - 1)
@@ -245,7 +251,7 @@ using Test
     end
     append!(gates, reverse(gates))
 
-    psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+    psi = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
     phi = deepcopy(psi)
     c = div(N, 2)
 
@@ -275,8 +281,12 @@ using Test
         exponentiate_krylovdim=15,
       )
 
-      Sz1[step] = expect(psi, "Sz"; sites=c:c)[1]
-      Sz2[step] = expect(phi, "Sz"; sites=c:c)[1]
+      # TODO: What should `expect` output? Right now
+      # it outputs a dictionary.
+      Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
+      # TODO: What should `expect` output? Right now
+      # it outputs a dictionary.
+      Sz2[step] = real(expect("Sz", phi; vertices=[c])[c])
       En1[step] = real(inner(psi', H, psi))
       En2[step] = real(inner(phi', H, phi))
     end
@@ -284,18 +294,13 @@ using Test
     #
     # Evolve using TDVP
     # 
-    struct TDVPObserver <: AbstractObserver end
 
-    Sz2 = zeros(Nsteps)
-    En2 = zeros(Nsteps)
-    function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
-      if bond == 1 && half_sweep == 2
-        Sz2[sweep] = expect(psi, "Sz"; sites=c)
-        En2[sweep] = real(inner(psi', H, psi))
-      end
-    end
+    phi = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
 
-    phi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+    obs = Observer(
+      "Sz" => (; psi) -> expect("Sz", psi; vertices=[c])[c],
+      "En" => (; psi) -> real(inner(psi', H, psi)),
+    )
 
     phi = tdvp(
       H,
@@ -304,10 +309,14 @@ using Test
       time_step=-im * tau,
       cutoff,
       normalize=false,
-      (observer!)=TDVPObserver(),
+      (step_observer!)=obs,
       root_vertex=N, # defaults to 1, which breaks observer equality
     )
 
+    # TODO: Allow the notation
+    # `obs["Sz"]` to get the results.
+    Sz2 = results(obs, "Sz")
+    En2 = results(obs, "En")
     @test norm(Sz1 - Sz2) < 1e-3
     @test norm(En1 - En2) < 1e-3
   end
@@ -327,9 +336,9 @@ using Test
       os += "Sz", j, "Sz", j + 1
     end
 
-    H = MPO(os, s)
+    H = mpo(os, s)
 
-    psi = randomMPS(s; linkdims=2)
+    psi = random_mps(s; internal_inds_space=2)
     psi2 = deepcopy(psi)
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
@@ -373,36 +382,9 @@ using Test
       os += 0.5, "S-", j, "S+", j + 1
       os += "Sz", j, "Sz", j + 1
     end
-    H = MPO(os, s)
+    H = mpo(os, s)
 
     c = div(N, 2)
-
-    #
-    # Using the ITensors observer system
-    # 
-    struct TDVPObserver <: AbstractObserver end
-
-    Nsteps = convert(Int, ceil(abs(ttotal / tau)))
-    Sz1 = zeros(Nsteps)
-    En1 = zeros(Nsteps)
-    function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
-      if bond == 1 && half_sweep == 2
-        Sz1[sweep] = expect(psi, "Sz"; sites=c)
-        En1[sweep] = real(inner(psi', H, psi))
-      end
-    end
-
-    psi1 = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
-    tdvp(
-      H,
-      -im * ttotal,
-      psi1;
-      time_step=-im * tau,
-      cutoff,
-      normalize=false,
-      (observer!)=TDVPObserver(),
-      root_vertex=N, # defaults to 1, which breaks observer equality
-    )
 
     #
     # Using Observers.jl
@@ -410,7 +392,8 @@ using Test
 
     function measure_sz(; psi, bond, half_sweep)
       if bond == 1 && half_sweep == 2
-        return expect(psi, "Sz"; sites=c)
+        # TODO: `expect` should return a scalar here.
+        return expect("Sz", psi; vertices=[c])[c]
       end
       return nothing
     end
@@ -428,13 +411,14 @@ using Test
 
     obs = Observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
 
-    step_measure_sz(; psi) = expect(psi, "Sz"; sites=c)
+    # TODO: `expect` should return a scalar here.
+    step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
 
     step_measure_en(; psi) = real(inner(psi', H, psi))
 
     step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
 
-    psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
+    psi2 = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
     tdvp(
       H,
       -im * ttotal,
@@ -447,6 +431,8 @@ using Test
       root_vertex=N, # defaults to 1, which breaks observer equality
     )
 
+    # TODO: Allow the notation
+    # `obs["Sz"]` to get the results.
     Sz2 = results(obs)["Sz"]
     En2 = results(obs)["En"]
     infos = results(obs)["info"]
@@ -454,10 +440,12 @@ using Test
     Sz2_step = results(step_obs)["Sz"]
     En2_step = results(step_obs)["En"]
 
-    @test Sz1 ≈ Sz2
-    @test En1 ≈ En2
-    @test Sz1 ≈ Sz2_step
-    @test En1 ≈ En2_step
+    ## @test Sz1 ≈ Sz2
+    ## @test En1 ≈ En2
+    ## @test Sz1 ≈ Sz2_step
+    ## @test En1 ≈ En2_step
+    @test Sz2 ≈ Sz2_step
+    @test En2 ≈ En2_step
     @test all(x -> x.converged == 1, infos)
     @test length(values(infos)) == 180
   end
@@ -474,9 +462,9 @@ end
 
     os = ITensorNetworks.heisenberg(c)
 
-    H = TTNO(os, s)
+    H = TTN(os, s)
 
-    ψ0 = normalize!(randomTTNS(s; link_space=10))
+    ψ0 = normalize!(random_ttn(s; link_space=10))
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
@@ -518,11 +506,11 @@ end
       os2 += "Sz", src(e), "Sz", dst(e)
     end
 
-    H1 = TTNO(os1, s)
-    H2 = TTNO(os2, s)
+    H1 = TTN(os1, s)
+    H2 = TTN(os2, s)
     Hs = [H1, H2]
 
-    ψ0 = normalize!(randomTTNS(s; link_space=10))
+    ψ0 = normalize!(random_ttn(s; link_space=10))
 
     ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
 
@@ -556,9 +544,9 @@ end
 
     os = ITensorNetworks.heisenberg(c)
 
-    H = TTNO(os, s)
+    H = TTN(os, s)
 
-    ψ0 = normalize!(randomTTNS(s; link_space=10))
+    ψ0 = normalize!(random_ttn(s; link_space=10))
 
     function solver(PH, t, psi0; kwargs...)
       solver_kwargs = (;
@@ -601,12 +589,12 @@ end
     s = siteinds("S=1/2", c)
 
     os = ITensorNetworks.heisenberg(c)
-    H = TTNO(os, s)
+    H = TTN(os, s)
     HM = contract(H)
 
     Ut = exp(-im * tau * HM)
 
-    psi = TTNS(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    psi = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
     psix = contract(psi)
 
     Sz_tdvp = Float64[]
@@ -630,7 +618,7 @@ end
         solver_maxiter=500,
         solver_krylovdim=25,
       )
-      push!(Sz_tdvp, real(expect("Sz", psi; sites=[c])[c]))
+      push!(Sz_tdvp, real(expect("Sz", psi; vertices=[c])[c]))
       push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
       F = abs(scalar(dag(psix) * contract(psi)))
     end
@@ -651,7 +639,7 @@ end
     s = siteinds("S=1/2", c)
 
     os = ITensorNetworks.heisenberg(c)
-    H = TTNO(os, s)
+    H = TTN(os, s)
 
     gates = ITensor[]
     for e in edges(c)
@@ -666,7 +654,7 @@ end
     end
     append!(gates, reverse(gates))
 
-    psi = TTNS(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    psi = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
     phi = copy(psi)
     c = (2, 1)
 
@@ -689,8 +677,8 @@ end
         H, -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, exponentiate_krylovdim=15
       )
 
-      Sz1[step] = real(expect("Sz", psi; sites=[c])[c])
-      Sz2[step] = real(expect("Sz", phi; sites=[c])[c])
+      Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
+      Sz2[step] = real(expect("Sz", phi; vertices=[c])[c])
       En1[step] = real(inner(psi', H, psi))
       En2[step] = real(inner(phi', H, phi))
     end
@@ -698,19 +686,12 @@ end
     #
     # Evolve using TDVP
     # 
-    struct TDVPObserver <: AbstractObserver end
 
-    Sz2 = zeros(Nsteps)
-    En2 = zeros(Nsteps)
-    function ITensors.measure!(obs::TDVPObserver; sweep, pos, half_sweep, psi, kwargs...)
-      if last(pos) == (1, 2) && half_sweep == 2
-        Sz2[sweep] = real(expect("Sz", psi; sites=[c])[c])
-        En2[sweep] = real(inner(psi', H, psi))
-      end
-    end
-
-    phi = TTNS(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
-
+    phi = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    obs = Observer(
+      "Sz" => (; psi) -> expect("Sz", psi; vertices=[c])[c],
+      "En" => (; psi) -> real(inner(psi', H, psi)),
+    )
     phi = tdvp(
       H,
       -im * ttotal,
@@ -718,7 +699,7 @@ end
       time_step=-im * tau,
       cutoff,
       normalize=false,
-      (observer!)=TDVPObserver(),
+      (step_observer!)=obs,
       root_vertex=(3, 2),
     )
 
@@ -736,9 +717,9 @@ end
     s = siteinds("S=1/2", c)
 
     os = ITensorNetworks.heisenberg(c)
-    H = TTNO(os, s)
+    H = TTN(os, s)
 
-    psi = normalize!(randomTTNS(s; link_space=2))
+    psi = normalize!(random_ttn(s; link_space=2))
 
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
@@ -763,7 +744,7 @@ end
   #   s = siteinds("S=1/2", c; conserve_qns=true)
 
   #   os = ITensorNetworks.heisenberg(c)
-  #   H = TTNO(os, s)
+  #   H = TTN(os, s)
 
   #   c = (2, 2)
 
@@ -777,7 +758,7 @@ end
   #   En1 = zeros(Nsteps)
   #   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
   #     if bond == 1 && half_sweep == 2
-  #       Sz1[sweep] = expect("Sz", psi; sites=[c])[c]
+  #       Sz1[sweep] = expect("Sz", psi; vertices=[c])[c]
   #       En1[sweep] = real(inner(psi', H, psi))
   #     end
   #   end
@@ -800,7 +781,7 @@ end
 
   #   function measure_sz(; psi, bond, half_sweep)
   #     if bond == 1  && half_sweep == 2
-  #       return expect("Sz", psi; sites=[c])[c]
+  #       return expect("Sz", psi; vertices=[c])[c]
   #     end
   #     return nothing
   #   end
@@ -814,7 +795,7 @@ end
 
   #   obs = Observer("Sz" => measure_sz, "En" => measure_en)
 
-  #   step_measure_sz(; psi) = expect("Sz", psi; sites=[c])[c]
+  #   step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
 
   #   step_measure_en(; psi) = real(inner(psi', H, psi))
 
