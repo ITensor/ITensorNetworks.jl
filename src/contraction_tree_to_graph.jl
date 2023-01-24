@@ -1,11 +1,9 @@
 
-"""The main object here is `g' a NamedGraph which represents a graphical version of a contraction sequence.
-It's vertices describe a partition between the leaves of the sequence (will be labelled with an n = 1 or n = 3 element tuple, where each element of the tuple describes the leaves in one of those partition)
-n = 1 implies the vertex is actually a leaf.
-Edges connect vertices which are child/ parent and also define a bi-partition"""
-
-
-"""Function to take a sequence (returned by ITensorNetworks.contraction_sequence) and construct a graph g which represents it (see above)"""
+"""
+Take a contraction_sequence and return a graphical representation of it. The leaves of the graph represent the leaves of the sequence whilst the internal_nodes of the graph
+define a tripartition of the graph and thus are named as an n = 3 element tuples, which each element specifying the keys involved.
+Edges connect parents/children within the contraction sequence.
+"""
 function contraction_sequence_to_graph(contract_sequence)
     
     g = fill_contraction_sequence_graph_vertices(contract_sequence)
@@ -38,7 +36,7 @@ function fill_contraction_sequence_graph_vertices(contract_sequence)
     return g
 end
   
-"""Given a contraction sequence which is a subsequence of some larger sequence which is being built on current_g and has leaves `leaves`
+"""Given a contraction sequence which is a subsequence of some larger sequence (with leaves `leaves`) which is being built on g
 Spawn `contract sequence' as a vertex on `current_g' and continue on with its children """
 function fill_contraction_sequence_graph_vertices!(g, contract_sequence, leaves)
     if(isa(contract_sequence, Array))
