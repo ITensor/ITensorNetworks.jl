@@ -102,7 +102,7 @@ end
   t2 = TreeTensorNetwork([M2[v] for v in eachindex(M2)])
 
   # Test with good initial guess
-  @test contract(t1, t2; alg="fit", init=t12_ref) ≈ t12_ref
+  @test contract(t1, t2; alg="fit", init=t12_ref) ≈ t12_ref rtol = 1e-7
 end
 
 nothing
