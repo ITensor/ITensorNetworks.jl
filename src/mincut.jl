@@ -79,9 +79,8 @@ end
 
 """
 Given a tn and outinds (a subset of noncommoninds of tn),
-get a binary tree structure of outinds based on given algorithm (mincut or mps).
-If algorithm="mps", the binary tree will have a line/mps structure.
-
+get a binary tree structure of outinds that will be used in the binary tree partition.
+If maximally_unbalanced=true, the binary tree will have a line/mps structure.
 The binary tree is recursively constructed from leaves to the root.
 
 Example:
@@ -169,7 +168,7 @@ function _binary_tree_partition_inds_mincut(
   end
   while length(outinds) > 2
     tree_list = collect(powerset(outinds, 2, 2))
-    sourceinds_list = [vectorize(i) for i in tree_list]
+    sourceinds_list = [collect(Leaves(i)) for i in tree_list]
     _, i = _mincut_inds(tn_pair, out_to_maxweight_ind, sourceinds_list)
     tree = tree_list[i]
     outinds = setdiff(outinds, tree)

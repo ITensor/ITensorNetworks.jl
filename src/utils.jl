@@ -25,13 +25,3 @@ function line_to_tree(line::Vector)
   end
   return [line_to_tree(line[1:(end - 1)]), line[end]]
 end
-
-# vectorize a tree
-# example: [[1,2], [3,4]] = [1, 2, 3, 4]
-function vectorize(tree)
-  @assert tree != []
-  if !(tree isa Vector)
-    return [tree]
-  end
-  return mapreduce(vectorize, vcat, tree)
-end
