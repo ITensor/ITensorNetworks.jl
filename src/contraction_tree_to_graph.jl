@@ -51,31 +51,20 @@ function fill_contraction_sequence_graph_vertices!(g, contract_sequence, leaves)
     end
 end
 
-"""Utility functions for the graphical representation of a contraction sequence"""
-
-"""Get the vertex bi-partition that a given edge between non-leaf nodes represents"""
+"""Get the vertex bi-partition that a given edge represents"""
 function contraction_tree_leaf_bipartition(g::AbstractGraph, e)
 
-    if(is_leaf_edge(g, e))
-        println("ERROR: EITHER THE SOURCE OR THE VERTEX IS A LEAF SO EDGE DOESN'T REALLY REPRESENT A BI-PARTITION")
+    if(!is_leaf_edge(g, e))
+        vsrc_set, vdst_set = [Set(vni) for vni in src(e)], [Set(vni) for vni in dst(e)]
+        c1, c2, c3 = [src(e)[1]..., src(e)[2]...], [src(e)[2]..., src(e)[3]...], [src(e)[1]..., src(e)[3]...]
+        left_bipartition = Set(c1) ∈ vdst_set ? c1 : Set(c2) ∈ vdst_set ? c2 : c3
+
+        c1, c2, c3 = [dst(e)[1]..., dst(e)[2]...], [dst(e)[2]..., dst(e)[3]...], [dst(e)[1]..., dst(e)[3]...]
+        right_bipartition = Set(c1) ∈ vsrc_set ? c1 : Set(c2) ∈ vsrc_set ? c2 : c3
+    else
+        left_bipartition = filter(vs -> Set(vs) ∈ [Set(vni) for vni in dst(e)], src(e))[1]
+        right_bipartition = setdiff(src(e), left_bipartition)
     end
 
-    vsrc_set, vdst_set = [Set(vni) for vni in src(e)], [Set(vni) for vni in dst(e)]
-    c1, c2, c3 = [src(e)[1]..., src(e)[2]...], [src(e)[2]..., src(e)[3]...], [src(e)[1]..., src(e)[3]...]
-    left_bipartition = Set(c1) ∈ vdst_set ? c1 : Set(c2) ∈ vdst_set ? c2 : c3
-
-    c1, c2, c3 = [dst(e)[1]..., dst(e)[2]...], [dst(e)[2]..., dst(e)[3]...], [dst(e)[1]..., dst(e)[3]...]
-    right_bipartition = Set(c1) ∈ vsrc_set ? c1 : Set(c2) ∈ vsrc_set ? c2 : c3
-
     return left_bipartition, right_bipartition
-end
-
-"""Given a contraction node, get the keys living on all its neighbouring leaves"""
-function external_node_keys(g::AbstractGraph, v)
-    return [Base.Iterators.flatten(v[findall(==(1), [length(vi) == 1 for vi in v])])...]
-end
-
-"""Given a contraction node, get all keys which are not living on a neighbouring leaf"""
-function external_contraction_node_ext_keys(g::AbstractGraph, v)
-    return [Base.Iterators.flatten(v[findall(==(1), [length(vi) != 1 for vi in v])])...]
 end
