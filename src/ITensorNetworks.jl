@@ -1,11 +1,13 @@
 module ITensorNetworks
 
 using AbstractTrees
+using Combinatorics
 using Compat
 using DataGraphs
 using Dictionaries
 using DocStringExtensions
 using Graphs
+using GraphsFlows
 using Graphs.SimpleGraphs # AbstractSimpleGraph
 using IsApprox
 using ITensors
@@ -77,6 +79,7 @@ include("expect.jl")
 include("models.jl")
 include("tebd.jl")
 include("itensornetwork.jl")
+include("mincut.jl")
 include("utility.jl")
 include("specialitensornetworks.jl")
 include("renameitensornetwork.jl")

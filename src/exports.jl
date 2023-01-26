@@ -35,7 +35,8 @@ export Key,
   incident_edges,
   comb_tree,
   named_comb_tree,
-  subgraph
+  subgraph,
+  mincut_partitions
 
 # DataGraphs
 export DataGraph, vertex_data, edge_data, underlying_graph
