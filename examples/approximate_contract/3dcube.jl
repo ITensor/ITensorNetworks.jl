@@ -1,4 +1,5 @@
 using ITensors, TimerOutputs
+using KaHyPar
 using ITensorNetworks
 using ITensorNetworks: contraction_sequence, ITensorNetwork, ising_network
 using ITensorNetworks.ApproximateTNContraction:
@@ -27,17 +28,17 @@ function contract_log_norm(tn, seq)
   end
 end
 
-function exact_contract(N)
+function exact_contract(N; beta)
   ITensors.set_warn_order(1000)
   reset_timer!(timer)
   linkdim = 2
-  network = ising_network(named_grid(N), 0.3)
+  network = ising_network(named_grid(N), beta)
   tn = Array{ITensor,length(N)}(undef, N...)
   for v in vertices(network)
     tn[v...] = network[v...]
   end
   tn = vec(tn)
-  seq = contraction_sequence(tn; alg="kahypar_bipartite", sc_target=36)
+  seq = contraction_sequence(tn; alg="kahypar_bipartite", sc_target=20)
   @info seq
   tn = [(i, 0.0) for i in tn]
   return contract_log_norm(tn, seq)
@@ -108,46 +109,50 @@ function build_recursive_tntree(tn, N; env_size)
   ]
 end
 
-function bench_3d_cube(
-  N; num_iter, cutoff, maxdim, ansatz, algorithm, snake, use_cache, ortho, env_size
-)
+# if ortho == true
+# @info "orthogonalize tn towards the first vertex"
+# itn = ITensorNetwork(named_grid(N); link_space=2)
+# for i in 1:N[1]
+#   for j in 1:N[2]
+#     for k in 1:N[3]
+#       itn[i, j, k] = tn[i, j, k]
+#     end
+#   end
+# end
+# itn = orthogonalize(itn, (1, 1, 1))
+# @info itn[1, 1, 1]
+# @info itn[1, 1, 1].tensor
+# for i in 1:N[1]
+#   for j in 1:N[2]
+#     for k in 1:N[3]
+#       tn[i, j, k] = itn[i, j, k]
+#     end
+#   end
+# end
+# end
+function build_tntree(N; beta, h, snake, env_size, szverts)
+  @info "beta is", beta
   ITensors.set_warn_order(100)
-  reset_timer!(timer)
-  network = ising_network(named_grid(N), 0.3)
+  network = ising_network(named_grid(N), beta, h; szverts=szverts)
   tn = Array{ITensor,length(N)}(undef, N...)
   for v in vertices(network)
     tn[v...] = network[v...]
   end
-  # if ortho == true
-  # @info "orthogonalize tn towards the first vertex"
-  # itn = ITensorNetwork(named_grid(N); link_space=2)
-  # for i in 1:N[1]
-  #   for j in 1:N[2]
-  #     for k in 1:N[3]
-  #       itn[i, j, k] = tn[i, j, k]
-  #     end
-  #   end
-  # end
-  # itn = orthogonalize(itn, (1, 1, 1))
-  # @info itn[1, 1, 1]
-  # @info itn[1, 1, 1].tensor
-  # for i in 1:N[1]
-  #   for j in 1:N[2]
-  #     for k in 1:N[3]
-  #       tn[i, j, k] = itn[i, j, k]
-  #     end
-  #   end
-  # end
-  # end
   if snake == true
     for k in 1:N[3]
       rangej = iseven(k) ? reverse(1:N[2]) : 1:N[2]
       tn[:, rangej, k] = tn[:, 1:N[2], k]
     end
   end
-  tntree = build_tntree(tn, N; env_size=env_size)
-  out_list = []
-  for _ in 1:num_iter
+  return build_tntree(tn, N; env_size=env_size)
+end
+
+function bench_3d_cube_lnZ(
+  N; beta, h, num_iter, cutoff, maxdim, ansatz, algorithm, snake, use_cache, ortho, env_size
+)
+  reset_timer!(timer)
+  tntree = build_tntree(N; beta=beta, h=h, snake=snake, env_size=env_size, szverts=nothing)
+  function _run()
     out, log_acc_norm = approximate_contract(
       tntree;
       cutoff=cutoff,
@@ -158,14 +163,43 @@ function bench_3d_cube(
       orthogonalize=ortho,
     )
     @info "out is", log(out[1][1]) + log_acc_norm
-    push!(out_list, log(out[1][1]) + log_acc_norm)
+    return log(out[1][1]) + log_acc_norm
+  end
+  out_list = []
+  for _ in 1:num_iter
+    push!(out_list, _run())
   end
   show(timer)
   # after warmup, start to benchmark
   reset_timer!(timer)
   for _ in 1:num_iter
+    push!(out_list, _run())
+  end
+  @info "lnZ results are", out_list, "mean is", sum(out_list) / (num_iter * 2)
+  return show(timer)
+end
+
+function bench_3d_cube_magnetization(
+  N;
+  beta,
+  h,
+  num_iter,
+  cutoff,
+  maxdim,
+  ansatz,
+  algorithm,
+  snake,
+  use_cache,
+  ortho,
+  env_size,
+  szverts,
+)
+  reset_timer!(timer)
+  tntree1 = build_tntree(N; beta=beta, h=h, snake=snake, env_size=env_size, szverts=szverts)
+  tntree2 = build_tntree(N; beta=beta, h=h, snake=snake, env_size=env_size, szverts=nothing)
+  function _run()
     out, log_acc_norm = approximate_contract(
-      tntree;
+      tntree1;
       cutoff=cutoff,
       maxdim=maxdim,
       ansatz=ansatz,
@@ -173,24 +207,47 @@ function bench_3d_cube(
       use_cache=use_cache,
       orthogonalize=ortho,
     )
-    @info "out is", log(out[1][1]) + log_acc_norm
-    push!(out_list, log(out[1][1]) + log_acc_norm)
+    lognorm1 = log(out[1][1]) + log_acc_norm
+    out, log_acc_norm = approximate_contract(
+      tntree2;
+      cutoff=cutoff,
+      maxdim=maxdim,
+      ansatz=ansatz,
+      algorithm=algorithm,
+      use_cache=use_cache,
+      orthogonalize=ortho,
+    )
+    lognorm2 = log(out[1][1]) + log_acc_norm
+    return lognorm1 / lognorm2
   end
-  @info "lnZ results are", out_list, "mean is", sum(out_list) / (num_iter * 2)
+  out_list = []
+  for _ in 1:num_iter
+    push!(out_list, _run())
+  end
+  show(timer)
+  # after warmup, start to benchmark
+  reset_timer!(timer)
+  for _ in 1:num_iter
+    push!(out_list, _run())
+  end
+  @info "magnetization results are", out_list, "mean is", sum(out_list) / (num_iter * 2)
   return show(timer)
 end
 
-# exact_contract((5, 5, 5))
+# exact_contract((1, 20, 20); beta=0.44)
 # TODO: (6, 6, 6), env_size=(2, 1, 1) is buggy (cutoff=1e-12, maxdim=256, ansatz="comb", algorithm="density_matrix",)
-@time bench_3d_cube(
-  (6, 6, 6);
+@time bench_3d_cube_magnetization(
+  (1, 6, 6);
+  beta=0.44,
+  h=0.0001,
   num_iter=2,
-  cutoff=1e-12,
-  maxdim=320,
+  cutoff=1e-20,
+  maxdim=64,
   ansatz="mps",
   algorithm="density_matrix",
   snake=false,
   use_cache=true,
   ortho=false,
-  env_size=(3, 1, 1),
+  env_size=(1, 5, 1),
+  szverts=[(1, 3, 3)],
 )
