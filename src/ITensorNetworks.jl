@@ -1,11 +1,13 @@
 module ITensorNetworks
 
 using AbstractTrees
+using Combinatorics
 using Compat
 using DataGraphs
 using Dictionaries
 using DocStringExtensions
 using Graphs
+using GraphsFlows
 using Graphs.SimpleGraphs # AbstractSimpleGraph
 using IsApprox
 using ITensors
@@ -77,11 +79,14 @@ include("expect.jl")
 include("models.jl")
 include("tebd.jl")
 include("itensornetwork.jl")
+include("mincut.jl")
 include("utility.jl")
 include("specialitensornetworks.jl")
 include("renameitensornetwork.jl")
 include("boundarymps.jl")
 include("beliefpropagation.jl")
+include("contraction_tree_to_graph.jl")
+include(joinpath("Graphs", "abstractgraph.jl"))
 include(joinpath("treetensornetworks", "abstracttreetensornetwork.jl"))
 include(joinpath("treetensornetworks", "ttn.jl"))
 include(joinpath("treetensornetworks", "opsum_to_ttn.jl"))

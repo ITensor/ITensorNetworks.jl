@@ -19,6 +19,7 @@ import NamedGraphs:
   vertex_to_parent_vertex,
   rename_vertices,
   disjoint_union,
+  mincut_partitions,
   incident_edges
 
 import .DataGraphs:

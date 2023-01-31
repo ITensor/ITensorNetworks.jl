@@ -22,8 +22,8 @@ using Test
   H = mpo(os, s)
 
   # Test basic usage with default parameters
-  Hpsi = apply(H, psi; alg="fit")
-  @test_broken inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
+  Hpsi = apply(H, psi; alg="fit", init=psi')
+  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
 
   #
   # Change "top" indices of MPO to be a different set
@@ -35,21 +35,19 @@ using Test
     psit[j] *= delta(s[j], t[j])
   end
 
-  # Test with nsweeps=2
-  Hpsi = apply(H, psi; alg="fit", nsweeps=2)
-  @test_broken inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
+  # Test with nsweeps=3
+  Hpsi = apply(H, psi; alg="fit", nsweeps=3)
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with less good initial guess MPS not equal to psi
-  psi_guess = copy(psi)
-  psi_guess = truncate(psi_guess; maxdim=2)
+  psi_guess = truncate(psi; maxdim=2)
   Hpsi = apply(H, psi; alg="fit", nsweeps=4, init_state=psi_guess)
-  @test_broken inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with nsite=1
-  Hpsi_guess = @test_broken apply(H, psi; alg="naive", cutoff=1E-4)
-  # Hpsi = apply(H, psi; alg="fit", init_state=Hpsi_guess, nsite=1, nsweeps=2)
-  Hpsi = apply(H, psi; alg="fit", nsite=1, nsweeps=2)
-  @test_broken inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
+  Hpsi_guess = random_mps(t; internal_inds_space=32)
+  Hpsi = apply(H, psi; alg="fit", init=Hpsi_guess, nsite=1, nsweeps=4)
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
 end
 
 @testset "Contract TTN" begin
@@ -65,7 +63,7 @@ end
 
   # Test basic usage with default parameters
   Hpsi = apply(H, psi; alg="fit")
-  @test_broken inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5 # broken when rebasing local draft on remote main, fix this
+  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
 
   #
   # Change "top" indices of TTN to be a different set
@@ -77,17 +75,34 @@ end
 
   # Test with nsweeps=2
   Hpsi = apply(H, psi; alg="fit", nsweeps=2)
-  @test_broken inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5 # broken when rebasing local draft on remote main, fix this
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with less good initial guess MPS not equal to psi
-  psi_guess = copy(psi)
-  psi_guess = truncate(psi_guess; maxdim=2)
-  Hpsi = apply(H, psi; alg="fit", nsweeps=4, init_state=psi_guess)
-  @test_broken inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5 # broken when rebasing local draft on remote main, fix this
+  Hpsi_guess = truncate(psit; maxdim=2)
+  Hpsi = apply(H, psi; alg="fit", nsweeps=4, init=Hpsi_guess)
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with nsite=1
-  Hpsi = apply(H, psi; alg="fit", nsite=1, nsweeps=2)
-  @test_broken inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4 # broken when rebasing local draft on remote main, fix this
+  Hpsi_guess = random_ttn(t; link_space=4)
+  Hpsi = apply(H, psi; alg="fit", nsite=1, nsweeps=4, init=Hpsi_guess)
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
+end
+
+@testset "Contract TTN with dangling inds" begin
+  nbit = 3
+  sites = siteinds("Qubit", nbit)
+
+  # randomMPO does not support linkdims keyword.
+  M1 = replaceprime(randomMPO(sites) + randomMPO(sites), 1=>2, 0=>1)
+  M2 = randomMPO(sites) + randomMPO(sites)
+  M12_ref = contract(M1, M2; alg="naive")
+  t12_ref = TreeTensorNetwork([M12_ref[v] for v in eachindex(M12_ref)])
+
+  t1 = TreeTensorNetwork([M1[v] for v in eachindex(M1)])
+  t2 = TreeTensorNetwork([M2[v] for v in eachindex(M2)])
+
+  # Test with good initial guess
+  @test contract(t1, t2; alg="fit", init=t12_ref) ≈ t12_ref rtol = 1e-7
 end
 
 nothing

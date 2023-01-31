@@ -18,7 +18,6 @@ function contract(
   nsweeps=1,
   kwargs...,
 )
-  @warn """`contract(::AbstractTTN, ::AbstractTTN; alg="fit")` is currently broken, you will likely get incorrect results."""
   n = nv(tn1)
   n != nv(tn2) && throw(
     DimensionMismatch("Number of sites operator ($n) and state ($(nv(tn2))) do not match"),
