@@ -6,10 +6,7 @@ using LinearAlgebra
 using Test
 
 const ttn_solvers_examples_dir = joinpath(
-  pkgdir(ITensorNetworks),
-  "examples",
-  "treetensornetworks",
-  "solvers",
+  pkgdir(ITensorNetworks), "examples", "treetensornetworks", "solvers"
 )
 
 include(joinpath(ttn_solvers_examples_dir, "03_models.jl"))
