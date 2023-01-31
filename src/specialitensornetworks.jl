@@ -49,7 +49,7 @@ function ising_network(
     q = eltype[f11 f12; f21 f22]
     w, V = eigen(q)
     w = map(sqrt, w)
-    sqrt_q = V * Diagonal(w) * inv(V)
+    sqrt_q = V * ITensors.Diagonal(w) * inv(V)
     t = itensor(sqrt_q, i, i')
     tn[v1] = tn[v1] * t
     tn[v1] = noprime!(tn[v1])
