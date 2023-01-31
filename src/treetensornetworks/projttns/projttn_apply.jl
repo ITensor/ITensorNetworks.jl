@@ -21,7 +21,9 @@ function shift_position(P::ProjTTNApply, pos)
   return ProjTTNApply(pos, P.psi0, P.H, P.environments)
 end
 
-function make_environment!(P::ProjTTNApply{V}, psi::TTN{V}, e::NamedEdge{V})::ITensor where {V}
+function make_environment!(
+  P::ProjTTNApply{V}, psi::TTN{V}, e::NamedEdge{V}
+)::ITensor where {V}
   # invalidate environment for opposite edge direction if necessary
   reverse(e) ∈ incident_edges(P) || unset!(P.environments, reverse(e))
   # do nothing if valid environment already present

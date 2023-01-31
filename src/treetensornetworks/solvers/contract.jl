@@ -20,7 +20,7 @@ function contract(
 )
   n = nv(tn1)
   n != nv(tn2) && throw(
-    DimensionMismatch("Number of sites operator ($n) and state ($(nv(tn2))) do not match"),
+    DimensionMismatch("Number of sites operator ($n) and state ($(nv(tn2))) do not match")
   )
   if n == 1
     v = only(vertices(tn2))
