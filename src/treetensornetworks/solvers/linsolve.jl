@@ -52,5 +52,5 @@ function linsolve(A::AbstractTTN, b::AbstractTTN, x₀::AbstractTTN, a₀::Numbe
   # TODO: Define `itensornetwork_cache`
   # TODO: Define `linsolve_cache`
   P = linsolve_cache(itensornetwork_cache(x₀', A, x₀), itensornetwork_cache(x₀', b))
-  return tdvp(linsolve_solver, P, t, x₀; reverse_step=false, kwargs...)
+  return alternating_update(linsolve_solver, P, t, x₀; reverse_step=false, kwargs...)
 end
