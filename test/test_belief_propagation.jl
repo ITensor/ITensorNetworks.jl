@@ -13,6 +13,7 @@ using ITensors
 using Metis
 using LinearAlgebra
 using NamedGraphs
+using SplitApplyCombine
 
 @testset "belief_propagation" begin
 
