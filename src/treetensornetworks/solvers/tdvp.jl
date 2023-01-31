@@ -43,6 +43,10 @@ function tdvp_solver(; kwargs...)
   end
 end
 
+function tdvp(solver, H, t::Number, init::AbstractTTN; kwargs...)
+  return alternating_update(solver, H, t, init; kwargs...)
+end
+
 """
     tdvp(H::TTN, t::Number, psi0::TTN; kwargs...)
 
@@ -60,7 +64,7 @@ Optional keyword arguments:
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
 function tdvp(H, t::Number, init::AbstractTTN; kwargs...)
-  return alternating_update(tdvp_solver(; kwargs...), H, t, init; kwargs...)
+  return tdvp(tdvp_solver(; kwargs...), H, t, init; kwargs...)
 end
 
 tdvp(t::Number, H, init::AbstractTTN; kwargs...) = tdvp(H, t, init; kwargs...)
