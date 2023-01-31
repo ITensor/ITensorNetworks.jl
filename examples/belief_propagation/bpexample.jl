@@ -3,9 +3,10 @@ using ITensors
 using Metis
 using ITensorNetworks
 using Random
+using SplitApplyCombine
 
 using ITensorNetworks:
-  compute_message_tensors, calculate_contraction, group_partition_vertices, contract_inner
+  compute_message_tensors, calculate_contraction, contract_inner, unwrap_graph_vertices
 
 n = 4
 dims = (n, n)
@@ -25,7 +26,8 @@ v = (1, 1)
 
 #Now do Simple Belief Propagation to Measure Sz on Site v
 nsites = 1
-vertex_groups = group_partition_vertices(ψψ, v -> v[1]; nvertices_per_partition=nsites)
+
+vertex_groups = unwrap_graph_vertices(partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition = nsites), 3)
 mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
 sz_bp =
   calculate_contraction(
@@ -36,7 +38,7 @@ println("Simple Belief Propagation Gives Sz on Site " * string(v) * " as " * str
 
 #Now do General Belief Propagation to Measure Sz on Site v
 nsites = 4
-vertex_groups = group_partition_vertices(ψψ, v -> v[1]; nvertices_per_partition=nsites)
+vertex_groups = unwrap_graph_vertices(partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition = nsites), 3)
 mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
 sz_bp =
   calculate_contraction(

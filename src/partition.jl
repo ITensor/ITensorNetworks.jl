@@ -287,22 +287,23 @@ function partition(
   return partition(g, subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...))
 end
 
-"""
-Group the vertices of g according to some function and then perform a partition into npartions/ nvertices_per_partition
-"""
-#This seems a bit specific. Perhaps there is a more general way to do this? Like define a sequence of functions/ partitionings which can be iteratively applied to the graph 
-function group_partition_vertices(
-  g::AbstractGraph,
-  f::Function;
-  npartitions=nothing,
-  nvertices_per_partition=nothing,
-  kwargs...,
-)
-  vertex_groups = group(f, vertices(g))
-  Z_p = partition(
-    partition(g, vertex_groups); npartitions, nvertices_per_partition, kwargs...
-  )
-  return [
-    reduce(vcat, (vertices(Z_p[vp][v]) for v in vertices(Z_p[vp]))) for vp in vertices(Z_p)
-  ]
+"""Given a graph which has 'nlevels' --- i.e. each vertex represents a graph down to 'nlevels' of graphs ---
+fetch all the vertices down those levels and return the grouping
+at the highest level. Use a keyword argument to state whether we are at the top"""
+function unwrap_graph_vertices(g, nlevels::Int64; toplevel = true)
+
+  if(nlevels == 1)
+    return vertices(g)
+  end
+
+  vertex_groups = []
+  for v in vertices(g)
+    if(!toplevel)
+      push!(vertex_groups, unwrap_graph_vertices(g[v], nlevels - 1; toplevel = false)...)
+    else
+      push!(vertex_groups, unwrap_graph_vertices(g[v], nlevels - 1; toplevel = false))
+    end
+  end
+
+  return vertex_groups
 end

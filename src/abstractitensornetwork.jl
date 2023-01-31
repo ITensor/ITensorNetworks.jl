@@ -602,8 +602,8 @@ function split_index(
   tn = copy(tn)
   for e in edges_to_split
     inds = commoninds(tn[src(e)], tn[dst(e)])
-    tn[src(e)] = replaceinds(tn[src(e)], inds..., src_ind_map(inds)...)
-    tn[dst(e)] = replaceinds(tn[dst(e)], inds..., dst_ind_map(inds)...)
+    tn[src(e)] = replaceinds(tn[src(e)], inds, src_ind_map(inds))
+    tn[dst(e)] = replaceinds(tn[dst(e)], inds, dst_ind_map(inds))
   end
 
   return tn
