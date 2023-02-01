@@ -93,15 +93,14 @@ using Test
       siteinds("S=1/2", grid((4,))),
       siteinds("S=1/2", named_grid((3, 3))),
     )
-    
-    #ψ = ITensorNetwork(g; link_space) do v, inds...
-    #  return itensor(randn(eltype, dims(inds)...), inds...)
-    #end
-    #@test Base.eltype(ψ[first(vertices(ψ))]) == eltype
-    #ψ = ITensorNetwork(g; link_space) do v, inds...
-    #  return itensor(randn(dims(inds)...), inds...)
-    #end
-    #@test Base.eltype(ψ[first(vertices(ψ))]) == Float64
+    ψ = ITensorNetwork(g; link_space) do v, inds...
+      return itensor(randn(eltype, dims(inds)...), inds...)
+    end
+    @test Base.eltype(ψ[first(vertices(ψ))]) == eltype
+    ψ = ITensorNetwork(g; link_space) do v, inds...
+      return itensor(randn(dims(inds)...), inds...)
+    end
+    @test Base.eltype(ψ[first(vertices(ψ))]) == Float64
     ψ = randomITensorNetwork(eltype, g; link_space)
     @test Base.eltype(ψ[first(vertices(ψ))]) == eltype
     ψ = randomITensorNetwork(g; link_space)
