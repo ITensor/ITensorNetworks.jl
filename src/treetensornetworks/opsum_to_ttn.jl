@@ -117,7 +117,7 @@ function finite_state_machine(
       # if term starts at this site, add its coefficient as a site factor
       site_coef = one(C)
       if (isempty(dims_in) || all(T_inds[dims_in] .== -1)) &&
-         ITensors.argument(term) ∉ site_coef_done
+        ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
         push!(site_coef_done, ITensors.argument(term))
       end
@@ -304,7 +304,7 @@ function svdTTN(
       # if term starts at this site, add its coefficient as a site factor
       site_coef = one(C)
       if (isempty(dims_in) || all(T_inds[dims_in] .== -1)) &&
-         ITensors.argument(term) ∉ site_coef_done
+        ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
         push!(site_coef_done, ITensors.argument(term))
       end
@@ -337,9 +337,9 @@ function svdTTN(
 
   # compress this tempTTN representation into dense form
 
-  link_space = dictionary(
-    [e => Index((isempty(rightmaps[e]) ? 0 : size(Vs[e], 2)) + 2, edge_tag(e)) for e in es]
-  )
+  link_space = dictionary([
+    e => Index((isempty(rightmaps[e]) ? 0 : size(Vs[e], 2)) + 2, edge_tag(e)) for e in es
+  ])
 
   H = TTN(sites)
 
@@ -441,9 +441,7 @@ function computeSiteProd(sites::IndsNetwork{V,<:Index}, ops::Prod{Op})::ITensor 
 end
 
 # changed `isless_site` to use tree vertex ordering relative to root
-function sorteachterm(
-  os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V
-) where {V}
+function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) where {V}
   os = copy(os)
   findpos(op::Op) = find_index_in_tree(op, sites, root_vertex)
   isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
@@ -535,7 +533,9 @@ function TTN(
 
   if hasqns(first(first(vertex_data(sites))))
     if !is_path_graph(sites)
-      error("OpSum → TTN constructor for QN conserving tensor networks only works for path/linear graphs right now.")
+      error(
+        "OpSum → TTN constructor for QN conserving tensor networks only works for path/linear graphs right now.",
+      )
     end
     # Use `ITensors.MPO` for now until general TTN constructor
     # works for QNs.

@@ -24,9 +24,7 @@ end
 
 isortho(ψ::AbstractTTN) = isone(length(ortho_center(ψ)))
 
-function set_ortho_center(
-  ψ::AbstractTTN{V}, new_center::Vector{<:V}
-) where {V}
+function set_ortho_center(ψ::AbstractTTN{V}, new_center::Vector{<:V}) where {V}
   return typeof(ψ)(itensor_network(ψ), new_center)
 end
 
@@ -112,9 +110,7 @@ end
 # Truncation
 # 
 
-function truncate(
-  ψ::AbstractTTN; root_vertex=default_root_vertex(ψ), kwargs...
-)
+function truncate(ψ::AbstractTTN; root_vertex=default_root_vertex(ψ), kwargs...)
   for e in post_order_dfs_edges(ψ, root_vertex)
     # always orthogonalize towards source first to make truncations controlled
     ψ = orthogonalize(ψ, src(e))
@@ -149,11 +145,7 @@ function contract(
   # return ψ[root_vertex]
 end
 
-function inner(
-  ϕ::AbstractTTN,
-  ψ::AbstractTTN;
-  root_vertex=default_root_vertex(ϕ, ψ),
-)
+function inner(ϕ::AbstractTTN, ψ::AbstractTTN; root_vertex=default_root_vertex(ϕ, ψ))
   ϕᴴ = sim(dag(ϕ); sites=[])
   ψ = sim(ψ; sites=[])
   ϕψ = ϕᴴ ⊗ ψ
@@ -321,9 +313,7 @@ function Base.:+(
 end
 
 # TODO: switch default algorithm once more are implemented
-function Base.:+(
-  ψs::AbstractTTN...; alg=ITensors.Algorithm"directsum"(), kwargs...
-)
+function Base.:+(ψs::AbstractTTN...; alg=ITensors.Algorithm"directsum"(), kwargs...)
   return +(ITensors.Algorithm(alg), ψs...; kwargs...)
 end
 
@@ -340,9 +330,7 @@ function ITensors.add(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
 end
 
 # TODO: Delete this
-function permute(
-  ψ::AbstractTTN, ::Tuple{typeof(linkind),typeof(siteinds),typeof(linkind)}
-)
+function permute(ψ::AbstractTTN, ::Tuple{typeof(linkind),typeof(siteinds),typeof(linkind)})
   ψ̃ = copy(ψ)
   for v in vertices(ψ)
     ls = [only(linkinds(ψ, n => v)) for n in neighbors(ψ, v)] # TODO: won't work for multiple indices per link...
@@ -376,7 +364,9 @@ end
 #
 
 # TODO: implement using multi-graph disjoint union
-function inner(y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex=default_root_vertex(x, A, y))
+function inner(
+  y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex=default_root_vertex(x, A, y)
+)
   traversal_order = reverse(post_order_dfs_vertices(x, root_vertex))
   check_hascommoninds(siteinds, A, x)
   check_hascommoninds(siteinds, A, y)
@@ -391,7 +381,11 @@ end
 
 # TODO: implement using multi-graph disjoint
 function inner(
-  B::AbstractTTN, y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex=default_root_vertex(B, y, A, x)
+  B::AbstractTTN,
+  y::AbstractTTN,
+  A::AbstractTTN,
+  x::AbstractTTN;
+  root_vertex=default_root_vertex(B, y, A, x),
 )
   N = nv(B)
   if nv(y) != N || nv(x) != N || nv(A) != N

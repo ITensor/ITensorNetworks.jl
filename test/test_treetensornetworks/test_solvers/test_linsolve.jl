@@ -38,11 +38,15 @@ using Random
     # Test complex case
     #
     Random.seed!(1234)
-    x_c = random_mps(s; states, internal_inds_space=4) + 0.1im * random_mps(s; states, internal_inds_space=2)
+    x_c =
+      random_mps(s; states, internal_inds_space=4) +
+      0.1im * random_mps(s; states, internal_inds_space=2)
     b = apply(H, x_c; cutoff)
 
     x0 = random_mps(s; states, internal_inds_space=10)
-    x = @test_broken linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-6)
+    x = @test_broken linsolve(
+      H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-6
+    )
 
     # @test norm(x - x_c) < 1E-3
   end

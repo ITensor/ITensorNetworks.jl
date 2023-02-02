@@ -55,5 +55,5 @@ Base.size(P::ProjTTNSum) = size(P.pm[1])
 function position(
   P::ProjTTNSum{V}, psi::TTN{V}, pos::Union{Vector{<:V},NamedEdge{V}}
 ) where {V}
-  ProjTTNSum(map(M -> position(M, psi, pos), P.pm))
+  return ProjTTNSum(map(M -> position(M, psi, pos), P.pm))
 end

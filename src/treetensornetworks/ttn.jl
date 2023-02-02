@@ -51,9 +51,7 @@ function TTN(eltype::Type{<:Number}, graph::AbstractGraph, args...; kwargs...)
 end
 
 # construct from given state (map)
-function TTN(
-  ::Type{ElT}, is::AbstractIndsNetwork, initstate, args...
-) where {ElT<:Number}
+function TTN(::Type{ElT}, is::AbstractIndsNetwork, initstate, args...) where {ElT<:Number}
   itensor_network = ITensorNetwork(ElT, is, initstate)
   return TTN(itensor_network, args...)
 end
@@ -94,7 +92,10 @@ end
 #
 
 function TTN(
-  ::Type{ElT}, sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork}, ops::Dictionary; kwargs...
+  ::Type{ElT},
+  sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork},
+  ops::Dictionary;
+  kwargs...,
 ) where {ElT<:Number}
   s = first(sites_map) # TODO: Use the sites_map
   N = nv(sites)
@@ -112,14 +113,22 @@ function TTN(
 end
 
 function TTN(
-  ::Type{ElT}, sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork}, fops::Function; kwargs...
+  ::Type{ElT},
+  sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork},
+  fops::Function;
+  kwargs...,
 ) where {ElT<:Number}
   sites = first(sites_map) # TODO: Use the sites_map
   ops = Dictionary(vertices(sites), map(v -> fops(v), vertices(sites)))
   return TTN(ElT, sites, ops; kwargs...)
 end
 
-function TTN(::Type{ElT}, sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork}, op::String; kwargs...) where {ElT<:Number}
+function TTN(
+  ::Type{ElT},
+  sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork},
+  op::String;
+  kwargs...,
+) where {ElT<:Number}
   sites = first(sites_map) # TODO: Use the sites_map
   ops = Dictionary(vertices(sites), fill(op, nv(sites)))
   return TTN(ElT, sites, ops; kwargs...)
@@ -137,7 +146,9 @@ function mps(external_inds::Vector{<:Vector{<:Index}}; states)
   for v in vertices(tn)
     tn[v] = state(only(external_inds[v]), states(v))
   end
-  tn = insert_missing_internal_inds(tn, edges(g); internal_inds_space=trivial_space(indtype(external_inds)))
+  tn = insert_missing_internal_inds(
+    tn, edges(g); internal_inds_space=trivial_space(indtype(external_inds))
+  )
   return TTN(tn)
 end
 

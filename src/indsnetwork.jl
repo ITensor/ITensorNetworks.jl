@@ -33,25 +33,23 @@ function IndsNetwork(data_graph::DataGraph)
   return IndsNetwork{vertextype(data_graph)}(data_graph)
 end
 
-@traitfn function IndsNetwork{V,I}(g::G) where {G<:DataGraph,V,I; !IsUnderlyingGraph{G}}
+@traitfn function IndsNetwork{V,I}(g::G) where {G<:DataGraph,V,I;!IsUnderlyingGraph{G}}
   return _IndsNetwork(V, I, g)
 end
 
-function IndsNetwork{V,I}(
-  g::AbstractNamedGraph, link_space, site_space
-) where {V,I}
+function IndsNetwork{V,I}(g::AbstractNamedGraph, link_space, site_space) where {V,I}
   link_space_dictionary = link_space_map(V, I, g, link_space)
   site_space_dictionary = site_space_map(V, I, g, site_space)
   return IndsNetwork{V,I}(g, link_space_dictionary, site_space_dictionary)
 end
 
-function IndsNetwork{V,I}(
-  g::AbstractSimpleGraph, link_space, site_space
-) where {V,I}
+function IndsNetwork{V,I}(g::AbstractSimpleGraph, link_space, site_space) where {V,I}
   return IndsNetwork{V,I}(NamedGraph(g), link_space, site_space)
 end
 
-@traitfn function IndsNetwork{V}(g::G, link_space, site_space) where {G,V; IsUnderlyingGraph{G}}
+@traitfn function IndsNetwork{V}(
+  g::G, link_space, site_space
+) where {G,V;IsUnderlyingGraph{G}}
   I = indtype(link_space, site_space)
   return IndsNetwork{V,I}(g, link_space, site_space)
 end
@@ -137,17 +135,17 @@ end
 
 @traitfn function IndsNetwork{V,I}(
   g::G; link_space=nothing, site_space=nothing
-) where {G,V,I; IsUnderlyingGraph{G}}
+) where {G,V,I;IsUnderlyingGraph{G}}
   return IndsNetwork{V,I}(g, link_space, site_space)
 end
 
 @traitfn function IndsNetwork{V}(
   g::G; link_space=nothing, site_space=nothing
-) where {G,V; IsUnderlyingGraph{G}}
+) where {G,V;IsUnderlyingGraph{G}}
   return IndsNetwork{V}(g, link_space, site_space)
 end
 
-@traitfn function IndsNetwork(g::G; kwargs...) where{G; IsUnderlyingGraph{G}}
+@traitfn function IndsNetwork(g::G; kwargs...) where {G; IsUnderlyingGraph{G}}
   return IndsNetwork{vertextype(g)}(g; kwargs...)
 end
 
