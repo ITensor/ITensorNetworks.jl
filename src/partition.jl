@@ -281,17 +281,17 @@ graph from the results of `partition`.
 A graph partitioning backend such as Metis or KaHyPar needs to be installed for this function to work
 if the subgraph vertices aren't specified explicitly.
 """
-function partition(g::AbstractGraph; npartitions = nothing, nvertices_per_partition = nothing, sgraph_vertices = nothing, kwargs...)
+function partition(g::AbstractGraph; npartitions = nothing, nvertices_per_partition = nothing, subgraph_vertices = nothing, kwargs...)
 
-  if(count([npartitions != nothing, nvertices_per_partition != nothing, sgraph_vertices != nothing ]) >= 2)
-    throw(error("ERROR: CANNOT SPECIFY MULTIPLY PARTITIONING OPTIONS, PLEASE GIVE ONLY 1"))
+  if count(isnothing, (npartitions, nvertices_per_partition, subgraph_vertices)) != 2
+    error("Error: Cannot give multiple/ no partitioning options. Please specify exactly one.")
   end
 
 
-  if(sgraph_vertices == nothing)
-    return partition(g, subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...))
+  if subgraph_vertices == nothing
+    return partition(g, ITensorNetworks.subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...))
   else
-    return partition(g, sgraph_vertices)
+    return partition(g, subgraph_vertices)
   end
 
 end
@@ -303,8 +303,8 @@ function nested_graph_leaf_vertices(g; toplevel = true)
   vertex_groups = []
   for v in vertices(g)
 
-    if(hasmethod(vertices, Tuple{typeof(g[v])}))
-      if(!toplevel)
+    if hasmethod(vertices, Tuple{typeof(g[v])})
+      if !toplevel
         push!(vertex_groups, nested_graph_leaf_vertices(g[v]; toplevel = false)...)
       else
         push!(vertex_groups, nested_graph_leaf_vertices(g[v]; toplevel = false))

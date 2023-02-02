@@ -107,7 +107,7 @@ function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir 
 
   subgraphs = unique([find_subgraph(v, mts) for v in verts])
 
-  if(dir == :out)
+  if dir == :out
     return get_environment(tn, mts, setdiff(vertices(tn), verts))
   end
 
@@ -140,7 +140,7 @@ Simulaneously initialise and update message tensors of a tensornetwork
 function compute_message_tensors(
   tn::ITensorNetwork; niters=10, nvertices_per_partition=nothing, npartitions = nothing, vertex_groups=nothing, kwargs...
 )
-  Z = partition(tn; nvertices_per_partition, npartitions, sgraph_vertices = vertex_groups)
+  Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices = vertex_groups)
 
   mts = construct_initial_mts(tn, Z; kwargs...)
   mts = update_all_mts(tn, mts, niters)
