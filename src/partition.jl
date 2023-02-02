@@ -296,22 +296,23 @@ function partition(g::AbstractGraph; npartitions = nothing, nvertices_per_partit
 
 end
 
-"""Given a graph which has 'nlevels' --- i.e. each vertex represents a graph down to 'nlevels' of graphs ---
-fetch all the vertices down those levels and return the grouping
-at the highest level. Use a keyword argument to state whether we are at the top"""
-function unwrap_graph_vertices(g, nlevels::Int64; toplevel = true)
-
-  if(nlevels == 1)
-    return vertices(g)
-  end
+"""Given a nested graph fetch all the vertices down to the lowest levels and return the grouping
+at the highest level. Keyword argument is used to state whether we are at the top"""
+function nested_graph_leaf_vertices(g; toplevel = true)
 
   vertex_groups = []
   for v in vertices(g)
-    if(!toplevel)
-      push!(vertex_groups, unwrap_graph_vertices(g[v], nlevels - 1; toplevel = false)...)
+
+    if(hasmethod(vertices, Tuple{typeof(g[v])}))
+      if(!toplevel)
+        push!(vertex_groups, nested_graph_leaf_vertices(g[v]; toplevel = false)...)
+      else
+        push!(vertex_groups, nested_graph_leaf_vertices(g[v]; toplevel = false))
+      end
     else
-      push!(vertex_groups, unwrap_graph_vertices(g[v], nlevels - 1; toplevel = false))
+      push!(vertex_groups, [v]...)
     end
+
   end
 
   return vertex_groups

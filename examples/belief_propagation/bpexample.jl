@@ -6,7 +6,7 @@ using Random
 using SplitApplyCombine
 
 using ITensorNetworks:
-  compute_message_tensors, calculate_contraction, contract_inner, unwrap_graph_vertices
+  compute_message_tensors, calculate_contraction, contract_inner, nested_graph_leaf_vertices
 
 function main()
   n = 4
@@ -28,7 +28,7 @@ function main()
   #Now do Simple Belief Propagation to Measure Sz on Site v
   nsites = 1
 
-  vertex_groups = unwrap_graph_vertices(partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition = nsites), 3)
+  vertex_groups = nested_graph_leaf_vertices(partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition = nsites))
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
   sz_bp =
     calculate_contraction(
@@ -39,7 +39,7 @@ function main()
 
   #Now do General Belief Propagation to Measure Sz on Site v
   nsites = 4
-  vertex_groups = unwrap_graph_vertices(partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition = nsites), 3)
+  vertex_groups = nested_graph_leaf_vertices(partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition = nsites))
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
   sz_bp =
     calculate_contraction(
