@@ -288,11 +288,11 @@ function partition(g::AbstractGraph; npartitions = nothing, nvertices_per_partit
   end
 
 
-  if subgraph_vertices == nothing
-    return partition(g, ITensorNetworks.subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...))
-  else
-    return partition(g, subgraph_vertices)
+  if isnothing(subgraph_vertices)
+    subgraph_vertices = ITensorNetworks.subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...)
   end
+  
+  return partition(g, subgraph_vertices)
 
 end
 
