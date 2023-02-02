@@ -281,10 +281,19 @@ graph from the results of `partition`.
 A graph partitioning backend such as Metis or KaHyPar needs to be installed for this function to work
 if the subgraph vertices aren't specified explicitly.
 """
-function partition(
-  g::AbstractGraph; npartitions=nothing, nvertices_per_partition=nothing, kwargs...
-)
-  return partition(g, subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...))
+function partition(g::AbstractGraph; npartitions = nothing, nvertices_per_partition = nothing, sgraph_vertices = nothing, kwargs...)
+
+  if(count([npartitions != nothing, nvertices_per_partition != nothing, sgraph_vertices != nothing ]) >= 2)
+    throw(error("ERROR: CANNOT SPECIFY MULTIPLY PARTITIONING OPTIONS, PLEASE GIVE ONLY 1"))
+  end
+
+
+  if(sgraph_vertices == nothing)
+    return partition(g, subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...))
+  else
+    return partition(g, sgraph_vertices)
+  end
+
 end
 
 """Given a graph which has 'nlevels' --- i.e. each vertex represents a graph down to 'nlevels' of graphs ---

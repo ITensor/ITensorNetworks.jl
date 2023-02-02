@@ -138,23 +138,19 @@ end
 Simulaneously initialise and update message tensors of a tensornetwork
 """
 function compute_message_tensors(
-  tn::ITensorNetwork; niters=10, nvertices_per_partition=1, vertex_groups=nothing, kwargs...
+  tn::ITensorNetwork; niters=10, nvertices_per_partition=1, npartitions = nothing, vertex_groups=nothing, kwargs...
 )
-  Z = if vertex_groups == nothing
-    partition(tn; nvertices_per_partition=nvertices_per_partition)
-  else
-    partition(tn, vertex_groups)
-  end
+  Z = partition(tn; nvertices_per_partition, npartitions, sgraph_vertices = vertex_groups)
 
   mts = construct_initial_mts(tn, Z; kwargs...)
   mts = update_all_mts(tn, mts, niters)
   return mts
 end
 
-"""
-Check env is the correct environment for the subset of vertices of tn
-"""
-function assert_correct_environment(tn::ITensorNetwork, env::Vector{ITensor}, verts::Vector)
-  outer_verts_indices = flatten([commoninds(tn, e) for e in boundary_edges(tn, verts)])
-  return issetequal(noncommoninds(env...), outer_verts_indices)
-end
+# """
+# Check env is the correct environment for the subset of vertices of tn
+# """
+# function assert_correct_environment(tn::ITensorNetwork, env::Vector{ITensor}, verts::Vector)
+#   outer_verts_indices = flatten([commoninds(tn, e) for e in boundary_edges(tn, verts)])
+#   return issetequal(noncommoninds(env...), outer_verts_indices)
+# end
