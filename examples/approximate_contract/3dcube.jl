@@ -1,7 +1,7 @@
-using ITensors, TimerOutputs
+using ITensors, TimerOutputs, Graphs
 using KaHyPar
 using ITensorNetworks
-using ITensorNetworks: contraction_sequence, ITensorNetwork, ising_network
+using ITensorNetworks: contraction_sequence, ITensorNetwork, ising_network, vertex_tag
 using ITensorNetworks.ApproximateTNContraction:
   approximate_contract, line_to_tree, timer, line_network
 
@@ -28,7 +28,7 @@ function contract_log_norm(tn, seq)
   end
 end
 
-function exact_contract(N; beta)
+function exact_contract(N; beta, sc_target)
   ITensors.set_warn_order(1000)
   reset_timer!(timer)
   linkdim = 2
@@ -38,7 +38,7 @@ function exact_contract(N; beta)
     tn[v...] = network[v...]
   end
   tn = vec(tn)
-  seq = contraction_sequence(tn; alg="kahypar_bipartite", sc_target=20)
+  seq = contraction_sequence(tn; alg="kahypar_bipartite", sc_target=sc_target)
   @info seq
   tn = [(i, 0.0) for i in tn]
   return contract_log_norm(tn, seq)
@@ -130,7 +130,7 @@ end
 #   end
 # end
 # end
-function build_tntree(N; beta, h, snake, env_size, szverts)
+function build_tntree(N; block_size, beta, h, snake, env_size, szverts)
   @info "beta is", beta
   ITensors.set_warn_order(100)
   network = ising_network(named_grid(N), beta, h; szverts=szverts)
@@ -144,14 +144,77 @@ function build_tntree(N; beta, h, snake, env_size, szverts)
       tn[:, rangej, k] = tn[:, 1:N[2], k]
     end
   end
-  return build_tntree(tn, N; env_size=env_size)
+  if block_size == (1, 1, 1)
+    return build_tntree(tn, N; env_size=env_size)
+  end
+  tn_reduced = ITensorNetwork()
+  reduced_N = (
+    ceil(Int, N[1] / block_size[1]),
+    ceil(Int, N[2] / block_size[2]),
+    ceil(Int, N[3] / block_size[3]),
+  )
+  for i in 1:reduced_N[1]
+    for j in 1:reduced_N[2]
+      for k in 1:reduced_N[3]
+        add_vertex!(tn_reduced, (i, j, k))
+        ii = (i - 1) * block_size[1]
+        jj = (j - 1) * block_size[2]
+        kk = (k - 1) * block_size[3]
+        ii_end = min(ii + block_size[1], N[1])
+        jj_end = min(jj + block_size[2], N[2])
+        kk_end = min(kk + block_size[3], N[3])
+        tn_reduced[(i, j, k)] = ITensors.contract(
+          tn[(ii + 1):ii_end, (jj + 1):jj_end, (kk + 1):kk_end]...
+        )
+      end
+    end
+  end
+  for e in edges(tn_reduced)
+    v1, v2 = e.src, e.dst
+    C = combiner(
+      commoninds(tn_reduced[v1], tn_reduced[v2])...;
+      tags="$(vertex_tag(v1))↔$(vertex_tag(v2))",
+    )
+    tn_reduced[v1] = tn_reduced[v1] * C
+    tn_reduced[v2] = tn_reduced[v2] * C
+  end
+  network_reduced = Array{ITensor,3}(undef, reduced_N...)
+  for v in vertices(tn_reduced)
+    network_reduced[v...] = tn_reduced[v...]
+  end
+  reduced_env = (
+    ceil(Int, env_size[1] / block_size[1]),
+    ceil(Int, env_size[2] / block_size[2]),
+    ceil(Int, env_size[3] / block_size[3]),
+  )
+  return build_tntree(network_reduced, reduced_N; env_size=reduced_env)
 end
 
 function bench_3d_cube_lnZ(
-  N; beta, h, num_iter, cutoff, maxdim, ansatz, algorithm, snake, use_cache, ortho, env_size
+  N;
+  block_size,
+  beta,
+  h,
+  num_iter,
+  cutoff,
+  maxdim,
+  ansatz,
+  algorithm,
+  snake,
+  use_cache,
+  ortho,
+  env_size,
 )
   reset_timer!(timer)
-  tntree = build_tntree(N; beta=beta, h=h, snake=snake, env_size=env_size, szverts=nothing)
+  tntree = build_tntree(
+    N;
+    block_size=block_size,
+    beta=beta,
+    h=h,
+    snake=snake,
+    env_size=env_size,
+    szverts=nothing,
+  )
   function _run()
     out, log_acc_norm = approximate_contract(
       tntree;
@@ -181,6 +244,7 @@ end
 
 function bench_3d_cube_magnetization(
   N;
+  block_size,
   beta,
   h,
   num_iter,
@@ -195,8 +259,24 @@ function bench_3d_cube_magnetization(
   szverts,
 )
   reset_timer!(timer)
-  tntree1 = build_tntree(N; beta=beta, h=h, snake=snake, env_size=env_size, szverts=szverts)
-  tntree2 = build_tntree(N; beta=beta, h=h, snake=snake, env_size=env_size, szverts=nothing)
+  tntree1 = build_tntree(
+    N;
+    block_size=block_size,
+    beta=beta,
+    h=h,
+    snake=snake,
+    env_size=env_size,
+    szverts=szverts,
+  )
+  tntree2 = build_tntree(
+    N;
+    block_size=block_size,
+    beta=beta,
+    h=h,
+    snake=snake,
+    env_size=env_size,
+    szverts=nothing,
+  )
   function _run()
     out, log_acc_norm = approximate_contract(
       tntree1;
@@ -234,20 +314,53 @@ function bench_3d_cube_magnetization(
   return show(timer)
 end
 
-# exact_contract((1, 20, 20); beta=0.44)
+# exact_contract((4, 4, 10); beta=0.3, sc_target=28)
 # TODO: (6, 6, 6), env_size=(2, 1, 1) is buggy (cutoff=1e-12, maxdim=256, ansatz="comb", algorithm="density_matrix",)
-@time bench_3d_cube_magnetization(
-  (1, 6, 6);
-  beta=0.44,
-  h=0.0001,
+# TODO below is buggy
+# @time bench_3d_cube_lnZ(
+#   (3, 8, 10);
+#   use_2D=false,
+#   beta=0.3,
+#   h=0.0,
+#   num_iter=2,
+#   cutoff=1e-20,
+#   maxdim=128,
+#   ansatz="mps",
+#   algorithm="density_matrix",
+#   snake=false,
+#   use_cache=true,
+#   ortho=false,
+#   env_size=(3, 1, 1),
+# )
+@time bench_3d_cube_lnZ(
+  (6, 6, 6);
+  block_size=(6, 1, 1),
+  beta=0.3,
+  h=0.0,
   num_iter=2,
-  cutoff=1e-20,
-  maxdim=64,
+  cutoff=1e-12,
+  maxdim=128,
   ansatz="mps",
   algorithm="density_matrix",
   snake=false,
   use_cache=true,
   ortho=false,
-  env_size=(1, 5, 1),
-  szverts=[(1, 3, 3)],
+  env_size=(6, 1, 1),
 )
+
+# @time bench_3d_cube_magnetization(
+#   (1, 6, 6);
+#   use_2D=true,
+#   beta=0.44,
+#   h=0.0001,
+#   num_iter=2,
+#   cutoff=1e-20,
+#   maxdim=64,
+#   ansatz="mps",
+#   algorithm="density_matrix",
+#   snake=false,
+#   use_cache=true,
+#   ortho=false,
+#   env_size=(1, 6, 1),
+#   szverts=[(1, 3, 3)],
+# )
