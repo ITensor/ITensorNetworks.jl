@@ -3,10 +3,7 @@ using ITensorNetworks
 using Random
 using Test
 
-@testset "MPS DMRG-X" for conserve_qns in (
-  false,
-  true,
-)
+@testset "MPS DMRG-X" for conserve_qns in (false, true)
   n = 10
   s = siteinds("S=1/2", n; conserve_qns)
 

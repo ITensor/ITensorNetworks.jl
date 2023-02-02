@@ -175,9 +175,7 @@ each step of the algorithm when optimizing the MPS.
 Returns:
 * `psi::MPS` - time-evolved MPS
 """
-function tdvp(
-  solver, Hs::Vector{<:AbstractTTN}, t::Number, psi0::AbstractTTN; kwargs...
-)
+function tdvp(solver, Hs::Vector{<:AbstractTTN}, t::Number, psi0::AbstractTTN; kwargs...)
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)
     check_hascommoninds(siteinds, H, psi0')

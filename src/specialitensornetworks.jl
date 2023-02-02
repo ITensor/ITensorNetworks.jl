@@ -79,7 +79,9 @@ function randomITensorNetwork(s::IndsNetwork; link_space=nothing)
   return randomITensorNetwork(Float64, s; link_space)
 end
 
-@traitfn function randomITensorNetwork(eltype::Type, g::::IsUnderlyingGraph; link_space=nothing)
+@traitfn function randomITensorNetwork(
+  eltype::Type, g::::IsUnderlyingGraph; link_space=nothing
+)
   return randomITensorNetwork(eltype, IndsNetwork(g); link_space)
 end
 

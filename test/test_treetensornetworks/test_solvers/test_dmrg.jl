@@ -33,9 +33,7 @@ using Test
   ## maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
   ## cutoff!(sweeps, cutoff)
 
-  psi = dmrg(
-    H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
-  )
+  psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1)
   @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
 
   # Alias for `ITensorNetworks.dmrg`
@@ -64,9 +62,7 @@ end
   sweeps = Sweeps(nsweeps) # number of sweeps is 5
   maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
   cutoff!(sweeps, cutoff)
-  psi = dmrg(
-    H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
-  )
+  psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1)
 
   # Compare to `ITensors.MPO` version of `dmrg`
   linear_order = [4, 1, 2, 5, 3, 6]
