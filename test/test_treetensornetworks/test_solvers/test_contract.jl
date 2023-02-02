@@ -93,7 +93,7 @@ end
   sites = siteinds("Qubit", nbit)
 
   # randomMPO does not support linkdims keyword.
-  M1 = replaceprime(randomMPO(sites) + randomMPO(sites), 1=>2, 0=>1)
+  M1 = replaceprime(randomMPO(sites) + randomMPO(sites), 1 => 2, 0 => 1)
   M2 = randomMPO(sites) + randomMPO(sites)
   M12_ref = contract(M1, M2; alg="naive")
   t12_ref = TreeTensorNetwork([M12_ref[v] for v in eachindex(M12_ref)])

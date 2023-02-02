@@ -20,7 +20,7 @@ function contract(
 )
   n = nv(tn1)
   n != nv(tn2) && throw(
-    DimensionMismatch("Number of sites operator ($n) and state ($(nv(tn2))) do not match"),
+    DimensionMismatch("Number of sites operator ($n) and state ($(nv(tn2))) do not match")
   )
   if n == 1
     v = only(vertices(tn2))
@@ -47,9 +47,7 @@ function contract(
   t = Inf
   reverse_step = false
   PH = ProjTTNApply(tn2, tn1)
-  psi = tdvp(
-    contract_solver(; kwargs...), PH, t, init; nsweeps, reverse_step, kwargs...
-  )
+  psi = tdvp(contract_solver(; kwargs...), PH, t, init; nsweeps, reverse_step, kwargs...)
 
   return psi
 end

@@ -103,8 +103,7 @@ Given a subet of vertices of a given Tensor Network and the Message Tensors for 
 Specifically, the contraction of the environment tensors and tn[vertices] will be a scalar.
 """
 #CAN SWITCH DIR TO GET OUTGOING ENVIRONMENT BUT THIS WON'T BE QUITE RIGHT IF WE ARE DOING GENERAL BELIEF PROPAGATION
-function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir = :in)
-
+function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir=:in)
   subgraphs = unique([find_subgraph(v, mts) for v in verts])
 
   if dir == :out
@@ -138,9 +137,14 @@ end
 Simulaneously initialise and update message tensors of a tensornetwork
 """
 function compute_message_tensors(
-  tn::ITensorNetwork; niters=10, nvertices_per_partition=nothing, npartitions = nothing, vertex_groups=nothing, kwargs...
+  tn::ITensorNetwork;
+  niters=10,
+  nvertices_per_partition=nothing,
+  npartitions=nothing,
+  vertex_groups=nothing,
+  kwargs...,
 )
-  Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices = vertex_groups)
+  Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
 
   mts = construct_initial_mts(tn, Z; kwargs...)
   mts = update_all_mts(tn, mts, niters)

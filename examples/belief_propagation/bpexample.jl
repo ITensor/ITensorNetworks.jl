@@ -28,18 +28,24 @@ function main()
   #Now do Simple Belief Propagation to Measure Sz on Site v
   nsites = 1
 
-  vertex_groups = nested_graph_leaf_vertices(partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition = nsites))
+  vertex_groups = nested_graph_leaf_vertices(
+    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
+  )
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
   sz_bp =
     calculate_contraction(
       ψψ, mts, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])]
     )[] / calculate_contraction(ψψ, mts, [(v, 1)])[]
 
-  println("Simple Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp))
+  println(
+    "Simple Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp)
+  )
 
   #Now do General Belief Propagation to Measure Sz on Site v
   nsites = 4
-  vertex_groups = nested_graph_leaf_vertices(partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition = nsites))
+  vertex_groups = nested_graph_leaf_vertices(
+    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
+  )
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
   sz_bp =
     calculate_contraction(
@@ -58,7 +64,7 @@ function main()
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
   sz_exact = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
-  println("The exact value of Sz on Site " * string(v) * " is " * string(sz_exact))
+  return println("The exact value of Sz on Site " * string(v) * " is " * string(sz_exact))
 end
 
 main()

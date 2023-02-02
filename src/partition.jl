@@ -84,8 +84,8 @@ function subgraph_vertices(
   end
 
   return subgraph_vertices(
-      Backend(backend), g, _npartitions(g, npartitions, nvertices_per_partition); kwargs...
-    )
+    Backend(backend), g, _npartitions(g, npartitions, nvertices_per_partition); kwargs...
+  )
 end
 
 function subgraph_vertices(
@@ -281,38 +281,42 @@ graph from the results of `partition`.
 A graph partitioning backend such as Metis or KaHyPar needs to be installed for this function to work
 if the subgraph vertices aren't specified explicitly.
 """
-function partition(g::AbstractGraph; npartitions = nothing, nvertices_per_partition = nothing, subgraph_vertices = nothing, kwargs...)
-
+function partition(
+  g::AbstractGraph;
+  npartitions=nothing,
+  nvertices_per_partition=nothing,
+  subgraph_vertices=nothing,
+  kwargs...,
+)
   if count(isnothing, (npartitions, nvertices_per_partition, subgraph_vertices)) != 2
-    error("Error: Cannot give multiple/ no partitioning options. Please specify exactly one.")
+    error(
+      "Error: Cannot give multiple/ no partitioning options. Please specify exactly one."
+    )
   end
-
 
   if isnothing(subgraph_vertices)
-    subgraph_vertices = ITensorNetworks.subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...)
+    subgraph_vertices = ITensorNetworks.subgraph_vertices(
+      g; npartitions, nvertices_per_partition, kwargs...
+    )
   end
-  
-  return partition(g, subgraph_vertices)
 
+  return partition(g, subgraph_vertices)
 end
 
 """Given a nested graph fetch all the vertices down to the lowest levels and return the grouping
 at the highest level. Keyword argument is used to state whether we are at the top"""
-function nested_graph_leaf_vertices(g; toplevel = true)
-
+function nested_graph_leaf_vertices(g; toplevel=true)
   vertex_groups = []
   for v in vertices(g)
-
     if hasmethod(vertices, Tuple{typeof(g[v])})
       if !toplevel
-        push!(vertex_groups, nested_graph_leaf_vertices(g[v]; toplevel = false)...)
+        push!(vertex_groups, nested_graph_leaf_vertices(g[v]; toplevel=false)...)
       else
-        push!(vertex_groups, nested_graph_leaf_vertices(g[v]; toplevel = false))
+        push!(vertex_groups, nested_graph_leaf_vertices(g[v]; toplevel=false))
       end
     else
       push!(vertex_groups, [v]...)
     end
-
   end
 
   return vertex_groups

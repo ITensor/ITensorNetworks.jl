@@ -33,7 +33,9 @@ using SplitApplyCombine
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
   nsites = 1
-  vertex_groups = nested_graph_leaf_vertices(partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition = nsites))
+  vertex_groups = nested_graph_leaf_vertices(
+    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
+  )
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
   bp_sz =
     calculate_contraction(
@@ -62,7 +64,6 @@ using SplitApplyCombine
   bp_szsz =
     calculate_contraction(ψψ, mts, vs; verts_tensors=[ψOψ[v] for v in vs])[] / calculate_contraction(ψψ, mts, vs)[]
 
-
   @test abs.(bp_szsz - actual_szsz) <= 0.05
 
   #FINALLY, TEST FORMING OF A TWO SITE RDM. JUST CHECK THAT IS HAS THE CORRECT SIZE, TRACE AND IS PSD
@@ -75,7 +76,9 @@ using SplitApplyCombine
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
   nsites = 2
-  vertex_groups = nested_graph_leaf_vertices(partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition = nsites))
+  vertex_groups = nested_graph_leaf_vertices(
+    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
+  )
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))

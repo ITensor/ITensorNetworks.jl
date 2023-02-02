@@ -4,9 +4,7 @@ _maybe_fill(x::Number, n) = fill(x, n)
 """
 Random field J1-J2 Heisenberg model on a general graph
 """
-function heisenberg(
-  g::AbstractGraph; J1=1.0, J2=0.0, h::Union{<:Real,Vector{<:Real}}=0
-)
+function heisenberg(g::AbstractGraph; J1=1.0, J2=0.0, h::Union{<:Real,Vector{<:Real}}=0)
   h = _maybe_fill(h, nv(g))
   ℋ = OpSum()
   if !iszero(J1)

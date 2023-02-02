@@ -61,7 +61,9 @@ function tdvp_sweep(
 
   maxtruncerr = 0.0
   info = nothing
-  for sweep_step in sweep_generator(direction, underlying_graph(PH), root_vertex, reverse_step; state=psi, kwargs...)
+  for sweep_step in sweep_generator(
+    direction, underlying_graph(PH), root_vertex, reverse_step; state=psi, kwargs...
+  )
     psi, PH, current_time, maxtruncerr, spec, info = tdvp_local_update(
       solver,
       PH,
@@ -99,7 +101,8 @@ function tdvp_sweep(
       flush(stdout)
     end
     if time_direction(sweep_step) == +1
-      update!(observer;
+      update!(
+        observer;
         psi,
         bond=minimum(pos(sweep_step)),
         sweep=sw,
@@ -151,9 +154,7 @@ function _insert_tensor(psi::AbstractTTN, phi::ITensor, pos::Vector; kwargs...)
   return psi, spec # TODO: return maxtruncerr, will not be correct in cases where insertion executes multiple factorizations
 end
 
-function _insert_tensor(
-  psi::AbstractTTN, phi::ITensor, e::NamedEdge; kwargs...
-)
+function _insert_tensor(psi::AbstractTTN, phi::ITensor, e::NamedEdge; kwargs...)
   psi[dst(e)] *= phi
   psi = set_ortho_center(psi, [dst(e)])
   return psi, nothing
