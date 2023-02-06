@@ -98,7 +98,6 @@ function update_all_mts(
   return mts
 end
 
-
 """
 Given a subet of vertices of a given Tensor Network and the Message Tensors for that network, return a Dictionary with the involved subgraphs as keys and the vector of tensors associated with that subgraph as values
 Specifically, the contraction of the environment tensors and tn[vertices] will be a scalar.
