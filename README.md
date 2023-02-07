@@ -161,7 +161,7 @@ with vertex data:
  3 │ Index[(dim=2|id=683|"S=1/2,Site,n=3")]
 
 and edge data:
-0-element Dictionaries.Dictionary{NamedGraphs.NamedEdge{Int64}, Vector{Index}}
+0-element Dictionaries.Dictionary{NamedEdge{Int64}, Vector{Index}}
 
 julia> tn1 = ITensorNetwork(s; link_space=2)
 ITensorNetwork{Int64} with 3 vertices:

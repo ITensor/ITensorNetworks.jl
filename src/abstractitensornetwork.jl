@@ -593,6 +593,22 @@ function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combine
   return combined_tn
 end
 
+function split_index(
+  tn::AbstractITensorNetwork,
+  edges_to_split;
+  src_ind_map::Function=identity,
+  dst_ind_map::Function=prime,
+)
+  tn = copy(tn)
+  for e in edges_to_split
+    inds = commoninds(tn[src(e)], tn[dst(e)])
+    tn[src(e)] = replaceinds(tn[src(e)], inds, src_ind_map(inds))
+    tn[dst(e)] = replaceinds(tn[dst(e)], inds, dst_ind_map(inds))
+  end
+
+  return tn
+end
+
 function flatten_networks(
   tn1::AbstractITensorNetwork,
   tn2::AbstractITensorNetwork;
