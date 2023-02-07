@@ -25,16 +25,29 @@ function ITensors.apply(
     if ortho
       ψ = orthogonalize(ψ, v⃗[1])
     end
-    oψᵥ = apply(o, ψ[v⃗[1]] * ψ[v⃗[2]])
-    ψᵥ₁, ψᵥ₂ = factorize(
-      oψᵥ, inds(ψ[v⃗[1]]); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e)
-    )
+    
+    #Check whether to do a memory efficient QR first
+    if length(inds(ψ[v⃗[1]])) + length(inds(ψ[v⃗[2]])) <= 6
+      oψᵥ = apply(o, ψ[v⃗[1]] * ψ[v⃗[2]])
+      ψᵥ₁, ψᵥ₂ = factorize(
+        oψᵥ, inds(ψ[v⃗[1]]); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e)
+      )
+    else
+      Qv1, Rv1 = factorize(ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), inds(ψ[v⃗[1]], tags ="Site")); cutoff, maxdim)  
+      Qv2, Rv2 = factorize(ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), inds(ψ[v⃗[2]], tags ="Site")); cutoff, maxdim)  
+      Rv1_new, Rv2_new = factorize(noprime(Rv1*o*Rv2), inds(Rv1); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e))  
+      ψᵥ₁ = Qv1 * Rv1_new  
+      ψᵥ₂ = Qv2 * Rv2_new
+    end
+
     if normalize
       ψᵥ₁ ./= norm(ψᵥ₁)
       ψᵥ₂ ./= norm(ψᵥ₂)
     end
+
     ψ[v⃗[1]] = ψᵥ₁
     ψ[v⃗[2]] = ψᵥ₂
+
   elseif length(v⃗) < 1
     error("Gate being applied does not share indices with tensor network.")
   elseif length(v⃗) > 2
