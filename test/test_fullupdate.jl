@@ -14,20 +14,6 @@ using Random
 using LinearAlgebra
 using SplitApplyCombine
 
-function RandomUnitaryMatrix(N::Int)
-  x = (rand(N, N) + rand(N, N) * im) / sqrt(2)
-  f = qr(x)
-  diagR = sign.(real(diag(f.R)))
-  diagR[diagR .== 0] .= 1
-  u = f.Q * diagm(diagR)
-
-  return u
-end
-
-function ITensors.op(::OpName"RandomTwoSiteU", ::SiteType"S=1/2")
-  return RandomUnitaryMatrix(4)
-end
-
 @testset "full_update" begin
   Random.seed!(5623)
   dims = (2, 3)
@@ -57,7 +43,7 @@ end
   ngates = 5
 
   for i in 1:ngates
-    o = ITensors.op("RandomTwoSiteU", s[v1]..., s[v2]...)
+    o = ITensors.op("RandomUnitary", s[v1]..., s[v2]...)
     ψOexact = apply(o, ψ; maxdim=4 * χ)
     ψOSBP = apply_fullupdate(
       o, ψ, envsSBP; maxdim=χ, normalize=true, print_fidelity_loss=true
