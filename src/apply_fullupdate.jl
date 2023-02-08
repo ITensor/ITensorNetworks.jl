@@ -163,7 +163,7 @@ Note the environment tensors should be the environments for <ψ|ψ> (i.e. the br
 function apply_fullupdate(
   o::ITensor,
   ψ::AbstractITensorNetwork,
-  envs = Vector{ITensor};
+  envs::Vector{ITensor};
   nsweeps=10,
   maxdim=nothing,
   normalize=false,
