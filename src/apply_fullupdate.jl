@@ -24,9 +24,9 @@ end
 
 """Perform an SVD on p*q*o (with identity environments) to get an initial guess for the full update"""
 function initial_guess_pprime_qprime(
-  p::ITensor, q::ITensor, o::ITensor; cutoff=nothing, maxdim=nothing
+  p::ITensor, q::ITensor, o::ITensor;maxdim=nothing
 )
-  p_out, q_out = factorize(noprime(p * q * o), inds(p); cutoff, maxdim)
+  p_out, q_out = factorize(noprime(p * q * o), inds(p); maxdim)
 
   cur_ind = commonind(p_out, q_out)
   replaceind!(p_out, cur_ind, replacetags(cur_ind, tags(cur_ind), tags(commonind(p, q))))
@@ -99,12 +99,11 @@ function optimise_p_q(
   envs::Vector{ITensor},
   gate::ITensor,
   nsweeps::Int64;
-  cutoff=nothing,
   maxdim=nothing,
   print_fidelity_loss=false,
   isposdef=true
 )
-  p_cur, q_cur = initial_guess_pprime_qprime(p, q, gate; cutoff, maxdim)
+  p_cur, q_cur = initial_guess_pprime_qprime(p, q, gate; maxdim)
   normalize!(p_cur)
   normalize!(q_cur)
 
@@ -166,7 +165,6 @@ function apply_fullupdate(
   ψ::AbstractITensorNetwork;
   envs = nothing,
   nsweeps=10,
-  cutoff=nothing,
   maxdim=nothing,
   normalize=false,
   print_fidelity_loss=false,
@@ -176,7 +174,7 @@ function apply_fullupdate(
   ψ = copy(ψ)
   v⃗ = neighbor_vertices(ψ, o)
   if length(v⃗) == 1 || envs == nothing
-    return ITensors.apply(o, ψ; cutoff, maxdim, normalize, ortho)
+    return ITensors.apply(o, ψ; maxdim, normalize, ortho)
   elseif length(v⃗) == 2
     e = v⃗[1] => v⃗[2]
     if !has_edge(ψ, e)
@@ -203,7 +201,7 @@ function apply_fullupdate(
     envs=  vcat(envs, X, prime(dag(X)), Y, prime(dag(Y)))
 
     p, q = optimise_p_q(
-      p, q, envs, o, nsweeps; cutoff, maxdim, print_fidelity_loss, isposdef
+      p, q, envs, o, nsweeps; maxdim, print_fidelity_loss, isposdef
     )
 
     ψᵥ₁,  ψᵥ₂ = X * p, Y * q
