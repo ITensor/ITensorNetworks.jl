@@ -23,9 +23,7 @@ function create_b(
 end
 
 """Perform an SVD on p*q*o (with identity environments) to get an initial guess for the full update"""
-function initial_guess_pprime_qprime(
-  p::ITensor, q::ITensor, o::ITensor;maxdim=nothing
-)
+function initial_guess_pprime_qprime(p::ITensor, q::ITensor, o::ITensor; maxdim=nothing)
   p_out, q_out = factorize(noprime(p * q * o), inds(p); maxdim)
 
   cur_ind = commonind(p_out, q_out)
@@ -68,7 +66,9 @@ function fidelity(
     ],
     envs,
   )
-  term1 = ITensors.contract(term1_tns; sequence=ITensors.optimal_contraction_sequence(term1_tns))
+  term1 = ITensors.contract(
+    term1_tns; sequence=ITensors.optimal_contraction_sequence(term1_tns)
+  )
   term2_tns = vcat(
     [
       p_cur,
@@ -78,7 +78,9 @@ function fidelity(
     ],
     envs,
   )
-  term2 = ITensors.contract(term2_tns; sequence=ITensors.optimal_contraction_sequence(term2_tns))
+  term2 = ITensors.contract(
+    term2_tns; sequence=ITensors.optimal_contraction_sequence(term2_tns)
+  )
   term3_tns = vcat(
     [
       replaceprime(dag(prime(p_prev * q_prev * gate)), 2 => 1),
@@ -86,7 +88,9 @@ function fidelity(
     ],
     envs,
   )
-  term3 = ITensors.contract(term3_tns; sequence=ITensors.optimal_contraction_sequence(term3_tns))
+  term3 = ITensors.contract(
+    term3_tns; sequence=ITensors.optimal_contraction_sequence(term3_tns)
+  )
 
   f = term3[] / sqrt(term1[] * term2[])
   return f * conj(f)
@@ -101,7 +105,7 @@ function optimise_p_q(
   nsweeps::Int64;
   maxdim=nothing,
   print_fidelity_loss=false,
-  isposdef=true
+  isposdef=true,
 )
   p_cur, q_cur = initial_guess_pprime_qprime(p, q, gate; maxdim)
   normalize!(p_cur)
@@ -152,7 +156,9 @@ function optimise_p_q(
   fend = print_fidelity_loss ? fidelity(envs, p_cur, q_cur, p, q, gate) : 0
 
   if (print_fidelity_loss && real(fend - fstart) < 0.0 && nsweeps >= 1)
-    println("Warning: Krylov Solver Didn't Find a Better Solution by Sweeping. Something might be amiss.")
+    println(
+      "Warning: Krylov Solver Didn't Find a Better Solution by Sweeping. Something might be amiss.",
+    )
   end
 
   return p_cur, q_cur
@@ -168,9 +174,8 @@ function apply_fullupdate(
   maxdim=nothing,
   normalize=false,
   print_fidelity_loss=false,
-  isposdef=true
+  isposdef=true,
 )
-
   ψ = copy(ψ)
   v⃗ = neighbor_vertices(ψ, o)
   if length(v⃗) == 1 || isempty(envs)
@@ -181,7 +186,11 @@ function apply_fullupdate(
       error("Vertices where the gates are being applied must be neighbors for now.")
     end
 
-    if (!assert_correct_environment(ψ ⊗ prime(dag(ψ); sites=[]), envs, [(v⃗[1], 1), (v⃗[1], 2), (v⃗[2], 1), (v⃗[2], 2)]))
+    if (
+      !assert_correct_environment(
+        ψ ⊗ prime(dag(ψ); sites=[]), envs, [(v⃗[1], 1), (v⃗[1], 2), (v⃗[2], 1), (v⃗[2], 2)]
+      )
+    )
       println(
         "Error: Environment provided does not match the local wavefunction, cannot apply"
       )
@@ -189,22 +198,18 @@ function apply_fullupdate(
     end
 
     X, p = factorize(
-      ψ[v⃗[1]],
-      uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), inds(ψ[v⃗[1]]; tags="Site")),
+      ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), inds(ψ[v⃗[1]]; tags="Site"))
     )
     Y, q = factorize(
-      ψ[v⃗[2]],
-      uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), inds(ψ[v⃗[2]]; tags="Site")),
+      ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), inds(ψ[v⃗[2]]; tags="Site"))
     )
 
     envs = copy(envs)
-    envs=  vcat(envs, X, prime(dag(X)), Y, prime(dag(Y)))
+    envs = vcat(envs, X, prime(dag(X)), Y, prime(dag(Y)))
 
-    p, q = optimise_p_q(
-      p, q, envs, o, nsweeps; maxdim, print_fidelity_loss, isposdef
-    )
+    p, q = optimise_p_q(p, q, envs, o, nsweeps; maxdim, print_fidelity_loss, isposdef)
 
-    ψᵥ₁,  ψᵥ₂ = X * p, Y * q
+    ψᵥ₁, ψᵥ₂ = X * p, Y * q
 
     if normalize
       ψᵥ₁ ./= norm(ψᵥ₁)
@@ -215,13 +220,12 @@ function apply_fullupdate(
     ψ[v⃗[2]] = ψᵥ₂
 
     return ψ
-  
+
   elseif length(v⃗) < 1
     error("Gate being applied does not share indices with tensor network.")
   elseif length(v⃗) > 2
     error("Gates with more than 2 sites is not supported yet.")
   end
-
 end
 
 partial = (f, a...; c...) -> (b...) -> f(a..., b...; c...)

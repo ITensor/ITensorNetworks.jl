@@ -25,21 +25,32 @@ function ITensors.apply(
     if ortho
       ψ = orthogonalize(ψ, v⃗[1])
     end
-    
+
     #Check whether to do a memory efficient QR first (do both sites combined for now, although we could split if we wish)
     #if no maxdim is provided just do it based on inds counting, if it is provided do it based on whichever takes less memory
-    d1, d2 = prod(dim.(inds(ψ[v⃗[1]], tags ="Site"))), prod(dim.(inds(ψ[v⃗[2]], tags ="Site")))
-    χv1, χv2 = prod(dim.(uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), inds(ψ[v⃗[1]], tags ="Site")))), prod(dim.(uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), inds(ψ[v⃗[2]], tags ="Site"))))
-    if (maxdim == nothing && length(inds(ψ[v⃗[1]])) + length(inds(ψ[v⃗[2]])) <= 6) || (maxdim != nothing && maxdim*maxdim*d1*d2 >= χv1*χv2)
+    d1, d2 = prod(dim.(inds(ψ[v⃗[1]]; tags="Site"))),
+    prod(dim.(inds(ψ[v⃗[2]]; tags="Site")))
+    χv1, χv2 = prod(
+      dim.(uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), inds(ψ[v⃗[1]]; tags="Site")))
+    ),
+    prod(dim.(uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), inds(ψ[v⃗[2]]; tags="Site"))))
+    if (maxdim == nothing && length(inds(ψ[v⃗[1]])) + length(inds(ψ[v⃗[2]])) <= 6) ||
+      (maxdim != nothing && maxdim * maxdim * d1 * d2 >= χv1 * χv2)
       oψᵥ = apply(o, ψ[v⃗[1]] * ψ[v⃗[2]])
       ψᵥ₁, ψᵥ₂ = factorize(
         oψᵥ, inds(ψ[v⃗[1]]); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e)
       )
     else
-      Qv1, Rv1 = factorize(ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), inds(ψ[v⃗[1]], tags ="Site")))  
-      Qv2, Rv2 = factorize(ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), inds(ψ[v⃗[2]], tags ="Site")))  
-      Rv1_new, Rv2_new = factorize(noprime(Rv1*o*Rv2), inds(Rv1); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e))  
-      ψᵥ₁ = Qv1 * Rv1_new  
+      Qv1, Rv1 = factorize(
+        ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), inds(ψ[v⃗[1]]; tags="Site"))
+      )
+      Qv2, Rv2 = factorize(
+        ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), inds(ψ[v⃗[2]]; tags="Site"))
+      )
+      Rv1_new, Rv2_new = factorize(
+        noprime(Rv1 * o * Rv2), inds(Rv1); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e)
+      )
+      ψᵥ₁ = Qv1 * Rv1_new
       ψᵥ₂ = Qv2 * Rv2_new
     end
 
