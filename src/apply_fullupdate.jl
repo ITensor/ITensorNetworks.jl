@@ -162,8 +162,8 @@ end
 Note the environment tensors should be the environments for <ψ|ψ> (i.e. the braket, not just the bra)"""
 function apply_fullupdate(
   o::ITensor,
-  ψ::AbstractITensorNetwork;
-  envs = nothing,
+  ψ::AbstractITensorNetwork,
+  envs = Vector{ITensor};
   nsweeps=10,
   maxdim=nothing,
   normalize=false,
@@ -173,7 +173,7 @@ function apply_fullupdate(
 
   ψ = copy(ψ)
   v⃗ = neighbor_vertices(ψ, o)
-  if length(v⃗) == 1 || envs == nothing
+  if length(v⃗) == 1 || isempty(envs)
     return ITensors.apply(o, ψ; maxdim, normalize, ortho)
   elseif length(v⃗) == 2
     e = v⃗[1] => v⃗[2]

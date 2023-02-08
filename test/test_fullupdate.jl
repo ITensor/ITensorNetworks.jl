@@ -60,8 +60,8 @@ end
     for i = 1:ngates
         o = ITensors.op("RandomTwoSiteU", s[v1]..., s[v2]...)
         ψOexact = apply(o,  ψ; maxdim = 4*χ)
-        ψOSBP = apply_fullupdate(o,  ψ; envs =envsSBP, maxdim=χ,normalize=true,print_fidelity_loss=true)
-        ψOGBP = apply_fullupdate(o,  ψ; envs = envsGBP, maxdim=χ,normalize=true,print_fidelity_loss=true)
+        ψOSBP = apply_fullupdate(o,  ψ, envsSBP; maxdim=χ,normalize=true,print_fidelity_loss=true)
+        ψOGBP = apply_fullupdate(o,  ψ, envsGBP; maxdim=χ,normalize=true,print_fidelity_loss=true)
         fSBP= contract_inner(ψOSBP, ψOexact)/sqrt(contract_inner(ψOexact, ψOexact)*contract_inner(ψOSBP, ψOSBP))
         fGBP= contract_inner(ψOGBP, ψOexact)/sqrt(contract_inner(ψOexact, ψOexact)*contract_inner(ψOGBP, ψOGBP))
         @test real(fGBP*conj(fGBP)) >= real(fSBP*conj(fSBP))
