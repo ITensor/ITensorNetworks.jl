@@ -195,8 +195,7 @@ siteinds(tn::AbstractITensorNetwork) = external_indsnetwork(tn)
 # External indsnetwork of the flattened network, with vertices
 # mapped back to `tn1`.
 function flatten_external_indsnetwork(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork,
+  tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 )
   is = external_indsnetwork(sim(tn1; sites=[]) ⊗ tn2)
   flattened_is = IndsNetwork(underlying_graph(tn1))
@@ -359,7 +358,9 @@ function isapprox(
   error("Not implemented")
   d = norm(x - y)
   if !isfinite(d)
-    error("In `isapprox(x::AbstractITensorNetwork, y::AbstractITensorNetwork)`, `norm(x - y)` is not finite")
+    error(
+      "In `isapprox(x::AbstractITensorNetwork, y::AbstractITensorNetwork)`, `norm(x - y)` is not finite",
+    )
   end
   return d <= max(atol, rtol * max(norm(x), norm(y)))
 end
@@ -501,11 +502,7 @@ function factorize(
   return tn
 end
 
-function factorize(
-  tn::AbstractITensorNetwork,
-  edge::Pair;
-  kwargs...,
-)
+function factorize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
   return factorize(tn, edgetype(tn)(edge); kwargs...)
 end
 
@@ -594,6 +591,22 @@ function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combine
     combined_tn[dst(e)] = combined_tn[dst(e)] * combiners[reverse(e)]
   end
   return combined_tn
+end
+
+function split_index(
+  tn::AbstractITensorNetwork,
+  edges_to_split;
+  src_ind_map::Function=identity,
+  dst_ind_map::Function=prime,
+)
+  tn = copy(tn)
+  for e in edges_to_split
+    inds = commoninds(tn[src(e)], tn[dst(e)])
+    tn[src(e)] = replaceinds(tn[src(e)], inds, src_ind_map(inds))
+    tn[dst(e)] = replaceinds(tn[dst(e)], inds, dst_ind_map(inds))
+  end
+
+  return tn
 end
 
 function flatten_networks(
@@ -790,7 +803,9 @@ function site_combiners(tn::AbstractITensorNetwork{V}) where {V}
   return Cs
 end
 
-function insert_missing_internal_inds(tn::AbstractITensorNetwork, edges; internal_inds_space=trivial_space(tn))
+function insert_missing_internal_inds(
+  tn::AbstractITensorNetwork, edges; internal_inds_space=trivial_space(tn)
+)
   tn = copy(tn)
   for e in edges
     if !hascommoninds(tn[src(e)], tn[dst(e)])
@@ -803,7 +818,9 @@ function insert_missing_internal_inds(tn::AbstractITensorNetwork, edges; interna
   return tn
 end
 
-function insert_missing_internal_inds(tn::AbstractITensorNetwork; internal_inds_space=trivial_space(tn))
+function insert_missing_internal_inds(
+  tn::AbstractITensorNetwork; internal_inds_space=trivial_space(tn)
+)
   return insert_internal_inds(tn, edges(tn); internal_inds_space)
 end
 

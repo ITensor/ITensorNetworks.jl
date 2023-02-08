@@ -33,7 +33,13 @@ end
 # Pre-defined sweeping paradigms
 # 
 
-function one_site_sweep(direction::Base.ForwardOrdering, graph::AbstractGraph{V}, root_vertex::V, reverse_step; kwargs...) where {V}
+function one_site_sweep(
+  direction::Base.ForwardOrdering,
+  graph::AbstractGraph{V},
+  root_vertex::V,
+  reverse_step;
+  kwargs...,
+) where {V}
   edges = post_order_dfs_edges(graph, root_vertex)
   steps = SweepStep{V}[]
   for e in edges
@@ -48,7 +54,13 @@ function one_site_sweep(direction::Base.ReverseOrdering, args...; kwargs...)
   return reverse(reverse.(one_site_sweep(Base.Forward, args...; kwargs...)))
 end
 
-function two_site_sweep(direction::Base.ForwardOrdering, graph::AbstractGraph{V}, root_vertex::V, reverse_step; kwargs...) where {V}
+function two_site_sweep(
+  direction::Base.ForwardOrdering,
+  graph::AbstractGraph{V},
+  root_vertex::V,
+  reverse_step;
+  kwargs...,
+) where {V}
   edges = post_order_dfs_edges(graph, root_vertex)
   steps = SweepStep{V}[]
   for e in edges[1:(end - 1)]

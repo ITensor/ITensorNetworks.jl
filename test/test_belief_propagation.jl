@@ -1,17 +1,19 @@
 using ITensorNetworks
 using ITensorNetworks:
-  construct_initial_mts,
-  get_single_site_expec,
-  update_all_mts,
   ising_network,
-  get_two_site_expec,
-  two_site_rdm_bp
+  compute_message_tensors,
+  nested_graph_leaf_vertices,
+  calculate_contraction,
+  split_index,
+  contract_inner
 using Test
 using Compat
 using ITensors
 #ASSUME ONE CAN INSTALL THIS, MIGHT FAIL FOR WINDOWS
 using Metis
 using LinearAlgebra
+using NamedGraphs
+using SplitApplyCombine
 
 @testset "belief_propagation" begin
 
@@ -22,27 +24,25 @@ using LinearAlgebra
   χ = 4
   ψ = randomITensorNetwork(s; link_space=χ)
 
-  ψψ = norm_sqr_network(ψ; flatten=true, map_bra_linkinds=prime)
-  combiners = linkinds_combiners(ψψ)
-  ψψ = combine_linkinds(ψψ, combiners)
+  ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
   v = (1, 3)
+
   Oψ = copy(ψ)
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
-  ψOψ = inner_network(ψ, Oψ; flatten=true, map_bra_linkinds=prime)
-  ψOψ = combine_linkinds(ψOψ, combiners)
+  exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
-  contract_seq = contraction_sequence(ψψ)
-  actual_sz =
-    ITensors.contract(ψOψ; sequence=contract_seq)[] /
-    ITensors.contract(ψψ; sequence=contract_seq)[]
+  nsites = 1
+  vertex_groups = nested_graph_leaf_vertices(
+    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
+  )
+  mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
+  bp_sz =
+    calculate_contraction(
+      ψψ, mts, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])]
+    )[] / calculate_contraction(ψψ, mts, [(v, 1)])[]
 
-  niters, nsites = 20, 1
-  mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
-  mts = update_all_mts(ψψ, mts, niters)
-  bp_sz = get_single_site_expec(ψψ, mts, ψOψ, v)
-
-  @test abs.(bp_sz - actual_sz) <= 0.00001
+  @test abs.(bp_sz - exact_sz) <= 0.00001
 
   #NOW TEST TWO_SITE_EXPEC TAKING ON THE PARTITION FUNCTION OF THE RECTANGULAR ISING. SHOULD BE REASONABLE AND 
   #INDEPENDENT OF INIT CONDITIONS, FOR SMALL BETA
@@ -50,19 +50,19 @@ using LinearAlgebra
   g = named_grid(dims)
   s = IndsNetwork(g; link_space=2)
   beta = 0.2
-  v1, v2 = (2, 3), (3, 3)
+  vs = [(2, 3), (3, 3)]
   ψψ = ising_network(s, beta)
-  ψOψ = ising_network(s, beta; szverts=[v1, v2])
+  ψOψ = ising_network(s, beta; szverts=vs)
 
   contract_seq = contraction_sequence(ψψ)
   actual_szsz =
     ITensors.contract(ψOψ; sequence=contract_seq)[] /
     ITensors.contract(ψψ; sequence=contract_seq)[]
 
-  niters, nsites = 10, 2
-  mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
-  mts = update_all_mts(ψψ, mts, niters)
-  bp_szsz = get_two_site_expec(ψψ, mts, ψOψ, v1, v2)
+  nsites = 2
+  mts = compute_message_tensors(ψψ; nvertices_per_partition=nsites)
+  bp_szsz =
+    calculate_contraction(ψψ, mts, vs; verts_tensors=[ψOψ[v] for v in vs])[] / calculate_contraction(ψψ, mts, vs)[]
 
   @test abs.(bp_szsz - actual_szsz) <= 0.05
 
@@ -70,20 +70,29 @@ using LinearAlgebra
   dims = (4, 4)
   g = named_grid(dims)
   s = siteinds("S=1/2", g)
-  v1, v2 = (2, 2), (2, 3)
+  vs = [(2, 2), (2, 3), (2, 4)]
   χ = 3
   ψ = randomITensorNetwork(s; link_space=χ)
-  ψψ = norm_sqr_network(ψ; flatten=true, map_bra_linkinds=prime)
-  combiners = linkinds_combiners(ψψ)
-  ψψ = combine_linkinds(ψψ, combiners)
+  ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
-  niters, nsites = 20, 2
-  mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
-  mts = update_all_mts(ψψ, mts, niters)
-  approx_rdm = two_site_rdm_bp(ψψ, ψ, mts, v1, v2, s, combiners)
+  nsites = 2
+  vertex_groups = nested_graph_leaf_vertices(
+    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
+  )
+  mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
 
-  @test abs(tr(approx_rdm) - 1.0) < 0.00000001
-  eigs = eigvals(approx_rdm)
+  ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
+  rdm = calculate_contraction(
+    ψψ,
+    mts,
+    [(v, 2) for v in vs];
+    verts_tensors=ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]],
+  )
+
+  rdm = array((rdm * combiner(inds(rdm; plev=0)...)) * combiner(inds(rdm; plev=1)...))
+  rdm /= tr(rdm)
+
+  eigs = eigvals(rdm)
   @test all(>=(0), real(eigs)) && all(==(0), imag(eigs))
-  @test size(approx_rdm) == (4, 4)
+  @test size(rdm) == (2^length(vs), 2^length(vs))
 end

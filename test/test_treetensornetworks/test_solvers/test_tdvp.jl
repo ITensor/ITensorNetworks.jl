@@ -29,8 +29,10 @@ using Test
     @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
     @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
     #Different backend solvers, default solver_backend = "applyexp"
-    ψ1_exponentiate_backend = tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
-    @test ψ1 ≈ ψ1_exponentiate_backend rtol=1e-7
+    ψ1_exponentiate_backend = tdvp(
+      H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate"
+    )
+    @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
 
     @test norm(ψ1) ≈ 1.0
 
@@ -44,8 +46,10 @@ using Test
     ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
 
     #Different backend solvers, default solver_backend = "applyexp"
-    ψ2_exponentiate_backend = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
-    @test ψ2 ≈ ψ2_exponentiate_backend rtol=1e-7
+    ψ2_exponentiate_backend = tdvp(
+      H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate"
+    )
+    @test ψ2 ≈ ψ2_exponentiate_backend rtol = 1e-7
 
     @test norm(ψ2) ≈ 1.0
 
@@ -81,8 +85,10 @@ using Test
     @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
 
     #Different backend solvers, default solver_backend = "applyexp"
-    ψ1_exponentiate_backend = tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
-    @test ψ1 ≈ ψ1_exponentiate_backend rtol=1e-7
+    ψ1_exponentiate_backend = tdvp(
+      Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate"
+    )
+    @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
 
     @test norm(ψ1) ≈ 1.0
 
@@ -96,8 +102,10 @@ using Test
     ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
     #Different backend solvers, default solver_backend = "applyexp"
-    ψ2_exponentiate_backend = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
-    @test ψ2 ≈ ψ2_exponentiate_backend rtol=1e-7
+    ψ2_exponentiate_backend = tdvp(
+      Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate"
+    )
+    @test ψ2 ≈ ψ2_exponentiate_backend rtol = 1e-7
 
     @test norm(ψ2) ≈ 1.0
 
@@ -650,7 +658,7 @@ end
         1 / 2 * op("S+", s1) * op("S-", s2) +
         1 / 2 * op("S-", s1) * op("S+", s2)
       Gj = exp(-1.0im * tau / 2 * hj)
-    push!(gates, Gj)
+      push!(gates, Gj)
     end
     append!(gates, reverse(gates))
 
@@ -674,7 +682,14 @@ end
 
       nsite = (step <= 3 ? 2 : 1)
       phi = tdvp(
-        H, -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, exponentiate_krylovdim=15
+        H,
+        -tau * im,
+        phi;
+        nsweeps=1,
+        cutoff,
+        nsite,
+        normalize=true,
+        exponentiate_krylovdim=15,
       )
 
       Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])

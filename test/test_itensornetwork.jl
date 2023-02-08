@@ -67,7 +67,7 @@ using Test
     @test !has_vertex(tn_2, ((1, 2), 2))
     @test tn_2[((1, 2), 1)] ≈ tn[((1, 2), 2)] * tn[((1, 2), 1)]
   end
-  
+
   @testset "Remove edge (regression test for issue #5)" begin
     dims = (2, 2)
     g = named_grid(dims)
@@ -84,7 +84,7 @@ using Test
     @test has_vertex(tn, ((2, 2), 1))
     @test has_vertex(tn, ((2, 2), 2))
   end
-  
+
   @testset "Custom element type" for eltype in (Float32, Float64, ComplexF32, ComplexF64),
     link_space in (nothing, 3),
     g in (
@@ -93,6 +93,7 @@ using Test
       siteinds("S=1/2", grid((4,))),
       siteinds("S=1/2", named_grid((3, 3))),
     )
+
     ψ = ITensorNetwork(g; link_space) do v, inds...
       return itensor(randn(eltype, dims(inds)...), inds...)
     end
@@ -145,7 +146,7 @@ using Test
   end
 
   @testset "mincut" begin
-    tn = ITensorNetwork(named_grid(4); link_space=3);
+    tn = ITensorNetwork(named_grid(4); link_space=3)
     w = weights(tn)
     @test w isa Dictionary{Tuple{Int,Int},Float64}
     @test length(w) ≈ ne(tn)

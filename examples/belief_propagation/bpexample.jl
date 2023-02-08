@@ -2,47 +2,69 @@ using Compat
 using ITensors
 using Metis
 using ITensorNetworks
+using Random
+using SplitApplyCombine
 
-using ITensorNetworks: construct_initial_mts, update_all_mts, get_single_site_expec
+using ITensorNetworks:
+  compute_message_tensors, calculate_contraction, contract_inner, nested_graph_leaf_vertices
 
-n = 4
-system_dims = (n, n)
-g = named_grid(system_dims)
-# g = named_comb_tree(system_dims)
-s = siteinds("S=1/2", g)
-chi = 2
+function main()
+  n = 4
+  dims = (n, n)
+  g = named_grid(dims)
+  s = siteinds("S=1/2", g)
+  chi = 2
 
-ψ = randomITensorNetwork(s; link_space=chi)
+  Random.seed!(5467)
 
-ψψ = norm_sqr_network(ψ; flatten=true, map_bra_linkinds=prime)
-combiners = linkinds_combiners(ψψ)
-ψψ = combine_linkinds(ψψ, combiners)
+  #bra
+  ψ = randomITensorNetwork(s; link_space=chi)
+  #bra-ket (but not actually contracted)
+  ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
-# Apply Sz to site v
-v = one.(system_dims)
-Oψ = copy(ψ)
-Oψ[v] = apply(op("Sz", s[v]), ψ[v])
-ψOψ = inner_network(ψ, Oψ; flatten=true, map_bra_linkinds=prime)
-ψOψ = combine_linkinds(ψOψ, combiners)
+  #Site to take expectation value on
+  v = (1, 1)
 
-# Get the value of sz on v via exact contraction
-contract_seq = contraction_sequence(ψψ)
-actual_sz = contract(ψOψ; sequence=contract_seq)[] / contract(ψψ; sequence=contract_seq)[]
+  #Now do Simple Belief Propagation to Measure Sz on Site v
+  nsites = 1
 
-println("Actual value of Sz on site " * string(v) * " is " * string(actual_sz))
+  vertex_groups = nested_graph_leaf_vertices(
+    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
+  )
+  mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
+  sz_bp =
+    calculate_contraction(
+      ψψ, mts, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])]
+    )[] / calculate_contraction(ψψ, mts, [(v, 1)])[]
 
-niters = 20
+  println(
+    "Simple Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp)
+  )
 
-nsites = 1
-println("\nFirst " * string(nsites) * " sites form a subgraph")
-mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
-@show get_single_site_expec(ψψ, mts, ψOψ, v)
-mts = update_all_mts(ψψ, mts, niters)
-@show get_single_site_expec(ψψ, mts, ψOψ, v)
+  #Now do General Belief Propagation to Measure Sz on Site v
+  nsites = 4
+  vertex_groups = nested_graph_leaf_vertices(
+    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
+  )
+  mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
+  sz_bp =
+    calculate_contraction(
+      ψψ, mts, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])]
+    )[] / calculate_contraction(ψψ, mts, [(v, 1)])[]
 
-nsites = 4
-println("\nNow " * string(nsites) * " sites form a subgraph")
-mts = construct_initial_mts(ψψ, nsites; init=(I...) -> @compat allequal(I) ? 1 : 0)
-@show get_single_site_expec(ψψ, mts, ψOψ, v)
-mts = update_all_mts(ψψ, mts, niters)
-@show get_single_site_expec(ψψ, mts, ψOψ, v)
+  println(
+    "General Belief Propagation (2-site subgraphs) Gives Sz on Site " *
+    string(v) *
+    " as " *
+    string(sz_bp),
+  )
+
+  #Now do it exactly
+  Oψ = copy(ψ)
+  Oψ[v] = apply(op("Sz", s[v]), ψ[v])
+  sz_exact = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
+
+  return println("The exact value of Sz on Site " * string(v) * " is " * string(sz_exact))
+end
+
+main()

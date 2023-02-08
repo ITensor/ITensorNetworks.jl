@@ -22,7 +22,9 @@ Keyword arguments:
 
 Overload of `KrylovKit.linsolve`.
 """
-function linsolve(A::AbstractTTN, b::AbstractTTN, x₀::AbstractTTN, a₀::Number=0, a₁::Number=1; kwargs...)
+function linsolve(
+  A::AbstractTTN, b::AbstractTTN, x₀::AbstractTTN, a₀::Number=0, a₁::Number=1; kwargs...
+)
   function linsolve_solver(
     P,
     t,
