@@ -28,8 +28,10 @@ function ITensors.apply(
 
     #Check whether to do a memory efficient QR first (do both sites combined for now, although we could split if we wish)
     #if no maxdim is provided just do it based on inds counting, if it is provided do it based on whichever takes less memory
-    d1, d2 = prod(dim.(inds(ψ[v⃗[1]]; tags="Site"))),
-    prod(dim.(inds(ψ[v⃗[2]]; tags="Site")))
+
+    v1_siteinds = setdiff(inds(ψ[v⃗[1]]), flatten(unique(inds.([ψ[v] for v in neighbors(ψ, v⃗[1])]))))
+    v2_siteinds = setdiff(inds(ψ[v⃗[2]]), flatten(unique(inds.([ψ[v] for v in neighbors(ψ, v⃗[2])]))))
+    d1, d2 = prod(dim.(v1_siteinds)), prod(dim.(v2_siteinds))
     χv1, χv2 = prod(
       dim.(uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), inds(ψ[v⃗[1]]; tags="Site")))
     ),
