@@ -44,11 +44,10 @@ function contract(
   ##   )
   ## end
 
-  t = Inf
   reverse_step = false
   PH = ProjTTNApply(tn2, tn1)
   psi = alternating_update(
-    contract_solver(; kwargs...), PH, t, init; nsweeps, reverse_step, kwargs...
+    contract_solver(; kwargs...), PH, init; nsweeps, reverse_step, kwargs...
   )
 
   return psi

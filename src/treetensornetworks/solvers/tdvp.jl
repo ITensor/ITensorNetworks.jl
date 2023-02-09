@@ -43,7 +43,7 @@ function tdvp_solver(; solver_backend="exponentiate", kwargs...)
 end
 
 function tdvp(solver, H, t::Number, init::AbstractTTN; kwargs...)
-  return alternating_update(solver, H, t, init; kwargs...)
+  return alternating_update(solver, H, init; time=t, kwargs...)
 end
 
 """
