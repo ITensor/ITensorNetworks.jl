@@ -96,6 +96,9 @@ export AbstractITensorNetwork,
   tdvp,
   to_vec
 
+# ITensorNetworks: binary_tree_partition.jl
+export binary_tree_partition
+
 # ITensorNetworks: lattices.jl
 # TODO: DELETE
 export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph

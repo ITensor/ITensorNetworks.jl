@@ -4,6 +4,7 @@ using AbstractTrees
 using Combinatorics
 using Compat
 using DataGraphs
+using DataStructures
 using Dictionaries
 using DocStringExtensions
 using Graphs
@@ -80,6 +81,7 @@ include("models.jl")
 include("tebd.jl")
 include("itensornetwork.jl")
 include("mincut.jl")
+include("binary_tree_partition.jl")
 include("utility.jl")
 include("specialitensornetworks.jl")
 include("renameitensornetwork.jl")
