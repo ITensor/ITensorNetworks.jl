@@ -22,24 +22,14 @@ function create_b(
   )
 end
 
-"""Perform an SVD on p*q*o (with identity environments) to get an initial guess for the full update"""
-function initial_guess_pprime_qprime(p::ITensor, q::ITensor, o::ITensor; maxdim=nothing)
-  p_out, q_out = factorize(noprime(p * q * o), inds(p); maxdim)
-
-  cur_ind = commonind(p_out, q_out)
-  replaceind!(p_out, cur_ind, replacetags(cur_ind, tags(cur_ind), tags(commonind(p, q))))
-  replaceind!(q_out, cur_ind, replacetags(cur_ind, tags(cur_ind), tags(commonind(p, q))))
-
-  return p_out, q_out
-end
-
 function M_p(
   envs::Vector{ITensor}, p_q_tensor::ITensor, apply_tensor::ITensor; opt_sequence=nothing
 )
+  s_ind = setdiff(inds(p_q_tensor), collect(Iterators.flatten(inds.(vcat(envs, apply_tensor)))))
   return noprime(
     ITensors.contract(
       vcat(
-        ITensor[p_q_tensor, noprime!(prime(dag(p_q_tensor)); tags="Site"), apply_tensor],
+        ITensor[p_q_tensor, replaceinds(prime(dag(p_q_tensor)), prime(s_ind), s_ind), apply_tensor],
         envs,
       );
       sequence=opt_sequence,
@@ -56,25 +46,31 @@ function fidelity(
   q_prev::ITensor,
   gate::ITensor,
 )
+
+  p_sind = commonind(p_cur, gate)
+  q_sind = commonind(q_cur, gate)
+  gate_sq = gate*prime(dag(gate))
+  replaceinds!(gate_sq, noncommoninds(gate_sq, gate), Index[prime(p_sind), prime(q_sind)])
   term1_tns = vcat(
     [
       p_prev,
       q_prev,
       prime(dag(p_prev)),
       prime(dag(q_prev)),
-      swapprime(gate * swapprime(dag(gate), 0, 2), 2, 1),
+      gate_sq,
     ],
     envs,
   )
   term1 = ITensors.contract(
     term1_tns; sequence=ITensors.optimal_contraction_sequence(term1_tns)
   )
+
   term2_tns = vcat(
     [
       p_cur,
       q_cur,
-      noprime(prime(dag(p_cur)); tags="Site"),
-      noprime(prime(dag(q_cur)); tags="Site"),
+      replaceind(prime(dag(p_cur)), prime(p_sind), p_sind),
+      replaceind(prime(dag(q_cur)), prime(q_sind), q_sind),
     ],
     envs,
   )
@@ -83,8 +79,12 @@ function fidelity(
   )
   term3_tns = vcat(
     [
-      replaceprime(dag(prime(p_prev * q_prev * gate)), 2 => 1),
-      prime(p_cur * q_cur; tags="Site"),
+
+      p_prev,
+      q_prev,
+      prime(dag(p_cur)),
+      prime(dag(q_cur)),
+      gate
     ],
     envs,
   )
@@ -107,11 +107,15 @@ function optimise_p_q(
   print_fidelity_loss=false,
   isposdef=true,
 )
-  p_cur, q_cur = initial_guess_pprime_qprime(p, q, gate; maxdim)
+  p_cur, q_cur = factorize(noprime(p * q * gate), inds(p); maxdim, tags = tags(commonind(p, q)))
   normalize!(p_cur)
   normalize!(q_cur)
 
   fstart = print_fidelity_loss ? fidelity(envs, p_cur, q_cur, p, q, gate) : 0
+
+  #Get 'site'-style ind on p and q (useful)
+  qs_ind = setdiff(inds(q_cur), collect(Iterators.flatten(inds.(vcat(envs, p_cur)))))
+  ps_ind = setdiff(inds(p_cur), collect(Iterators.flatten(inds.(vcat(envs, q_cur)))))
 
   opt_b_seq = ITensors.optimal_contraction_sequence(
     vcat(ITensor[p, q, gate, dag(prime(q_cur))], envs)
@@ -120,10 +124,10 @@ function optimise_p_q(
     vcat(ITensor[p, q, gate, dag(prime(p_cur))], envs)
   )
   opt_M_seq = ITensors.optimal_contraction_sequence(
-    vcat(ITensor[q_cur, noprime!(prime(dag(q_cur)); tags="Site"), p_cur], envs)
+    vcat(ITensor[q_cur, replaceinds(prime(dag(q_cur)), prime(qs_ind), qs_ind), p_cur], envs)
   )
   opt_M_tilde_seq = ITensors.optimal_contraction_sequence(
-    vcat(ITensor[p_cur, noprime!(prime(dag(p_cur)); tags="Site"), q_cur], envs)
+    vcat(ITensor[p_cur, replaceinds(prime(dag(p_cur)), prime(ps_ind), ps_ind), q_cur], envs)
   )
   for i in 1:nsweeps
     b = create_b(p, q, gate, envs, q_cur; opt_sequence=opt_b_seq)

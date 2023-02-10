@@ -29,29 +29,21 @@ function ITensors.apply(
     #Check whether to do a memory efficient QR first (do both sites combined for now, although we could split if we wish)
     #if no maxdim is provided just do it based on inds counting, if it is provided do it based on whichever takes less memory
 
-    v1_siteinds = setdiff(
-      inds(ψ[v⃗[1]]), flatten(unique(inds.([ψ[v] for v in neighbors(ψ, v⃗[1])])))
-    )
-    v2_siteinds = setdiff(
-      inds(ψ[v⃗[2]]), flatten(unique(inds.([ψ[v] for v in neighbors(ψ, v⃗[2])])))
-    )
-    d1, d2 = prod(dim.(v1_siteinds)), prod(dim.(v2_siteinds))
-    χv1, χv2 = prod(
-      dim.(uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), inds(ψ[v⃗[1]]; tags="Site")))
-    ),
-    prod(dim.(uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), inds(ψ[v⃗[2]]; tags="Site"))))
-    if (maxdim == nothing && length(inds(ψ[v⃗[1]])) + length(inds(ψ[v⃗[2]])) <= 6) ||
-      (maxdim != nothing && maxdim * maxdim * d1 * d2 >= χv1 * χv2)
+    dim_v1 = dim(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]))
+    dim_v2 = dim(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]))
+    dim_shared = dim(commoninds(ψ[v⃗[1]], ψ[v⃗[2]]))
+    d1, d2 = dim(uniqueinds(ψ, v⃗[1])), dim(uniqueinds(ψ, v⃗[2]))
+    if dim_v1*dim_v2 <= d1*d2*dim_shared*dim_shared*d1*d2
       oψᵥ = apply(o, ψ[v⃗[1]] * ψ[v⃗[2]])
       ψᵥ₁, ψᵥ₂ = factorize(
         oψᵥ, inds(ψ[v⃗[1]]); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e)
       )
     else
       Qv1, Rv1 = factorize(
-        ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), inds(ψ[v⃗[1]]; tags="Site"))
+        ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), uniqueinds(ψ, v⃗[1]))
       )
       Qv2, Rv2 = factorize(
-        ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), inds(ψ[v⃗[2]]; tags="Site"))
+        ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), uniqueinds(ψ, v⃗[2]))
       )
       Rv1_new, Rv2_new = factorize(
         noprime(Rv1 * o * Rv2), inds(Rv1); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e)
