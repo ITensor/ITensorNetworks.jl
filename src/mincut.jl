@@ -34,6 +34,15 @@ function _mincut_partitions(
   return p1, p2
 end
 
+function _mincut_partition_maxweightoutinds(
+  tn::ITensorNetwork, source_inds::Vector{<:Index}, terminal_inds::Vector{<:Index}
+)
+  tn, out_to_maxweight_ind = _maxweightoutinds_tn(tn, [source_inds..., terminal_inds...])
+  source_inds = [out_to_maxweight_ind[i] for i in source_inds]
+  terminal_inds = [out_to_maxweight_ind[i] for i in terminal_inds]
+  return _mincut_partitions(tn, source_inds, terminal_inds)
+end
+
 """
 Sum of shortest path distances among all outinds.
 """

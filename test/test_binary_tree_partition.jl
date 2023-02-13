@@ -35,7 +35,7 @@ using ITensorNetworks:
   @test sort(p2) == [5, 6, 7, 8]
 end
 
-@testset "test inds_binary_tree of a 2D network" begin
+@testset "test _binary_tree_partition_inds of a 2D network" begin
   N = (3, 3, 3)
   linkdim = 2
   network = randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
@@ -52,4 +52,23 @@ end
     tn, noncommoninds(Vector{ITensor}(tn)...); maximally_unbalanced=true
   )
   @test length(out) == 2
+end
+
+@testset "test binary_tree_partition" begin
+  i = Index(2, "i")
+  j = Index(2, "j")
+  k = Index(2, "k")
+  l = Index(2, "l")
+  m = Index(2, "m")
+  T = randomITensor(i, j, k, l, m)
+  M = MPS(T, (i, j, k, l, m); cutoff=1e-5, maxdim=5)
+  network = M[:]
+  out1 = contract(network...)
+  tn = ITensorNetwork(network)
+  inds_btree = _binary_tree_partition_inds(tn, [i, j, k, l, m]; maximally_unbalanced=false)
+  par = binary_tree_partition(tn, inds_btree)
+  networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
+  network2 = vcat(networks...)
+  out2 = contract(network2...)
+  @test isapprox(out1, out2)
 end
