@@ -30,12 +30,11 @@ function applyexp_solver(; kwargs...)
   return solver
 end
 
-function tdvp_solver(; kwargs...)
-  solver_backend = get(kwargs, :solver_backend, "applyexp")
-  if solver_backend == "applyexp"
-    return applyexp_solver(; kwargs...)
-  elseif solver_backend == "exponentiate"
+function tdvp_solver(; solver_backend="exponentiate", kwargs...)
+  if solver_backend == "exponentiate"
     return exponentiate_solver(; kwargs...)
+  elseif solver_backend == "applyexp"
+    return applyexp_solver(; kwargs...)
   else
     error(
       "solver_backend=$solver_backend not recognized (options are \"applyexp\" or \"exponentiate\")",
@@ -66,7 +65,3 @@ Optional keyword arguments:
 function tdvp(H, t::Number, init::AbstractTTN; kwargs...)
   return tdvp(tdvp_solver(; kwargs...), H, t, init; kwargs...)
 end
-
-tdvp(t::Number, H, init::AbstractTTN; kwargs...) = tdvp(H, t, init; kwargs...)
-
-tdvp(H, init::AbstractTTN, t::Number; kwargs...) = tdvp(H, t, init; kwargs...)

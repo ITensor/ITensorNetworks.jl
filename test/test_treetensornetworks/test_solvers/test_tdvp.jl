@@ -26,11 +26,9 @@ using Test
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
 
-    @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
-    @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
     #Different backend solvers, default solver_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(
-      H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate"
+      H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate"
     )
     @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
 
@@ -81,12 +79,9 @@ using Test
 
     ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
 
-    @test ψ1 ≈ tdvp(-0.1im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
-    @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
-
     #Different backend solvers, default solver_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(
-      Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate"
+      Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate"
     )
     @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
 
@@ -477,9 +472,6 @@ end
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
 
-    @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
-    @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
-
     @test norm(ψ1) ≈ 1.0
 
     ## Should lose fidelity:
@@ -521,9 +513,6 @@ end
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
     ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
-
-    @test ψ1 ≈ tdvp(-0.1im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
-    @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
 
     @test norm(ψ1) ≈ 1.0
 
