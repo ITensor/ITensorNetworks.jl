@@ -1,10 +1,10 @@
 using ITensorNetworks
 using ITensorNetworks:
   compute_message_tensors,
-  apply_fullupdate,
   get_environment,
   nested_graph_leaf_vertices,
-  contract_inner
+  contract_inner,
+  apply_fullupdate
 using Test
 using Compat
 using ITensors
@@ -44,12 +44,25 @@ using SplitApplyCombine
 
   for i in 1:ngates
     o = ITensors.op("RandomUnitary", s[v1]..., s[v2]...)
+
     ψOexact = apply(o, ψ; maxdim=4 * χ)
-    ψOSBP = apply_fullupdate(
-      o, ψ, envsSBP; maxdim=χ, normalize=true, print_fidelity_loss=true
+    ψOSBP = apply(
+      o,
+      ψ;
+      envs=envsSBP,
+      maxdim=χ,
+      normalize=true,
+      print_fidelity_loss=true,
+      envisposdef=true,
     )
-    ψOGBP = apply_fullupdate(
-      o, ψ, envsGBP; maxdim=χ, normalize=true, print_fidelity_loss=true
+    ψOGBP = apply(
+      o,
+      ψ;
+      envs=envsGBP,
+      maxdim=χ,
+      normalize=true,
+      print_fidelity_loss=true,
+      envisposdef=true,
     )
     fSBP =
       contract_inner(ψOSBP, ψOexact) /
@@ -57,6 +70,7 @@ using SplitApplyCombine
     fGBP =
       contract_inner(ψOGBP, ψOexact) /
       sqrt(contract_inner(ψOexact, ψOexact) * contract_inner(ψOGBP, ψOGBP))
+
     @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
   end
 end
