@@ -1,5 +1,13 @@
 function tebd(
-  ℋ::Sum, ψ::AbstractITensorNetwork; β, Δβ, maxdim, cutoff, print_frequency=10, ortho=false, kwargs...
+  ℋ::Sum,
+  ψ::AbstractITensorNetwork;
+  β,
+  Δβ,
+  maxdim,
+  cutoff,
+  print_frequency=10,
+  ortho=false,
+  kwargs...,
 )
   𝒰 = exp(-Δβ * ℋ; alg=Trotter{2}())
   # Imaginary time evolution terms

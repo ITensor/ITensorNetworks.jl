@@ -100,7 +100,13 @@ function ITensors.apply(
 end
 
 function ITensors.apply(
-  o⃗::Scaled, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false, kwargs...
+  o⃗::Scaled,
+  ψ::AbstractITensorNetwork;
+  cutoff,
+  maxdim,
+  normalize=false,
+  ortho=false,
+  kwargs...,
 )
   return maybe_real(Ops.coefficient(o⃗)) *
          apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho, kwargs...)
