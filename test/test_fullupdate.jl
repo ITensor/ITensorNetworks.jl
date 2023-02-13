@@ -1,10 +1,6 @@
 using ITensorNetworks
 using ITensorNetworks:
-  compute_message_tensors,
-  get_environment,
-  nested_graph_leaf_vertices,
-  contract_inner,
-  apply_fullupdate
+  compute_message_tensors, get_environment, nested_graph_leaf_vertices, contract_inner
 using Test
 using Compat
 using ITensors

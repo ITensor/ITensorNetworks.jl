@@ -1,73 +1,3 @@
-# function ITensors.apply(
-#   o::ITensor,
-#   ψ::AbstractITensorNetwork;
-#   cutoff=nothing,
-#   maxdim=nothing,
-#   normalize=false,
-#   ortho=false,
-# )
-#   ψ = copy(ψ)
-#   v⃗ = neighbor_vertices(ψ, o)
-#   if length(v⃗) == 1
-#     if ortho
-#       ψ = orthogonalize(ψ, v⃗[1])
-#     end
-#     oψᵥ = apply(o, ψ[v⃗[1]])
-#     if normalize
-#       oψᵥ ./= norm(oψᵥ)
-#     end
-#     ψ[v⃗[1]] = oψᵥ
-#   elseif length(v⃗) == 2
-#     e = v⃗[1] => v⃗[2]
-#     if !has_edge(ψ, e)
-#       error("Vertices where the gates are being applied must be neighbors for now.")
-#     end
-#     if ortho
-#       ψ = orthogonalize(ψ, v⃗[1])
-#     end
-
-#     #Check whether to do a memory efficient QR first (do both sites combined for now, although we could split if we wish)
-#     #if no maxdim is provided just do it based on inds counting, if it is provided do it based on whichever takes less memory
-
-#     dim_v1 = dim(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]))
-#     dim_v2 = dim(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]))
-#     dim_shared = dim(commoninds(ψ[v⃗[1]], ψ[v⃗[2]]))
-#     d1, d2 = dim(uniqueinds(ψ, v⃗[1])), dim(uniqueinds(ψ, v⃗[2]))
-#     if dim_v1*dim_v2 <= d1*d2*dim_shared*dim_shared*d1*d2
-#       oψᵥ = apply(o, ψ[v⃗[1]] * ψ[v⃗[2]])
-#       ψᵥ₁, ψᵥ₂ = factorize(
-#         oψᵥ, inds(ψ[v⃗[1]]); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e)
-#       )
-#     else
-#       Qv1, Rv1 = factorize(
-#         ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), uniqueinds(ψ, v⃗[1]))
-#       )
-#       Qv2, Rv2 = factorize(
-#         ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), uniqueinds(ψ, v⃗[2]))
-#       )
-#       Rv1_new, Rv2_new = factorize(
-#         noprime(Rv1 * o * Rv2), inds(Rv1); cutoff, maxdim, tags=ITensorNetworks.edge_tag(e)
-#       )
-#       ψᵥ₁ = Qv1 * Rv1_new
-#       ψᵥ₂ = Qv2 * Rv2_new
-#     end
-
-#     if normalize
-#       ψᵥ₁ ./= norm(ψᵥ₁)
-#       ψᵥ₂ ./= norm(ψᵥ₂)
-#     end
-
-#     ψ[v⃗[1]] = ψᵥ₁
-#     ψ[v⃗[2]] = ψᵥ₂
-
-#   elseif length(v⃗) < 1
-#     error("Gate being applied does not share indices with tensor network.")
-#   elseif length(v⃗) > 2
-#     error("Gates with more than 2 sites is not supported yet.")
-#   end
-#   return ψ
-# end
-
 function ITensors.apply(
   o::ITensor,
   ψ::AbstractITensorNetwork;
@@ -160,6 +90,7 @@ function ITensors.apply(
   maxdim=typemax(Int),
   normalize=false,
   ortho=false,
+  kwargs...,
 )
   o⃗ψ = ψ
   for oᵢ in o⃗
@@ -172,70 +103,34 @@ function ITensors.apply(
   o⃗::Scaled, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false
 )
   return maybe_real(Ops.coefficient(o⃗)) *
-         apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho)
+         apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho, kwargs...)
 end
 
 function ITensors.apply(
-  o⃗::Prod, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false
+  o⃗::Prod,
+  ψ::AbstractITensorNetwork;
+  cutoff,
+  maxdim,
+  normalize=false,
+  ortho=false,
+  kwargs...,
 )
   o⃗ψ = ψ
   for oᵢ in o⃗
-    o⃗ψ = apply(oᵢ, o⃗ψ; cutoff, maxdim, normalize, ortho)
+    o⃗ψ = apply(oᵢ, o⃗ψ; cutoff, maxdim, normalize, ortho, kwargs...)
   end
   return o⃗ψ
 end
 
 function ITensors.apply(
-  o::Op, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false
+  o::Op, ψ::AbstractITensorNetwork; cutoff, maxdim, normalize=false, ortho=false, kwargs...
 )
-  return apply(ITensor(o, siteinds(ψ)), ψ; cutoff, maxdim, normalize, ortho)
-end
-
-"""
-Check env is the correct environment for the subset of vertices of tn
-"""
-function assert_correct_environment(ψ::ITensorNetwork, env::Vector{ITensor}, verts::Vector)
-  outer_verts_indices = flatten([commoninds(ψ, e) for e in boundary_edges(ψ, verts)])
-  return issetequal(noncommoninds(env...), outer_verts_indices)
+  return apply(ITensor(o, siteinds(ψ)), ψ; cutoff, maxdim, normalize, ortho, kwargs...)
 end
 
 ### Full Update Routines ###
 
-function create_b(
-  p::ITensor,
-  q::ITensor,
-  gate::ITensor,
-  envs::Vector{ITensor},
-  bottom_tensor::ITensor;
-  opt_sequence=nothing,
-)
-  return noprime(
-    ITensors.contract(
-      vcat(ITensor[p, q, gate, dag(prime(bottom_tensor))], envs); sequence=opt_sequence
-    ),
-  )
-end
-
-function M_p(
-  envs::Vector{ITensor}, p_q_tensor::ITensor, apply_tensor::ITensor; opt_sequence=nothing
-)
-  s_ind = setdiff(
-    inds(p_q_tensor), collect(Iterators.flatten(inds.(vcat(envs, apply_tensor))))
-  )
-  return noprime(
-    ITensors.contract(
-      vcat(
-        ITensor[
-          p_q_tensor, replaceinds(prime(dag(p_q_tensor)), prime(s_ind), s_ind), apply_tensor
-        ],
-        envs,
-      );
-      sequence=opt_sequence,
-    ),
-  )
-end
-
-"""Calculate the overlap of the gate acting on the previous p and q versus the new p and q in the presence of environments. This is the cost function to minimise"""
+"""Calculate the overlap of the gate acting on the previous p and q versus the new p and q in the presence of environments. This is the cost function that optimise_p_q will minimise"""
 function fidelity(
   envs::Vector{ITensor},
   p_cur::ITensor,
@@ -274,13 +169,7 @@ function fidelity(
   term2 = ITensors.contract(
     term2_tns; sequence=ITensors.optimal_contraction_sequence(term2_tns)
   )
-  term3_tns = vcat([
-    p_prev,
-    q_prev,
-    prime(dag(p_cur)),
-    prime(dag(q_cur)),
-    gate,
-  ], envs)
+  term3_tns = vcat([p_prev, q_prev, prime(dag(p_cur)), prime(dag(q_cur)), gate], envs)
   term3 = ITensors.contract(
     term3_tns; sequence=ITensors.optimal_contraction_sequence(term3_tns)
   )
@@ -320,23 +209,60 @@ function optimise_p_q(
   opt_M_tilde_seq = ITensors.optimal_contraction_sequence(
     vcat(ITensor[p_cur, replaceinds(prime(dag(p_cur)), prime(ps_ind), ps_ind), q_cur], envs)
   )
+
+  function b(
+    p::ITensor,
+    q::ITensor,
+    o::ITensor,
+    envs::Vector{ITensor},
+    r::ITensor;
+    opt_sequence=nothing,
+  )
+    return noprime(
+      ITensors.contract(vcat(ITensor[p, q, o, dag(prime(r))], envs); sequence=opt_sequence)
+    )
+  end
+
+  function M_p(
+    envs::Vector{ITensor},
+    p_q_tensor::ITensor,
+    s_ind,
+    apply_tensor::ITensor;
+    opt_sequence=nothing,
+  )
+    return noprime(
+      ITensors.contract(
+        vcat(
+          ITensor[
+            p_q_tensor,
+            replaceinds(prime(dag(p_q_tensor)), prime(s_ind), s_ind),
+            apply_tensor,
+          ],
+          envs,
+        );
+        sequence=opt_sequence,
+      ),
+    )
+  end
   for i in 1:nfullupdatesweeps
-    b = create_b(p, q, o, envs, q_cur; opt_sequence=opt_b_seq)
-    M_p_partial = partial(M_p, envs, q_cur; opt_sequence=opt_M_seq)
+    b_vec = b(p, q, o, envs, q_cur; opt_sequence=opt_b_seq)
+    M_p_partial = partial(M_p, envs, q_cur, qs_ind; opt_sequence=opt_M_seq)
 
-    p_cur, info = linsolve(M_p_partial, b, p_cur; isposdef=envisposdef, ishermitian=false)
+    p_cur, info = linsolve(
+      M_p_partial, b_vec, p_cur; isposdef=envisposdef, ishermitian=false
+    )
 
-    b_tilde = create_b(p, q, o, envs, p_cur; opt_sequence=opt_b_tilde_seq)
-    M_p_tilde_partial = partial(M_p, envs, p_cur; opt_sequence=opt_M_tilde_seq)
+    b_tilde_vec = b(p, q, o, envs, p_cur; opt_sequence=opt_b_tilde_seq)
+    M_p_tilde_partial = partial(M_p, envs, p_cur, ps_ind; opt_sequence=opt_M_tilde_seq)
 
     q_cur, info = linsolve(
-      M_p_tilde_partial, b_tilde, q_cur; isposdef=envisposdef, ishermitian=false
+      M_p_tilde_partial, b_tilde_vec, q_cur; isposdef=envisposdef, ishermitian=false
     )
   end
 
   fend = print_fidelity_loss ? fidelity(envs, p_cur, q_cur, p, q, o) : 0
 
-  if (print_fidelity_loss && real(fend - fstart) < 0.0 && nsweeps >= 1)
+  if (print_fidelity_loss && real(fend - fstart) <= 0.0 && nsweeps >= 1)
     println(
       "Warning: Krylov Solver Didn't Find a Better Solution by Sweeping. Something might be amiss.",
     )
@@ -344,3 +270,5 @@ function optimise_p_q(
 
   return p_cur, q_cur
 end
+
+partial = (f, a...; c...) -> (b...) -> f(a..., b...; c...)
