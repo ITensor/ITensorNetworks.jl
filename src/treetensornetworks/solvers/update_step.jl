@@ -1,4 +1,4 @@
-function tdvp_step(
+function update_step(
   order::TDVPOrder,
   solver,
   PH,
@@ -12,7 +12,7 @@ function tdvp_step(
   sub_time_steps *= time_step
   info = nothing
   for substep in 1:length(sub_time_steps)
-    psi, PH, info = tdvp_sweep(
+    psi, PH, info = update_sweep(
       orderings[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...
     )
     current_time += sub_time_steps[substep]
@@ -34,14 +34,14 @@ function _get_sweep_generator(kwargs)
   return error("Unsupported value $nsite for nsite keyword argument.")
 end
 
-function tdvp_sweep(
+function update_sweep(
   direction::Base.Ordering, solver, PH, time_step::Number, psi::AbstractTTN; kwargs...
 )
   PH = copy(PH)
   psi = copy(psi)
   if nv(psi) == 1
     error(
-      "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
+      "`alternating_update` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
   sweep_generator = _get_sweep_generator(kwargs)
@@ -64,7 +64,7 @@ function tdvp_sweep(
   for sweep_step in sweep_generator(
     direction, underlying_graph(PH), root_vertex, reverse_step; state=psi, kwargs...
   )
-    psi, PH, current_time, maxtruncerr, spec, info = tdvp_local_update(
+    psi, PH, current_time, maxtruncerr, spec, info = local_update(
       solver,
       PH,
       psi,
@@ -160,7 +160,7 @@ function _insert_tensor(psi::AbstractTTN, phi::ITensor, e::NamedEdge; kwargs...)
   return psi, nothing
 end
 
-function tdvp_local_update(
+function local_update(
   solver,
   PH,
   psi,

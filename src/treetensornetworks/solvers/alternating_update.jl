@@ -1,10 +1,10 @@
-function _tdvp_compute_nsweeps(t; kwargs...)
+function _compute_nsweeps(t; kwargs...)
   time_step::Number = get(kwargs, :time_step, t)
   nsweeps::Union{Int,Nothing} = get(kwargs, :nsweeps, nothing)
   if isinf(t) && isnothing(nsweeps)
     nsweeps = 1
   elseif !isnothing(nsweeps) && time_step != t
-    error("Cannot specify both time_step and nsweeps in tdvp")
+    error("Cannot specify both time_step and nsweeps in alternating_update")
   elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsweeps)
     nsweeps = convert(Int, ceil(abs(t / time_step)))
     if !(nsweeps * time_step ≈ t)
@@ -42,10 +42,10 @@ function process_sweeps(; kwargs...)
   return (; maxdim, mindim, cutoff, noise)
 end
 
-function tdvp(solver, PH, t::Number, psi0::AbstractTTN; kwargs...)
+function alternating_update(solver, PH, t::Number, psi0::AbstractTTN; kwargs...)
   reverse_step = get(kwargs, :reverse_step, true)
 
-  nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
+  nsweeps = _compute_nsweeps(t; kwargs...)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
 
   time_start::Number = get(kwargs, :time_start, 0.0)
@@ -81,7 +81,7 @@ function tdvp(solver, PH, t::Number, psi0::AbstractTTN; kwargs...)
     end
 
     sw_time = @elapsed begin
-      psi, PH, info = tdvp_step(
+      psi, PH, info = update_step(
         tdvp_order,
         solver,
         PH,
@@ -121,39 +121,22 @@ function tdvp(solver, PH, t::Number, psi0::AbstractTTN; kwargs...)
   return psi
 end
 
-"""
-    tdvp(H::MPS,psi0::MPO,t::Number; kwargs...)
-    tdvp(H::TTN,psi0::TTN,t::Number; kwargs...)
-
-Use the time dependent variational principle (TDVP) algorithm
-to compute `exp(t*H)*psi0` using an efficient algorithm based
-on alternating optimization of the state tensors and local Krylov
-exponentiation of H.
-                    
-Returns:
-* `psi` - time-evolved state
-
-Optional keyword arguments:
-* `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
-* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
-* `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
-"""
-function tdvp(solver, H::AbstractTTN, t::Number, psi0::AbstractTTN; kwargs...)
+function alternating_update(solver, H::AbstractTTN, t::Number, psi0::AbstractTTN; kwargs...)
   check_hascommoninds(siteinds, H, psi0)
   check_hascommoninds(siteinds, H, psi0')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
   PH = ProjTTN(H)
-  return tdvp(solver, PH, t, psi0; kwargs...)
+  return alternating_update(solver, PH, t, psi0; kwargs...)
 end
 
-function tdvp(solver, t::Number, H, psi0::AbstractTTN; kwargs...)
-  return tdvp(solver, H, t, psi0; kwargs...)
+function alternating_update(solver, t::Number, H, psi0::AbstractTTN; kwargs...)
+  return alternating_update(solver, H, t, psi0; kwargs...)
 end
 
-function tdvp(solver, H, psi0::AbstractTTN, t::Number; kwargs...)
-  return tdvp(solver, H, t, psi0; kwargs...)
+function alternating_update(solver, H, psi0::AbstractTTN, t::Number; kwargs...)
+  return alternating_update(solver, H, t, psi0; kwargs...)
 end
 
 """
@@ -175,12 +158,14 @@ each step of the algorithm when optimizing the MPS.
 Returns:
 * `psi::MPS` - time-evolved MPS
 """
-function tdvp(solver, Hs::Vector{<:AbstractTTN}, t::Number, psi0::AbstractTTN; kwargs...)
+function alternating_update(
+  solver, Hs::Vector{<:AbstractTTN}, t::Number, psi0::AbstractTTN; kwargs...
+)
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)
     check_hascommoninds(siteinds, H, psi0')
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
   PHs = ProjTTNSum(Hs)
-  return tdvp(solver, PHs, t, psi0; kwargs...)
+  return alternating_update(solver, PHs, t, psi0; kwargs...)
 end

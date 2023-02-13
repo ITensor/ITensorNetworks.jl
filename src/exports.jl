@@ -90,6 +90,8 @@ export AbstractITensorNetwork,
   group_terms,
   # tebd.jl
   tebd,
+  # treetensornetwork/opsum_to_ttn.jl
+  mpo,
   # treetensornetwork/solvers.jl
   TimeDependentSum,
   dmrg_x,
