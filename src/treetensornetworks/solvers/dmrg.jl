@@ -22,7 +22,9 @@ Overload of `ITensors.dmrg`.
 function dmrg(H, init::AbstractTTN; kwargs...)
   t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   reverse_step = false
-  psi = tdvp(eigsolve_solver(; kwargs...), H, t, init; reverse_step, kwargs...)
+  psi = alternating_update(
+    eigsolve_solver(; kwargs...), H, t, init; reverse_step, kwargs...
+  )
   return psi
 end
 
