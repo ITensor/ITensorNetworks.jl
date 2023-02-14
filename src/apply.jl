@@ -268,7 +268,7 @@ function optimise_p_q(
 
   fend = print_fidelity_loss ? fidelity(envs, p_cur, q_cur, p, q, o) : 0
 
-  if (print_fidelity_loss && real(fend - fstart) <= 0.0 && nsweeps >= 1)
+  if (print_fidelity_loss && real(fend - fstart) < -1e-15 && nfullupdatesweeps >= 1)
     println(
       "Warning: Krylov Solver Didn't Find a Better Solution by Sweeping. Something might be amiss.",
     )
