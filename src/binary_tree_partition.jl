@@ -75,8 +75,8 @@ function _binary_partition(
 end
 
 """
-Given an input tensor network containing tensors in the input `tn`` and
-tensors in `deltas``, remove redundent delta tensors in `deltas` and change
+Given an input tensor network containing tensors in the input `tn` and
+tensors in `deltas`, remove redundent delta tensors in `deltas` and change
 inds accordingly to make the output `tn` and `out_deltas` represent the same
 tensor network but with less delta tensors.
 Note: inds of tensors in `tn` and `deltas` may be changed, and `out_deltas`
@@ -116,9 +116,8 @@ function _remove_deltas(tn::ITensorNetwork, deltas::Vector{ITensor})
       _root_union!(ds, find_root!(ds, i2), find_root!(ds, i1))
     end
   end
-  tn = map_data(
-    t -> replaceinds(t, deltainds => [find_root!(ds, i) for i in deltainds]), tn; edges=[]
-  )
+  sim_deltainds = [find_root!(ds, i) for i in deltainds]
+  tn = map_data(t -> replaceinds(t, deltainds => sim_deltainds), tn; edges=[])
   out_deltas = Vector{ITensor}([delta(i.first, i.second) for i in out_delta_inds])
   return tn, out_deltas
 end

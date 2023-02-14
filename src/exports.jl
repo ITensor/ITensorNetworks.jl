@@ -101,6 +101,9 @@ export AbstractITensorNetwork,
 # ITensorNetworks: binary_tree_partition.jl
 export binary_tree_partition
 
+# ITensorNetworks: approx_itensornetwork.jl
+export approx_binary_tree_itensornetwork
+
 # ITensorNetworks: lattices.jl
 # TODO: DELETE
 export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph

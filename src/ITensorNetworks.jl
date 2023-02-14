@@ -19,6 +19,7 @@ using IterTools
 using KrylovKit: KrylovKit
 using NamedGraphs
 using Observers
+using OMEinsumContractionOrders
 using Printf
 using Requires
 using SimpleTraits
@@ -82,6 +83,7 @@ include("tebd.jl")
 include("itensornetwork.jl")
 include("mincut.jl")
 include("binary_tree_partition.jl")
+include("approx_binarytree_itensornetwork.jl")
 include("utility.jl")
 include("specialitensornetworks.jl")
 include("renameitensornetwork.jl")
