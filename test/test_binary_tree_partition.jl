@@ -1,10 +1,10 @@
 using ITensors
 using ITensorNetworks:
-_binary_tree_partition_inds,
-_mps_partition_inds_order,
-_mincut_partitions,
-_remove_non_leaf_deltas,
-_approx_binary_tree_itensornetwork
+  _binary_tree_partition_inds,
+  _mps_partition_inds_order,
+  _mincut_partitions,
+  _remove_non_leaf_deltas,
+  _approx_binary_tree_itensornetwork
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")
