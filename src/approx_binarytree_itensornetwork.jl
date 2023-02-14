@@ -214,13 +214,9 @@ function _optcontract(network::Vector)
 end
 
 function _get_low_rank_projector(tensor, inds1, inds2; cutoff, maxdim)
-  t00 = time()
-  @info "eigen input size", size(tensor)
   @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: eigen" begin
     diag, U = eigen(tensor, inds1, inds2; cutoff=cutoff, maxdim=maxdim, ishermitian=true)
   end
-  t11 = time() - t00
-  @info "size of U", size(U), "size of diag", size(diag), "costs", t11
   return U
 end
 
@@ -485,8 +481,8 @@ end
 
 """
 Approximate a given ITensorNetwork `tn` into an output ITensorNetwork with a binary tree structure.
-The binary tree structure automatically chosen based on `_binary_tree_partition_inds`.
-If `maximally_unbalanced=true``, the binary tree will have a line/mps structure.
+The binary tree structure is automatically chosen based on `_binary_tree_partition_inds`.
+If `maximally_unbalanced=true`, the binary tree will have a line/mps structure.
 """
 function approx_binary_tree_itensornetwork(
   tn::ITensorNetwork; cutoff=1e-15, maxdim=10000, maximally_unbalanced=false
