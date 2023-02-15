@@ -42,8 +42,23 @@ function tdvp_solver(; solver_backend="exponentiate", kwargs...)
   end
 end
 
-function tdvp(solver, H, t::Number, init::AbstractTTN; kwargs...)
-  return alternating_update(solver, H, init; time=t, kwargs...)
+function _compute_nsweeps(nsweeps, t, time_step)
+  if isinf(t) && isnothing(nsweeps)
+    nsweeps = 1
+  elseif !isnothing(nsweeps) && time_step != t
+    error("Cannot specify both nsweeps and a custom time_step in tdvp")
+  elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsweeps)
+    nsweeps = convert(Int, ceil(abs(t / time_step)))
+    if !(nsweeps * time_step ≈ t)
+      error("Time step $time_step not commensurate with total time t=$t")
+    end
+  end
+  return nsweeps
+end
+
+function tdvp(solver, H, t::Number, init::AbstractTTN; time_step=t, nsweeps=nothing, kwargs...)
+  nsweeps = _compute_nsweeps(nsweeps, t, time_step)
+  return alternating_update(solver, H, init; nsweeps, time_step, kwargs...)
 end
 
 """

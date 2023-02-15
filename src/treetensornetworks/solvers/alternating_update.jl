@@ -1,16 +1,3 @@
-function _compute_nsweeps(nsweeps, t, time_step)
-  if isinf(t) && isnothing(nsweeps)
-    nsweeps = 1
-  elseif !isnothing(nsweeps) && time_step != t
-    error("Cannot specify both nsweeps and a custom time_step in alternating_update")
-  elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsweeps)
-    nsweeps = convert(Int, ceil(abs(t / time_step)))
-    if !(nsweeps * time_step ≈ t)
-      error("Time step $time_step not commensurate with total time t=$t")
-    end
-  end
-  return nsweeps
-end
 
 function _extend_sweeps_param(param, nsweeps)
   if param isa Number
@@ -46,14 +33,12 @@ function alternating_update(
   checkdone=nothing,
   order=2,
   outputlevel=0,
-  time::Number=Inf,
   time_start=0.0,
-  time_step=time,
+  time_step=0.0,
   nsweeps=nothing,
   write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
   kwargs...,
 )
-  nsweeps = _compute_nsweeps(nsweeps, time, time_step)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
 
   step_observer = get(kwargs, :step_observer!, nothing)
