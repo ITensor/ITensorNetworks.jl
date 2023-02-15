@@ -56,7 +56,9 @@ function _compute_nsweeps(nsweeps, t, time_step)
   return nsweeps
 end
 
-function tdvp(solver, H, t::Number, init::AbstractTTN; time_step=t, nsweeps=nothing, kwargs...)
+function tdvp(
+  solver, H, t::Number, init::AbstractTTN; time_step=t, nsweeps=nothing, kwargs...
+)
   nsweeps = _compute_nsweeps(nsweeps, t, time_step)
   return alternating_update(solver, H, init; nsweeps, time_step, kwargs...)
 end

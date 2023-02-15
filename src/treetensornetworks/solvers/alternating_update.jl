@@ -11,8 +11,8 @@ function _extend_sweeps_param(param, nsweeps)
   return eparam
 end
 
-function process_sweeps(;
-  nsweeps=1,
+function process_sweeps(
+  nsweeps;
   cutoff=fill(1E-16, nsweeps),
   maxdim=fill(typemax(Int), nsweeps),
   mindim=fill(1, nsweeps),
@@ -23,7 +23,7 @@ function process_sweeps(;
   mindim = _extend_sweeps_param(mindim, nsweeps)
   cutoff = _extend_sweeps_param(cutoff, nsweeps)
   noise = _extend_sweeps_param(noise, nsweeps)
-  return (; maxdim, mindim, cutoff, noise)
+  return maxdim, mindim, cutoff, noise
 end
 
 function alternating_update(
@@ -35,11 +35,11 @@ function alternating_update(
   outputlevel=0,
   time_start=0.0,
   time_step=0.0,
-  nsweeps=nothing,
+  nsweeps=1,
   write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
   kwargs...,
 )
-  maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
+  maxdim, mindim, cutoff, noise = process_sweeps(nsweeps; kwargs...)
 
   step_observer = get(kwargs, :step_observer!, nothing)
 
