@@ -7,13 +7,13 @@ function update_step(
   current_time=0.0,
   kwargs...,
 )
-  orderings = ITensorNetworks.orderings(order)
+  directions = ITensorNetworks.directions(order)
   sub_time_steps = ITensorNetworks.sub_time_steps(order)
   sub_time_steps *= time_step
   info = nothing
   for substep in 1:length(sub_time_steps)
     psi, PH, info = update_sweep(
-      orderings[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...
+      directions[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...
     )
     current_time += sub_time_steps[substep]
   end

@@ -31,7 +31,7 @@ function alternating_update(
   PH,
   psi0::AbstractTTN;
   checkdone=nothing,
-  order=2,
+  tdvp_order=TDVPOrder(2, Base.Forward),
   outputlevel=0,
   time_start=0.0,
   time_step=0.0,
@@ -42,8 +42,6 @@ function alternating_update(
   maxdim, mindim, cutoff, noise = process_sweeps(nsweeps; kwargs...)
 
   step_observer = get(kwargs, :step_observer!, nothing)
-
-  tdvp_order = TDVPOrder(order, Base.Forward)
 
   psi = copy(psi0)
 

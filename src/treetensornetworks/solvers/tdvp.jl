@@ -57,9 +57,10 @@ function _compute_nsweeps(nsweeps, t, time_step)
 end
 
 function tdvp(
-  solver, H, t::Number, init::AbstractTTN; time_step=t, nsweeps=nothing, kwargs...
+  solver, H, t::Number, init::AbstractTTN; time_step=t, nsweeps=nothing, order=2, kwargs...
 )
   nsweeps = _compute_nsweeps(nsweeps, t, time_step)
+  tdvp_order = TDVPOrder(order, Base.Forward)
   return alternating_update(solver, H, init; nsweeps, time_step, kwargs...)
 end
 
