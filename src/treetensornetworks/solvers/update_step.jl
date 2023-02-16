@@ -24,18 +24,14 @@ isforward(direction::Base.ForwardOrdering) = true
 isforward(direction::Base.ReverseOrdering) = false
 isreverse(direction) = !isforward(direction)
 
-# very much draft, interface to be discussed
-function _get_sweep_generator(kwargs)
-  sweep_generator = get(kwargs, :sweep_generator, nothing)
-  isnothing(sweep_generator) || return sweep_type
-  nsite::Int = get(kwargs, :nsite, 2)
-  nsite == 1 && return one_site_sweep
-  nsite == 2 && return two_site_sweep
-  return error("Unsupported value $nsite for nsite keyword argument.")
-end
-
 function update_sweep(
-  direction::Base.Ordering, solver, PH, time_step::Number, psi::AbstractTTN; kwargs...
+  direction::Base.Ordering,
+  solver,
+  PH,
+  time_step::Number,
+  psi::AbstractTTN;
+  nsite=2,
+  kwargs...,
 )
   PH = copy(PH)
   psi = copy(psi)
@@ -44,7 +40,16 @@ function update_sweep(
       "`alternating_update` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
-  sweep_generator = _get_sweep_generator(kwargs)
+
+  sweep_generator = nothing
+  if nsite == 1
+    sweep_generator = one_site_sweep
+  elseif nsite == 2
+    sweep_generator = two_site_sweep
+  else
+    error("Unsupported value $nsite for nsite keyword argument.")
+  end
+
   root_vertex = get(kwargs, :root_vertex, default_root_vertex(underlying_graph(PH)))
   reverse_step::Bool = get(kwargs, :reverse_step, true)
   normalize::Bool = get(kwargs, :normalize, false)
