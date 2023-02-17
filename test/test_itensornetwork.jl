@@ -115,7 +115,7 @@ using Test
 
   @testset "randomITensorNetwork with custom distributions" begin
     distribution = Uniform(-1.0, 1.0)
-    tn = randomITensorNetwork(named_grid(4), distribution; link_space=2)
+    tn = randomITensorNetwork(distribution, named_grid(4); link_space=2)
     # Note: distributions in package `Distributions` currently doesn't support customized
     # eltype, and all elements have type `Float64`
     @test Base.eltype(tn[first(vertices(tn))]) == Float64

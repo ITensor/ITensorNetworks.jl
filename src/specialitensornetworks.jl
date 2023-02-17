@@ -108,7 +108,7 @@ Bond_dim is given by link_space and entries are randomized.
 The random distribution is based on the input argument `distribution`.
 """
 function randomITensorNetwork(
-  s::IndsNetwork, distribution::Distribution; link_space=nothing
+  distribution::Distribution, s::IndsNetwork; link_space=nothing
 )
   return ITensorNetwork(s; link_space) do v, inds...
     itensor(rand(distribution, dim(inds)...), inds...)
@@ -116,7 +116,7 @@ function randomITensorNetwork(
 end
 
 @traitfn function randomITensorNetwork(
-  g::::IsUnderlyingGraph, distribution::Distribution; link_space=nothing
+  distribution::Distribution, g::::IsUnderlyingGraph; link_space=nothing
 )
-  return randomITensorNetwork(IndsNetwork(g), distribution; link_space)
+  return randomITensorNetwork(distribution, IndsNetwork(g); link_space)
 end
