@@ -80,13 +80,35 @@ function ising_network(g::NamedGraph, beta::Number; h::Number=0.0, szverts=nothi
 end
 
 """
+Build an ITensor network on a graph specified by the inds network s. Bond_dim is given by link_space and entries are randomised (normal distribution, mean 0 std 1)
+"""
+function randomITensorNetwork(eltype::Type, s::IndsNetwork; link_space=nothing)
+  return ITensorNetwork(s; link_space) do v, inds...
+    itensor(randn(eltype, dim(inds)...), inds...)
+  end
+end
+
+function randomITensorNetwork(s::IndsNetwork; link_space=nothing)
+  return randomITensorNetwork(Float64, s; link_space)
+end
+
+@traitfn function randomITensorNetwork(
+  eltype::Type, g::::IsUnderlyingGraph; link_space=nothing
+)
+  return randomITensorNetwork(eltype, IndsNetwork(g); link_space)
+end
+
+@traitfn function randomITensorNetwork(g::::IsUnderlyingGraph; link_space=nothing)
+  return randomITensorNetwork(Float64, IndsNetwork(g); link_space)
+end
+
+"""
 Build an ITensor network on a graph specified by the inds network s.
 Bond_dim is given by link_space and entries are randomized.
-The random distribution is based on the kwarg `distribution`
-(default to normal distribution with mean 0 and std 1).
+The random distribution is based on the input argument `distribution`.
 """
 function randomITensorNetwork(
-  s::IndsNetwork; link_space=nothing, distribution=Normal{Float64}(0.0, 1.0)
+  s::IndsNetwork, distribution::Distribution; link_space=nothing
 )
   return ITensorNetwork(s; link_space) do v, inds...
     itensor(rand(distribution, dim(inds)...), inds...)
@@ -94,27 +116,7 @@ function randomITensorNetwork(
 end
 
 @traitfn function randomITensorNetwork(
-  g::::IsUnderlyingGraph; link_space=nothing, distribution=Normal{Float64}(0.0, 1.0)
+  g::::IsUnderlyingGraph, distribution::Distribution; link_space=nothing
 )
-  return randomITensorNetwork(
-    IndsNetwork(g); link_space=link_space, distribution=distribution
-  )
-end
-
-function randomITensorNetwork(eltype::Type, s::IndsNetwork; link_space=nothing)
-  mean = eltype(0.0)
-  std = eltype(1.0)
-  return randomITensorNetwork(
-    s; link_space=link_space, distribution=Normal{eltype}(mean, std)
-  )
-end
-
-@traitfn function randomITensorNetwork(
-  eltype::Type, g::::IsUnderlyingGraph; link_space=nothing
-)
-  mean = eltype(0.0)
-  std = eltype(1.0)
-  return randomITensorNetwork(
-    g; link_space=link_space, distribution=Normal{eltype}(mean, std)
-  )
+  return randomITensorNetwork(IndsNetwork(g), distribution; link_space)
 end
