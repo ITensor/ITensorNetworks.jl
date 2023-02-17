@@ -35,8 +35,8 @@ function ITensors.apply(
     dim_shared = dim(commoninds(ψ[v⃗[1]], ψ[v⃗[2]]))
     d1, d2 = dim(commoninds(ψ[v⃗[1]], o)), dim(commoninds(ψ[v⃗[2]], o))
     if outer_dim_v1 * outer_dim_v2 <= dim_shared * dim_shared * d1 * d2
-      Qᵥ₁, Rᵥ₁ = ITensor(1.0), copy(ψ[v⃗[1]])
-      Qᵥ₂, Rᵥ₂ = ITensor(1.0), copy(ψ[v⃗[2]])
+      Qᵥ₁, Rᵥ₁ = ITensor(true), copy(ψ[v⃗[1]])
+      Qᵥ₂, Rᵥ₂ = ITensor(true), copy(ψ[v⃗[2]])
     else
       Qᵥ₁, Rᵥ₁ = factorize(
         ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), uniqueinds(ψ, v⃗[1]))
