@@ -28,8 +28,11 @@ function _root_union!(s::DisjointSets, x, y; left_root=true)
   return s.revmap[_introot_union!(s.internal, s.intmap[x], s.intmap[y]; left_root=true)]
 end
 
-function _root(graph::DataGraph)
-  @assert is_directed(graph) && is_tree(undirected_graph(underlying_graph(graph)))
+"""
+Return the root vertex of a directed tree data graph
+"""
+@traitfn function _root(graph::AbstractDataGraph::IsDirected)
+  @assert is_tree(undirected_graph(underlying_graph(graph)))
   v = vertices(graph)[1]
   while parent_vertex(graph, v) != nothing
     v = parent_vertex(graph, v)
@@ -37,8 +40,11 @@ function _root(graph::DataGraph)
   return v
 end
 
-function _is_directed_binary_tree(graph::DataGraph)
-  if !is_directed(graph) || !(is_tree(undirected_graph(underlying_graph(graph))))
+"""
+Check if a data graph is a directed binary tree
+"""
+@traitfn function _is_directed_binary_tree(graph::AbstractDataGraph::IsDirected)
+  if !is_tree(undirected_graph(underlying_graph(graph)))
     return false
   end
   for v in vertices(graph)
