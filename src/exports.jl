@@ -98,8 +98,8 @@ export AbstractITensorNetwork,
   tdvp,
   to_vec
 
-# ITensorNetworks: binary_tree_partition.jl
-export binary_tree_partition
+# ITensorNetworks: mincut.jl
+export path_graph_structure, binary_tree_structure
 
 # ITensorNetworks: lattices.jl
 # TODO: DELETE

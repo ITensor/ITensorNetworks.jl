@@ -28,6 +28,27 @@ function _root_union!(s::DisjointSets, x, y; left_root=true)
   return s.revmap[_introot_union!(s.internal, s.intmap[x], s.intmap[y]; left_root=true)]
 end
 
+function _root(graph::DataGraph)
+  @assert is_directed(graph) && is_tree(undirected_graph(underlying_graph(graph)))
+  v = vertices(graph)[1]
+  while parent_vertex(graph, v) != nothing
+    v = parent_vertex(graph, v)
+  end
+  return v
+end
+
+function _is_directed_binary_tree(graph::DataGraph)
+  if !is_directed(graph) || !(is_tree(undirected_graph(underlying_graph(graph))))
+    return false
+  end
+  for v in vertices(graph)
+    if !is_leaf(graph, v) && length(child_vertices(graph, v)) != 2
+      return false
+    end
+  end
+  return true
+end
+
 """
 Partition the input network containing both `tn` and `deltas` (a vector of delta tensors)
 into two partitions, one adjacent to source_inds and the other adjacent to other external
@@ -134,31 +155,43 @@ Note: in the output partition, tensor vertex names will be changed. For a given 
 Note: for a given binary tree with n indices, the output partition will contain 2n-1 vertices,
   with each leaf vertex corresponding to a sub tn adjacent to one output index. Keeping these
   leaf vertices in the partition makes later `approx_itensornetwork` algorithms more efficient.
+Note: name of vertices in the output partition can be different from the name of vertices
+  in `inds_btree`.
 """
-function binary_tree_partition(tn::ITensorNetwork, inds_btree::Vector)
+function partition(
+  ::Algorithm"mincut_recursive_bisection", tn::ITensorNetwork, inds_btree::DataGraph
+)
+  @assert _is_directed_binary_tree(inds_btree)
   output_tns = Vector{ITensorNetwork}()
   output_deltas_vector = Vector{Vector{ITensor}}()
   # Mapping each vertex of the binary tree to a tn and a vector of deltas
   # representing the partition of the subtree containing this vertex and
   # its descendant vertices.
-  v_to_subtree_tn_deltas = Dict{Union{Vector,Index},Tuple}()
-  v_to_subtree_tn_deltas[inds_btree] = (tn, Vector{ITensor}())
-  for v in PreOrderDFS(inds_btree)
+  leaves = leaf_vertices(inds_btree)
+  root = _root(inds_btree)
+  v_to_subtree_tn_deltas = Dict{vertextype(inds_btree),Tuple}()
+  v_to_subtree_tn_deltas[root] = (tn, Vector{ITensor}())
+  for v in pre_order_dfs_vertices(inds_btree, root)
     @assert haskey(v_to_subtree_tn_deltas, v)
     input_tn, input_deltas = v_to_subtree_tn_deltas[v]
-    if v isa Index
+    if is_leaf(inds_btree, v)
       push!(output_tns, input_tn)
       push!(output_deltas_vector, input_deltas)
       continue
     end
+    c1, c2 = child_vertices(inds_btree, v)
+    descendant_c1 = pre_order_dfs_vertices(inds_btree, c1)
+    indices = [inds_btree[l] for l in intersect(descendant_c1, leaves)]
     tn1, deltas1, input_tn, input_deltas = _binary_partition(
-      input_tn, input_deltas, collect(Leaves(v[1]))
+      input_tn, input_deltas, indices
     )
-    v_to_subtree_tn_deltas[v[1]] = (tn1, deltas1)
+    v_to_subtree_tn_deltas[c1] = (tn1, deltas1)
+    descendant_c2 = pre_order_dfs_vertices(inds_btree, c2)
+    indices = [inds_btree[l] for l in intersect(descendant_c2, leaves)]
     tn1, deltas1, input_tn, input_deltas = _binary_partition(
-      input_tn, input_deltas, collect(Leaves(v[2]))
+      input_tn, input_deltas, indices
     )
-    v_to_subtree_tn_deltas[v[2]] = (tn1, deltas1)
+    v_to_subtree_tn_deltas[c2] = (tn1, deltas1)
     push!(output_tns, input_tn)
     push!(output_deltas_vector, input_deltas)
   end
@@ -181,4 +214,8 @@ function binary_tree_partition(tn::ITensorNetwork, inds_btree::Vector)
   end
   tn_deltas = ITensorNetwork(vcat(output_deltas_vector...))
   return partition(ITensorNetwork{Any}(disjoint_union(out_tn, tn_deltas)), subgraph_vs)
+end
+
+function partition(tn::ITensorNetwork, inds_btree::DataGraph; alg::String)
+  return partition(Algorithm(alg), tn, inds_btree)
 end
