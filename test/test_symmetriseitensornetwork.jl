@@ -1,10 +1,7 @@
 using ITensors
 using ITensorNetworks
 using ITensorNetworks:
-  compute_message_tensors,
-  nested_graph_leaf_vertices,
-  contract_inner,
-  symmetric_gauge
+  compute_message_tensors, nested_graph_leaf_vertices, contract_inner, symmetric_gauge
 using NamedGraphs
 using Test
 using Compat
