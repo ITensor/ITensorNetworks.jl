@@ -17,7 +17,7 @@ using SplitApplyCombine
 
   Random.seed!(5467)
   ψ = randomITensorNetwork(s; link_space=χ)
-  ψ_symm, ψ_symm_mts = symmetric_gauge(ψ)
+  ψ_symm, ψ_symm_mts = symmetric_gauge(ψ; niters = 50)
 
   #Test we just did a gauge transform and didn't change the overall network
   @test contract_inner(ψ_symm, ψ) /
@@ -27,11 +27,11 @@ using SplitApplyCombine
   vertex_groups = nested_graph_leaf_vertices(
     partition(ψψ_symm, group(v -> v[1], vertices(ψψ_symm)))
   )
-  ψ_symm_mts_V2 = compute_message_tensors(ψψ_symm; vertex_groups=vertex_groups)
+  ψ_symm_mts_V2 = compute_message_tensors(ψψ_symm; vertex_groups=vertex_groups, niters =50)
 
   for e in edges(ψ_symm_mts_V2)
-    #Test all message tensors are approximately diagonal (note tolerance is a bit dependent on how many iters used to compute mts)
+    #Test all message tensors are approximately diagonal
     m_e = ψ_symm_mts_V2[e]
-    @test diagITensor(vector(diag(m_e)), inds(m_e)) ≈ m_e atol = 4e-3
+    @test diagITensor(vector(diag(m_e)), inds(m_e)) ≈ m_e atol = 1e-8
   end
 end
