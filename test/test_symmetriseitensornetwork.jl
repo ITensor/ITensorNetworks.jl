@@ -4,7 +4,7 @@ using ITensorNetworks:
   compute_message_tensors,
   nested_graph_leaf_vertices,
   contract_inner,
-  symmetrise_itensornetwork
+  symmetric_gauge
 using NamedGraphs
 using Test
 using Compat
@@ -20,7 +20,7 @@ using SplitApplyCombine
 
   Random.seed!(5467)
   ψ = randomITensorNetwork(s; link_space=χ)
-  ψ_symm, ψ_symm_mts = symmetrise_itensornetwork(ψ)
+  ψ_symm, ψ_symm_mts = symmetric_gauge(ψ)
 
   #Test we just did a gauge transform and didn't change the overall network
   @test contract_inner(ψ_symm, ψ) /
