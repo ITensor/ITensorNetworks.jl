@@ -1,4 +1,5 @@
 using Dictionaries
+using Distributions
 using GraphsFlows
 using ITensors
 using ITensorNetworks
@@ -110,6 +111,14 @@ using Test
     @test Base.eltype(ψ[first(vertices(ψ))]) == eltype
     ψ = ITensorNetwork(undef, g)
     @test Base.eltype(ψ[first(vertices(ψ))]) == Float64
+  end
+
+  @testset "randomITensorNetwork with custom distributions" begin
+    distribution = Uniform(-1.0, 1.0)
+    tn = randomITensorNetwork(distribution, named_grid(4); link_space=2)
+    # Note: distributions in package `Distributions` currently doesn't support customized
+    # eltype, and all elements have type `Float64`
+    @test Base.eltype(tn[first(vertices(tn))]) == Float64
   end
 
   @testset "orthogonalize" begin
