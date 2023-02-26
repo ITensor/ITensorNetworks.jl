@@ -98,8 +98,8 @@ export AbstractITensorNetwork,
   tdvp,
   to_vec
 
-# ITensorNetworks: binary_tree_partition.jl
-export binary_tree_partition
+# ITensorNetworks: mincut.jl
+export path_graph_structure, binary_tree_structure
 
 # ITensorNetworks: approx_itensornetwork.jl
 export approx_binary_tree_itensornetwork

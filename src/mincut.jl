@@ -2,6 +2,36 @@
 MAX_WEIGHT = 1e32
 
 """
+Outputs a maximimally unbalanced directed binary tree DataGraph defining the desired graph structure
+"""
+function path_graph_structure(tn::ITensorNetwork)
+  return path_graph_structure(tn, noncommoninds(Vector{ITensor}(tn)...))
+end
+
+"""
+Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a maximimally unbalanced
+directed binary tree DataGraph of `outinds` defining the desired graph structure
+"""
+function path_graph_structure(tn::ITensorNetwork, outinds::Vector{<:Index})
+  return _binary_tree_structure(tn, outinds; maximally_unbalanced=true)
+end
+
+"""
+Outputs a directed binary tree DataGraph defining the desired graph structure
+"""
+function binary_tree_structure(tn::ITensorNetwork)
+  return binary_tree_structure(tn, noncommoninds(Vector{ITensor}(tn)...))
+end
+
+"""
+Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a
+directed binary tree DataGraph of `outinds` defining the desired graph structure
+"""
+function binary_tree_structure(tn::ITensorNetwork, outinds::Vector{<:Index})
+  return _binary_tree_structure(tn, outinds; maximally_unbalanced=false)
+end
+
+"""
 Calculate the mincut between two subsets of the uncontracted inds
 (source_inds and terminal_inds) of the input tn.
 Mincut of two inds list is defined as the mincut of two newly added vertices,
@@ -87,36 +117,31 @@ function _maxweightoutinds_tn(tn::ITensorNetwork, outinds::Union{Nothing,Vector{
 end
 
 """
-Given a tn and outinds (a subset of noncommoninds of tn),
-get a binary tree structure of outinds that will be used in the binary tree partition.
+Given a tn and outinds (a subset of noncommoninds of tn), get a `DataGraph`
+with binary tree structure of outinds that will be used in the binary tree partition.
 If maximally_unbalanced=true, the binary tree will have a line/mps structure.
 The binary tree is recursively constructed from leaves to the root.
 
 Example:
 # TODO
 """
-function _binary_tree_partition_inds(
-  tn::ITensorNetwork,
-  outinds::Union{Nothing,Vector{<:Index}};
-  maximally_unbalanced::Bool=false,
+function _binary_tree_structure(
+  tn::ITensorNetwork, outinds::Vector{<:Index}; maximally_unbalanced::Bool=false
 )
-  if outinds == nothing
-    outinds = noncommoninds(Vector{ITensor}(tn)...)
-  end
+  inds_tree_vector = _binary_tree_partition_inds(
+    tn, outinds; maximally_unbalanced=maximally_unbalanced
+  )
+  return _nested_vector_to_directed_tree(inds_tree_vector)
+end
+
+function _binary_tree_partition_inds(
+  tn::ITensorNetwork, outinds::Vector{<:Index}; maximally_unbalanced::Bool=false
+)
   if length(outinds) == 1
     return outinds
   end
   maxweight_tn, out_to_maxweight_ind = _maxweightoutinds_tn(tn, outinds)
-  return __binary_tree_partition_inds(
-    tn => maxweight_tn, out_to_maxweight_ind; maximally_unbalanced=maximally_unbalanced
-  )
-end
-
-function __binary_tree_partition_inds(
-  tn_pair::Pair{<:ITensorNetwork,<:ITensorNetwork},
-  out_to_maxweight_ind::Dict{Index,Index};
-  maximally_unbalanced::Bool=false,
-)
+  tn_pair = tn => maxweight_tn
   if maximally_unbalanced == false
     return _binary_tree_partition_inds_mincut(tn_pair, out_to_maxweight_ind)
   else
@@ -124,6 +149,30 @@ function __binary_tree_partition_inds(
       _binary_tree_partition_inds_maximally_unbalanced(tn_pair, out_to_maxweight_ind)
     )
   end
+end
+
+function _nested_vector_to_directed_tree(inds_tree_vector::Vector)
+  if length(inds_tree_vector) == 1 && inds_tree_vector[1] isa Index
+    inds_btree = DataGraph(NamedDiGraph([1]), Index)
+    inds_btree[1] = inds_tree_vector[1]
+    return inds_btree
+  end
+  treenode_to_v = Dict{Union{Vector,Index},Int}()
+  graph = DataGraph(NamedDiGraph(), Index)
+  v = 1
+  for treenode in PostOrderDFS(inds_tree_vector)
+    add_vertex!(graph, v)
+    treenode_to_v[treenode] = v
+    if treenode isa Index
+      graph[v] = treenode
+    else
+      @assert length(treenode) == 2
+      add_edge!(graph, v, treenode_to_v[treenode[1]])
+      add_edge!(graph, v, treenode_to_v[treenode[2]])
+    end
+    v += 1
+  end
+  return graph
 end
 
 """

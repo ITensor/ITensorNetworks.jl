@@ -6,6 +6,7 @@ using Compat
 using DataGraphs
 using DataStructures
 using Dictionaries
+using Distributions
 using DocStringExtensions
 using Graphs
 using GraphsFlows
@@ -40,6 +41,7 @@ using ITensors:
   OneITensor,
   check_hascommoninds,
   commontags,
+  dim,
   orthocenter,
   ProjMPS,
   set_nsite!
