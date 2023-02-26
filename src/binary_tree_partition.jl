@@ -41,10 +41,11 @@ Return the root vertex of a directed tree data graph
 end
 
 """
-Check if a data graph is a directed binary tree
+Check if a named graph is a directed binary tree
+  TODO: we may want to move this to `NamedGraphs.jl`
 """
-@traitfn function _is_directed_binary_tree(graph::AbstractDataGraph::IsDirected)
-  if !is_tree(undirected_graph(underlying_graph(graph)))
+@traitfn function _is_directed_binary_tree(graph::AbstractNamedGraph::IsDirected)
+  if !is_tree(undirected_graph(graph))
     return false
   end
   for v in vertices(graph)
@@ -53,6 +54,14 @@ Check if a data graph is a directed binary tree
     end
   end
   return true
+end
+
+"""
+Check if a data graph is a directed binary tree
+  TODO: we may want to move this to `DataGraphs.jl`
+"""
+function _is_directed_binary_tree(graph::AbstractDataGraph)
+  return _is_directed_binary_tree(underlying_graph(graph))
 end
 
 """
@@ -218,7 +227,12 @@ function partition(
     end
   end
   tn_deltas = ITensorNetwork(vcat(output_deltas_vector...))
-  return partition(ITensorNetwork{Any}(disjoint_union(out_tn, tn_deltas)), subgraph_vs)
+  par = partition(ITensorNetwork{Any}(disjoint_union(out_tn, tn_deltas)), subgraph_vs)
+  name_map = Dict()
+  for (i, v) in enumerate(pre_order_dfs_vertices(inds_btree, root))
+    name_map[i] = v
+  end
+  return rename_vertices(par, name_map)
 end
 
 function partition(tn::ITensorNetwork, inds_btree::DataGraph; alg::String)

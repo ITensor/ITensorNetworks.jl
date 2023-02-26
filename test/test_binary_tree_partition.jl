@@ -1,6 +1,9 @@
 using ITensors
 using ITensorNetworks:
-  _mps_partition_inds_order, _mincut_partitions, _is_directed_binary_tree, _remove_non_leaf_deltas
+  _mps_partition_inds_order,
+  _mincut_partitions,
+  _is_directed_binary_tree,
+  _remove_non_leaf_deltas
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")
@@ -50,7 +53,7 @@ end
   end
 end
 
-@testset "test binary_tree_partition and approx_binary_tree_itensornetwork" begin
+@testset "test binary_tree_partition and approx_itensornetwork" begin
   i = Index(2, "i")
   j = Index(2, "j")
   k = Index(2, "k")
@@ -67,44 +70,14 @@ end
   network2 = vcat(networks...)
   out2 = contract(network2...)
   @test isapprox(out1, out2)
-  # test approx_binary_tree_itensornetwork
-  approx_tn, lognorm = approx_binary_tree_itensornetwork(tn, inds_btree)
+  # test approx_itensornetwork
+  approx_tn, lognorm = approx_itensornetwork(
+    tn, binary_tree_structure; alg="density_matrix"
+  )
   network3 = Vector{ITensor}(approx_tn)
   out3 = contract(network3...) * exp(lognorm)
   i1 = noncommoninds(network...)
   i3 = noncommoninds(network3...)
   @test (length(i1) == length(i3))
   @test isapprox(out1, out3)
-end
-
-@testset "test _approx_binary_tree_itensornetwork" begin
-  i = Index(2, "i")
-  j = Index(2, "j")
-  k = Index(2, "k")
-  l = Index(2, "l")
-  m = Index(2, "m")
-  n = Index(2, "n")
-  o = Index(2, "o")
-  p = Index(2, "p")
-  q = Index(2, "q")
-  r = Index(2, "r")
-  s = Index(2, "s")
-  t = Index(2, "t")
-  u = Index(2, "u")
-  A = randomITensor(i, n)
-  B = randomITensor(j, o)
-  AB = randomITensor(n, o, r)
-  C = randomITensor(k, p)
-  D = randomITensor(l, q)
-  E = randomITensor(m, u)
-  CD = randomITensor(p, q, s)
-  ABCD = randomITensor(r, s, t)
-  ABCDE = randomITensor(t, u)
-  tensors = [A, B, C, D, E, AB, CD, ABCD, ABCDE]
-  tn = ITensorNetwork(tensors)
-  par = partition(ITensorNetwork{Any}(tn), [[1, 2, 6], [3, 4, 7], [8], [5, 9]])
-  approx_tn, log_norm = _approx_binary_tree_itensornetwork(par)
-  network = Vector{ITensor}(approx_tn)
-  out = contract(network...) * exp(log_norm)
-  @test isapprox(out, contract(tensors...))
 end

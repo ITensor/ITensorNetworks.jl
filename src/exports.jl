@@ -102,7 +102,7 @@ export AbstractITensorNetwork,
 export path_graph_structure, binary_tree_structure
 
 # ITensorNetworks: approx_itensornetwork.jl
-export approx_binary_tree_itensornetwork
+export approx_itensornetwork
 
 # ITensorNetworks: lattices.jl
 # TODO: DELETE

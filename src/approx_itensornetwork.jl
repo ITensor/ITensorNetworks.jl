@@ -467,11 +467,16 @@ Approximate a `binary_tree_partition` into an output ITensorNetwork
 with the same binary tree structure. `root` is the root vertex of the
 pre-order depth-first-search traversal used to perform the truncations.
 """
-function _approx_binary_tree_itensornetwork(
-  binary_tree_partition::DataGraph; root=1, cutoff=1e-15, maxdim=10000
+function approx_itensornetwork(
+  ::Algorithm"density_matrix",
+  binary_tree_partition::DataGraph;
+  root,
+  cutoff=1e-15,
+  maxdim=10000,
 )
   @assert is_tree(binary_tree_partition)
   @assert root in vertices(binary_tree_partition)
+  @assert _is_directed_binary_tree(dfs_tree(binary_tree_partition, root))
   # The `binary_tree_partition` may contain multiple delta tensors to make sure
   # the partition has a binary tree structure. These delta tensors could hurt the
   # performance when computing density matrices so we remove them first.
@@ -486,33 +491,59 @@ function _approx_binary_tree_itensornetwork(
 end
 
 """
-Approximate a given ITensorNetwork `tn` into an output ITensorNetwork with a binary tree structure.
-The binary tree structure is automatically chosen based on `_binary_tree_partition_inds`.
-If `maximally_unbalanced=true`, the binary tree will have a line/mps structure.
+Approximate a given ITensorNetwork `tn` into an output ITensorNetwork with `output_structure`.
+`output_structure` outputs a directed binary tree DataGraph defining the desired graph structure.
 """
-function approx_binary_tree_itensornetwork(
-  tn::ITensorNetwork; cutoff=1e-15, maxdim=10000, maximally_unbalanced=false
+function approx_itensornetwork(
+  ::Algorithm"density_matrix",
+  tn::ITensorNetwork,
+  output_structure::Function=path_graph_structure;
+  cutoff,
+  maxdim,
 )
-  inds_btree = _binary_tree_partition_inds(
-    tn, nothing; maximally_unbalanced=maximally_unbalanced
+  inds_btree = output_structure(tn)
+  return approx_itensornetwork(
+    tn, inds_btree; alg="density_matrix", cutoff=cutoff, maxdim=maxdim
   )
-  return approx_binary_tree_itensornetwork(tn, inds_btree; cutoff=cutoff, maxdim=maxdim)
 end
 
 """
-Approximate a given ITensorNetwork `tn` into an output ITensorNetwork with a binary tree structure.
-The binary tree structure is defined based on `inds_btree`, which is a nested vector of indices.
+Approximate a given ITensorNetwork `tn` into an output ITensorNetwork
+with a binary tree structure. The binary tree structure is defined based
+on `inds_btree`, which is a directed binary tree DataGraph of indices.
 """
-function approx_binary_tree_itensornetwork(
-  tn::ITensorNetwork, inds_btree::Vector; cutoff=1e-15, maxdim=10000
+function approx_itensornetwork(
+  ::Algorithm"density_matrix",
+  tn::ITensorNetwork,
+  inds_btree::DataGraph;
+  cutoff=1e-15,
+  maxdim=10000,
 )
-  par = binary_tree_partition(tn, inds_btree)
-  output_tn, log_root_norm = _approx_binary_tree_itensornetwork(
-    par; root=1, cutoff=cutoff, maxdim=maxdim
+  par = partition(tn, inds_btree; alg="mincut_recursive_bisection")
+  output_tn, log_root_norm = approx_itensornetwork(
+    par; alg="density_matrix", root=_root(inds_btree), cutoff=cutoff, maxdim=maxdim
   )
   # Each leaf vertex in `output_tn` is adjacent to one output index.
   # We remove these leaf vertices so that each non-root vertex in `output_tn`
   # is an order 3 tensor.
   _rem_leaf_vertices!(output_tn; root=1)
   return output_tn, log_root_norm
+end
+
+function approx_itensornetwork(
+  partitioned_tn::DataGraph; alg::String, root, cutoff=1e-15, maxdim=10000
+)
+  return approx_itensornetwork(Algorithm(alg), partitioned_tn; root, cutoff, maxdim)
+end
+
+function approx_itensornetwork(
+  tn::ITensorNetwork, inds_btree::DataGraph; alg::String, cutoff=1e-15, maxdim=10000
+)
+  return approx_itensornetwork(Algorithm(alg), tn, inds_btree; cutoff, maxdim)
+end
+
+function approx_itensornetwork(
+  tn::ITensorNetwork, output_structure::Function; alg::String, cutoff=1e-15, maxdim=10000
+)
+  return approx_itensornetwork(Algorithm(alg), tn, output_structure; cutoff, maxdim)
 end
