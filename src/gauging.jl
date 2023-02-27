@@ -21,7 +21,6 @@ function symmetric_gauge(
 
     X_D, X_U = eigen(mts[s1 => s2]; ishermitian=true, cutoff=eigen_message_tensor_cutoff)
     Y_D, Y_U = eigen(mts[s2 => s1]; ishermitian=true, cutoff=eigen_message_tensor_cutoff)
-
     X_D, Y_D = map_diag(x -> x + regularization, X_D),
     map_diag(x -> x + regularization, Y_D)
 
@@ -42,7 +41,7 @@ function symmetric_gauge(
 
     ψsymm[vsrc] = replaceinds(ψsymm[vsrc] * U * rootS, commoninds(S, V), edge_ind)
     ψsymm[vdst] = replaceinds(ψsymm[vdst], edge_ind, edge_ind_sim)
-    ψsymm[vdst] = replaceinds(ψsymm[vdst] * dag(rootS * V), commoninds(U, S), edge_ind)
+    ψsymm[vdst] = replaceinds(ψsymm[vdst] * rootS * V, commoninds(U, S), edge_ind)
 
     S = replaceinds(
       S, [commoninds(S, U)..., commoninds(S, V)...] => [edge_ind..., prime(edge_ind)...]
