@@ -199,14 +199,18 @@ end
 """
 Contract of a vector of tensors, `network`, with a contraction sequence generated via sa_bipartite
 """
-function _optcontract(network::Vector)
+function _optcontract(
+  network::Vector; contraction_sequence_alg="optimal", contraction_sequence_kwargs=(;)
+)
   @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: _optcontract" begin
     if length(network) == 0
       return ITensor(1.0)
     end
     @assert network isa Vector{ITensor}
     @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: contraction_sequence" begin
-      seq = contraction_sequence(network; alg="sa_bipartite")
+      seq = contraction_sequence(
+        network; alg=contraction_sequence_alg, contraction_sequence_kwargs...
+      )
     end
     output = contract(network; sequence=seq)
     return output
@@ -253,14 +257,22 @@ Return the partial density matrix whose root is `v` and root child is `child_v`.
 If the tensor is in `partial_dms`, just return the tensor without contraction.
 """
 function _get_pdm(
-  partial_dms::Vector{_PartialDensityMatrix}, v, child_v, child_dm_tensor, network
+  partial_dms::Vector{_PartialDensityMatrix},
+  v,
+  child_v,
+  child_dm_tensor,
+  network;
+  contraction_sequence_alg,
+  contraction_sequence_kwargs,
 )
   for partial_dm in partial_dms
     if partial_dm.child == child_v
       return partial_dm
     end
   end
-  tensor = _optcontract([child_dm_tensor, network...])
+  tensor = _optcontract(
+    [child_dm_tensor, network...]; contraction_sequence_alg, contraction_sequence_kwargs
+  )
   return _PartialDensityMatrix(tensor, v, child_v)
 end
 
@@ -279,7 +291,9 @@ function _update!(
   children::Vector,
   root::Union{<:Number,Tuple},
   network::Vector{ITensor},
-  inds_to_sim,
+  inds_to_sim;
+  contraction_sequence_alg,
+  contraction_sequence_kwargs,
 )
   if haskey(caches.v_to_cdm, v) && caches.v_to_cdm[v].children == children && v != root
     @assert haskey(caches.v_to_cdm, v)
@@ -290,18 +304,33 @@ function _update!(
     caches.v_to_cpdms[v] = []
   end
   cpdms = [
-    _get_pdm(caches.v_to_cpdms[v], v, child_v, dm_tensor, network) for
-    (child_v, dm_tensor) in child_to_dm
+    _get_pdm(
+      caches.v_to_cpdms[v],
+      v,
+      child_v,
+      dm_tensor,
+      network;
+      contraction_sequence_alg,
+      contraction_sequence_kwargs,
+    ) for (child_v, dm_tensor) in child_to_dm
   ]
   if length(cpdms) == 0
     sim_network = map(x -> replaceinds(x, inds_to_sim), network)
-    density_matrix = _optcontract([network..., sim_network...])
+    density_matrix = _optcontract(
+      [network..., sim_network...]; contraction_sequence_alg, contraction_sequence_kwargs
+    )
   elseif length(cpdms) == 1
     sim_network = map(x -> replaceinds(x, inds_to_sim), network)
-    density_matrix = _optcontract([cpdms[1].tensor, sim_network...])
+    density_matrix = _optcontract(
+      [cpdms[1].tensor, sim_network...];
+      contraction_sequence_alg,
+      contraction_sequence_kwargs,
+    )
   else
     simtensor = _sim(cpdms[2].tensor, inds_to_sim)
-    density_matrix = _optcontract([cpdms[1].tensor, simtensor])
+    density_matrix = _optcontract(
+      [cpdms[1].tensor, simtensor]; contraction_sequence_alg, contraction_sequence_kwargs
+    )
   end
   caches.v_to_cdm[v] = _DensityMatrix(density_matrix, v, children)
   caches.v_to_cpdms[v] = cpdms
@@ -333,7 +362,14 @@ Example:
      | |   \
   and the returned tensor `U` will be the projector at vertex 4 in the output tn.
 """
-function _rem_vertex!(alg_graph::_DensityMartrixAlgGraph, root; kwargs...)
+function _rem_vertex!(
+  alg_graph::_DensityMartrixAlgGraph,
+  root;
+  cutoff,
+  maxdim,
+  contraction_sequence_alg,
+  contraction_sequence_kwargs,
+)
   caches = alg_graph.caches
   outinds_root_to_sim = _densitymatrix_outinds_to_sim(alg_graph.partition, root)
   inds_to_sim = merge(alg_graph.innerinds_to_sim, outinds_root_to_sim)
@@ -343,16 +379,30 @@ function _rem_vertex!(alg_graph::_DensityMartrixAlgGraph, root; kwargs...)
     children = sort(child_vertices(dm_dfs_tree, v))
     @assert length(children) <= 2
     network = Vector{ITensor}(alg_graph.partition[v])
-    _update!(caches, v, children, root, Vector{ITensor}(network), inds_to_sim)
+    _update!(
+      caches,
+      v,
+      children,
+      root,
+      Vector{ITensor}(network),
+      inds_to_sim;
+      contraction_sequence_alg,
+      contraction_sequence_kwargs,
+    )
   end
   U = _get_low_rank_projector(
     caches.v_to_cdm[root].tensor,
     collect(values(outinds_root_to_sim)),
     collect(keys(outinds_root_to_sim));
-    kwargs...,
+    cutoff,
+    maxdim,
   )
   # update partition and out_tree
-  root_tensor = _optcontract([Vector{ITensor}(alg_graph.partition[root])..., U])
+  root_tensor = _optcontract(
+    [Vector{ITensor}(alg_graph.partition[root])..., U];
+    contraction_sequence_alg,
+    contraction_sequence_kwargs,
+  )
   new_root = child_vertices(dm_dfs_tree, root)[1]
   new_tn = disjoint_union(alg_graph.partition[new_root], ITensorNetwork([root_tensor]))
   alg_graph.partition[new_root] = ITensorNetwork{Any}(new_tn)
@@ -366,8 +416,13 @@ function _rem_vertex!(alg_graph::_DensityMartrixAlgGraph, root; kwargs...)
   )
   @assert length(caches.v_to_cpdms[new_root]) <= 1
   caches.v_to_cpdms[new_root] = [
-    _PartialDensityMatrix(_optcontract([cpdm.tensor, root_tensor]), new_root, cpdm.child)
-    for cpdm in caches.v_to_cpdms[new_root]
+    _PartialDensityMatrix(
+      _optcontract(
+        [cpdm.tensor, root_tensor]; contraction_sequence_alg, contraction_sequence_kwargs
+      ),
+      new_root,
+      cpdm.child,
+    ) for cpdm in caches.v_to_cpdms[new_root]
   ]
   return U
 end
@@ -378,12 +433,16 @@ with root `root` without changing the tensor represented by tn.
 In particular, the tensor of each leaf vertex is contracted with the tensor of its parent vertex
 to keep the tensor unchanged.
 """
-function _rem_leaf_vertices!(tn::ITensorNetwork; root=1)
+function _rem_leaf_vertices!(
+  tn::ITensorNetwork; root=1, contraction_sequence_alg, contraction_sequence_kwargs
+)
   dfs_t = dfs_tree(tn, root)
   leaves = leaf_vertices(dfs_t)
   parents = [parent_vertex(dfs_t, leaf) for leaf in leaves]
   for (l, p) in zip(leaves, parents)
-    tn[p] = _optcontract([tn[p], tn[l]])
+    tn[p] = _optcontract(
+      [tn[p], tn[l]]; contraction_sequence_alg, contraction_sequence_kwargs
+    )
     rem_vertex!(tn, l)
   end
 end
@@ -443,19 +502,29 @@ Approximate a `partition` into an output ITensorNetwork
 with the binary tree structure defined by `out_tree`.
 """
 function _approx_binary_tree_itensornetwork!(
-  partition::DataGraph, out_tree::NamedGraph; root=1, cutoff=1e-15, maxdim=10000
+  partition::DataGraph,
+  out_tree::NamedGraph;
+  root=1,
+  cutoff=1e-15,
+  maxdim=10000,
+  contraction_sequence_alg,
+  contraction_sequence_kwargs,
 )
   @assert sort(vertices(partition)) == sort(vertices(out_tree))
   alg_graph = _DensityMartrixAlgGraph(partition, out_tree, root)
   output_tn = ITensorNetwork()
   for v in post_order_dfs_vertices(out_tree, root)[1:(end - 1)]
-    U = _rem_vertex!(alg_graph, v; cutoff=cutoff, maxdim=maxdim)
+    U = _rem_vertex!(
+      alg_graph, v; cutoff, maxdim, contraction_sequence_alg, contraction_sequence_kwargs
+    )
     add_vertex!(output_tn, v)
     output_tn[v] = U
   end
   @assert length(vertices(partition)) == 1
   add_vertex!(output_tn, root)
-  root_tensor = _optcontract(Vector{ITensor}(partition[root]))
+  root_tensor = _optcontract(
+    Vector{ITensor}(partition[root]); contraction_sequence_alg, contraction_sequence_kwargs
+  )
   root_norm = norm(root_tensor)
   root_tensor /= root_norm
   output_tn[root] = root_tensor
@@ -473,6 +542,8 @@ function approx_itensornetwork(
   root,
   cutoff=1e-15,
   maxdim=10000,
+  contraction_sequence_alg,
+  contraction_sequence_kwargs,
 )
   @assert is_tree(binary_tree_partition)
   @assert root in vertices(binary_tree_partition)
@@ -484,9 +555,11 @@ function approx_itensornetwork(
   return _approx_binary_tree_itensornetwork!(
     partition_wo_deltas,
     underlying_graph(binary_tree_partition);
-    root=root,
-    cutoff=cutoff,
-    maxdim=maxdim,
+    root,
+    cutoff,
+    maxdim,
+    contraction_sequence_alg,
+    contraction_sequence_kwargs,
   )
 end
 
@@ -500,10 +573,18 @@ function approx_itensornetwork(
   output_structure::Function=path_graph_structure;
   cutoff,
   maxdim,
+  contraction_sequence_alg,
+  contraction_sequence_kwargs,
 )
   inds_btree = output_structure(tn)
   return approx_itensornetwork(
-    tn, inds_btree; alg="density_matrix", cutoff=cutoff, maxdim=maxdim
+    tn,
+    inds_btree;
+    alg="density_matrix",
+    cutoff=cutoff,
+    maxdim=maxdim,
+    contraction_sequence_alg=contraction_sequence_alg,
+    contraction_sequence_kwargs=contraction_sequence_kwargs,
   )
 end
 
@@ -518,32 +599,87 @@ function approx_itensornetwork(
   inds_btree::DataGraph;
   cutoff=1e-15,
   maxdim=10000,
+  contraction_sequence_alg="optimal",
+  contraction_sequence_kwargs=(;),
 )
   par = partition(tn, inds_btree; alg="mincut_recursive_bisection")
   output_tn, log_root_norm = approx_itensornetwork(
-    par; alg="density_matrix", root=_root(inds_btree), cutoff=cutoff, maxdim=maxdim
+    par;
+    alg="density_matrix",
+    root=_root(inds_btree),
+    cutoff=cutoff,
+    maxdim=maxdim,
+    contraction_sequence_alg=contraction_sequence_alg,
+    contraction_sequence_kwargs=contraction_sequence_kwargs,
   )
   # Each leaf vertex in `output_tn` is adjacent to one output index.
   # We remove these leaf vertices so that each non-root vertex in `output_tn`
   # is an order 3 tensor.
-  _rem_leaf_vertices!(output_tn; root=1)
+  _rem_leaf_vertices!(
+    output_tn;
+    root=_root(inds_btree),
+    contraction_sequence_alg=contraction_sequence_alg,
+    contraction_sequence_kwargs=contraction_sequence_kwargs,
+  )
   return output_tn, log_root_norm
 end
 
 function approx_itensornetwork(
-  partitioned_tn::DataGraph; alg::String, root, cutoff=1e-15, maxdim=10000
+  partitioned_tn::DataGraph;
+  alg::String,
+  root,
+  cutoff=1e-15,
+  maxdim=10000,
+  contraction_sequence_alg="optimal",
+  contraction_sequence_kwargs=(;),
 )
-  return approx_itensornetwork(Algorithm(alg), partitioned_tn; root, cutoff, maxdim)
+  return approx_itensornetwork(
+    Algorithm(alg),
+    partitioned_tn;
+    root,
+    cutoff,
+    maxdim,
+    contraction_sequence_alg,
+    contraction_sequence_kwargs,
+  )
 end
 
 function approx_itensornetwork(
-  tn::ITensorNetwork, inds_btree::DataGraph; alg::String, cutoff=1e-15, maxdim=10000
+  tn::ITensorNetwork,
+  inds_btree::DataGraph;
+  alg::String,
+  cutoff=1e-15,
+  maxdim=10000,
+  contraction_sequence_alg="optimal",
+  contraction_sequence_kwargs=(;),
 )
-  return approx_itensornetwork(Algorithm(alg), tn, inds_btree; cutoff, maxdim)
+  return approx_itensornetwork(
+    Algorithm(alg),
+    tn,
+    inds_btree;
+    cutoff,
+    maxdim,
+    contraction_sequence_alg,
+    contraction_sequence_kwargs,
+  )
 end
 
 function approx_itensornetwork(
-  tn::ITensorNetwork, output_structure::Function; alg::String, cutoff=1e-15, maxdim=10000
+  tn::ITensorNetwork,
+  output_structure::Function;
+  alg::String,
+  cutoff=1e-15,
+  maxdim=10000,
+  contraction_sequence_alg="optimal",
+  contraction_sequence_kwargs=(;),
 )
-  return approx_itensornetwork(Algorithm(alg), tn, output_structure; cutoff, maxdim)
+  return approx_itensornetwork(
+    Algorithm(alg),
+    tn,
+    output_structure;
+    cutoff,
+    maxdim,
+    contraction_sequence_alg,
+    contraction_sequence_kwargs,
+  )
 end

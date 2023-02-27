@@ -1,4 +1,4 @@
-using ITensors
+using ITensors, OMEinsumContractionOrders
 using ITensorNetworks:
   _mps_partition_inds_order,
   _mincut_partitions,
@@ -72,7 +72,7 @@ end
   @test isapprox(out1, out2)
   # test approx_itensornetwork
   approx_tn, lognorm = approx_itensornetwork(
-    tn, binary_tree_structure; alg="density_matrix"
+    tn, binary_tree_structure; alg="density_matrix", contraction_sequence_alg="sa_bipartite"
   )
   network3 = Vector{ITensor}(approx_tn)
   out3 = contract(network3...) * exp(lognorm)

@@ -20,7 +20,6 @@ using IterTools
 using KrylovKit: KrylovKit
 using NamedGraphs
 using Observers
-using OMEinsumContractionOrders
 using Printf
 using Requires
 using SimpleTraits

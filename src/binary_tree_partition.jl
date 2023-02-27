@@ -169,7 +169,7 @@ Note: in the output partition, tensor vertex names will be changed. For a given 
 Note: for a given binary tree with n indices, the output partition will contain 2n-1 vertices,
   with each leaf vertex corresponding to a sub tn adjacent to one output index. Keeping these
   leaf vertices in the partition makes later `approx_itensornetwork` algorithms more efficient.
-Note: name of vertices in the output partition can be different from the name of vertices
+Note: name of vertices in the output partition are the same as the name of vertices
   in `inds_btree`.
 """
 function partition(
