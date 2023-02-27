@@ -3,7 +3,7 @@ function symmetric_gauge(
   ψ::ITensorNetwork;
   eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
   regularization=10 * eps(real(scalartype(ψ))),
-  niters=30
+  niters=30,
 )
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
   vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1], vertices(ψψ))))
