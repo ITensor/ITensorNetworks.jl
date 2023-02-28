@@ -1,4 +1,4 @@
-using Graphs, NamedGraphs
+using NamedGraphs: add_edge!, add_vertex!, NamedDiGraph
 using ITensorNetworks: _root, _is_rooted, _is_rooted_directed_binary_tree
 
 @testset "test rooted directed graphs" begin
