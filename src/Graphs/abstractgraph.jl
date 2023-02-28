@@ -18,11 +18,6 @@ function internal_edges(g::AbstractGraph)
   return filter(e -> !is_leaf_edge(g, e), edges(g))
 end
 
-"""Get all vertices which are leaves of a graph"""
-function leaf_vertices(g::AbstractGraph)
-  return vertices(g)[findall(==(1), [is_leaf(g, v) for v in vertices(g)])]
-end
-
 """Get distance of a vertex from a leaf"""
 function distance_to_leaf(g::AbstractGraph, v)
   leaves = leaf_vertices(g)
