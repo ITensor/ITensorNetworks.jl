@@ -33,3 +33,35 @@ end
 function distance_from_roots(g::AbstractGraph, dist::Int64)
   return vertices(g)[findall(<=(dist), [distance_to_leaf(g, v) for v in vertices(g)])]
 end
+
+"""
+Return the root vertex of a rooted directed graph
+"""
+@traitfn function _root(graph::AbstractGraph::IsDirected)
+  @assert _is_rooted(graph) "the input $(graph) has to be rooted"
+  v = vertices(graph)[1]
+  while parent_vertex(graph, v) != nothing
+    v = parent_vertex(graph, v)
+  end
+  return v
+end
+
+@traitfn function _is_rooted(graph::AbstractGraph::IsDirected)
+  roots = [v for v in vertices(graph) if parent_vertex(graph, v) == nothing]
+  return length(roots) == 1
+end
+
+@traitfn function _is_rooted_directed_binary_tree(graph::AbstractGraph::IsDirected)
+  if !_is_rooted(graph)
+    return false
+  end
+  if !is_tree(undirected_graph(graph))
+    return false
+  end
+  for v in vertices(graph)
+    if length(child_vertices(graph, v)) > 2
+      return false
+    end
+  end
+  return true
+end
