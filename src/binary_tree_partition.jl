@@ -29,33 +29,6 @@ function _root_union!(s::DisjointSets, x, y; left_root=true)
 end
 
 """
-Return the root vertex of a directed tree data graph
-"""
-@traitfn function _root(graph::AbstractDataGraph::IsDirected)
-  @assert is_tree(undirected_graph(underlying_graph(graph)))
-  v = vertices(graph)[1]
-  while parent_vertex(graph, v) != nothing
-    v = parent_vertex(graph, v)
-  end
-  return v
-end
-
-"""
-Check if a data graph is a directed binary tree
-"""
-@traitfn function _is_directed_binary_tree(graph::AbstractDataGraph::IsDirected)
-  if !is_tree(undirected_graph(underlying_graph(graph)))
-    return false
-  end
-  for v in vertices(graph)
-    if !is_leaf(graph, v) && length(child_vertices(graph, v)) != 2
-      return false
-    end
-  end
-  return true
-end
-
-"""
 Partition the input network containing both `tn` and `deltas` (a vector of delta tensors)
 into two partitions, one adjacent to source_inds and the other adjacent to other external
 inds of the network.
@@ -167,7 +140,7 @@ Note: name of vertices in the output partition can be different from the name of
 function partition(
   ::Algorithm"mincut_recursive_bisection", tn::ITensorNetwork, inds_btree::DataGraph
 )
-  @assert _is_directed_binary_tree(inds_btree)
+  @assert _is_rooted_directed_binary_tree(inds_btree)
   output_tns = Vector{ITensorNetwork}()
   output_deltas_vector = Vector{Vector{ITensor}}()
   # Mapping each vertex of the binary tree to a tn and a vector of deltas

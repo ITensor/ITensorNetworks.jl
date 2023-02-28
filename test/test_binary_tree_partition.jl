@@ -1,6 +1,6 @@
 using ITensors
 using ITensorNetworks:
-  _mps_partition_inds_order, _mincut_partitions, _is_directed_binary_tree
+  _mps_partition_inds_order, _mincut_partitions, _is_rooted_directed_binary_tree
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")
@@ -17,7 +17,7 @@ using ITensorNetworks:
   tn = ITensorNetwork(M[:])
   for out in [binary_tree_structure(tn), path_graph_structure(tn)]
     @test out isa DataGraph
-    @test _is_directed_binary_tree(out)
+    @test _is_rooted_directed_binary_tree(out)
     @test length(vertex_data(out).values) == 8
   end
   out = _mps_partition_inds_order(tn, [o, p, i, j, k, l, m, n])
@@ -45,7 +45,7 @@ end
   tn = ITensorNetwork(vec(tn[:, :, 1]))
   for out in [binary_tree_structure(tn), path_graph_structure(tn)]
     @test out isa DataGraph
-    @test _is_directed_binary_tree(out)
+    @test _is_rooted_directed_binary_tree(out)
     @test length(vertex_data(out).values) == 9
   end
 end
