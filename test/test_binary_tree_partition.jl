@@ -1,5 +1,6 @@
 using ITensors, OMEinsumContractionOrders
 using ITensorNetworks:
+  _root,
   _mps_partition_inds_order,
   _mincut_partitions,
   _is_rooted_directed_binary_tree,
@@ -64,8 +65,9 @@ end
   network = M[:]
   out1 = contract(network...)
   tn = ITensorNetwork(network)
-  par = partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
-  par = _contract_deltas_ignore_leaf_partitions(par)
+  inds_btree = binary_tree_structure(tn)
+  par = partition(tn, inds_btree; alg="mincut_recursive_bisection")
+  par = _contract_deltas_ignore_leaf_partitions(par; root=_root(inds_btree))
   networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
   network2 = vcat(networks...)
   out2 = contract(network2...)

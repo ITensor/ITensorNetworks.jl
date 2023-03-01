@@ -171,7 +171,7 @@ end
 function _DensityMartrixAlgGraph(
   partition::DataGraph, out_tree::NamedGraph, root::Union{<:Number,Tuple}
 )
-  innerinds = _get_inner_inds(partition)
+  innerinds = _commoninds(partition)
   sim_innerinds = [sim(ind) for ind in innerinds]
   return _DensityMartrixAlgGraph(
     partition,
@@ -180,20 +180,6 @@ function _DensityMartrixAlgGraph(
     Dict(zip(innerinds, sim_innerinds)),
     _DensityMatrixAlgCaches(),
   )
-end
-
-function _get_inner_inds(partition::DataGraph)
-  networks = [Vector{ITensor}(partition[v]) for v in vertices(partition)]
-  network = vcat(networks...)
-  outinds = noncommoninds(network...)
-  allinds = mapreduce(t -> [i for i in inds(t)], vcat, network)
-  return Vector(setdiff(allinds, outinds))
-end
-
-function _get_out_inds(partition::DataGraph)
-  networks = [Vector{ITensor}(partition[v]) for v in vertices(partition)]
-  network = vcat(networks...)
-  return noncommoninds(network...)
 end
 
 """
@@ -229,7 +215,7 @@ end
 Returns a dict that maps the partition's outinds that are adjacent to `partition[root]` to siminds
 """
 function _densitymatrix_outinds_to_sim(partition, root)
-  outinds = _get_out_inds(partition)
+  outinds = _noncommoninds(partition)
   outinds_root = intersect(outinds, noncommoninds(Vector{ITensor}(partition[root])...))
   outinds_root_to_sim = Dict(zip(outinds_root, [sim(ind) for ind in outinds_root]))
   return outinds_root_to_sim
@@ -434,7 +420,10 @@ In particular, the tensor of each leaf vertex is contracted with the tensor of i
 to keep the tensor unchanged.
 """
 function _rem_leaf_vertices!(
-  tn::ITensorNetwork; root=1, contraction_sequence_alg, contraction_sequence_kwargs
+  tn::ITensorNetwork;
+  root=first(vertices(tn)),
+  contraction_sequence_alg,
+  contraction_sequence_kwargs,
 )
   dfs_t = dfs_tree(tn, root)
   leaves = leaf_vertices(dfs_t)
@@ -447,56 +436,6 @@ function _rem_leaf_vertices!(
   end
 end
 
-_is_delta(t) = (t.tensor.storage.data == 1.0)
-
-"""
-Given an input `partition`, remove redundent delta tensors in non-leaf vertices of
-`partition` without changing the tensor network value. `root` is the root of the
-dfs_tree that defines the leaves.
-"""
-function _remove_non_leaf_deltas(partition::DataGraph; root=1)
-  partition = copy(partition)
-  leaves = leaf_vertices(dfs_tree(partition, root))
-  # We only remove deltas in non-leaf vertices
-  nonleaf_vertices = setdiff(vertices(partition), leaves)
-  outinds = _get_out_inds(subgraph(partition, nonleaf_vertices))
-  all_deltas = mapreduce(
-    tn_v -> [
-      partition[tn_v][v] for v in vertices(partition[tn_v]) if _is_delta(partition[tn_v][v])
-    ],
-    vcat,
-    nonleaf_vertices,
-  )
-  if length(all_deltas) == 0
-    return partition
-  end
-  deltainds = collect(Set(mapreduce(t -> collect(inds(t)), vcat, all_deltas)))
-  ds = DisjointSets(deltainds)
-  for t in all_deltas
-    i1, i2 = inds(t)
-    if find_root!(ds, i1) in outinds
-      _root_union!(ds, find_root!(ds, i1), find_root!(ds, i2))
-    else
-      _root_union!(ds, find_root!(ds, i2), find_root!(ds, i1))
-    end
-  end
-  deltainds_to_sim = Dict(zip(deltainds, [find_root!(ds, ind) for ind in deltainds]))
-  for tn_v in nonleaf_vertices
-    tn = partition[tn_v]
-    nondelta_vertices = [v for v in vertices(tn) if !_is_delta(tn[v])]
-    tn = subgraph(tn, nondelta_vertices)
-    partition[tn_v] = map_data(t -> replaceinds(t, deltainds_to_sim), tn; edges=[])
-  end
-  # Note: we also need to change inds in the leaves since they can be connected by deltas
-  # in nonleaf vertices
-  for tn_v in leaves
-    partition[tn_v] = map_data(
-      t -> replaceinds(t, deltainds_to_sim), partition[tn_v]; edges=[]
-    )
-  end
-  return partition
-end
-
 """
 Approximate a `partition` into an output ITensorNetwork
 with the binary tree structure defined by `out_tree`.
@@ -504,7 +443,7 @@ with the binary tree structure defined by `out_tree`.
 function _approx_binary_tree_itensornetwork!(
   partition::DataGraph,
   out_tree::NamedGraph;
-  root=1,
+  root=first(vertices(partition)),
   cutoff=1e-15,
   maxdim=10000,
   contraction_sequence_alg,
@@ -547,11 +486,13 @@ function approx_itensornetwork(
 )
   @assert is_tree(binary_tree_partition)
   @assert root in vertices(binary_tree_partition)
-  @assert _is_directed_binary_tree(dfs_tree(binary_tree_partition, root))
+  @assert _is_rooted_directed_binary_tree(dfs_tree(binary_tree_partition, root))
   # The `binary_tree_partition` may contain multiple delta tensors to make sure
   # the partition has a binary tree structure. These delta tensors could hurt the
   # performance when computing density matrices so we remove them first.
-  partition_wo_deltas = _remove_non_leaf_deltas(binary_tree_partition; root=root)
+  partition_wo_deltas = _contract_deltas_ignore_leaf_partitions(
+    binary_tree_partition; root=root
+  )
   return _approx_binary_tree_itensornetwork!(
     partition_wo_deltas,
     underlying_graph(binary_tree_partition);

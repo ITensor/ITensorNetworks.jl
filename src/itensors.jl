@@ -57,7 +57,7 @@ function ITensors.replaceinds(tensor::ITensor, ind_to_newind::Dict{<:Index,<:Ind
   end
   out_inds = map(i -> ind_to_newind[i], subset_inds)
   return replaceinds(tensor, subset_inds => out_inds)
- end
+end
 
 is_delta(it::ITensor) = is_delta(ITensors.tensor(it))
 is_delta(t::ITensors.Tensor) = false
