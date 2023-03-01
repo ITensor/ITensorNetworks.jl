@@ -2,8 +2,8 @@ using ITensors, OMEinsumContractionOrders
 using ITensorNetworks:
   _mps_partition_inds_order,
   _mincut_partitions,
-  _is_directed_binary_tree,
-  _remove_non_leaf_deltas
+  _is_rooted_directed_binary_tree,
+  _contract_deltas_ignore_leaf_partitions
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")
@@ -20,7 +20,7 @@ using ITensorNetworks:
   tn = ITensorNetwork(M[:])
   for out in [binary_tree_structure(tn), path_graph_structure(tn)]
     @test out isa DataGraph
-    @test _is_directed_binary_tree(out)
+    @test _is_rooted_directed_binary_tree(out)
     @test length(vertex_data(out).values) == 8
   end
   out = _mps_partition_inds_order(tn, [o, p, i, j, k, l, m, n])
@@ -48,7 +48,7 @@ end
   tn = ITensorNetwork(vec(tn[:, :, 1]))
   for out in [binary_tree_structure(tn), path_graph_structure(tn)]
     @test out isa DataGraph
-    @test _is_directed_binary_tree(out)
+    @test _is_rooted_directed_binary_tree(out)
     @test length(vertex_data(out).values) == 9
   end
 end
@@ -65,7 +65,7 @@ end
   out1 = contract(network...)
   tn = ITensorNetwork(network)
   par = partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
-  par = _remove_non_leaf_deltas(par)
+  par = _contract_deltas_ignore_leaf_partitions(par)
   networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
   network2 = vcat(networks...)
   out2 = contract(network2...)
