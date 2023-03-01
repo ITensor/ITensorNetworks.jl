@@ -1,5 +1,6 @@
 using ITensors
-using ITensorNetworks: _contract_deltas, _noncommoninds
+using ITensorNetworks:
+  _contract_deltas, _contract_deltas_ignore_leaf_partitions, _noncommoninds
 
 @testset "test _contract_deltas over ITensorNetwork" begin
   is = [Index(2, string(i)) for i in 1:6]
@@ -26,7 +27,7 @@ end
   for inds_tree in [binary_tree_structure(tn), path_graph_structure(tn)]
     par = partition(tn, inds_tree; alg="mincut_recursive_bisection")
     root = 1
-    par_contract_deltas = _contract_deltas(par; root=root)
+    par_contract_deltas = _contract_deltas_ignore_leaf_partitions(par; root=root)
     @test Set(_noncommoninds(par)) == Set(_noncommoninds(par_contract_deltas))
     leaves = leaf_vertices(dfs_tree(par_contract_deltas, root))
     nonleaf_vertices = setdiff(vertices(par_contract_deltas), leaves)

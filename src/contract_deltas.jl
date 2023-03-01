@@ -35,6 +35,9 @@ If a disjoint set contains indices in `rootinds`, then one of such indices in `r
 must be the root of this set.
 """
 function _delta_inds_disjointsets(deltas::Vector{<:ITensor}, rootinds::Vector{<:Index})
+  if deltas == []
+    return DisjointSets()
+  end
   inds_list = map(t -> collect(inds(t)), deltas)
   deltainds = collect(Set(vcat(inds_list...)))
   ds = DisjointSets(deltainds)
@@ -117,40 +120,39 @@ function _noncommoninds(partition::DataGraph)
 end
 
 """
-Given an input `partition`, contract redundent delta tensors in `partition`
-without changing the tensor network value. `root` is the root of the
-dfs_tree that defines the leaves.
+Given an input `partition`, contract redundent delta tensors of non-leaf vertices
+in `partition` without changing the tensor network value.
+`root` is the root of the dfs_tree that defines the leaves.
 Note: for each vertex `v` of `partition`, the number of non-delta tensors
   in `partition[v]` will not be changed.
 Note: only delta tensors of non-leaf vertices will be contracted.
+Note: this function assumes that all noncommoninds of the partition are in leaf partitions.
 """
-function _contract_deltas(partition::DataGraph; root=1)
+function _contract_deltas_ignore_leaf_partitions(
+  partition::DataGraph; root=first(vertices(partition))
+)
   partition = copy(partition)
   leaves = leaf_vertices(dfs_tree(partition, root))
-  # We only remove deltas in non-leaf vertices
-  nonleaf_vertices = setdiff(vertices(partition), leaves)
-  rootinds = _noncommoninds(subgraph(partition, nonleaf_vertices))
-  all_deltas = mapreduce(
-    tn_v -> [
-      partition[tn_v][v] for v in vertices(partition[tn_v]) if is_delta(partition[tn_v][v])
-    ],
-    vcat,
-    nonleaf_vertices,
-  )
-  if length(all_deltas) == 0
-    return partition
-  end
-  ds = _delta_inds_disjointsets(Vector{ITensor}(all_deltas), rootinds)
-  deltainds = [ds...]
-  sim_deltainds = [find_root!(ds, ind) for ind in deltainds]
-  for tn_v in nonleaf_vertices
-    tn = partition[tn_v]
-    nondelta_vertices = [v for v in vertices(tn) if !is_delta(tn[v])]
-    tn = subgraph(tn, nondelta_vertices)
-    partition[tn_v] = map_data(t -> replaceinds(t, deltainds, sim_deltainds), tn; edges=[])
+  nonleaves = setdiff(vertices(partition), leaves)
+  rootinds = _noncommoninds(subgraph(partition, nonleaves))
+  # check rootinds are not noncommoninds of the partition
+  @assert intersect(rootinds, _noncommoninds(partition)) == []
+  nonleaves_tn = _contract_deltas(reduce(union, [partition[v] for v in nonleaves]))
+  nondelta_vs = filter(v -> !is_delta(nonleaves_tn[v]), vertices(nonleaves_tn))
+  for v in nonleaves
+    partition[v] = subgraph(nonleaves_tn, intersect(nondelta_vs, vertices(partition[v])))
   end
   # Note: we also need to change inds in the leaves since they can be connected by deltas
   # in nonleaf vertices
+  delta_vs = setdiff(vertices(nonleaves_tn), nondelta_vs)
+  if delta_vs == []
+    return partition
+  end
+  ds = _delta_inds_disjointsets(
+    Vector{ITensor}(subgraph(nonleaves_tn, delta_vs)), Vector{Index}()
+  )
+  deltainds = [ds...]
+  sim_deltainds = [find_root!(ds, ind) for ind in deltainds]
   for tn_v in leaves
     partition[tn_v] = map_data(
       t -> replaceinds(t, deltainds, sim_deltainds), partition[tn_v]; edges=[]
