@@ -1,4 +1,3 @@
-"""
 function _binary_partition(tn::ITensorNetwork, source_inds::Vector{<:Index})
   external_inds = noncommoninds(Vector{ITensor}(tn)...)
   # add delta tensor to each external ind
