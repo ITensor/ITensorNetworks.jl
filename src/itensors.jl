@@ -41,3 +41,9 @@ trivial_space(x::Index) = _trivial_space(x)
 trivial_space(x::Vector{<:Index}) = _trivial_space(x)
 trivial_space(x::ITensor) = trivial_space(inds(x))
 trivial_space(x::Tuple{Vararg{Index}}) = trivial_space(first(x))
+
+is_delta(it::ITensor) = is_delta(ITensors.tensor(it))
+is_delta(t::ITensors.Tensor) = false
+function is_delta(t::ITensors.NDTensors.UniformDiagTensor)
+  return isone(ITensors.NDTensors.getdiagindex(t, 1))
+end
