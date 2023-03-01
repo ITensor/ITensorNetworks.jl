@@ -85,7 +85,7 @@ function partition(
     end
   end
   tn_deltas = ITensorNetwork(vcat(output_deltas_vector...))
-  par = partition(ITensorNetwork{Any}(disjoint_union(out_tn, tn_deltas)), subgraph_vs)
+  par = partition(disjoint_union(out_tn, tn_deltas), subgraph_vs)
   name_map = Dict()
   for (i, v) in enumerate(pre_order_dfs_vertices(inds_btree, root))
     name_map[i] = v
