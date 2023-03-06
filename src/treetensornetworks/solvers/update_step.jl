@@ -126,11 +126,11 @@ end
 
 # draft for unification of different nsite and time direction updates
 
-function _extract_tensor(psi::AbstractTTN, pos::Vector)
+function make_local_tensor(psi::AbstractTTN, pos::Vector)
   return psi, prod(psi[v] for v in pos)
 end
 
-function _extract_tensor(psi::AbstractTTN, e::NamedEdge)
+function make_local_tensor(psi::AbstractTTN, e::NamedEdge)
   left_inds = uniqueinds(psi, e)
   U, S, V = svd(psi[src(e)], left_inds; lefttags=tags(psi, e), righttags=tags(psi, e))
   psi[src(e)] = U
@@ -183,7 +183,7 @@ function local_update(
   maxtruncerr,
 )
   psi = orthogonalize(psi, current_ortho(sweep_step)) # choose the one that is closest to previous ortho center?
-  psi, phi = _extract_tensor(psi, pos(sweep_step))
+  psi, phi = make_local_tensor(psi, pos(sweep_step))
   time_step = time_direction(sweep_step) * time_step
   PH = set_nsite(PH, nsite(sweep_step))
   PH = position(PH, psi, pos(sweep_step))
