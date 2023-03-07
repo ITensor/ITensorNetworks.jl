@@ -8,13 +8,18 @@ function update_step(
   kwargs...,
 )
   directions = ITensorNetworks.directions(order)
-  sub_time_steps = ITensorNetworks.sub_time_steps(order)
-  #sub_time_steps *= time_step
+  sub_time_steps = time_step * ITensorNetworks.sub_time_steps(order)
   info = nothing
   for substep in 1:length(sub_time_steps)
-    #psi, PH, info = update_sweep(directions[substep], solver, PH, sub_time_steps[substep], psi; current_time, substep, tdvp_order=order, kwargs...
     psi, PH, info = update_sweep(
-      directions[substep], solver, PH, time_step, psi; current_time, substep, tdvp_order=order, kwargs...
+      directions[substep],
+      solver,
+      PH,
+      psi;
+      current_time,
+      substep,
+      time_step=sub_time_steps[substep],
+      kwargs...,
     )
     current_time += sub_time_steps[substep]
   end
@@ -23,13 +28,11 @@ end
 
 isforward(direction::Base.ForwardOrdering) = true
 isforward(direction::Base.ReverseOrdering) = false
-isreverse(direction) = !isforward(direction)
 
 function update_sweep(
   direction::Base.Ordering,
   solver,
   PH,
-  time_step::Number,
   psi::AbstractTTN;
   current_time=0.0,
   normalize=false,
@@ -68,15 +71,7 @@ function update_sweep(
     direction, underlying_graph(PH), root_vertex, reverse_step; state=psi, kwargs...
   )
     psi, PH, current_time, spec, info = local_update(
-      solver,
-      PH,
-      psi,
-      sweep_step;
-      current_time,
-      outputlevel,
-      time_step, # TODO: handle time_step prefactor here?
-      normalize,
-      kwargs...
+      solver, PH, psi, sweep_step; current_time, outputlevel, normalize, kwargs...
     )
     maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
     if outputlevel >= 2
@@ -177,19 +172,21 @@ function local_update(
   time_step,
   normalize,
   noise,
-  kwargs...
+  kwargs...,
 )
   psi = orthogonalize(psi, current_ortho(sweep_step)) # choose the one that is closest to previous ortho center?
   psi, phi = extract_local_tensor(psi, pos(sweep_step))
-  #
-  # TODO: currently solver might be getting wrong direction, i.e. from the TDVPOrder
-  #       rather than the sweep_step
-  #       Why do we have both of these sources of direction?
-  #
-  #time_step = time_direction(sweep_step) * time_step
   PH = set_nsite(PH, nsite(sweep_step))
   PH = position(PH, psi, pos(sweep_step))
-  phi, info = solver(PH, time_step, phi; current_time, time_step, time_sign=time_direction(sweep_step), outputlevel, kwargs...)
+  phi, info = solver(
+    PH,
+    phi;
+    current_time,
+    time_step,
+    time_direction=time_direction(sweep_step),
+    outputlevel,
+    kwargs...,
+  )
   current_time += time_step
   normalize && (phi /= norm(phi))
   drho = nothing
@@ -198,13 +195,7 @@ function local_update(
     drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
   end
   psi, spec = insert_local_tensor(
-    psi,
-    phi,
-    pos(sweep_step);
-    eigen_perturbation=drho,
-    ortho,
-    normalize,
-    kwargs...
+    psi, phi, pos(sweep_step); eigen_perturbation=drho, ortho, normalize, kwargs...
   )
   return psi, PH, current_time, spec, info
 end
