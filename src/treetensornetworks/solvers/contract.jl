@@ -1,13 +1,10 @@
-function contract_solver(; kwargs...)
-  function solver(PH, psi; kws...)
-    v = ITensor(1.0)
-    for j in sites(PH)
-      v *= PH.psi0[j]
-    end
-    Hpsi0 = contract(PH, v)
-    return Hpsi0, nothing
+function contract_solver(PH, psi; kwargs...)
+  v = ITensor(1.0)
+  for j in sites(PH)
+    v *= PH.psi0[j]
   end
-  return solver
+  Hpsi0 = contract(PH, v)
+  return Hpsi0, nothing
 end
 
 function contract(
@@ -47,7 +44,7 @@ function contract(
   reverse_step = false
   PH = ProjTTNApply(tn2, tn1)
   psi = alternating_update(
-    contract_solver(; kwargs...), PH, init; nsweeps, reverse_step, kwargs...
+    contract_solver, PH, init; nsweeps, reverse_step, kwargs...
   )
 
   return psi
