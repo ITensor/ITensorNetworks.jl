@@ -35,6 +35,9 @@ function update_sweep(
   PH,
   psi::AbstractTTN;
   current_time=0.0,
+  cutoff=1E-16,
+  maxdim=typemax(Int),
+  mindim=1,
   normalize=false,
   nsite=2,
   outputlevel=0,
@@ -61,9 +64,6 @@ function update_sweep(
   end
 
   observer = get(kwargs, :observer!, nothing)
-  maxdim::Integer = get(kwargs, :maxdim, typemax(Int))
-  mindim::Integer = get(kwargs, :mindim, 1)
-  cutoff::Real = get(kwargs, :cutoff, 1E-16)
 
   maxtruncerr = 0.0
   info = nothing
@@ -71,7 +71,7 @@ function update_sweep(
     direction, underlying_graph(PH), root_vertex, reverse_step; state=psi, kwargs...
   )
     psi, PH, current_time, spec, info = local_update(
-      solver, PH, psi, sweep_step; current_time, outputlevel, normalize, kwargs...
+      solver, PH, psi, sweep_step; current_time, outputlevel, cutoff, maxdim, mindim, normalize, kwargs...
     )
     maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
     if outputlevel >= 2

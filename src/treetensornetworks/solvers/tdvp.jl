@@ -1,5 +1,3 @@
-using Printf
-
 function exponentiate_solver(; kwargs...)
   function solver(
     H,
