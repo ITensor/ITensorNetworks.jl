@@ -26,6 +26,9 @@ using Test
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
 
+    #
+    #TODO: exponentiate is now the default, so switch this to applyexp
+    #
     #Different backend solvers, default solver_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(
       H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate"

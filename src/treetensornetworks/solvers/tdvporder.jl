@@ -16,6 +16,10 @@ function directions(::TDVPOrder{2,direction}) where {direction}
 end
 sub_time_steps(::TDVPOrder{2}) = [1.0 / 2.0, 1.0 / 2.0]
 
+#
+# TODO: possible bug, shouldn't length(directions) here equal
+#       length(sub_time_steps) below? (I.e. both return a length 6 vector?)
+#
 function directions(::TDVPOrder{4,direction}) where {direction}
   return [direction, Base.ReverseOrdering(direction)]
 end
