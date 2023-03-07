@@ -1,27 +1,40 @@
 function exponentiate_solver(; kwargs...)
-  function solver(H, t, init; kws...)
+  function solver(H, t_ignore, init; ishermitian=true, issymmetric=true, solver_krylovdim=30, solver_maxiter=100, solver_outputlevel=0, solver_tol=1E-12, substep, tdvp_order, time_step, time_sign, kws...)
     solver_kwargs = (;
-      ishermitian=get(kwargs, :ishermitian, true),
-      issymmetric=get(kwargs, :issymmetric, true),
-      tol=get(kwargs, :solver_tol, 1E-12),
-      krylovdim=get(kwargs, :solver_krylovdim, 30),
-      maxiter=get(kwargs, :solver_maxiter, 100),
-      verbosity=get(kwargs, :solver_outputlevel, 0),
+      ishermitian,
+      issymmetric,
+      tol=solver_tol,
+      krylovdim=solver_krylovdim,
+      maxiter=solver_maxiter,
+      verbosity=solver_outputlevel,
       eager=true,
     )
-    psi, info = exponentiate(H, t, init; solver_kwargs...)
+
+    # Compute δt
+    dir = ITensorNetworks.directions(tdvp_order)
+    time_sign = dir[substep] == Base.Order.ForwardOrdering() ? +1 : -1
+    sub_time_step = ITensorNetworks.sub_time_steps(tdvp_order)
+    δt = time_step*time_sign*sub_time_step[substep]
+
+    psi, info = KrylovKit.exponentiate(H, δt, init; solver_kwargs...)
     return psi, info
   end
   return solver
 end
 
 function applyexp_solver(; kwargs...)
-  function solver(H, t, init; kws...)
-    tol_per_unit_time = get(kwargs, :solver_tol, 1E-8)
+  function solver(H, t_ignore, init; tdvp_order, solver_krylovdim=30, solver_outputlevel=0, solver_tol=1E-8, substep, time_step, kws...)
     solver_kwargs = (;
-      maxiter=get(kwargs, :solver_krylovdim, 30),
-      outputlevel=get(kwargs, :solver_outputlevel, 0),
+      maxiter=solver_krylovdim,
+      outputlevel=solver_outputlevel
     )
+
+    # compute t
+    dir = ITensorNetworks.directions(tdvp_order)
+    sub_time_step = ITensorNetworks.sub_time_steps(tdvp_order)
+    # TODO: need to add sign here!!!
+    t = time_step*sub_time_step
+
     #applyexp tol is absolute, compute from tol_per_unit_time:
     tol = abs(t) * tol_per_unit_time
     psi, info = applyexp(H, t, init; tol, solver_kwargs..., kws...)
@@ -61,7 +74,7 @@ function tdvp(
 )
   nsweeps = _compute_nsweeps(nsweeps, t, time_step)
   tdvp_order = TDVPOrder(order, Base.Forward)
-  return alternating_update(solver, H, init; nsweeps, time_step, kwargs...)
+  return alternating_update(solver, H, init; nsweeps, tdvp_order, time_step, kwargs...)
 end
 
 """
