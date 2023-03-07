@@ -1,5 +1,20 @@
+using Printf
+
 function exponentiate_solver(; kwargs...)
-  function solver(H, t_ignore, init; ishermitian=true, issymmetric=true, solver_krylovdim=30, solver_maxiter=100, solver_outputlevel=0, solver_tol=1E-12, substep, tdvp_order, time_step, time_sign, kws...)
+  function solver(
+    H,
+    init;
+    ishermitian=true,
+    issymmetric=true,
+    solver_krylovdim=30,
+    solver_maxiter=100,
+    solver_outputlevel=0,
+    solver_tol=1E-12,
+    substep,
+    time_step,
+    time_direction,
+    kws...,
+  )
     solver_kwargs = (;
       ishermitian,
       issymmetric,
@@ -10,11 +25,10 @@ function exponentiate_solver(; kwargs...)
       eager=true,
     )
 
-    # Compute δt
-    dir = ITensorNetworks.directions(tdvp_order)
-    time_sign = dir[substep] == Base.Order.ForwardOrdering() ? +1 : -1
-    sub_time_step = ITensorNetworks.sub_time_steps(tdvp_order)
-    δt = time_step*time_sign*sub_time_step[substep]
+    δt = time_step * time_direction
+
+    #@printf("Solver time_step = %s \n",time_step)
+    #@printf("  Substep %d Internal time step δt = %s \n",substep,δt)
 
     psi, info = KrylovKit.exponentiate(H, δt, init; solver_kwargs...)
     return psi, info
@@ -23,21 +37,25 @@ function exponentiate_solver(; kwargs...)
 end
 
 function applyexp_solver(; kwargs...)
-  function solver(H, t_ignore, init; tdvp_order, solver_krylovdim=30, solver_outputlevel=0, solver_tol=1E-8, substep, time_step, kws...)
-    solver_kwargs = (;
-      maxiter=solver_krylovdim,
-      outputlevel=solver_outputlevel
-    )
+  function solver(
+    H,
+    init;
+    tdvp_order,
+    solver_krylovdim=30,
+    solver_outputlevel=0,
+    solver_tol=1E-8,
+    substep,
+    time_step,
+    time_direction,
+    kws...,
+  )
+    solver_kwargs = (; maxiter=solver_krylovdim, outputlevel=solver_outputlevel)
 
-    # compute t
-    dir = ITensorNetworks.directions(tdvp_order)
-    sub_time_step = ITensorNetworks.sub_time_steps(tdvp_order)
-    # TODO: need to add sign here!!!
-    t = time_step*sub_time_step
+    δt = time_step * time_direction
 
     #applyexp tol is absolute, compute from tol_per_unit_time:
-    tol = abs(t) * tol_per_unit_time
-    psi, info = applyexp(H, t, init; tol, solver_kwargs..., kws...)
+    tol = abs(δt) * tol_per_unit_time
+    psi, info = applyexp(H, δt, init; tol, solver_kwargs..., kws...)
     return psi, info
   end
   return solver

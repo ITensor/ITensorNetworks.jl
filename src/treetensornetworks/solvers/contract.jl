@@ -1,5 +1,5 @@
 function contract_solver(; kwargs...)
-  function solver(PH, t, psi; kws...)
+  function solver(PH, psi; kws...)
     v = ITensor(1.0)
     for j in sites(PH)
       v *= PH.psi0[j]

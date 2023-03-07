@@ -27,7 +27,6 @@ function linsolve(
 )
   function linsolve_solver(
     P,
-    t,
     x₀;
     ishermitian=false,
     solver_tol=1E-14,
