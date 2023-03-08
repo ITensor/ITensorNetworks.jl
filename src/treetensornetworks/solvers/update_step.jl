@@ -71,7 +71,17 @@ function update_sweep(
     direction, underlying_graph(PH), root_vertex, reverse_step; state=psi, kwargs...
   )
     psi, PH, current_time, spec, info = local_update(
-      solver, PH, psi, sweep_step; current_time, outputlevel, cutoff, maxdim, mindim, normalize, kwargs...
+      solver,
+      PH,
+      psi,
+      sweep_step;
+      current_time,
+      outputlevel,
+      cutoff,
+      maxdim,
+      mindim,
+      normalize,
+      kwargs...,
     )
     maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
     if outputlevel >= 2

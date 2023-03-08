@@ -43,9 +43,7 @@ function contract(
 
   reverse_step = false
   PH = ProjTTNApply(tn2, tn1)
-  psi = alternating_update(
-    contract_solver, PH, init; nsweeps, reverse_step, kwargs...
-  )
+  psi = alternating_update(contract_solver, PH, init; nsweeps, reverse_step, kwargs...)
 
   return psi
 end
