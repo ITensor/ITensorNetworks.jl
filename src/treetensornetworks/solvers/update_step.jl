@@ -192,8 +192,7 @@ function local_update(
     PH,
     phi;
     current_time,
-    time_step,
-    time_direction=time_direction(sweep_step),
+    time_step=time_step * time_direction(sweep_step),
     outputlevel,
     kwargs...,
   )

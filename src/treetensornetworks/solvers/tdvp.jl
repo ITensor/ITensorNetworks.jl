@@ -10,7 +10,6 @@ function exponentiate_solver(; kwargs...)
     solver_tol=1E-12,
     substep,
     time_step,
-    time_direction,
     kws...,
   )
     solver_kwargs = (;
@@ -23,12 +22,7 @@ function exponentiate_solver(; kwargs...)
       eager=true,
     )
 
-    δt = time_step * time_direction
-
-    #@printf("Solver time_step = %s \n",time_step)
-    #@printf("  Substep %d Internal time step δt = %s \n",substep,δt)
-
-    psi, info = KrylovKit.exponentiate(H, δt, init; solver_kwargs...)
+    psi, info = KrylovKit.exponentiate(H, time_step, init; solver_kwargs...)
     return psi, info
   end
   return solver
@@ -44,16 +38,13 @@ function applyexp_solver(; kwargs...)
     solver_tol=1E-8,
     substep,
     time_step,
-    time_direction,
     kws...,
   )
     solver_kwargs = (; maxiter=solver_krylovdim, outputlevel=solver_outputlevel)
 
-    δt = time_step * time_direction
-
     #applyexp tol is absolute, compute from tol_per_unit_time:
-    tol = abs(δt) * tol_per_unit_time
-    psi, info = applyexp(H, δt, init; tol, solver_kwargs..., kws...)
+    tol = abs(time_step) * tol_per_unit_time
+    psi, info = applyexp(H, time_step, init; tol, solver_kwargs..., kws...)
     return psi, info
   end
   return solver
