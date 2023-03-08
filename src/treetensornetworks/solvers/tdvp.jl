@@ -62,12 +62,11 @@ function tdvp_solver(; solver_backend="exponentiate", kwargs...)
   end
 end
 
-function _compute_nsweeps(nsweeps, t, time_step)
-  if isinf(t) && isnothing(nsweeps)
-    nsweeps = 1
-  elseif !isnothing(nsweeps) && time_step != t
-    error("Cannot specify both nsweeps and a custom time_step in tdvp")
-  elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsweeps)
+function _compute_nsweeps(nsteps, t, time_step)
+  nsweeps = 1
+  if !isnothing(nsteps) && time_step != t
+    error("Cannot specify both nsteps and time_step in tdvp")
+  elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsteps)
     nsweeps = convert(Int, ceil(abs(t / time_step)))
     if !(nsweeps * time_step ≈ t)
       error("Time step $time_step not commensurate with total time t=$t")
@@ -77,9 +76,16 @@ function _compute_nsweeps(nsweeps, t, time_step)
 end
 
 function tdvp(
-  solver, H, t::Number, init::AbstractTTN; time_step=t, nsweeps=nothing, order=2, kwargs...
+  solver,
+  H,
+  t::Number,
+  init::AbstractTTN;
+  time_step::Number=t,
+  nsteps=nothing,
+  order::Integer=2,
+  kwargs...,
 )
-  nsweeps = _compute_nsweeps(nsweeps, t, time_step)
+  nsweeps = _compute_nsweeps(nsteps, t, time_step)
   tdvp_order = TDVPOrder(order, Base.Forward)
   return alternating_update(solver, H, init; nsweeps, tdvp_order, time_step, kwargs...)
 end
@@ -88,14 +94,16 @@ end
     tdvp(H::TTN, t::Number, psi0::TTN; kwargs...)
 
 Use the time dependent variational principle (TDVP) algorithm
-to compute `exp(H*t)*psi0` using an efficient algorithm based
+to approximately compute `exp(H*t)*psi0` using an efficient algorithm based
 on alternating optimization of the state tensors and local Krylov
-exponentiation of H.
+exponentiation of H. The time parameter `t` can be a real or complex number.
                     
 Returns:
 * `psi` - time-evolved state
 
 Optional keyword arguments:
+* `time_step::Number = t` - time step to use when evolving the state. Smaller time steps generally give more accurate results but can make the algorithm take more computational time to run.
+* `nsteps::Integer` - evolve by the requested total time `t` by performing `nsteps` of the TDVP algorithm. More steps can result in more accurate results but require more computational time to run. (Note that only one of the `time_step` or `nsteps` parameters can be provided, not both.)
 * `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
 * `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
