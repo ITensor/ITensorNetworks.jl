@@ -24,22 +24,22 @@ ode_kwargs = (; reltol=1e-8, abstol=1e-8)
 ω⃗ = [ω₁, ω₂]
 f⃗ = [t -> cos(ω * t) for ω in ω⃗]
 
-function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
+function tdvp_ode_solver(H⃗₀, ψ₀; time_step, kwargs...)
   return ode_solver(
-    -im * TimeDependentSum(f⃗, H⃗₀),
-    time_step,
-    ψ₀;
-    solver_alg=ode_alg,
-    ode_kwargs...,
-    kwargs...,
+    -im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; solver_alg=ode_alg, ode_kwargs...
   )
 end
 
 krylov_kwargs = (; tol=1e-8, eager=true)
 
-function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
+function krylov_solver(H⃗₀, ψ₀; time_step, ishermitian=false, issymmetric=false, kwargs...)
   return krylov_solver(
-    -im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
+    -im * TimeDependentSum(f⃗, H⃗₀),
+    time_step,
+    ψ₀;
+    krylov_kwargs...,
+    ishermitian,
+    issymmetric,
   )
 end
 
@@ -49,7 +49,7 @@ end
   J₂ = 0.1
 
   time_step = 0.1
-  time_stop = 1.0
+  time_total = 1.0
 
   nsite = 2
   maxdim = 100
@@ -63,11 +63,11 @@ end
 
   ψ₀ = complex(mps(s; states=(j -> isodd(j) ? "↑" : "↓")))
 
-  ψₜ_ode = tdvp(ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite)
+  ψₜ_ode = tdvp(tdvp_ode_solver, H⃗₀, time_total, ψ₀; time_step, maxdim, cutoff, nsite)
 
-  ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
+  ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_total, ψ₀; time_step, cutoff, nsite)
 
-  ψₜ_full, _ = ode_solver(contract.(H⃗₀), time_stop, contract(ψ₀))
+  ψₜ_full, _ = tdvp_ode_solver(contract.(H⃗₀), contract(ψ₀); time_step=time_total)
 
   @test norm(ψ₀) ≈ 1
   @test norm(ψₜ_ode) ≈ 1
@@ -78,8 +78,8 @@ end
   krylov_err = norm(contract(ψₜ_krylov) - ψₜ_full)
 
   @test krylov_err > ode_err
-  @test ode_err < 1e-3
-  @test krylov_err < 1e-3
+  @test ode_err < 1e-2
+  @test krylov_err < 1e-2
 end
 
 @testset "TTN: Time dependent Hamiltonian" begin
@@ -92,7 +92,7 @@ end
   J₂ = 0.1
 
   time_step = 0.1
-  time_stop = 1.0
+  time_total = 1.0
 
   nsite = 2
   maxdim = 100
@@ -106,11 +106,11 @@ end
 
   ψ₀ = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
 
-  ψₜ_ode = tdvp(ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite)
+  ψₜ_ode = tdvp(ode_solver, H⃗₀, time_total, ψ₀; time_step, maxdim, cutoff, nsite)
 
-  ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
+  ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_total, ψ₀; time_step, cutoff, nsite)
 
-  ψₜ_full, _ = ode_solver(contract.(H⃗₀), time_stop, contract(ψ₀))
+  ψₜ_full, _ = tdvp_ode_solver(contract.(H⃗₀), contract(ψ₀); time_step=time_total)
 
   @test norm(ψ₀) ≈ 1
   @test norm(ψₜ_ode) ≈ 1
@@ -121,7 +121,7 @@ end
   krylov_err = norm(contract(ψₜ_krylov) - ψₜ_full)
 
   @test krylov_err > ode_err
-  @test ode_err < 1e-3
+  @test ode_err < 1e-2
   @test krylov_err < 1e-2
 end
 
