@@ -106,7 +106,7 @@ end
 
   ψ₀ = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
 
-  ψₜ_ode = tdvp(ode_solver, H⃗₀, time_total, ψ₀; time_step, maxdim, cutoff, nsite)
+  ψₜ_ode = tdvp(tdvp_ode_solver, H⃗₀, time_total, ψ₀; time_step, maxdim, cutoff, nsite)
 
   ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_total, ψ₀; time_step, cutoff, nsite)
 
