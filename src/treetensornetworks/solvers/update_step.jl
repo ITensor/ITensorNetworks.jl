@@ -65,6 +65,7 @@ function update_sweep(
 
   observer = get(kwargs, :observer!, nothing)
 
+
   maxtruncerr = 0.0
   info = nothing
   for sweep_step in sweep_generator(
