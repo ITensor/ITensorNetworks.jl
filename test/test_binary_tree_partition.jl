@@ -1,6 +1,6 @@
 using ITensors
 using ITensorNetworks:
-  _binary_tree_partition_inds, _mps_partition_inds_order, _mincut_partitions
+  _mps_partition_inds_order, _mincut_partitions, _is_rooted_directed_binary_tree
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")
@@ -15,12 +15,11 @@ using ITensorNetworks:
   T = randomITensor(i, j, k, l, m, n, o, p)
   M = MPS(T, (i, j, k, l, m, n, o, p); cutoff=1e-5, maxdim=500)
   tn = ITensorNetwork(M[:])
-  out = _binary_tree_partition_inds(
-    tn, [i, j, k, l, m, n, o, p]; maximally_unbalanced=false
-  )
-  @test length(out) == 2
-  out = _binary_tree_partition_inds(tn, [i, j, k, l, m, n, o, p]; maximally_unbalanced=true)
-  @test length(out) == 2
+  for out in [binary_tree_structure(tn), path_graph_structure(tn)]
+    @test out isa DataGraph
+    @test _is_rooted_directed_binary_tree(out)
+    @test length(vertex_data(out).values) == 8
+  end
   out = _mps_partition_inds_order(tn, [o, p, i, j, k, l, m, n])
   @test out in [[i, j, k, l, m, n, o, p], [p, o, n, m, l, k, j, i]]
   p1, p2 = _mincut_partitions(tn, [k, l], [m, n])
@@ -44,14 +43,11 @@ end
     tn[v...] = network[v...]
   end
   tn = ITensorNetwork(vec(tn[:, :, 1]))
-  out = _binary_tree_partition_inds(
-    tn, noncommoninds(Vector{ITensor}(tn)...); maximally_unbalanced=false
-  )
-  @test length(out) == 2
-  out = _binary_tree_partition_inds(
-    tn, noncommoninds(Vector{ITensor}(tn)...); maximally_unbalanced=true
-  )
-  @test length(out) == 2
+  for out in [binary_tree_structure(tn), path_graph_structure(tn)]
+    @test out isa DataGraph
+    @test _is_rooted_directed_binary_tree(out)
+    @test length(vertex_data(out).values) == 9
+  end
 end
 
 @testset "test binary_tree_partition" begin
@@ -65,8 +61,7 @@ end
   network = M[:]
   out1 = contract(network...)
   tn = ITensorNetwork(network)
-  inds_btree = _binary_tree_partition_inds(tn, [i, j, k, l, m]; maximally_unbalanced=false)
-  par = binary_tree_partition(tn, inds_btree)
+  par = partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
   networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
   network2 = vcat(networks...)
   out2 = contract(network2...)

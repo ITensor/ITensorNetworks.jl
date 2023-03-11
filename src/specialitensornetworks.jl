@@ -101,3 +101,22 @@ end
 @traitfn function randomITensorNetwork(g::::IsUnderlyingGraph; link_space=nothing)
   return randomITensorNetwork(Float64, IndsNetwork(g); link_space)
 end
+
+"""
+Build an ITensor network on a graph specified by the inds network s.
+Bond_dim is given by link_space and entries are randomized.
+The random distribution is based on the input argument `distribution`.
+"""
+function randomITensorNetwork(
+  distribution::Distribution, s::IndsNetwork; link_space=nothing
+)
+  return ITensorNetwork(s; link_space) do v, inds...
+    itensor(rand(distribution, dim(inds)...), inds...)
+  end
+end
+
+@traitfn function randomITensorNetwork(
+  distribution::Distribution, g::::IsUnderlyingGraph; link_space=nothing
+)
+  return randomITensorNetwork(distribution, IndsNetwork(g); link_space)
+end

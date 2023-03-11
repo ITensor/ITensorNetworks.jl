@@ -6,6 +6,7 @@ using Compat
 using DataGraphs
 using DataStructures
 using Dictionaries
+using Distributions
 using DocStringExtensions
 using Graphs
 using GraphsFlows
@@ -39,6 +40,7 @@ using ITensors:
   OneITensor,
   check_hascommoninds,
   commontags,
+  dim,
   orthocenter,
   ProjMPS,
   set_nsite!
@@ -81,6 +83,7 @@ include("models.jl")
 include("tebd.jl")
 include("itensornetwork.jl")
 include("mincut.jl")
+include("contract_deltas.jl")
 include("binary_tree_partition.jl")
 include("utility.jl")
 include("specialitensornetworks.jl")
@@ -88,7 +91,10 @@ include("renameitensornetwork.jl")
 include("boundarymps.jl")
 include("beliefpropagation.jl")
 include("contraction_tree_to_graph.jl")
+include("gauging.jl")
+include(joinpath("ITensorsExt", "itensorutils.jl"))
 include(joinpath("Graphs", "abstractgraph.jl"))
+include(joinpath("Graphs", "abstractdatagraph.jl"))
 include(joinpath("treetensornetworks", "abstracttreetensornetwork.jl"))
 include(joinpath("treetensornetworks", "ttn.jl"))
 include(joinpath("treetensornetworks", "opsum_to_ttn.jl"))

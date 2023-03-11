@@ -1,5 +1,13 @@
 function tebd(
-  ℋ::Sum, ψ::AbstractITensorNetwork; β, Δβ, maxdim, cutoff, print_frequency=10, ortho=false
+  ℋ::Sum,
+  ψ::AbstractITensorNetwork;
+  β,
+  Δβ,
+  maxdim,
+  cutoff,
+  print_frequency=10,
+  ortho=false,
+  kwargs...,
 )
   𝒰 = exp(-Δβ * ℋ; alg=Trotter{2}())
   # Imaginary time evolution terms
@@ -11,7 +19,7 @@ function tebd(
       @show step, (step - 1) * Δβ, β
     end
     ψ = insert_links(ψ)
-    ψ = apply(u⃗, ψ; cutoff, maxdim, normalize=true, ortho)
+    ψ = apply(u⃗, ψ; cutoff, maxdim, normalize=true, ortho, kwargs...)
     if ortho
       for v in vertices(ψ)
         ψ = orthogonalize(ψ, v)
