@@ -85,7 +85,7 @@ function update_sweep(
     )
     maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
     if outputlevel >= 2
-      if time_direction(sweep_step) == +1
+      if get(data(sweep_step),:time_direction,0) == +1
         @printf("Sweep %d, direction %s, position (%s,) \n", sw, direction, pos(step))
       end
       print("  Truncated using")
@@ -103,7 +103,7 @@ function update_sweep(
       end
       flush(stdout)
     end
-    if time_direction(sweep_step) == +1
+    if get(data(sweep_step),:time_direction,0) == +1
       update!(
         observer;
         psi,
@@ -192,8 +192,9 @@ function local_update(
     PH,
     phi;
     current_time,
-    time_step=time_step * time_direction(sweep_step),
+    time_step=time_step * get(data(sweep_step),:time_direction,+1),
     outputlevel,
+    data(sweep_step)...,
     kwargs...,
   )
   current_time += time_step

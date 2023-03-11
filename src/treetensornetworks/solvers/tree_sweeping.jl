@@ -9,13 +9,13 @@ Auxiliary object specifying a single local update step in a tree sweeping algori
 """
 struct SweepStep{V} # TODO: parametrize on position type instead of vertex type
   pos::Union{Vector{<:V},NamedEdge{V}}
-  time_direction::Int
+  data::NamedTuple
 end
 
 # field access
 pos(st::SweepStep) = st.pos
 nsite(st::SweepStep) = isa(pos(st), AbstractEdge) ? 0 : length(pos(st))
-time_direction(st::SweepStep) = st.time_direction
+data(st::SweepStep) = st.data
 
 # utility
 current_ortho(st::SweepStep) = current_ortho(typeof(pos(st)), st)
@@ -23,10 +23,10 @@ current_ortho(::Type{<:Vector{<:V}}, st::SweepStep{V}) where {V} = first(pos(st)
 current_ortho(::Type{NamedEdge{V}}, st::SweepStep{V}) where {V} = src(pos(st))
 
 # reverse
-Base.reverse(s::SweepStep{V}) where {V} = SweepStep{V}(reverse(pos(s)), time_direction(s))
+Base.reverse(s::SweepStep{V}) where {V} = SweepStep{V}(reverse(pos(s)), data(s))
 
 function Base.:(==)(s1::SweepStep{V}, s2::SweepStep{V}) where {V}
-  return pos(s1) == pos(s2) && time_direction(s1) == time_direction(s2)
+  return pos(s1) == pos(s2) && data(s1) == data(s2)
 end
 
 # 
@@ -43,10 +43,10 @@ function one_site_sweep(
   edges = post_order_dfs_edges(graph, root_vertex)
   steps = SweepStep{V}[]
   for e in edges
-    push!(steps, SweepStep{V}([src(e)], +1))
-    reverse_step && push!(steps, SweepStep{V}(e, -1))
+    push!(steps, SweepStep{V}([src(e)], (;time_direction = +1)))
+    reverse_step && push!(steps, SweepStep{V}(e, (;time_direction = -1)))
   end
-  push!(steps, SweepStep{V}([root_vertex], +1))
+  push!(steps, SweepStep{V}([root_vertex], (;time_direction = +1)))
   return steps
 end
 
@@ -64,10 +64,10 @@ function two_site_sweep(
   edges = post_order_dfs_edges(graph, root_vertex)
   steps = SweepStep{V}[]
   for e in edges[1:(end - 1)]
-    push!(steps, SweepStep{V}([src(e), dst(e)], +1))
-    reverse_step && push!(steps, SweepStep{V}([dst(e)], -1))
+    push!(steps, SweepStep{V}([src(e), dst(e)], (;time_direction = +1)))
+    reverse_step && push!(steps, SweepStep{V}([dst(e)], (;time_direction = -1)))
   end
-  push!(steps, SweepStep{V}([src(edges[end]), dst(edges[end])], +1))
+  push!(steps, SweepStep{V}([src(edges[end]), dst(edges[end])], (;time_direction = +1)))
   return steps
 end
 
