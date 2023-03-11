@@ -36,8 +36,8 @@ end
 function one_site_sweep(
   direction::Base.ForwardOrdering,
   graph::AbstractGraph{V},
-  root_vertex::V,
   reverse_step;
+  root_vertex::V=default_root_vertex(graph),
   kwargs...,
 ) where {V}
   edges = post_order_dfs_edges(graph, root_vertex)
@@ -57,8 +57,8 @@ end
 function two_site_sweep(
   direction::Base.ForwardOrdering,
   graph::AbstractGraph{V},
-  root_vertex::V,
   reverse_step;
+  root_vertex::V=default_root_vertex(graph),
   kwargs...,
 ) where {V}
   edges = post_order_dfs_edges(graph, root_vertex)

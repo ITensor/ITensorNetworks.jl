@@ -68,7 +68,7 @@ function update_sweep(
   maxtruncerr = 0.0
   info = nothing
   for sweep_step in sweep_generator(
-    direction, underlying_graph(PH), root_vertex, reverse_step; state=psi, kwargs...
+    direction, underlying_graph(PH), reverse_step; root_vertex, kwargs...
   )
     psi, PH, current_time, spec, info = local_update(
       solver,
