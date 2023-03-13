@@ -1,7 +1,7 @@
-function eigsolve_solver(; kwargs...)
-  function solver(H, t, init; kws...)
+function eigsolve_solver(; solver_which_eigenvalue=:SR, kwargs...)
+  function solver(H, init; kws...)
     howmany = 1
-    which = get(kwargs, :solver_which_eigenvalue, :SR)
+    which = solver_which_eigenvalue
     solver_kwargs = (;
       ishermitian=get(kwargs, :ishermitian, true),
       tol=get(kwargs, :solver_tol, 1E-14),
@@ -20,11 +20,8 @@ end
 Overload of `ITensors.dmrg`.
 """
 function dmrg(H, init::AbstractTTN; kwargs...)
-  t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   reverse_step = false
-  psi = alternating_update(
-    eigsolve_solver(; kwargs...), H, t, init; reverse_step, kwargs...
-  )
+  psi = alternating_update(eigsolve_solver(; kwargs...), H, init; reverse_step, kwargs...)
   return psi
 end
 

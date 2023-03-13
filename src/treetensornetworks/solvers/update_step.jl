@@ -7,35 +7,44 @@ function update_step(
   current_time=0.0,
   kwargs...,
 )
-  orderings = ITensorNetworks.orderings(order)
-  sub_time_steps = ITensorNetworks.sub_time_steps(order)
-  sub_time_steps *= time_step
+  directions_ = directions(order)
+  sub_time_steps_ = time_step * sub_time_steps(order)
   info = nothing
-  for substep in 1:length(sub_time_steps)
+  for substep in 1:length(sub_time_steps_)
     psi, PH, info = update_sweep(
-      orderings[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...
+      directions_[substep],
+      solver,
+      PH,
+      psi;
+      current_time,
+      substep,
+      time_step=sub_time_steps_[substep],
+      kwargs...,
     )
-    current_time += sub_time_steps[substep]
+    current_time += sub_time_steps_[substep]
   end
   return psi, PH, info
 end
 
 isforward(direction::Base.ForwardOrdering) = true
 isforward(direction::Base.ReverseOrdering) = false
-isreverse(direction) = !isforward(direction)
-
-# very much draft, interface to be discussed
-function _get_sweep_generator(kwargs)
-  sweep_generator = get(kwargs, :sweep_generator, nothing)
-  isnothing(sweep_generator) || return sweep_type
-  nsite::Int = get(kwargs, :nsite, 2)
-  nsite == 1 && return one_site_sweep
-  nsite == 2 && return two_site_sweep
-  return error("Unsupported value $nsite for nsite keyword argument.")
-end
 
 function update_sweep(
-  direction::Base.Ordering, solver, PH, time_step::Number, psi::AbstractTTN; kwargs...
+  direction::Base.Ordering,
+  solver,
+  PH,
+  psi::AbstractTTN;
+  current_time=0.0,
+  cutoff=1E-16,
+  maxdim=typemax(Int),
+  mindim=1,
+  normalize=false,
+  nsite=2,
+  outputlevel=0,
+  reverse_step=true,
+  root_vertex=default_root_vertex(underlying_graph(PH)),
+  sw=1,
+  kwargs...,
 )
   PH = copy(PH)
   psi = copy(psi)
@@ -44,43 +53,37 @@ function update_sweep(
       "`alternating_update` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
-  sweep_generator = _get_sweep_generator(kwargs)
-  root_vertex = get(kwargs, :root_vertex, default_root_vertex(underlying_graph(PH)))
-  reverse_step::Bool = get(kwargs, :reverse_step, true)
-  normalize::Bool = get(kwargs, :normalize, false)
-  which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
-  svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
+
+  sweep_generator = nothing
+  if nsite == 1
+    sweep_generator = one_site_sweep
+  elseif nsite == 2
+    sweep_generator = two_site_sweep
+  else
+    error("Unsupported value $nsite for nsite keyword argument.")
+  end
+
   observer = get(kwargs, :observer!, nothing)
-  outputlevel = get(kwargs, :outputlevel, 0)
-  sw = get(kwargs, :sweep, 1)
-  current_time = get(kwargs, :current_time, 0.0)
-  maxdim::Integer = get(kwargs, :maxdim, typemax(Int))
-  mindim::Integer = get(kwargs, :mindim, 1)
-  cutoff::Real = get(kwargs, :cutoff, 1E-16)
-  noise::Real = get(kwargs, :noise, 0.0)
 
   maxtruncerr = 0.0
   info = nothing
   for sweep_step in sweep_generator(
     direction, underlying_graph(PH), root_vertex, reverse_step; state=psi, kwargs...
   )
-    psi, PH, current_time, maxtruncerr, spec, info = local_update(
+    psi, PH, current_time, spec, info = local_update(
       solver,
       PH,
       psi,
       sweep_step;
       current_time,
       outputlevel,
-      time_step, # TODO: handle time_step prefactor here?
-      normalize,
-      noise,
-      which_decomp,
-      svd_alg,
       cutoff,
       maxdim,
       mindim,
-      maxtruncerr,
+      normalize,
+      kwargs...,
     )
+    maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
     if outputlevel >= 2
       if time_direction(sweep_step) == +1
         @printf("Sweep %d, direction %s, position (%s,) \n", sw, direction, pos(step))
@@ -119,13 +122,22 @@ function update_sweep(
   return psi, PH, TDVPInfo(maxtruncerr)
 end
 
-# draft for unification of different nsite and time direction updates
+#
+# Here extract_local_tensor and insert_local_tensor
+# are essentially inverse operations, adapted for different kinds of 
+# algorithms and networks.
+#
+# In the simplest case, exact_local_tensor contracts together a few
+# tensors of the network and returns the result, while 
+# insert_local_tensors takes that tensor and factorizes it back
+# apart and puts it back into the network.
+#
 
-function _extract_tensor(psi::AbstractTTN, pos::Vector)
+function extract_local_tensor(psi::AbstractTTN, pos::Vector)
   return psi, prod(psi[v] for v in pos)
 end
 
-function _extract_tensor(psi::AbstractTTN, e::NamedEdge)
+function extract_local_tensor(psi::AbstractTTN, e::NamedEdge)
   left_inds = uniqueinds(psi, e)
   U, S, V = svd(psi[src(e)], left_inds; lefttags=tags(psi, e), righttags=tags(psi, e))
   psi[src(e)] = U
@@ -133,7 +145,7 @@ function _extract_tensor(psi::AbstractTTN, e::NamedEdge)
 end
 
 # sort of multi-site replacebond!; TODO: use dense TTN constructor instead
-function _insert_tensor(psi::AbstractTTN, phi::ITensor, pos::Vector; kwargs...)
+function insert_local_tensor(psi::AbstractTTN, phi::ITensor, pos::Vector; kwargs...)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   normalize::Bool = get(kwargs, :normalize, false)
   eigen_perturbation = get(kwargs, :eigen_perturbation, nothing)
@@ -154,7 +166,7 @@ function _insert_tensor(psi::AbstractTTN, phi::ITensor, pos::Vector; kwargs...)
   return psi, spec # TODO: return maxtruncerr, will not be correct in cases where insertion executes multiple factorizations
 end
 
-function _insert_tensor(psi::AbstractTTN, phi::ITensor, e::NamedEdge; kwargs...)
+function insert_local_tensor(psi::AbstractTTN, phi::ITensor, e::NamedEdge; kwargs...)
   psi[dst(e)] *= phi
   psi = set_ortho_center(psi, [dst(e)])
   return psi, nothing
@@ -170,19 +182,20 @@ function local_update(
   time_step,
   normalize,
   noise,
-  which_decomp,
-  svd_alg,
-  cutoff,
-  maxdim,
-  mindim,
-  maxtruncerr,
+  kwargs...,
 )
   psi = orthogonalize(psi, current_ortho(sweep_step)) # choose the one that is closest to previous ortho center?
-  psi, phi = _extract_tensor(psi, pos(sweep_step))
-  time_step = time_direction(sweep_step) * time_step
+  psi, phi = extract_local_tensor(psi, pos(sweep_step))
   PH = set_nsite(PH, nsite(sweep_step))
   PH = position(PH, psi, pos(sweep_step))
-  phi, info = solver(PH, time_step, phi; current_time, outputlevel)
+  phi, info = solver(
+    PH,
+    phi;
+    current_time,
+    time_step=time_step * time_direction(sweep_step),
+    outputlevel,
+    kwargs...,
+  )
   current_time += time_step
   normalize && (phi /= norm(phi))
   drho = nothing
@@ -190,19 +203,8 @@ function local_update(
   if noise > 0.0 && isforward(direction)
     drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
   end
-  psi, spec = _insert_tensor(
-    psi,
-    phi,
-    pos(sweep_step);
-    maxdim,
-    mindim,
-    cutoff,
-    eigen_perturbation=drho,
-    ortho,
-    normalize,
-    which_decomp,
-    svd_alg,
+  psi, spec = insert_local_tensor(
+    psi, phi, pos(sweep_step); eigen_perturbation=drho, ortho, normalize, kwargs...
   )
-  maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
-  return psi, PH, current_time, maxtruncerr, spec, info
+  return psi, PH, current_time, spec, info
 end

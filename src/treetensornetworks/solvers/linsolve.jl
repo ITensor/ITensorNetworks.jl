@@ -27,7 +27,6 @@ function linsolve(
 )
   function linsolve_solver(
     P,
-    t,
     x₀;
     ishermitian=false,
     solver_tol=1E-14,
@@ -50,9 +49,8 @@ function linsolve(
 
   error("`linsolve` for TTN not yet implemented.")
 
-  t = Inf
   # TODO: Define `itensornetwork_cache`
   # TODO: Define `linsolve_cache`
   P = linsolve_cache(itensornetwork_cache(x₀', A, x₀), itensornetwork_cache(x₀', b))
-  return alternating_update(linsolve_solver, P, t, x₀; reverse_step=false, kwargs...)
+  return alternating_update(linsolve_solver, P, x₀; reverse_step=false, kwargs...)
 end

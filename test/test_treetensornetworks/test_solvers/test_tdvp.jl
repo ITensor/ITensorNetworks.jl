@@ -24,11 +24,14 @@ using Test
     ψ0 = random_mps(s; internal_inds_space=10)
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
+    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
 
+    #
+    #TODO: exponentiate is now the default, so switch this to applyexp
+    #
     #Different backend solvers, default solver_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(
-      H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate"
+      H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1, solver_backend="exponentiate"
     )
     @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
 
@@ -41,11 +44,11 @@ using Test
     @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
     # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
+    ψ2 = tdvp(H, +0.1im, ψ1; nsteps=1, cutoff)
 
     #Different backend solvers, default solver_backend = "applyexp"
     ψ2_exponentiate_backend = tdvp(
-      H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate"
+      H, +0.1im, ψ1; nsteps=1, cutoff, solver_backend="exponentiate"
     )
     @test ψ2 ≈ ψ2_exponentiate_backend rtol = 1e-7
 
@@ -77,11 +80,11 @@ using Test
 
     ψ0 = random_mps(s; internal_inds_space=10)
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
 
     #Different backend solvers, default solver_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(
-      Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate"
+      Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1, solver_backend="exponentiate"
     )
     @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
 
@@ -94,11 +97,11 @@ using Test
     @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
     # Time evolve backwards:
-    ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
+    ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
 
     #Different backend solvers, default solver_backend = "applyexp"
     ψ2_exponentiate_backend = tdvp(
-      Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate"
+      Hs, +0.1im, ψ1; nsteps=1, cutoff, solver_backend="exponentiate"
     )
     @test ψ2 ≈ ψ2_exponentiate_backend rtol = 1e-7
 
@@ -125,11 +128,11 @@ using Test
 
     ψ0 = random_mps(s; internal_inds_space=10)
 
-    function solver(PH, t, psi0; kwargs...)
+    function solver(PH, psi0; time_step, kwargs...)
       solver_kwargs = (;
         ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
       )
-      psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
+      psi, info = exponentiate(PH, time_step, psi0; solver_kwargs...)
       return psi, info
     end
 
@@ -277,7 +280,7 @@ using Test
         H,
         -tau * im,
         phi;
-        nsweeps=1,
+        nsteps=1,
         cutoff,
         nsite,
         normalize=true,
@@ -470,7 +473,7 @@ end
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
+    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -481,7 +484,7 @@ end
     @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
     # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
+    ψ2 = tdvp(H, +0.1im, ψ1; nsteps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -512,7 +515,7 @@ end
 
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -523,7 +526,7 @@ end
     @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
     # Time evolve backwards:
-    ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
+    ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -545,11 +548,11 @@ end
 
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
-    function solver(PH, t, psi0; kwargs...)
+    function solver(PH, psi0; time_step, kwargs...)
       solver_kwargs = (;
         ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
       )
-      psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
+      psi, info = exponentiate(PH, time_step, psi0; solver_kwargs...)
       return psi, info
     end
 
@@ -674,7 +677,7 @@ end
         H,
         -tau * im,
         phi;
-        nsweeps=1,
+        nsteps=1,
         cutoff,
         nsite,
         normalize=true,
