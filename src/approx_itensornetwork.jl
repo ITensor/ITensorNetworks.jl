@@ -69,7 +69,7 @@ Example:
 """
 struct _DensityMatrix
   tensor::ITensor
-  root::Union{<:Number,Tuple}
+  root::Any
   children::Vector
 end
 
@@ -126,8 +126,8 @@ Example:
 """
 struct _PartialDensityMatrix
   tensor::ITensor
-  root::Union{<:Number,Tuple}
-  child::Union{<:Number,Tuple}
+  root::Any
+  child::Any
 end
 
 """
@@ -135,13 +135,13 @@ The struct contains cached density matrices and cached partial density matrices
 for each vertex in the tensor network.
 """
 struct _DensityMatrixAlgCaches
-  v_to_cdm::Dict{Union{<:Number,Tuple},_DensityMatrix}
-  v_to_cpdms::Dict{Union{<:Number,Tuple},Vector{_PartialDensityMatrix}}
+  v_to_cdm::Dict{Any,_DensityMatrix}
+  v_to_cpdms::Dict{Any,Vector{_PartialDensityMatrix}}
 end
 
 function _DensityMatrixAlgCaches()
-  v_to_cdm = Dict{Union{<:Number,Tuple},_DensityMatrix}()
-  v_to_cpdms = Dict{Union{<:Number,Tuple},Vector{_PartialDensityMatrix}}()
+  v_to_cdm = Dict{Any,_DensityMatrix}()
+  v_to_cpdms = Dict{Any,Vector{_PartialDensityMatrix}}()
   return _DensityMatrixAlgCaches(v_to_cdm, v_to_cpdms)
 end
 
@@ -163,14 +163,12 @@ The struct stores data used in the density matrix algorithm.
 struct _DensityMartrixAlgGraph
   partition::DataGraph
   out_tree::NamedGraph
-  root::Union{<:Number,Tuple}
+  root::Any
   innerinds_to_sim::Dict{<:Index,<:Index}
   caches::_DensityMatrixAlgCaches
 end
 
-function _DensityMartrixAlgGraph(
-  partition::DataGraph, out_tree::NamedGraph, root::Union{<:Number,Tuple}
-)
+function _DensityMartrixAlgGraph(partition::DataGraph, out_tree::NamedGraph, root::Any)
   innerinds = _commoninds(partition)
   sim_innerinds = [sim(ind) for ind in innerinds]
   return _DensityMartrixAlgGraph(
@@ -273,9 +271,9 @@ Update `caches.v_to_cdm[v]` and `caches.v_to_cpdms[v]`.
 """
 function _update!(
   caches::_DensityMatrixAlgCaches,
-  v::Union{<:Number,Tuple},
+  v::Any,
   children::Vector,
-  root::Union{<:Number,Tuple},
+  root::Any,
   network::Vector{ITensor},
   inds_to_sim;
   contraction_sequence_alg,
