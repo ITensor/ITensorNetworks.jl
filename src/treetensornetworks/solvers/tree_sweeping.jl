@@ -1,6 +1,49 @@
-# 
-# Sweep step
-# 
+
+function one_site_sweep(
+  graph::AbstractGraph;
+  include_edges=false,
+  root_vertex=default_root_vertex(graph),
+  kwargs...,
+)
+  edges = post_order_dfs_edges(graph, root_vertex)
+  V = vertextype(graph)
+  E = edgetype(graph)
+  steps = Union{Vector{<:V},E}[]
+  for e in edges
+    push!(steps, [src(e)])
+    include_edges && push!(steps,e)
+  end
+  push!(steps, [root_vertex])
+
+  # Second half sweep
+  steps = vcat(steps,reverse(reverse.(steps)))
+
+  return steps
+end
+
+
+function two_site_sweep(
+  graph::AbstractGraph;
+  include_edges=false,
+  root_vertex=default_root_vertex(graph),
+  kwargs...,
+)
+  edges = post_order_dfs_edges(graph, root_vertex)
+  V = vertextype(graph)
+  E = edgetype(graph)
+  steps = Union{Vector{<:V},E}[]
+  for e in edges[1:(end - 1)]
+    push!(steps, [src(e), dst(e)])
+    include_edges && push!(steps, [dst(e)])
+  end
+  push!(steps, [src(edges[end]), dst(edges[end])])
+
+  # Second half sweep
+  steps = vcat(steps,reverse(reverse.(steps)))
+
+  return steps
+end
+
 
 """
   struct SweepStep{V}
