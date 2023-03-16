@@ -23,7 +23,7 @@ function process_sweeps(
   mindim = _extend_sweeps_param(mindim, nsweeps)
   cutoff = _extend_sweeps_param(cutoff, nsweeps)
   noise = _extend_sweeps_param(noise, nsweeps)
-  return maxdim, mindim, cutoff, noise
+  return maxdim, mindim, cutoff, noise, kwargs
 end
 
 function alternating_update(
@@ -31,26 +31,17 @@ function alternating_update(
   PH,
   psi0::AbstractTTN;
   checkdone=nothing,
-  tdvp_order=TDVPOrder(2, Base.Forward),
   outputlevel=0,
-  time_start=0.0,
-  time_step=0.0,
   nsweeps=1,
   write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
   kwargs...,
 )
-  maxdim, mindim, cutoff, noise = process_sweeps(nsweeps; kwargs...)
+  maxdim, mindim, cutoff, noise, kwargs = process_sweeps(nsweeps; kwargs...)
 
   step_observer = get(kwargs, :step_observer!, nothing)
 
   psi = copy(psi0)
 
-  # Keep track of the start of the current time step.
-  # Helpful for tracking the total time, for example
-  # when using time-dependent solvers.
-  # This will be passed as a keyword argument to the
-  # `solver`.
-  current_time = time_start
   info = nothing
   for sw in 1:nsweeps
     if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
@@ -64,31 +55,26 @@ function alternating_update(
 
     sw_time = @elapsed begin
       psi, PH, info = update_step(
-        tdvp_order,
         solver,
         PH,
-        time_step,
         psi;
-        kwargs...,
-        current_time,
         outputlevel,
         sweep=sw,
         maxdim=maxdim[sw],
         mindim=mindim[sw],
         cutoff=cutoff[sw],
         noise=noise[sw],
+        kwargs...,
       )
     end
 
-    current_time += time_step
-
-    update!(step_observer; psi, sweep=sw, outputlevel, current_time)
+    update!(step_observer; psi, sweep=sw, outputlevel)
 
     if outputlevel >= 1
       print("After sweep ", sw, ":")
       print(" maxlinkdim=", maxlinkdim(psi))
       @printf(" maxerr=%.2E", info.maxtruncerr)
-      print(" current_time=", round(current_time; digits=3))
+      #print(" current_time=", round(current_time; digits=3))
       print(" time=", round(sw_time; digits=3))
       println()
       flush(stdout)
