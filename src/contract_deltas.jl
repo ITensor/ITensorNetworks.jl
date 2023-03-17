@@ -111,15 +111,6 @@ function _contract_deltas(tn::ITensorNetwork)
 end
 
 """
-  TODO: do we want to make it a public function?
-"""
-function _noncommoninds(partition::DataGraph)
-  networks = [Vector{ITensor}(partition[v]) for v in vertices(partition)]
-  network = vcat(networks...)
-  return noncommoninds(network...)
-end
-
-"""
 Given an input `partition`, contract redundent delta tensors of non-leaf vertices
 in `partition` without changing the tensor network value.
 `root` is the root of the dfs_tree that defines the leaves.

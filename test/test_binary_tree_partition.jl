@@ -1,6 +1,10 @@
-using ITensors
+using ITensors, OMEinsumContractionOrders
 using ITensorNetworks:
-  _mps_partition_inds_order, _mincut_partitions, _is_rooted_directed_binary_tree
+  _root,
+  _mps_partition_inds_order,
+  _mincut_partitions,
+  _is_rooted_directed_binary_tree,
+  _contract_deltas_ignore_leaf_partitions
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")
@@ -50,7 +54,7 @@ end
   end
 end
 
-@testset "test binary_tree_partition" begin
+@testset "test binary_tree_partition and approx_itensornetwork" begin
   i = Index(2, "i")
   j = Index(2, "j")
   k = Index(2, "k")
@@ -61,9 +65,21 @@ end
   network = M[:]
   out1 = contract(network...)
   tn = ITensorNetwork(network)
-  par = partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
+  inds_btree = binary_tree_structure(tn)
+  par = partition(tn, inds_btree; alg="mincut_recursive_bisection")
+  par = _contract_deltas_ignore_leaf_partitions(par; root=_root(inds_btree))
   networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
   network2 = vcat(networks...)
   out2 = contract(network2...)
   @test isapprox(out1, out2)
+  # test approx_itensornetwork
+  approx_tn, lognorm = approx_itensornetwork(
+    tn, binary_tree_structure; alg="density_matrix", contraction_sequence_alg="sa_bipartite"
+  )
+  network3 = Vector{ITensor}(approx_tn)
+  out3 = contract(network3...) * exp(lognorm)
+  i1 = noncommoninds(network...)
+  i3 = noncommoninds(network3...)
+  @test (length(i1) == length(i3))
+  @test isapprox(out1, out3)
 end

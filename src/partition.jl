@@ -321,3 +321,21 @@ function nested_graph_leaf_vertices(g; toplevel=true)
 
   return vertex_groups
 end
+
+"""
+  TODO: do we want to make it a public function?
+"""
+function _noncommoninds(partition::DataGraph)
+  networks = [Vector{ITensor}(partition[v]) for v in vertices(partition)]
+  network = vcat(networks...)
+  return noncommoninds(network...)
+end
+
+# Util functions for partition
+function _commoninds(partition::DataGraph)
+  networks = [Vector{ITensor}(partition[v]) for v in vertices(partition)]
+  network = vcat(networks...)
+  outinds = noncommoninds(network...)
+  allinds = mapreduce(t -> [i for i in inds(t)], vcat, network)
+  return Vector(setdiff(allinds, outinds))
+end

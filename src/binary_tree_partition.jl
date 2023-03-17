@@ -33,7 +33,7 @@ Note: in the output partition, tensor vertex names will be changed. For a given 
 Note: for a given binary tree with n indices, the output partition will contain 2n-1 vertices,
   with each leaf vertex corresponding to a sub tn adjacent to one output index. Keeping these
   leaf vertices in the partition makes later `approx_itensornetwork` algorithms more efficient.
-Note: name of vertices in the output partition can be different from the name of vertices
+Note: name of vertices in the output partition are the same as the name of vertices
   in `inds_btree`.
 """
 function partition(
@@ -85,7 +85,12 @@ function partition(
     end
   end
   tn_deltas = ITensorNetwork(vcat(output_deltas_vector...))
-  return partition(ITensorNetwork{Any}(disjoint_union(out_tn, tn_deltas)), subgraph_vs)
+  par = partition(disjoint_union(out_tn, tn_deltas), subgraph_vs)
+  name_map = Dict()
+  for (i, v) in enumerate(pre_order_dfs_vertices(inds_btree, root))
+    name_map[i] = v
+  end
+  return rename_vertices(par, name_map)
 end
 
 function partition(tn::ITensorNetwork, inds_btree::DataGraph; alg::String)
