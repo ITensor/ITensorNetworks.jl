@@ -1,6 +1,26 @@
 isforward(direction::Base.ForwardOrdering) = true
 isforward(direction::Base.ReverseOrdering) = false
 
+function one_site_update_sweep(graph::AbstractGraph; kwargs...)
+  half1 = [
+    (loc, (; half_sweep=1)) for loc in one_site_half_sweep(Base.Forward, graph; kwargs...)
+  ]
+  half2 = [
+    (loc, (; half_sweep=2)) for loc in one_site_half_sweep(Base.Reverse, graph; kwargs...)
+  ]
+  return vcat(half1, half2)
+end
+
+function two_site_update_sweep(graph::AbstractGraph; kwargs...)
+  half1 = [
+    (loc, (; half_sweep=1)) for loc in two_site_half_sweep(Base.Forward, graph; kwargs...)
+  ]
+  half2 = [
+    (loc, (; half_sweep=2)) for loc in two_site_half_sweep(Base.Reverse, graph; kwargs...)
+  ]
+  return vcat(half1, half2)
+end
+
 function update_step(
   solver,
   PH,
@@ -9,14 +29,27 @@ function update_step(
   maxdim::Int=typemax(Int),
   mindim::Int=1,
   normalize::Bool=false,
-  outputlevel=0,
+  nsite::Int=2,
+  outputlevel::Int=0,
   sw::Int=1,
-  sweep_pattern,
+  sweep_pattern=nothing,
   kwargs...,
 )
   info = nothing
   PH = copy(PH)
   psi = copy(psi)
+
+  observer = get(kwargs, :observer!, nothing)
+
+  if isnothing(sweep_pattern)
+    if nsite == 1
+      sweep_pattern = one_site_update_sweep(psi)
+    elseif nsite == 2
+      sweep_pattern = two_site_update_sweep(psi)
+    else
+      error("nsite=$nsite not supported in alternating_update / update_step")
+    end
+  end
 
   if nv(psi) == 1
     error(
@@ -24,24 +57,24 @@ function update_step(
     )
   end
 
-  observer = get(kwargs, :observer!, nothing)
-
   maxtruncerr = 0.0
   info = nothing
-  for sweep_step in sweep_pattern
+  for (region, step_kwargs) in sweep_pattern
     psi, PH, spec, info = local_update(
       solver,
       PH,
       psi,
-      sweep_step;
+      region;
       outputlevel,
       cutoff,
       maxdim,
       mindim,
       normalize,
+      step_kwargs,
       kwargs...,
     )
     maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
+
     if outputlevel >= 2
       #if get(data(sweep_step),:time_direction,0) == +1
       #  @printf("Sweep %d, direction %s, position (%s,) \n", sw, direction, pos(step))
@@ -61,19 +94,16 @@ function update_step(
       end
       flush(stdout)
     end
-    # TODO: restore this. When should we call the observer?
-    #if get(data(sweep_step),:time_direction,0) == +1
-    #  update!(
-    #    observer;
-    #    psi,
-    #    bond=minimum(pos(sweep_step)),
-    #    sweep=sw,
-    #    half_sweep=isforward(direction) ? 1 : 2,
-    #    spec,
-    #    outputlevel,
-    #    info,
-    #  )
-    #end
+    update!(
+      observer;
+      psi,
+      region,
+      sweep=sw,
+      half_sweep=get(step_kwargs, :half_sweep, 1),
+      spec,
+      outputlevel,
+      info,
+    )
   end
   # Just to be sure:
   normalize && normalize!(psi)
@@ -103,7 +133,15 @@ function extract_local_tensor(psi::AbstractTTN, e::NamedEdge)
 end
 
 # sort of multi-site replacebond!; TODO: use dense TTN constructor instead
-function insert_local_tensor(psi::AbstractTTN, phi::ITensor, pos::Vector; which_decomp=nothing, normalize=false, eigen_perturbation=nothing, kwargs...)
+function insert_local_tensor(
+  psi::AbstractTTN,
+  phi::ITensor,
+  pos::Vector;
+  which_decomp=nothing,
+  normalize=false,
+  eigen_perturbation=nothing,
+  kwargs...,
+)
   spec = nothing
   for (v, vnext) in IterTools.partition(pos, 2, 1)
     e = edgetype(psi)(v, vnext)
@@ -118,7 +156,7 @@ function insert_local_tensor(psi::AbstractTTN, phi::ITensor, pos::Vector; which_
   psi = set_ortho_center(psi, [last(pos)])
   @assert isortho(psi) && only(ortho_center(psi)) == last(pos)
   normalize && (psi[last(pos)] ./= norm(psi[last(pos)]))
- # TODO: return maxtruncerr, will not be correct in cases where insertion executes multiple factorizations
+  # TODO: return maxtruncerr, will not be correct in cases where insertion executes multiple factorizations
   return psi, spec
 end
 
@@ -134,29 +172,16 @@ current_ortho(::Type{NamedEdge{V}}, st) where {V} = src(st)
 current_ortho(st) = current_ortho(typeof(st), st)
 
 function local_update(
-  solver,
-  PH,
-  psi,
-  sweep_step;
-  outputlevel,
-  normalize,
-  noise,
-  kwargs...,
+  solver, PH, psi, region; normalize, noise, step_kwargs=NamedTuple(), kwargs...
 )
-  psi = orthogonalize(psi, current_ortho(sweep_step)) # choose the one that is closest to previous ortho center?
-  psi, phi = extract_local_tensor(psi, sweep_step)
+  psi = orthogonalize(psi, current_ortho(region))
+  psi, phi = extract_local_tensor(psi, region)
 
-  nsite = isa(sweep_step,AbstractEdge) ? 0 : length(sweep_step)
+  nsites = (region isa AbstractEdge) ? 0 : length(region)
+  PH = set_nsite(PH, nsites)
+  PH = position(PH, psi, region)
 
-  PH = set_nsite(PH, nsite)
-  PH = position(PH, psi, sweep_step)
-  phi, info = solver(
-    PH,
-    phi;
-    outputlevel,
-    # TODO: pass sweep_step info here
-    kwargs...,
-  )
+  phi, info = solver(PH, phi; normalize, step_kwargs..., kwargs...)
   normalize && (phi /= norm(phi))
 
   drho = nothing
@@ -166,7 +191,7 @@ function local_update(
   end
 
   psi, spec = insert_local_tensor(
-    psi, phi, sweep_step; eigen_perturbation=drho, ortho, normalize, kwargs...
+    psi, phi, region; eigen_perturbation=drho, ortho, normalize, kwargs...
   )
   return psi, PH, spec, info
 end

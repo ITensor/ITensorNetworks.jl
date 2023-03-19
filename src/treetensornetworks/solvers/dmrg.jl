@@ -19,18 +19,8 @@ end
 """
 Overload of `ITensors.dmrg`.
 """
-function dmrg(H, init::AbstractTTN; nsite=2, kwargs...)
-  # TODO: move this logic inside alternating_update
-  sweep_pattern = nothing
-  if nsite == 1
-    sweep_pattern = one_site_sweep(H)
-  elseif nsite == 2
-    sweep_pattern = two_site_sweep(H)
-  else
-    error("nsite=$nsite not supported in DMRG")
-  end
-  psi = alternating_update(eigsolve_solver(; kwargs...), H, init; sweep_pattern, kwargs...)
-  return psi
+function dmrg(H, init::AbstractTTN; kwargs...)
+  return alternating_update(eigsolve_solver(; kwargs...), H, init; kwargs...)
 end
 
 """
