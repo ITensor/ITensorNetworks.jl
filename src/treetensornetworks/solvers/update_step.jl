@@ -1,5 +1,3 @@
-isforward(direction::Base.ForwardOrdering) = true
-isforward(direction::Base.ReverseOrdering) = false
 
 function one_site_update_sweep(graph::AbstractGraph; kwargs...)
   half1 = [
@@ -186,9 +184,9 @@ function local_update(
 
   drho = nothing
   ortho = "left"
-  if noise > 0.0 && isforward(direction)
-    drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
-  end
+  #if noise > 0.0 && isforward(direction)
+  #  drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
+  #end
 
   psi, spec = insert_local_tensor(
     psi, phi, region; eigen_perturbation=drho, ortho, normalize, kwargs...
