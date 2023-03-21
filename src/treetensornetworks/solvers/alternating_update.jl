@@ -3,7 +3,7 @@ function _extend_sweeps_param(param, nsweeps)
   if param isa Number
     eparam = fill(param, nsweeps)
   else
-    length(param) == nsweeps && return param
+    length(param) >= nsweeps && return param[1:nsweeps]
     eparam = Vector(undef, nsweeps)
     eparam[1:length(param)] = param
     eparam[(length(param) + 1):end] .= param[end]
