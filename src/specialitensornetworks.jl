@@ -30,7 +30,7 @@ OPTIONAL ARGUMENT:
 function ising_network(
   eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0, szverts=nothing
 )
-  tn = delta_network(eltype, s)
+  tn = delta_network(eltype, s; link_space = 2)
   if (szverts != nothing)
     for v in szverts
       tn[v] = diagITensor(eltype[1, -1], inds(tn[v]))
@@ -64,11 +64,6 @@ function ising_network(s::IndsNetwork, beta::Number; h::Number=0.0, szverts=noth
   return ising_network(typeof(beta), s, beta; h, szverts)
 end
 
-"""
-BUILD Z OF CLASSICAL ISING MODEL ON A GIVEN GRAPH AT INVERSE TEMP BETA
-H = -\\sum_{(v,v') \\in edges}\\sigma^{z}_{v}\\sigma^{z}_{v'}
-TAKE AS AN OPTIONAL ARGUMENT A LIST OF VERTICES OVER WHICH TO APPLY A SZ. THE RESULTANT NETWORK CAN THEN BE CONTRACTED AND DIVIDED BY THE ACTUAL PARTITION FUNCTION TO GET THAT OBSERVABLE
-"""
 function ising_network(
   eltype::Type, g::NamedGraph, beta::Number; h::Number=0.0, szverts=nothing
 )
@@ -77,6 +72,39 @@ end
 
 function ising_network(g::NamedGraph, beta::Number; h::Number=0.0, szverts=nothing)
   return ising_network(eltype(beta), g, beta; h, szverts)
+end
+
+# """Build the wavefunction whose norm is equal to Z of the classical ising model"""
+# function square_root_ising_network(eltype::Type, s::IndsNetwork, beta::Number)
+#   tn = delta_network(eltype, s; link_space = 2)
+#   x1 = sqrt(exp(-0.5*beta)*(1+exp(beta)))
+#   x2 = sqrt(exp(-0.5*beta)*(-1+exp(beta)))
+#   A = eltype[(0.5*x2 + 0.5*x1) (-0.5*x2 + 0.5*x1); (-0.5*x2 + 0.5*x1) (0.5*x2 + 0.5*x1)]
+#   for v in vertices(tn)
+#     for vn in neighbors(tn, v)
+#       tn[v] = noprime(tn[v] * ITensor(A, commonind(tn[v], tn[vn]), commonind(tn[v], tn[vn])'))
+#     end
+#   end
+
+#   return tn
+# end
+
+"""Build the wavefunction whose norm is equal to Z of the classical ising model
+s needs to have site indices in this case!"""
+function square_root_ising_network(eltype::Type, s::IndsNetwork, beta::Number; h::Number = 0.0)
+  return ising_network(s, 0.5*beta; h)
+end
+
+function square_root_ising_network(eltype::Type, g::NamedGraph, beta::Number; h::Number = 0.0)
+  return ising_network(siteinds("S=1/2", g), 0.5*beta; h)
+end
+
+function square_root_ising_network(s::IndsNetwork, beta::Number; h::Number = 0.0)
+  return square_root_ising_network(s, 0.5*typeof(beta); h)
+end
+
+function square_root_ising_network(g::NamedGraph, beta::Number; h::Number = 0.0)
+  return ising_network(siteinds("S=1/2", g), 0.5*typeof(beta); h)
 end
 
 """
