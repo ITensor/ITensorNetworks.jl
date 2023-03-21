@@ -30,7 +30,7 @@ OPTIONAL ARGUMENT:
 function ising_network(
   eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0, szverts=nothing
 )
-  tn = delta_network(eltype, s; link_space = 2)
+  tn = delta_network(eltype, s; link_space=2)
   if (szverts != nothing)
     for v in szverts
       tn[v] = diagITensor(eltype[1, -1], inds(tn[v]))
@@ -91,20 +91,22 @@ end
 
 """Build the wavefunction whose norm is equal to Z of the classical ising model
 s needs to have site indices in this case!"""
-function square_root_ising_network(eltype::Type, s::IndsNetwork, beta::Number; h::Number = 0.0)
-  return ising_network(s, 0.5*beta; h)
+function square_root_ising_network(
+  eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0
+)
+  return ising_network(s, 0.5 * beta; h)
 end
 
-function square_root_ising_network(eltype::Type, g::NamedGraph, beta::Number; h::Number = 0.0)
-  return ising_network(siteinds("S=1/2", g), 0.5*beta; h)
+function square_root_ising_network(eltype::Type, g::NamedGraph, beta::Number; h::Number=0.0)
+  return ising_network(siteinds("S=1/2", g), 0.5 * beta; h)
 end
 
-function square_root_ising_network(s::IndsNetwork, beta::Number; h::Number = 0.0)
-  return square_root_ising_network(s, 0.5*typeof(beta); h)
+function square_root_ising_network(s::IndsNetwork, beta::Number; h::Number=0.0)
+  return square_root_ising_network(s, 0.5 * typeof(beta); h)
 end
 
-function square_root_ising_network(g::NamedGraph, beta::Number; h::Number = 0.0)
-  return ising_network(siteinds("S=1/2", g), 0.5*typeof(beta); h)
+function square_root_ising_network(g::NamedGraph, beta::Number; h::Number=0.0)
+  return ising_network(siteinds("S=1/2", g), 0.5 * typeof(beta); h)
 end
 
 """
