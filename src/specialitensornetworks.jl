@@ -74,21 +74,6 @@ function ising_network(g::NamedGraph, beta::Number; h::Number=0.0, szverts=nothi
   return ising_network(eltype(beta), g, beta; h, szverts)
 end
 
-# """Build the wavefunction whose norm is equal to Z of the classical ising model"""
-# function square_root_ising_network(eltype::Type, s::IndsNetwork, beta::Number)
-#   tn = delta_network(eltype, s; link_space = 2)
-#   x1 = sqrt(exp(-0.5*beta)*(1+exp(beta)))
-#   x2 = sqrt(exp(-0.5*beta)*(-1+exp(beta)))
-#   A = eltype[(0.5*x2 + 0.5*x1) (-0.5*x2 + 0.5*x1); (-0.5*x2 + 0.5*x1) (0.5*x2 + 0.5*x1)]
-#   for v in vertices(tn)
-#     for vn in neighbors(tn, v)
-#       tn[v] = noprime(tn[v] * ITensor(A, commonind(tn[v], tn[vn]), commonind(tn[v], tn[vn])'))
-#     end
-#   end
-
-#   return tn
-# end
-
 """Build the wavefunction whose norm is equal to Z of the classical ising model
 s needs to have site indices in this case!"""
 function square_root_ising_network(
@@ -102,11 +87,11 @@ function square_root_ising_network(eltype::Type, g::NamedGraph, beta::Number; h:
 end
 
 function square_root_ising_network(s::IndsNetwork, beta::Number; h::Number=0.0)
-  return square_root_ising_network(s, 0.5 * typeof(beta); h)
+  return square_root_ising_network(typeof(beta), s, 0.5*beta; h)
 end
 
 function square_root_ising_network(g::NamedGraph, beta::Number; h::Number=0.0)
-  return ising_network(siteinds("S=1/2", g), 0.5 * typeof(beta); h)
+  return ising_network(typeof(beta), siteinds("S=1/2", g), 0.5*beta; h)
 end
 
 """
