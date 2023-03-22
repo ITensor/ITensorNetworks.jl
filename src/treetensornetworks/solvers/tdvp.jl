@@ -4,6 +4,7 @@ function exponentiate_solver(; kwargs...)
     init;
     ishermitian=true,
     issymmetric=true,
+    region,
     solver_krylovdim=30,
     solver_maxiter=100,
     solver_outputlevel=0,
@@ -86,8 +87,9 @@ function tdvp(
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step)
-  tdvp_order = TDVPOrder(order, Base.Forward)
-  return alternating_update(solver, H, init; nsweeps, tdvp_order, time_step, kwargs...)
+  tdvp_order = TDVPOrder(order)
+  sweep_pattern = one_site_update_sweep(tdvp_order,time_step,init)
+  return alternating_update(solver, H, init; nsweeps, sweep_pattern, kwargs...)
 end
 
 """

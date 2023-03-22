@@ -2,7 +2,7 @@
 function one_site_half_sweep(
   dir::Base.ForwardOrdering,
   graph::AbstractGraph;
-  include_edges=false,
+  reverse_step=false,
   root_vertex=default_root_vertex(graph),
   kwargs...,
 )
@@ -12,7 +12,7 @@ function one_site_half_sweep(
   steps = Union{Vector{<:V},E}[]
   for e in edges
     push!(steps, [src(e)])
-    include_edges && push!(steps, e)
+    reverse_step && push!(steps, e)
   end
   push!(steps, [root_vertex])
   return steps
@@ -25,7 +25,7 @@ end
 function two_site_half_sweep(
   dir::Base.ForwardOrdering,
   graph::AbstractGraph;
-  include_edges=false,
+  reverse_step=false,
   root_vertex=default_root_vertex(graph),
   kwargs...,
 )
@@ -35,7 +35,7 @@ function two_site_half_sweep(
   steps = Union{Vector{<:V},E}[]
   for e in edges[1:(end - 1)]
     push!(steps, [src(e), dst(e)])
-    include_edges && push!(steps, [dst(e)])
+    reverse_step && push!(steps, [dst(e)])
   end
   push!(steps, [src(edges[end]), dst(edges[end])])
   return steps

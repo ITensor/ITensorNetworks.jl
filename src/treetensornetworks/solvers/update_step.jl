@@ -57,7 +57,7 @@ function update_step(
 
   maxtruncerr = 0.0
   info = nothing
-  for (region, step_kwargs) in sweep_pattern
+  for (n,(region, step_kwargs)) in enumerate(sweep_pattern)
     psi, PH, spec, info = local_update(
       solver,
       PH,
@@ -94,6 +94,7 @@ function update_step(
     end
     update!(
       observer;
+      end_of_sweep = (n==length(sweep_pattern)),
       psi,
       region,
       sweep=sw,
@@ -179,7 +180,7 @@ function local_update(
   PH = set_nsite(PH, nsites)
   PH = position(PH, psi, region)
 
-  phi, info = solver(PH, phi; normalize, step_kwargs..., kwargs...)
+  phi, info = solver(PH, phi; normalize, region, step_kwargs..., kwargs...)
   normalize && (phi /= norm(phi))
 
   drho = nothing
