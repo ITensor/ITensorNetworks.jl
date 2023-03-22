@@ -6,7 +6,7 @@ TDVPOrder(order::Int) = TDVPOrder{order}()
 directions(::TDVPOrder) = error("Not implemented")
 sub_time_steps(::TDVPOrder) = error("Not implemented")
 
-# TODO: make these both length 1 for order 1?
+#TODO: make these both length 1 for order 1?
 directions(::TDVPOrder{1}) = [Base.Forward, Base.Reverse]
 sub_time_steps(::TDVPOrder{1}) = [1.0, 0.0]
 
@@ -35,7 +35,8 @@ end
 function two_site_update_sweep(tdvp_order::TDVPOrder, time_step::Number, graph::AbstractGraph; kwargs...)
   time_sign(loc) = (length(loc)==1) ? -1 : +1
   sweep = nothing
-  for (n,dir,fac) in enumerate(zip(directions(tdvp_order),sub_time_steps(tdvp_order)))
+  for (n,dir) in enumerate(directions(tdvp_order))
+    fac = sub_time_steps(tdvp_order)[n]
     substep = [
                (loc, (; substep=n, time_step=time_step*fac*time_sign(loc))) for loc in two_site_half_sweep(dir, graph; reverse_step=true, kwargs...)
     ]

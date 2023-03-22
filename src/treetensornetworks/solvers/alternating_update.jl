@@ -32,7 +32,6 @@ function alternating_update(
   psi0::AbstractTTN;
   checkdone=nothing,
   outputlevel=0,
-  nsite=2,
   nsweeps=1,
   write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
   kwargs...,

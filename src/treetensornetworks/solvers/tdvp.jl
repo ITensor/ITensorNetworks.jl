@@ -82,14 +82,21 @@ function tdvp(
   t::Number,
   init::AbstractTTN;
   time_step::Number=t,
+  nsite=2,
   nsteps=nothing,
   order::Integer=2,
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step)
   tdvp_order = TDVPOrder(order)
-  sweep_pattern = one_site_update_sweep(tdvp_order,time_step,init)
-  return alternating_update(solver, H, init; nsweeps, sweep_pattern, kwargs...)
+  if nsite == 1
+    sweep_pattern = one_site_update_sweep(tdvp_order,time_step,init)
+  elseif nsite == 2
+    sweep_pattern = two_site_update_sweep(tdvp_order,time_step,init)
+  else
+    error("nsite=$nsite not currently supported in TDVP")
+  end
+  return alternating_update(solver, H, init; nsweeps, sweep_pattern, nsite, kwargs...)
 end
 
 """
