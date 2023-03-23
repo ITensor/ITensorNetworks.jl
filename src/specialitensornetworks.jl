@@ -30,7 +30,7 @@ OPTIONAL ARGUMENT:
 function ising_network(
   eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0, szverts=nothing
 )
-  tn = delta_network(eltype, s; link_space=2)
+  tn = delta_network(eltype, s)
   if (szverts != nothing)
     for v in szverts
       tn[v] = diagITensor(eltype[1, -1], inds(tn[v]))
@@ -83,15 +83,15 @@ function square_root_ising_network(
 end
 
 function square_root_ising_network(eltype::Type, g::NamedGraph, beta::Number; h::Number=0.0)
-  return ising_network(siteinds("S=1/2", g), 0.5 * beta; h)
+  return ising_network(IndsNetwork(g, 2, 2), 0.5 * beta; h)
 end
 
 function square_root_ising_network(s::IndsNetwork, beta::Number; h::Number=0.0)
-  return square_root_ising_network(typeof(beta), s, 0.5*beta; h)
+  return square_root_ising_network(typeof(beta), s, 0.5 * beta; h)
 end
 
 function square_root_ising_network(g::NamedGraph, beta::Number; h::Number=0.0)
-  return ising_network(typeof(beta), siteinds("S=1/2", g), 0.5*beta; h)
+  return ising_network(typeof(beta), IndsNetwork(g, 2, 2), 0.5 * beta; h)
 end
 
 """
