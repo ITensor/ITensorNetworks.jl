@@ -76,9 +76,7 @@ end
 
 """Build the wavefunction whose norm is equal to Z of the classical ising model
 s needs to have site indices in this case!"""
-function ising_network_state(
-  eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0
-)
+function ising_network_state(eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0)
   return ising_network(s, 0.5 * beta; h)
 end
 
