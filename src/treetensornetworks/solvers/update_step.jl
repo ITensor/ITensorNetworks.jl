@@ -75,6 +75,8 @@ function update_step(
     end
     update!(
       observer;
+      sweep_step = n,
+      total_sweep_steps = length(sweep_regions),
       end_of_sweep = (n==length(sweep_regions)),
       psi,
       region,
