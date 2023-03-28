@@ -88,15 +88,8 @@ function tdvp(
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step)
-  tdvp_order = TDVPOrder(order)
-  if nsite == 1
-    sweep_pattern = one_site_update_sweep(tdvp_order,time_step,init)
-  elseif nsite == 2
-    sweep_pattern = two_site_update_sweep(tdvp_order,time_step,init)
-  else
-    error("nsite=$nsite not currently supported in TDVP")
-  end
-  return alternating_update(solver, H, init; nsweeps, sweep_pattern, nsite, kwargs...)
+  sweep_regions = tdvp_sweep(order,nsite,time_step,init; kwargs...)
+  return alternating_update(solver, H, init; nsweeps, sweep_regions, nsite, kwargs...)
 end
 
 """

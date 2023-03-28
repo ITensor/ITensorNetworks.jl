@@ -1,46 +1,50 @@
 
-function one_site_half_sweep(
-  dir::Base.ForwardOrdering,
-  graph::AbstractGraph;
-  reverse_step=false,
-  root_vertex=default_root_vertex(graph),
-  kwargs...,
-)
-  edges = post_order_dfs_edges(graph, root_vertex)
-  V = vertextype(graph)
-  E = edgetype(graph)
-  steps = Union{Vector{<:V},E}[]
-  for e in edges
-    push!(steps, [src(e)])
-    reverse_step && push!(steps, e)
+function one_site_region(edge; last_edge=false)
+  if last_edge
+    return [src(edge)], [dst(edge)]
   end
-  push!(steps, [root_vertex])
-  return steps
+  return ([src(edge)],)
 end
 
-function one_site_half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
-  return reverse(reverse.(one_site_half_sweep(Base.Forward, args...; kwargs...)))
+function two_site_region(edge; last_edge=false)
+  return ([src(edge),dst(edge)],)
 end
 
-function two_site_half_sweep(
+put_kwargs(t::Tuple{Any,NamedTuple}) = t
+put_kwargs(t::Tuple{Any,Any,NamedTuple}) = t
+put_kwargs(t::Tuple{Any,Any,Any,NamedTuple}) = t
+
+put_kwargs(v::Vector) = (v,(;))
+put_kwargs(j::Integer) = ([j],(;))
+put_kwargs(t::Tuple{<:Integer}) = (t,(;))
+put_kwargs(t::Tuple{<:Integer,<:Integer}) = (t,(;))
+
+function half_sweep(
   dir::Base.ForwardOrdering,
-  graph::AbstractGraph;
-  reverse_step=false,
+  graph::AbstractGraph,
+  region_function;
   root_vertex=default_root_vertex(graph),
   kwargs...,
 )
   edges = post_order_dfs_edges(graph, root_vertex)
   V = vertextype(graph)
   E = edgetype(graph)
-  steps = Union{Vector{<:V},E}[]
+  steps = []
   for e in edges[1:(end - 1)]
-    push!(steps, [src(e), dst(e)])
-    reverse_step && push!(steps, [dst(e)])
+    push!(steps, region_function(e; last_edge=false, kwargs...)...)
   end
-  push!(steps, [src(edges[end]), dst(edges[end])])
+  push!(steps, region_function(edges[end]; last_edge=true, kwargs...)...)
+
+  steps = put_kwargs.(steps)
+
   return steps
 end
 
-function two_site_half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
-  return reverse(reverse.(two_site_half_sweep(Base.Forward, args...; kwargs...)))
+function half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
+  rev_sweep = []
+  for region in reverse(half_sweep(Base.Forward, args...; kwargs...))
+    push!(rev_sweep, (reverse(region[1]), region[2:end]...))
+  end
+  return rev_sweep
 end
+

@@ -1,20 +1,13 @@
 
 function update_sweep(nsite, graph::AbstractGraph; kwargs...)
-  half_sweep_func = nothing
   if nsite == 1
-    half_sweep_func = one_site_half_sweep
+    region_function = one_site_region
   elseif nsite == 2
-    half_sweep_func = two_site_half_sweep
+    region_function = two_site_region
   else
     error("nsite=$nsite not supported in alternating_update / update_step")
   end
-  half1 = [
-    (loc, (; half_sweep=1)) for loc in half_sweep_func(Base.Forward, graph; kwargs...)
-  ]
-  half2 = [
-    (loc, (; half_sweep=2)) for loc in half_sweep_func(Base.Reverse, graph; kwargs...)
-  ]
-  return vcat(half1, half2)
+  return vcat(map(dir -> half_sweep(dir,graph,region_function; kwargs...), [Base.Forward, Base.Reverse])...)
 end
 
 function update_step(
@@ -28,7 +21,7 @@ function update_step(
   nsite::Int=2,
   outputlevel::Int=0,
   sw::Int=1,
-  sweep_pattern=update_sweep(nsite,psi),
+  sweep_regions=update_sweep(nsite,psi),
   kwargs...,
 )
   info = nothing
@@ -45,7 +38,7 @@ function update_step(
 
   maxtruncerr = 0.0
   info = nothing
-  for (n,(region, step_kwargs)) in enumerate(sweep_pattern)
+  for (n,(region, step_kwargs)) in enumerate(sweep_regions)
     psi, PH, spec, info = local_update(
       solver,
       PH,
@@ -82,7 +75,7 @@ function update_step(
     end
     update!(
       observer;
-      end_of_sweep = (n==length(sweep_pattern)),
+      end_of_sweep = (n==length(sweep_regions)),
       psi,
       region,
       sweep=sw,
