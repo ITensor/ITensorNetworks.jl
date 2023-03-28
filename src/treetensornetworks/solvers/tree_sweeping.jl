@@ -7,17 +7,17 @@ function one_site_region(edge; last_edge=false)
 end
 
 function two_site_region(edge; last_edge=false)
-  return ([src(edge),dst(edge)],)
+  return ([src(edge), dst(edge)],)
 end
 
 put_kwargs(t::Tuple{Any,NamedTuple}) = t
 put_kwargs(t::Tuple{Any,Any,NamedTuple}) = t
 put_kwargs(t::Tuple{Any,Any,Any,NamedTuple}) = t
 
-put_kwargs(v::Vector) = (v,(;))
-put_kwargs(j::Integer) = ([j],(;))
-put_kwargs(t::Tuple{<:Integer}) = (t,(;))
-put_kwargs(t::Tuple{<:Integer,<:Integer}) = (t,(;))
+put_kwargs(v::Vector) = (v, (;))
+put_kwargs(j::Integer) = ([j], (;))
+put_kwargs(t::Tuple{<:Integer}) = (t, (;))
+put_kwargs(t::Tuple{<:Integer,<:Integer}) = (t, (;))
 
 function half_sweep(
   dir::Base.ForwardOrdering,
@@ -47,4 +47,3 @@ function half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
   end
   return rev_sweep
 end
-

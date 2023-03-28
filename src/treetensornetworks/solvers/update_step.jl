@@ -7,7 +7,12 @@ function update_sweep(nsite, graph::AbstractGraph; kwargs...)
   else
     error("nsite=$nsite not supported in alternating_update / update_step")
   end
-  return vcat(map(dir -> half_sweep(dir,graph,region_function; kwargs...), [Base.Forward, Base.Reverse])...)
+  return vcat(
+    map(
+      dir -> half_sweep(dir, graph, region_function; kwargs...),
+      [Base.Forward, Base.Reverse],
+    )...,
+  )
 end
 
 function update_step(
@@ -21,7 +26,7 @@ function update_step(
   nsite::Int=2,
   outputlevel::Int=0,
   sw::Int=1,
-  sweep_regions=update_sweep(nsite,psi),
+  sweep_regions=update_sweep(nsite, psi),
   kwargs...,
 )
   info = nothing
@@ -38,7 +43,7 @@ function update_step(
 
   maxtruncerr = 0.0
   info = nothing
-  for (n,(region, step_kwargs)) in enumerate(sweep_regions)
+  for (n, (region, step_kwargs)) in enumerate(sweep_regions)
     psi, PH, spec, info = local_update(
       solver,
       PH,
@@ -75,16 +80,16 @@ function update_step(
     end
     update!(
       observer;
-      sweep_step = n,
-      total_sweep_steps = length(sweep_regions),
-      end_of_sweep = (n==length(sweep_regions)),
+      sweep_step=n,
+      total_sweep_steps=length(sweep_regions),
+      end_of_sweep=(n == length(sweep_regions)),
       psi,
       region,
       sweep=sw,
       spec,
       outputlevel,
       info,
-      step_kwargs...
+      step_kwargs...,
     )
   end
   # Just to be sure:
