@@ -64,11 +64,6 @@ function ising_network(s::IndsNetwork, beta::Number; h::Number=0.0, szverts=noth
   return ising_network(typeof(beta), s, beta; h, szverts)
 end
 
-"""
-BUILD Z OF CLASSICAL ISING MODEL ON A GIVEN GRAPH AT INVERSE TEMP BETA
-H = -\\sum_{(v,v') \\in edges}\\sigma^{z}_{v}\\sigma^{z}_{v'}
-TAKE AS AN OPTIONAL ARGUMENT A LIST OF VERTICES OVER WHICH TO APPLY A SZ. THE RESULTANT NETWORK CAN THEN BE CONTRACTED AND DIVIDED BY THE ACTUAL PARTITION FUNCTION TO GET THAT OBSERVABLE
-"""
 function ising_network(
   eltype::Type, g::NamedGraph, beta::Number; h::Number=0.0, szverts=nothing
 )
@@ -77,6 +72,24 @@ end
 
 function ising_network(g::NamedGraph, beta::Number; h::Number=0.0, szverts=nothing)
   return ising_network(eltype(beta), g, beta; h, szverts)
+end
+
+"""Build the wavefunction whose norm is equal to Z of the classical ising model
+s needs to have site indices in this case!"""
+function ising_network_state(eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0)
+  return ising_network(s, 0.5 * beta; h)
+end
+
+function ising_network_state(eltype::Type, g::NamedGraph, beta::Number; h::Number=0.0)
+  return ising_network(IndsNetwork(g, 2, 2), 0.5 * beta; h)
+end
+
+function ising_network_state(s::IndsNetwork, beta::Number; h::Number=0.0)
+  return square_root_ising_network(typeof(beta), s, 0.5 * beta; h)
+end
+
+function ising_network_state(g::NamedGraph, beta::Number; h::Number=0.0)
+  return ising_network(typeof(beta), IndsNetwork(g, 2, 2), 0.5 * beta; h)
 end
 
 """
