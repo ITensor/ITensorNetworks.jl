@@ -2,6 +2,13 @@ using ITensors
 using ITensorNetworks:
   _contract_deltas, _contract_deltas_ignore_leaf_partitions, _noncommoninds, _root
 
+@testset "test _contract_deltas with no deltas" begin
+  i = Index(2, "i")
+  t = randomITensor(i)
+  tn = _contract_deltas(ITensorNetwork([t]))
+  @test tn[1] == t
+end
+
 @testset "test _contract_deltas over ITensorNetwork" begin
   is = [Index(2, string(i)) for i in 1:6]
   a = ITensor(is[1], is[2])

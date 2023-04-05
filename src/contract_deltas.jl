@@ -82,9 +82,12 @@ Example:
    4 │ ((dim=2|id=626|"6"), (dim=2|id=237|"5"))
 """
 function _contract_deltas(tn::ITensorNetwork)
-  tn = copy(tn)
   network = Vector{ITensor}(tn)
   deltas = filter(t -> is_delta(t), network)
+  if deltas == []
+    return tn
+  end
+  tn = copy(tn)
   outinds = noncommoninds(network...)
   ds = _delta_inds_disjointsets(deltas, outinds)
   deltainds = [ds...]
