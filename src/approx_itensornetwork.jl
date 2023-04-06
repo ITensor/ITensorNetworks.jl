@@ -553,7 +553,7 @@ end
 
 function approx_itensornetwork(
   tn::ITensorNetwork,
-  output_structure::Function;
+  output_structure::Function=path_graph_structure;
   alg::String,
   cutoff=1e-15,
   maxdim=10000,
