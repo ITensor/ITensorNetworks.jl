@@ -60,26 +60,31 @@ end
   k = Index(2, "k")
   l = Index(2, "l")
   m = Index(2, "m")
-  T = randomITensor(i, j, k, l, m)
-  M = MPS(T, (i, j, k, l, m); cutoff=1e-5, maxdim=5)
-  network = M[:]
-  out1 = contract(network...)
-  tn = ITensorNetwork(network)
-  inds_btree = binary_tree_structure(tn)
-  par = partition(tn, inds_btree; alg="mincut_recursive_bisection")
-  par = _contract_deltas_ignore_leaf_partitions(par; root=_root(inds_btree))
-  networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
-  network2 = vcat(networks...)
-  out2 = contract(network2...)
-  @test isapprox(out1, out2)
-  # test approx_itensornetwork
-  approx_tn, lognorm = approx_itensornetwork(
-    tn, binary_tree_structure; alg="density_matrix", contraction_sequence_alg="sa_bipartite"
-  )
-  network3 = Vector{ITensor}(approx_tn)
-  out3 = contract(network3...) * exp(lognorm)
-  i1 = noncommoninds(network...)
-  i3 = noncommoninds(network3...)
-  @test (length(i1) == length(i3))
-  @test isapprox(out1, out3)
+  for dtype in [Float64, ComplexF64]
+    T = randomITensor(dtype, i, j, k, l, m)
+    M = MPS(T, (i, j, k, l, m); cutoff=1e-5, maxdim=5)
+    network = M[:]
+    out1 = contract(network...)
+    tn = ITensorNetwork(network)
+    inds_btree = binary_tree_structure(tn)
+    par = partition(tn, inds_btree; alg="mincut_recursive_bisection")
+    par = _contract_deltas_ignore_leaf_partitions(par; root=_root(inds_btree))
+    networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
+    network2 = vcat(networks...)
+    out2 = contract(network2...)
+    @test isapprox(out1, out2)
+    # test approx_itensornetwork
+    approx_tn, lognorm = approx_itensornetwork(
+      tn,
+      binary_tree_structure;
+      alg="density_matrix",
+      contraction_sequence_alg="sa_bipartite",
+    )
+    network3 = Vector{ITensor}(approx_tn)
+    out3 = contract(network3...) * exp(lognorm)
+    i1 = noncommoninds(network...)
+    i3 = noncommoninds(network3...)
+    @test (length(i1) == length(i3))
+    @test isapprox(out1, out3)
+  end
 end

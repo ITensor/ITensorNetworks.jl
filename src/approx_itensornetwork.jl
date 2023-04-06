@@ -166,9 +166,9 @@ end
 function _get_low_rank_projector(tensor, inds1, inds2; cutoff, maxdim)
   @assert length(inds(tensor)) <= 4
   @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: eigen" begin
-    diag, U = eigen(tensor, inds1, inds2; cutoff=cutoff, maxdim=maxdim, ishermitian=true)
+    F = eigen(tensor, inds1, inds2; cutoff=cutoff, maxdim=maxdim, ishermitian=true)
   end
-  return U
+  return F.Vt
 end
 
 """
@@ -233,16 +233,19 @@ function _update!(
   end
   if length(pdms) == 0
     sim_network = map(x -> replaceinds(x, inds_to_sim), network)
+    sim_network = map(dag, sim_network)
     density_matrix = _optcontract(
       [network..., sim_network...]; contraction_sequence_alg, contraction_sequence_kwargs
     )
   elseif length(pdms) == 1
     sim_network = map(x -> replaceinds(x, inds_to_sim), network)
+    sim_network = map(dag, sim_network)
     density_matrix = _optcontract(
       [pdms[1], sim_network...]; contraction_sequence_alg, contraction_sequence_kwargs
     )
   else
     simtensor = _sim(pdms[2], inds_to_sim)
+    simtensor = dag(simtensor)
     density_matrix = _optcontract(
       [pdms[1], simtensor]; contraction_sequence_alg, contraction_sequence_kwargs
     )
@@ -305,14 +308,14 @@ function _rem_vertex!(
   end
   U = _get_low_rank_projector(
     caches.e_to_dm[NamedEdge(nothing, root)],
-    collect(values(outinds_root_to_sim)),
-    collect(keys(outinds_root_to_sim));
+    collect(keys(outinds_root_to_sim)),
+    collect(values(outinds_root_to_sim));
     cutoff,
     maxdim,
   )
   # update partition and out_tree
   root_tensor = _optcontract(
-    [Vector{ITensor}(alg_graph.partition[root])..., U];
+    [Vector{ITensor}(alg_graph.partition[root])..., dag(U)];
     contraction_sequence_alg,
     contraction_sequence_kwargs,
   )
