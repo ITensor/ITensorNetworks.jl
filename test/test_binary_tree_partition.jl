@@ -58,7 +58,6 @@ end
   inds = [Index(2, "$i") for i in 1:5]
   tn = ITensorNetwork([randomITensor(i) for i in inds])
   par = partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
-  @info par
   networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
   network = vcat(networks...)
   @test isapprox(contract(Vector{ITensor}(tn)), contract(network...))
