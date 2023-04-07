@@ -14,6 +14,28 @@ function update_sweep(nsite, graph::AbstractGraph; kwargs...)
   )
 end
 
+function _step_printer(; cutoff, maxdim, mindim, outputlevel, psi, region, spec, sweep_step)
+  if outputlevel >= 2
+    #if get(data(sweep_step),:time_direction,0) == +1
+    #  @printf("Sweep %d, direction %s, position (%s,) \n", sw, direction, pos(step))
+    #end
+    print("  Truncated using")
+    @printf(" cutoff=%.1E", cutoff)
+    @printf(" maxdim=%d", maxdim)
+    @printf(" mindim=%d", mindim)
+    #print(" current_time=", round(current_time; digits=3))
+    println()
+    if spec != nothing
+      @printf(
+        "  Trunc. err=%.2E, bond dimension %d\n",
+        spec.truncerr,
+        linkdim(psi, edgetype(psi)(region...))
+      )
+    end
+    flush(stdout)
+  end
+end
+
 function update_step(
   solver,
   PH,
@@ -24,6 +46,7 @@ function update_step(
   normalize::Bool=false,
   nsite::Int=2,
   outputlevel::Int=0,
+  (step_observer!)::Observer=Observer(),
   sw::Int=1,
   sweep_regions=update_sweep(nsite, psi),
   kwargs...,
@@ -32,7 +55,7 @@ function update_step(
   PH = copy(PH)
   psi = copy(psi)
 
-  observer = get(kwargs, :observer!, nothing)
+  step_observer!["_step_printer"] = _step_printer
 
   # Append empty namedtuple to each element if not already present
   # (Needed to handle user-provided sweep_regions)
@@ -45,8 +68,7 @@ function update_step(
   end
 
   maxtruncerr = 0.0
-  info = nothing
-  for (n, (region, step_kwargs)) in enumerate(sweep_regions)
+  for (sweep_step, (region, step_kwargs)) in enumerate(sweep_regions)
     psi, PH, spec, info = local_update(
       solver,
       PH,
@@ -62,30 +84,14 @@ function update_step(
     )
     maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
 
-    if outputlevel >= 2
-      #if get(data(sweep_step),:time_direction,0) == +1
-      #  @printf("Sweep %d, direction %s, position (%s,) \n", sw, direction, pos(step))
-      #end
-      print("  Truncated using")
-      @printf(" cutoff=%.1E", cutoff)
-      @printf(" maxdim=%.1E", maxdim)
-      print(" mindim=", mindim)
-      #print(" current_time=", round(current_time; digits=3))
-      println()
-      if spec != nothing
-        @printf(
-          "  Trunc. err=%.2E, bond dimension %d\n",
-          spec.truncerr,
-          linkdim(psi, edgetype(psi)(pos(step)...))
-        )
-      end
-      flush(stdout)
-    end
     update!(
-      observer;
-      sweep_step=n,
+      step_observer!;
+      cutoff,
+      maxdim,
+      mindim,
+      sweep_step,
       total_sweep_steps=length(sweep_regions),
-      end_of_sweep=(n == length(sweep_regions)),
+      end_of_sweep=(sweep_step == length(sweep_regions)),
       psi,
       region,
       sweep=sw,

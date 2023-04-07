@@ -26,24 +26,37 @@ function process_sweeps(
   return maxdim, mindim, cutoff, noise, kwargs
 end
 
+function _sweep_printer(; info, outputlevel, psi, sweep, sw_time)
+  if outputlevel >= 1
+    print("After sweep ", sweep, ":")
+    print(" maxlinkdim=", maxlinkdim(psi))
+    @printf(" maxerr=%.2E", info.maxtruncerr)
+    #print(" current_time=", round(current_time; digits=3))
+    print(" time=", round(sw_time; digits=3))
+    println()
+    flush(stdout)
+  end
+end
+
 function alternating_update(
   solver,
   PH,
   psi0::AbstractTTN;
-  checkdone=nothing,
-  outputlevel=0,
-  nsweeps=1,
+  checkdone=(; kws...) -> false,
+  outputlevel::Integer=0,
+  nsweeps::Integer=1,
+  (sweep_observer!)::Observer=Observer(),
   write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
   kwargs...,
 )
   maxdim, mindim, cutoff, noise, kwargs = process_sweeps(nsweeps; kwargs...)
 
-  step_observer = get(kwargs, :step_observer!, nothing)
-
   psi = copy(psi0)
 
-  info = nothing
+  sweep_observer!["_sweep_printer"] = _sweep_printer
+
   for sw in 1:nsweeps
+
     if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
       if outputlevel >= 2
         println(
@@ -68,23 +81,9 @@ function alternating_update(
       )
     end
 
-    update!(step_observer; psi, sweep=sw, outputlevel)
+    update!(sweep_observer!; info, psi, sweep=sw, sw_time, outputlevel)
 
-    if outputlevel >= 1
-      print("After sweep ", sw, ":")
-      print(" maxlinkdim=", maxlinkdim(psi))
-      @printf(" maxerr=%.2E", info.maxtruncerr)
-      #print(" current_time=", round(current_time; digits=3))
-      print(" time=", round(sw_time; digits=3))
-      println()
-      flush(stdout)
-    end
-
-    isdone = false
-    if !isnothing(checkdone)
-      isdone = checkdone(; psi, sweep=sw, outputlevel, kwargs...)
-    end
-    isdone && break
+    checkdone(; psi, sweep=sw, outputlevel, kwargs...) && break
   end
   return psi
 end
