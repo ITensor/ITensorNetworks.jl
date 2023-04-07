@@ -46,6 +46,7 @@ function update_step(
   normalize::Bool=false,
   nsite::Int=2,
   outputlevel::Int=0,
+  step_printer=_step_printer,
   (step_observer!)::Observer=Observer(),
   sw::Int=1,
   sweep_regions=update_sweep(nsite, psi),
@@ -55,7 +56,7 @@ function update_step(
   PH = copy(PH)
   psi = copy(psi)
 
-  step_observer!["_step_printer"] = _step_printer
+  step_observer!["step_printer"] = step_printer
 
   # Append empty namedtuple to each element if not already present
   # (Needed to handle user-provided sweep_regions)

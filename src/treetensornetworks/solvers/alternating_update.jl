@@ -46,6 +46,7 @@ function alternating_update(
   outputlevel::Integer=0,
   nsweeps::Integer=1,
   (sweep_observer!)::Observer=Observer(),
+  sweep_printer=_sweep_printer,
   write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
   kwargs...,
 )
@@ -53,10 +54,9 @@ function alternating_update(
 
   psi = copy(psi0)
 
-  sweep_observer!["_sweep_printer"] = _sweep_printer
+  sweep_observer!["sweep_printer"] = sweep_printer
 
   for sw in 1:nsweeps
-
     if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
       if outputlevel >= 2
         println(
