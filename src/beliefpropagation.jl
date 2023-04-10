@@ -58,7 +58,9 @@ function construct_initial_mts(
 
       edge_itn = ITensorNetwork(edge_tensors)
 
-      mt = ITensorNetwork(contract(edge_itn; contract_kwargs...))
+      contract_output = contract(edge_itn; contract_kwargs...)
+
+      mt = typeof(contract_output) == ITensor ? ITensorNetwork(contract_output) : first(contract_output)
 
       mts[subgraph => subgraph_neighbor] = mt
     end
@@ -83,7 +85,8 @@ function update_mt(
     reduce(⊗, contract_list)
   end
 
-  itn = ITensorNetwork(contract(tn; contract_kwargs...))
+  contract_output = contract(tn; contract_kwargs...)
+  itn = typeof(contract_output) == ITensor ? ITensorNetwork(contract_output) : contract_output[1]
   normalize!.(vertex_data(itn))
 
   return itn
@@ -106,7 +109,7 @@ function update_all_mts(tn::ITensorNetwork, mts::DataGraph; contract_kwargs=(;))
     ]
 
     update_mts[src(e) => dst(e)] = update_mt(
-      tn, mts[src(e)], environment_tensornetworks; contract_kwargs...
+      tn, mts[src(e)], environment_tensornetworks; contract_kwargs
     )
   end
   return update_mts
@@ -116,7 +119,7 @@ function update_all_mts(
   tn::ITensorNetwork, mts::DataGraph, niters::Int; contract_kwargs=(;)
 )
   for i in 1:niters
-    mts = update_all_mts(tn, mts; contract_kwargs...)
+    mts = update_all_mts(tn, mts; contract_kwargs)
   end
   return mts
 end
@@ -136,7 +139,7 @@ function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir=
   central_tn = ITensorNetwork([
     tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)
   ])
-  return vcat(env_tns, central_tn)
+  return vcat(env_tns, ITensorNetwork[central_tn])
 end
 
 function get_environment(output_type::Type, tn::ITensorNetwork, mts::DataGraph, verts::Vector; kwargs...)
@@ -161,17 +164,15 @@ end
 Calculate the contraction of a tensor network centred on the vertices verts. Using message tensors.
 Defaults to using tn[verts] as the local network but can be overriden
 """
-function calculate_contraction(
+function calculate_contraction_network(
   tn::ITensorNetwork,
   mts::DataGraph,
   verts::Vector;
-  verts_tn=ITensorNetwork([tn[v] for v in verts]),
-  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
+  verts_tn=ITensorNetwork([tn[v] for v in verts])
 )
   environment_tns = get_environment(tn, mts, verts)
-  full_tn = reduce(⊗, vcat(environment_tns, verts_tn))
-  tensors_to_contract = ITensor[full_tn[v] for v in vertices(full_tn)]
-  return contract(tensors_to_contract; sequence=contraction_sequence(tensors_to_contract))
+
+  return reduce(⊗, vcat(environment_tns, ITensorNetwork[verts_tn]))
 end
 
 """
@@ -188,7 +189,7 @@ function compute_message_tensors(
 )
   Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
 
-  mts = construct_initial_mts(tn, Z; contract_kwargs..., kwargs...)
-  mts = update_all_mts(tn, mts, niters; contract_kwargs...)
+  mts = construct_initial_mts(tn, Z; contract_kwargs, kwargs...)
+  mts = update_all_mts(tn, mts, niters; contract_kwargs)
   return mts
 end
