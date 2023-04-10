@@ -7,9 +7,8 @@ function construct_initial_mts(
 end
 
 function construct_initial_mts(
-  tn::ITensorNetwork, subgraphs::DataGraph; contract_kwargs = (;), maxdim = nothing, init=(I...) -> @compat allequal(I) ? 1 : 0
+  tn::ITensorNetwork, subgraphs::DataGraph; contract_kwargs=(;), init=(I...) -> @compat allequal(I) ? 1 : 0
 )
-
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
   )
@@ -29,7 +28,6 @@ function construct_initial_mts(
           end
         end
 
-        #Does vertex share a commonind with a vertex in subgraph neighbor?? If so append tn[v] to list.
         if common_index
           push!(relevant_tensors, tn[vertex])
         end
@@ -40,14 +38,22 @@ function construct_initial_mts(
       for t in relevant_tensors
         inds_to_rm = Index[]
         for ind in inds(t)
-          if ind ∉ edge_inds && all([ind ∉ inds(tp) for tp ∈ setdiff(relevant_tensors, [t])])
+          if ind ∉ edge_inds &&
+            all([ind ∉ inds(tp) for tp in setdiff(relevant_tensors, [t])])
             push!(inds_to_rm, ind)
           end
         end
 
         new_inds = setdiff(inds(t), inds_to_rm)
-        push!(edge_tensors, normalize!(itensor([init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(new_inds)...))],new_inds,)))
-
+        push!(
+          edge_tensors,
+          normalize!(
+            itensor(
+              [init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(new_inds)...))],
+              new_inds,
+            ),
+          ),
+        )
       end
 
       edge_itn = ITensorNetwork(edge_tensors)
@@ -60,18 +66,6 @@ function construct_initial_mts(
   return mts
 end
 
-function normalize_itn!(tn::ITensorNetwork)
-  for v in vertices(tn)
-      normalize!(tn[v])
-  end
-end
-
-function normalize_itn(tn::ITensorNetwork)
-  tn = copy(tn)
-  normalize_itn!(tn)
-  return tn
-end
-
 """
 DO a single update of a message tensor using the current subgraph and the incoming mts
 """
@@ -79,7 +73,7 @@ function update_mt(
   tn::ITensorNetwork,
   subgraph_vertices::Vector,
   mts::Vector{ITensorNetwork};
-  contract_kwargs = (;)
+  contract_kwargs=(;),
 )
   contract_list = ITensorNetwork[mts; ITensorNetwork([tn[v] for v in subgraph_vertices])]
 
@@ -90,8 +84,9 @@ function update_mt(
   end
 
   itn = ITensorNetwork(contract(tn; contract_kwargs...))
-  return normalize_itn(itn)
+  normalize!.(vertex_data(itn))
 
+  return itn
 end
 
 function update_mt(
@@ -103,11 +98,7 @@ end
 """
 Do an update of all message tensors for a given ITensornetwork and its partition into sub graphs
 """
-function update_all_mts(
-  tn::ITensorNetwork,
-  mts::DataGraph;
-  contract_kwargs = (;)
-)
+function update_all_mts(tn::ITensorNetwork, mts::DataGraph; contract_kwargs=(;))
   update_mts = copy(mts)
   for e in edges(mts)
     environment_tensornetworks = ITensorNetwork[
@@ -122,10 +113,7 @@ function update_all_mts(
 end
 
 function update_all_mts(
-  tn::ITensorNetwork,
-  mts::DataGraph,
-  niters::Int;
-  contract_kwargs = (;)
+  tn::ITensorNetwork, mts::DataGraph, niters::Int; contract_kwargs=(;)
 )
   for i in 1:niters
     mts = update_all_mts(tn, mts; contract_kwargs...)
@@ -145,8 +133,28 @@ function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir=
   end
 
   env_tns = ITensorNetwork[mts[e] for e in boundary_edges(mts, subgraphs; dir=:in)]
-  central_tn = ITensorNetwork([tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)])
+  central_tn = ITensorNetwork([
+    tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)
+  ])
   return vcat(env_tns, central_tn)
+end
+
+function get_environment(output_type::Type, tn::ITensorNetwork, mts::DataGraph, verts::Vector; kwargs...)
+  itns = get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; kwargs...)
+
+  if output_type == Vector{ITensorNetwork}
+    return itns
+  else
+    itn = reduce(⊗, itns)
+    if output_type == ITensorNetwork
+      return itn
+    elseif output_type == Vector{ITensor}
+      return ITensor[itn[v] for v in vertices(itn)]
+    else
+      error("Output Type for get_environment not Supported!")
+    end
+  end
+
 end
 
 """
@@ -175,7 +183,7 @@ function compute_message_tensors(
   nvertices_per_partition=nothing,
   npartitions=nothing,
   vertex_groups=nothing,
-  contract_kwargs = (;),
+  contract_kwargs=(;),
   kwargs...,
 )
   Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
