@@ -34,7 +34,7 @@ function main()
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
   sz_bp =
     calculate_contraction(
-      ψψ, mts, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])]
+      ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
     )[] / calculate_contraction(ψψ, mts, [(v, 1)])[]
 
   println(
@@ -49,7 +49,7 @@ function main()
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
   sz_bp =
     calculate_contraction(
-      ψψ, mts, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])]
+      ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
     )[] / calculate_contraction(ψψ, mts, [(v, 1)])[]
 
   println(
