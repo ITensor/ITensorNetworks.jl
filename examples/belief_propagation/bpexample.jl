@@ -6,7 +6,10 @@ using Random
 using SplitApplyCombine
 
 using ITensorNetworks:
-  compute_message_tensors, calculate_contraction, contract_inner, nested_graph_leaf_vertices
+  compute_message_tensors,
+  calculate_contraction_network,
+  contract_inner,
+  nested_graph_leaf_vertices
 
 function main()
   n = 4
@@ -32,10 +35,11 @@ function main()
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
   )
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
-  sz_bp =
-    calculate_contraction(
-      ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
-    )[] / calculate_contraction(ψψ, mts, [(v, 1)])[]
+  numerator_network = calculate_contraction_network(
+    ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
+  )
+  denominator_network = calculate_contraction_network(ψψ, mts, [(v, 1)])
+  sz_bp = contract(numerator_network)[] / contract(denominator_network)[]
 
   println(
     "Simple Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp)
@@ -47,10 +51,11 @@ function main()
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
   )
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
-  sz_bp =
-    calculate_contraction(
-      ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
-    )[] / calculate_contraction(ψψ, mts, [(v, 1)])[]
+  numerator_network = calculate_contraction_network(
+    ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
+  )
+  denominator_network = calculate_contraction_network(ψψ, mts, [(v, 1)])
+  sz_bp = contract(numerator_network)[] / contract(denominator_network)[]
 
   println(
     "General Belief Propagation (2-site subgraphs) Gives Sz on Site " *
