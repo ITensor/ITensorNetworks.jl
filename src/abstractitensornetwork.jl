@@ -365,11 +365,6 @@ function isapprox(
   return d <= max(atol, rtol * max(norm(x), norm(y)))
 end
 
-function contract(tn::AbstractITensorNetwork; sequence=vertices(tn), kwargs...)
-  sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn, v), sequence)
-  return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
-end
-
 function contract(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
   return contract(tn, edgetype(tn)(edge); kwargs...)
 end

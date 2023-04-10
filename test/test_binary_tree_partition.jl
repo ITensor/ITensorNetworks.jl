@@ -82,11 +82,11 @@ end
     network2 = vcat(networks...)
     out2 = contract(network2...)
     @test isapprox(out1, out2)
-    # test approx_itensornetwork
-    approx_tn, lognorm = approx_itensornetwork(
-      tn,
-      binary_tree_structure;
+    # test approx_itensornetwork (here we call `contract` to test the interface)
+    approx_tn, lognorm = contract(
+      tn;
       alg="density_matrix",
+      output_structure=binary_tree_structure,
       contraction_sequence_alg="sa_bipartite",
     )
     network3 = Vector{ITensor}(approx_tn)

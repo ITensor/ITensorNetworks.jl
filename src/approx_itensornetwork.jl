@@ -461,10 +461,10 @@ function approx_itensornetwork(
   ::Algorithm"density_matrix",
   tn::ITensorNetwork,
   output_structure::Function=path_graph_structure;
-  cutoff,
-  maxdim,
-  contraction_sequence_alg,
-  contraction_sequence_kwargs,
+  cutoff=1e-15,
+  maxdim=10000,
+  contraction_sequence_alg="optimal",
+  contraction_sequence_kwargs=(;),
 )
   inds_btree = output_structure(tn)
   return approx_itensornetwork(
