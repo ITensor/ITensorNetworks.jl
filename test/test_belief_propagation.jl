@@ -39,7 +39,7 @@ using SplitApplyCombine
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
   bp_sz =
     calculate_contraction(
-      ψψ, mts, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])]
+      ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
     )[] / calculate_contraction(ψψ, mts, [(v, 1)])[]
 
   @test abs.(bp_sz - exact_sz) <= 0.00001
@@ -62,7 +62,9 @@ using SplitApplyCombine
   nsites = 2
   mts = compute_message_tensors(ψψ; nvertices_per_partition=nsites)
   bp_szsz =
-    calculate_contraction(ψψ, mts, vs; verts_tensors=[ψOψ[v] for v in vs])[] / calculate_contraction(ψψ, mts, vs)[]
+    calculate_contraction(
+      ψψ, mts, vs; verts_tn=ITensorNetwork(ITensor[ψOψ[v] for v in vs])
+    )[] / calculate_contraction(ψψ, mts, vs)[]
 
   @test abs.(bp_szsz - actual_szsz) <= 0.05
 
@@ -86,7 +88,7 @@ using SplitApplyCombine
     ψψ,
     mts,
     [(v, 2) for v in vs];
-    verts_tensors=ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]],
+    verts_tn=ITensorNetwork(ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]),
   )
 
   rdm = array((rdm * combiner(inds(rdm; plev=0)...)) * combiner(inds(rdm; plev=1)...))
