@@ -7,38 +7,69 @@ function construct_initial_mts(
 end
 
 function construct_initial_mts(
-  tn::ITensorNetwork, subgraphs::DataGraph; init=(I...) -> @compat allequal(I) ? 1 : 0
+  tn::ITensorNetwork, subgraphs::DataGraph; contract_kwargs = (;), maxdim = nothing, init=(I...) -> @compat allequal(I) ? 1 : 0
 )
-  # TODO: This is dropping the vertex data for some reason.
-  # mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensor}(subgraphs)
-  mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensor}(
+
+  mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
   )
   for v in vertices(mts)
     mts[v] = subgraphs[v]
   end
   for subgraph in vertices(subgraphs)
-    tns_to_contract = ITensor[]
     for subgraph_neighbor in neighbors(subgraphs, subgraph)
+      relevant_tensors = ITensor[]
       edge_inds = Index[]
       for vertex in vertices(subgraphs[subgraph])
-        psiv = tn[vertex]
+        common_index = false
         for e in [edgetype(tn)(vertex => neighbor) for neighbor in neighbors(tn, vertex)]
           if (find_subgraph(dst(e), subgraphs) == subgraph_neighbor)
             append!(edge_inds, commoninds(tn, e))
+            common_index = true
           end
         end
+
+        #Does vertex share a commonind with a vertex in subgraph neighbor?? If so append tn[v] to list.
+        if common_index
+          push!(relevant_tensors, tn[vertex])
+        end
       end
-      mt = normalize!(
-        itensor(
-          [init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(edge_inds)...))],
-          edge_inds,
-        ),
-      )
+
+      #Now prune the tensors in the list of any external indices not relevant
+      edge_tensors = ITensor[]
+      for t in relevant_tensors
+        inds_to_rm = Index[]
+        for ind in inds(t)
+          if ind ∉ edge_inds && all([ind ∉ inds(tp) for tp ∈ setdiff(relevant_tensors, [t])])
+            push!(inds_to_rm, ind)
+          end
+        end
+
+        new_inds = setdiff(inds(t), inds_to_rm)
+        push!(edge_tensors, normalize!(itensor([init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(new_inds)...))],new_inds,)))
+
+      end
+
+      edge_itn = ITensorNetwork(edge_tensors)
+
+      mt = ITensorNetwork(contract(edge_itn; contract_kwargs...))
+
       mts[subgraph => subgraph_neighbor] = mt
     end
   end
   return mts
+end
+
+function normalize_itn!(tn::ITensorNetwork)
+  for v in vertices(tn)
+      normalize!(tn[v])
+  end
+end
+
+function normalize_itn(tn::ITensorNetwork)
+  tn = copy(tn)
+  normalize_itn!(tn)
+  return tn
 end
 
 """
@@ -47,21 +78,24 @@ DO a single update of a message tensor using the current subgraph and the incomi
 function update_mt(
   tn::ITensorNetwork,
   subgraph_vertices::Vector,
-  mts::Vector{ITensor};
-  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
+  mts::Vector{ITensorNetwork};
+  contract_kwargs = (;)
 )
-  contract_list = [mts; [tn[v] for v in subgraph_vertices]]
+  contract_list = ITensorNetwork[mts; ITensorNetwork([tn[v] for v in subgraph_vertices])]
 
-  new_mt = if isone(length(contract_list))
+  tn = if isone(length(contract_list))
     copy(only(contract_list))
   else
-    contract(contract_list; sequence=contraction_sequence(contract_list))
+    reduce(⊗, contract_list)
   end
-  return normalize!(new_mt)
+
+  itn = ITensorNetwork(contract(tn; contract_kwargs...))
+  return normalize_itn(itn)
+
 end
 
 function update_mt(
-  tn::ITensorNetwork, subgraph::ITensorNetwork, mts::Vector{ITensor}; kwargs...
+  tn::ITensorNetwork, subgraph::ITensorNetwork, mts::Vector{ITensorNetwork}; kwargs...
 )
   return update_mt(tn, vertices(subgraph), mts; kwargs...)
 end
@@ -72,15 +106,16 @@ Do an update of all message tensors for a given ITensornetwork and its partition
 function update_all_mts(
   tn::ITensorNetwork,
   mts::DataGraph;
-  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
+  contract_kwargs = (;)
 )
   update_mts = copy(mts)
   for e in edges(mts)
-    environment_tensors = ITensor[
+    environment_tensornetworks = ITensorNetwork[
       mts[e_in] for e_in in setdiff(boundary_edges(mts, src(e); dir=:in), [reverse(e)])
     ]
+
     update_mts[src(e) => dst(e)] = update_mt(
-      tn, mts[src(e)], environment_tensors; contraction_sequence
+      tn, mts[src(e)], environment_tensornetworks; contract_kwargs...
     )
   end
   return update_mts
@@ -90,10 +125,10 @@ function update_all_mts(
   tn::ITensorNetwork,
   mts::DataGraph,
   niters::Int;
-  contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
+  contract_kwargs = (;)
 )
   for i in 1:niters
-    mts = update_all_mts(tn, mts; contraction_sequence)
+    mts = update_all_mts(tn, mts; contract_kwargs...)
   end
   return mts
 end
@@ -109,11 +144,9 @@ function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir=
     return get_environment(tn, mts, setdiff(vertices(tn), verts))
   end
 
-  env_tensors = ITensor[mts[e] for e in boundary_edges(mts, subgraphs; dir=:in)]
-  return vcat(
-    env_tensors,
-    ITensor[tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)],
-  )
+  env_tns = ITensorNetwork[mts[e] for e in boundary_edges(mts, subgraphs; dir=:in)]
+  central_tn = ITensorNetwork([tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)])
+  return vcat(env_tns, central_tn)
 end
 
 """
@@ -124,11 +157,12 @@ function calculate_contraction(
   tn::ITensorNetwork,
   mts::DataGraph,
   verts::Vector;
-  verts_tensors=ITensor[tn[v] for v in verts],
+  verts_tn=ITensorNetwork([tn[v] for v in verts]),
   contraction_sequence::Function=tn -> contraction_sequence(tn; alg="optimal"),
 )
-  environment_tensors = get_environment(tn, mts, verts)
-  tensors_to_contract = vcat(environment_tensors, verts_tensors)
+  environment_tns = get_environment(tn, mts, verts)
+  full_tn = reduce(⊗, vcat(environment_tns, verts_tn))
+  tensors_to_contract = ITensor[full_tn[v] for v in vertices(full_tn)]
   return contract(tensors_to_contract; sequence=contraction_sequence(tensors_to_contract))
 end
 
@@ -141,11 +175,12 @@ function compute_message_tensors(
   nvertices_per_partition=nothing,
   npartitions=nothing,
   vertex_groups=nothing,
+  contract_kwargs = (;),
   kwargs...,
 )
   Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
 
-  mts = construct_initial_mts(tn, Z; kwargs...)
-  mts = update_all_mts(tn, mts, niters)
+  mts = construct_initial_mts(tn, Z; contract_kwargs..., kwargs...)
+  mts = update_all_mts(tn, mts, niters; contract_kwargs...)
   return mts
 end
