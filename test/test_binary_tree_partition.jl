@@ -54,7 +54,16 @@ end
   end
 end
 
-@testset "test binary_tree_partition and approx_itensornetwork" begin
+@testset "test partition with mincut_recursive_bisection alg of disconnected tn" begin
+  inds = [Index(2, "$i") for i in 1:5]
+  tn = ITensorNetwork([randomITensor(i) for i in inds])
+  par = partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
+  networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
+  network = vcat(networks...)
+  @test isapprox(contract(Vector{ITensor}(tn)), contract(network...))
+end
+
+@testset "test partition with mincut_recursive_bisection alg and approx_itensornetwork" begin
   i = Index(2, "i")
   j = Index(2, "j")
   k = Index(2, "k")
@@ -73,11 +82,11 @@ end
     network2 = vcat(networks...)
     out2 = contract(network2...)
     @test isapprox(out1, out2)
-    # test approx_itensornetwork
-    approx_tn, lognorm = approx_itensornetwork(
-      tn,
-      binary_tree_structure;
+    # test approx_itensornetwork (here we call `contract` to test the interface)
+    approx_tn, lognorm = contract(
+      tn;
       alg="density_matrix",
+      output_structure=binary_tree_structure,
       contraction_sequence_alg="sa_bipartite",
     )
     network3 = Vector{ITensor}(approx_tn)
