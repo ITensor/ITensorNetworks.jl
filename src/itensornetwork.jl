@@ -66,6 +66,11 @@ function ITensorNetwork{V}(ts::ITensorCollection) where {V}
   return tn
 end
 
+function ITensorNetwork(t::ITensor)
+  ts = ITensor[t]
+  return ITensorNetwork{keytype(ts)}(ts)
+end
+
 #
 # Construction from underyling named graph
 #
