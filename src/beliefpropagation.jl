@@ -7,7 +7,10 @@ function construct_initial_mts(
 end
 
 function construct_initial_mts(
-  tn::ITensorNetwork, subgraphs::DataGraph; init=(I...) -> allequal(I) ? 1 : 0
+  tn::ITensorNetwork,
+  subgraphs::DataGraph;
+  contract_kwargs=(;),
+  init=(I...) -> allequal(I) ? 1 : 0,
 )
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
@@ -50,9 +53,14 @@ function construct_initial_mts(
         )
       end
 
-      mts[subgraph => subgraph_neighbor] = ITensorNetwork(
-        Dictionaries.Dictionary(boundary_vertices_s, boundary_tensors)
-      )
+      mt = ITensorNetwork(Dictionaries.Dictionary(boundary_vertices_s, boundary_tensors))
+
+      contract_output = contract(mt; contract_kwargs...)
+      mts[subgraph => subgraph_neighbor] = if typeof(contract_output) == ITensor
+        ITensorNetwork(contract_output)
+      else
+        first(contract_output)
+      end
     end
   end
   return mts
@@ -79,7 +87,7 @@ function update_mt(
   itn = if typeof(contract_output) == ITensor
     ITensorNetwork(contract_output)
   else
-    contract_output[1]
+    first(contract_output)
   end
   normalize!.(vertex_data(itn))
 
@@ -180,11 +188,12 @@ function compute_message_tensors(
   npartitions=nothing,
   vertex_groups=nothing,
   contract_kwargs=(;),
+  init_contract_kwargs=(;),
   init_kwargs...,
 )
   Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
 
-  mts = construct_initial_mts(tn, Z; init_kwargs...)
+  mts = construct_initial_mts(tn, Z; contract_kwargs=init_contract_kwargs, init_kwargs...)
   mts = update_all_mts(tn, mts, niters; contract_kwargs)
   return mts
 end

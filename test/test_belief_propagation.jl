@@ -133,6 +133,9 @@ ITensors.disable_warn_order()
     contract_kwargs=(;
       alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16, maxdim
     ),
+    init_contract_kwargs=(;
+      alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16
+    ),
   )
   numerator_network = calculate_contraction_network(
     ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v])

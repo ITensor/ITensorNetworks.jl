@@ -80,6 +80,12 @@ function main()
       maxdim,
       contraction_sequence_alg="greedy",
     ),
+    init_contract_kwargs=(;
+      alg="density_matrix",
+      output_structure=path_graph_structure,
+      cutoff=1e-16,
+      contraction_sequence_alg="greedy",
+    ),
   )
   numerator_network = calculate_contraction_network(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
