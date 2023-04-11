@@ -7,7 +7,10 @@ function construct_initial_mts(
 end
 
 function construct_initial_mts(
-  tn::ITensorNetwork, subgraphs::DataGraph; contract_kwargs=(;), init=(I...) -> @compat allequal(I) ? 1 : 0
+  tn::ITensorNetwork,
+  subgraphs::DataGraph;
+  contract_kwargs=(;),
+  init=(I...) -> allequal(I) ? 1 : 0,
 )
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
@@ -60,7 +63,11 @@ function construct_initial_mts(
 
       contract_output = contract(edge_itn; contract_kwargs...)
 
-      mt = typeof(contract_output) == ITensor ? ITensorNetwork(contract_output) : first(contract_output)
+      mt = if typeof(contract_output) == ITensor
+        ITensorNetwork(contract_output)
+      else
+        first(contract_output)
+      end
 
       mts[subgraph => subgraph_neighbor] = mt
     end
@@ -86,7 +93,11 @@ function update_mt(
   end
 
   contract_output = contract(tn; contract_kwargs...)
-  itn = typeof(contract_output) == ITensor ? ITensorNetwork(contract_output) : contract_output[1]
+  itn = if typeof(contract_output) == ITensor
+    ITensorNetwork(contract_output)
+  else
+    contract_output[1]
+  end
   normalize!.(vertex_data(itn))
 
   return itn
@@ -142,7 +153,9 @@ function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir=
   return vcat(env_tns, ITensorNetwork[central_tn])
 end
 
-function get_environment(output_type::Type, tn::ITensorNetwork, mts::DataGraph, verts::Vector; kwargs...)
+function get_environment(
+  output_type::Type, tn::ITensorNetwork, mts::DataGraph, verts::Vector; kwargs...
+)
   itns = get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; kwargs...)
 
   if output_type == Vector{ITensorNetwork}
@@ -157,7 +170,6 @@ function get_environment(output_type::Type, tn::ITensorNetwork, mts::DataGraph, 
       error("Output Type for get_environment not Supported!")
     end
   end
-
 end
 
 """
@@ -168,7 +180,7 @@ function calculate_contraction_network(
   tn::ITensorNetwork,
   mts::DataGraph,
   verts::Vector;
-  verts_tn=ITensorNetwork([tn[v] for v in verts])
+  verts_tn=ITensorNetwork([tn[v] for v in verts]),
 )
   environment_tns = get_environment(tn, mts, verts)
 

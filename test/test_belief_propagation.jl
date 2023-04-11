@@ -46,7 +46,7 @@ ITensors.disable_warn_order()
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
   )
   denominator_network = calculate_contraction_network(ψψ, mts, [(v, 1)])
-  bp_sz = contract(numerator_network)[]/contract(denominator_network)[]
+  bp_sz = contract(numerator_network)[] / contract(denominator_network)[]
 
   @test abs.(bp_sz - exact_sz) <= 1e-14
 
@@ -71,7 +71,7 @@ ITensors.disable_warn_order()
     ψψ, mts, vs; verts_tn=ITensorNetwork(ITensor[ψOψ[v] for v in vs])
   )
   denominator_network = calculate_contraction_network(ψψ, mts, vs)
-  bp_szsz = contract(numerator_network)[]/contract(denominator_network)[]
+  bp_szsz = contract(numerator_network)[] / contract(denominator_network)[]
 
   @test abs.(bp_szsz - actual_szsz) <= 0.05
 
@@ -91,12 +91,14 @@ ITensors.disable_warn_order()
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
-  rdm = contract(calculate_contraction_network(
-    ψψ,
-    mts,
-    [(v, 2) for v in vs];
-    verts_tn=ITensorNetwork(ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]),
-  ))
+  rdm = contract(
+    calculate_contraction_network(
+      ψψ,
+      mts,
+      [(v, 2) for v in vs];
+      verts_tn=ITensorNetwork(ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]),
+    ),
+  )
 
   rdm = array((rdm * combiner(inds(rdm; plev=0)...)) * combiner(inds(rdm; plev=1)...))
   rdm /= tr(rdm)
@@ -113,17 +115,16 @@ ITensors.disable_warn_order()
   ψ = randomITensorNetwork(s; link_space=χ)
   maxdim = 16
   v = (2, 2)
-  
-  ψψ = flatten_networks(ψ, dag(ψ); combine_linkinds = false, map_bra_linkinds = prime)
+
+  ψψ = flatten_networks(ψ, dag(ψ); combine_linkinds=false, map_bra_linkinds=prime)
   Oψ = copy(ψ)
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
-  ψOψ = flatten_networks(ψ, dag(Oψ); combine_linkinds = false, map_bra_linkinds = prime)
-  
+  ψOψ = flatten_networks(ψ, dag(Oψ); combine_linkinds=false, map_bra_linkinds=prime)
+
   combiners = linkinds_combiners(ψψ)
   ψψ = combine_linkinds(ψψ, combiners)
   ψOψ = combine_linkinds(ψOψ, combiners)
 
-  
   nsites = 1
   vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1], vertices(ψψ))))
   mts = compute_message_tensors(
@@ -136,13 +137,12 @@ ITensors.disable_warn_order()
   numerator_network = calculate_contraction_network(
     ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v])
   )
-  
+
   denominator_network = calculate_contraction_network(ψψ, mts, [v])
   bp_sz = contract(numerator_network)[] / contract(denominator_network)[]
-  
+
   exact_sz =
-    contract_boundary_mps(ψOψ; cutoff=1e-16) /
-    contract_boundary_mps(ψψ; cutoff=1e-16)
+    contract_boundary_mps(ψOψ; cutoff=1e-16) / contract_boundary_mps(ψψ; cutoff=1e-16)
 
   @test abs.(bp_sz - exact_sz) <= 1e-2
 end

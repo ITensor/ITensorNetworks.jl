@@ -65,17 +65,29 @@ function main()
   )
 
   #Now do General Belief Propagation with Matrix Product State Message Tensors Measure Sz on Site v
-  vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1][1], vertices(ψψ))))
+  vertex_groups = nested_graph_leaf_vertices(
+    partition(ψψ, group(v -> v[1][1], vertices(ψψ)))
+  )
   maxdim = 8
 
-  mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups, contract_kwargs=(;
-    alg="density_matrix", output_structure=path_graph_structure, maxdim, contraction_sequence_alg = "greedy"))
+  mts = compute_message_tensors(
+    ψψ;
+    vertex_groups=vertex_groups,
+    contract_kwargs=(;
+      alg="density_matrix",
+      output_structure=path_graph_structure,
+      maxdim,
+      contraction_sequence_alg="greedy",
+    ),
+  )
   numerator_network = calculate_contraction_network(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
   denominator_network = calculate_contraction_network(ψψ, mts, [(v, 1)])
-  contract_sequence = contraction_sequence(numerator_network; alg = "greedy")
-  sz_bp = contract(numerator_network; sequence = contract_sequence)[] / contract(denominator_network; sequence = contract_sequence)[]
+  contract_sequence = contraction_sequence(numerator_network; alg="greedy")
+  sz_bp =
+    contract(numerator_network; sequence=contract_sequence)[] /
+    contract(denominator_network; sequence=contract_sequence)[]
 
   println(
     "General Belief Propagation with Column Partitioning and MPS Message Tensors (Max dim 8) Gives Sz on Site " *

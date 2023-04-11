@@ -17,8 +17,8 @@ function symmetric_gauge(
 
     s1, s2 = find_subgraph((vsrc, 1), mts), find_subgraph((vdst, 1), mts)
 
-    forward_mt = mts[s1=>s2][first(vertices(mts[s1=>s2]))]
-    backward_mt = mts[s2=>s1][first(vertices(mts[s2=>s1]))]
+    forward_mt = mts[s1 => s2][first(vertices(mts[s1 => s2]))]
+    backward_mt = mts[s2 => s1][first(vertices(mts[s2 => s1]))]
 
     edge_ind = commoninds(forward_mt, ψsymm[vsrc])
     edge_ind_sim = sim(edge_ind)
