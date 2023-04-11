@@ -16,11 +16,15 @@ function symmetric_gauge(
     vsrc, vdst = src(e), dst(e)
 
     s1, s2 = find_subgraph((vsrc, 1), mts), find_subgraph((vdst, 1), mts)
-    edge_ind = commoninds(mts[s1 => s2], ψsymm[vsrc])
+
+    forward_mt = mts[s1=>s2][first(vertices(mts[s1=>s2]))]
+    backward_mt = mts[s2=>s1][first(vertices(mts[s2=>s1]))]
+
+    edge_ind = commoninds(forward_mt, ψsymm[vsrc])
     edge_ind_sim = sim(edge_ind)
 
-    X_D, X_U = eigen(mts[s1 => s2]; ishermitian=true, cutoff=eigen_message_tensor_cutoff)
-    Y_D, Y_U = eigen(mts[s2 => s1]; ishermitian=true, cutoff=eigen_message_tensor_cutoff)
+    X_D, X_U = eigen(forward_mt; ishermitian=true, cutoff=eigen_message_tensor_cutoff)
+    Y_D, Y_U = eigen(backward_mt; ishermitian=true, cutoff=eigen_message_tensor_cutoff)
     X_D, Y_D = map_diag(x -> x + regularization, X_D),
     map_diag(x -> x + regularization, Y_D)
 
@@ -46,7 +50,7 @@ function symmetric_gauge(
     S = replaceinds(
       S, [commoninds(S, U)..., commoninds(S, V)...] => [edge_ind..., prime(edge_ind)...]
     )
-    symm_mts[s1 => s2], symm_mts[s2 => s1] = S, S
+    symm_mts[s1 => s2], symm_mts[s2 => s1] = ITensorNetwork(S), ITensorNetwork(S)
   end
 
   return ψsymm, symm_mts

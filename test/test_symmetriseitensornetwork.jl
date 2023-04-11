@@ -31,7 +31,7 @@ using SplitApplyCombine
 
   for e in edges(ψ_symm_mts_V2)
     #Test all message tensors are approximately diagonal
-    m_e = ψ_symm_mts_V2[e]
+    m_e = ψ_symm_mts_V2[e][first(vertices(ψ_symm_mts_V2[e]))]
     @test diagITensor(vector(diag(m_e)), inds(m_e)) ≈ m_e atol = 1e-8
   end
 end
