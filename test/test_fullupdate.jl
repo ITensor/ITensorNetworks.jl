@@ -12,9 +12,9 @@ using SplitApplyCombine
 
 @testset "full_update" begin
   Random.seed!(5623)
-  dims = (2, 3)
-  n = prod(dims)
-  g = named_grid(dims)
+  g_dims = (2, 3)
+  n = prod(g_dims)
+  g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 2
   ψ = randomITensorNetwork(s; link_space=χ)

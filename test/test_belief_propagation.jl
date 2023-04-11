@@ -22,8 +22,8 @@ ITensors.disable_warn_order()
 @testset "belief_propagation" begin
 
   #FIRST TEST SINGLE SITE ON AN MPS, SHOULD BE EXACT
-  dims = (1, 6)
-  g = named_grid(dims)
+  g_dims = (1, 6)
+  g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 4
   Random.seed!(1234)
@@ -52,8 +52,8 @@ ITensors.disable_warn_order()
 
   #NOW TEST TWO_SITE_EXPEC TAKING ON THE PARTITION FUNCTION OF THE RECTANGULAR ISING. SHOULD BE REASONABLE AND 
   #INDEPENDENT OF INIT CONDITIONS, FOR SMALL BETA
-  dims = (3, 4)
-  g = named_grid(dims)
+  g_dims = (3, 4)
+  g = named_grid(g_dims)
   s = IndsNetwork(g; link_space=2)
   beta = 0.2
   vs = [(2, 3), (3, 3)]
@@ -76,8 +76,8 @@ ITensors.disable_warn_order()
   @test abs.(bp_szsz - actual_szsz) <= 0.05
 
   #TEST FORMING OF A TWO SITE RDM. JUST CHECK THAT IS HAS THE CORRECT SIZE, TRACE AND IS PSD
-  dims = (4, 4)
-  g = named_grid(dims)
+  g_dims = (4, 4)
+  g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   vs = [(2, 2), (2, 3), (2, 4)]
   χ = 3
@@ -108,8 +108,8 @@ ITensors.disable_warn_order()
   @test size(rdm) == (2^length(vs), 2^length(vs))
 
   #TEST MORE ADVANCED BP WITH ITENSORNETWORK MESSAGE TENSORS. IN THIS CASE IT SHOULD BE LIKE BOUNDARY MPS
-  dims = (6, 6)
-  g = named_grid(dims)
+  g_dims = (6, 6)
+  g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 2
   ψ = randomITensorNetwork(s; link_space=χ)

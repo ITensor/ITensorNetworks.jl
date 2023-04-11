@@ -7,10 +7,7 @@ function construct_initial_mts(
 end
 
 function construct_initial_mts(
-  tn::ITensorNetwork,
-  subgraphs::DataGraph;
-  contract_kwargs=(;),
-  init=(I...) -> allequal(I) ? 1 : 0,
+  tn::ITensorNetwork, subgraphs::DataGraph; init=(I...) -> allequal(I) ? 1 : 0
 )
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
@@ -20,56 +17,42 @@ function construct_initial_mts(
   end
   for subgraph in vertices(subgraphs)
     for subgraph_neighbor in neighbors(subgraphs, subgraph)
-      relevant_tensors = ITensor[]
-      edge_inds = Index[]
-      for vertex in vertices(subgraphs[subgraph])
-        common_index = false
-        for e in [edgetype(tn)(vertex => neighbor) for neighbor in neighbors(tn, vertex)]
-          if (find_subgraph(dst(e), subgraphs) == subgraph_neighbor)
-            append!(edge_inds, commoninds(tn, e))
-            common_index = true
-          end
-        end
-
-        if common_index
-          push!(relevant_tensors, tn[vertex])
-        end
-      end
-
-      #Now prune the tensors in the list of any external indices not relevant
-      edge_tensors = ITensor[]
-      for t in relevant_tensors
-        inds_to_rm = Index[]
-        for ind in inds(t)
-          if ind ∉ edge_inds &&
-            all([ind ∉ inds(tp) for tp in setdiff(relevant_tensors, [t])])
-            push!(inds_to_rm, ind)
-          end
-        end
-
-        new_inds = setdiff(inds(t), inds_to_rm)
+      boundary_vertices_s = setdiff(
+        vertices(subgraphs[subgraph]),
+        unique(
+          flatten([
+            neighbors(subgraphs[subgraph_neighbor], vn) for
+            vn in vertices(subgraphs[subgraph_neighbor])
+          ]),
+        ),
+      )
+      boundary_vertices_sn = setdiff(
+        vertices(subgraphs[subgraph_neighbor]),
+        unique(
+          flatten([
+            neighbors(subgraphs[subgraph], vn) for vn in vertices(subgraphs[subgraph])
+          ]),
+        ),
+      )
+      boundary_tensors = ITensor[]
+      for v in boundary_vertices_s
+        inds_boundary = flatten(unique([inds(tn[vn]) for vn in boundary_vertices_sn]))
+        inds_internal = flatten(
+          unique([inds(tn[v]) for v in setdiff(boundary_vertices_s, [v])])
+        )
+        new_inds = intersect(inds(tn[v]), vcat(inds_boundary, inds_internal))
         push!(
-          edge_tensors,
-          normalize!(
-            itensor(
-              [init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(new_inds)...))],
-              new_inds,
-            ),
+          boundary_tensors,
+          itensor(
+            [init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(new_inds)...))],
+            new_inds,
           ),
         )
       end
 
-      edge_itn = ITensorNetwork(edge_tensors)
-
-      contract_output = contract(edge_itn; contract_kwargs...)
-
-      mt = if typeof(contract_output) == ITensor
-        ITensorNetwork(contract_output)
-      else
-        first(contract_output)
-      end
-
-      mts[subgraph => subgraph_neighbor] = mt
+      mts[subgraph => subgraph_neighbor] = ITensorNetwork(
+        Dictionaries.Dictionary(boundary_vertices_s, boundary_tensors)
+      )
     end
   end
   return mts
@@ -197,11 +180,11 @@ function compute_message_tensors(
   npartitions=nothing,
   vertex_groups=nothing,
   contract_kwargs=(;),
-  kwargs...,
+  init_kwargs...,
 )
   Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
 
-  mts = construct_initial_mts(tn, Z; contract_kwargs, kwargs...)
+  mts = construct_initial_mts(tn, Z; init_kwargs...)
   mts = update_all_mts(tn, mts, niters; contract_kwargs)
   return mts
 end

@@ -4,6 +4,7 @@ using Metis
 using ITensorNetworks
 using Random
 using SplitApplyCombine
+using OMEinsumContractionOrders
 
 using ITensorNetworks:
   compute_message_tensors,
@@ -13,8 +14,8 @@ using ITensorNetworks:
 
 function main()
   n = 4
-  dims = (n, n)
-  g = named_grid(dims)
+  g_dims = (n, n)
+  g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   chi = 2
 
