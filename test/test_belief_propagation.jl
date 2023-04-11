@@ -5,7 +5,8 @@ using ITensorNetworks:
   nested_graph_leaf_vertices,
   calculate_contraction_network,
   split_index,
-  contract_inner
+  contract_inner,
+  contract_boundary_mps
 using Test
 using Compat
 using ITensors
@@ -14,6 +15,9 @@ using Metis
 using LinearAlgebra
 using NamedGraphs
 using SplitApplyCombine
+using Random
+
+ITensors.disable_warn_order()
 
 @testset "belief_propagation" begin
 
@@ -22,6 +26,7 @@ using SplitApplyCombine
   g = named_grid(dims)
   s = siteinds("S=1/2", g)
   χ = 4
+  Random.seed!(1234)
   ψ = randomITensorNetwork(s; link_space=χ)
 
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
@@ -105,7 +110,6 @@ using SplitApplyCombine
   g = named_grid(dims)
   s = siteinds("S=1/2", g)
   χ = 2
-  Random.seed!(1234)
   ψ = randomITensorNetwork(s; link_space=χ)
   maxdim = 16
   v = (2, 2)
