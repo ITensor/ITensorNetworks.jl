@@ -108,7 +108,7 @@ ITensors.disable_warn_order()
   @test size(rdm) == (2^length(vs), 2^length(vs))
 
   #TEST MORE ADVANCED BP WITH ITENSORNETWORK MESSAGE TENSORS. IN THIS CASE IT SHOULD BE LIKE BOUNDARY MPS
-  g_dims = (6, 6)
+  g_dims = (5, 4)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 2
@@ -147,5 +147,5 @@ ITensors.disable_warn_order()
   exact_sz =
     contract_boundary_mps(ψOψ; cutoff=1e-16) / contract_boundary_mps(ψψ; cutoff=1e-16)
 
-  @test abs.(bp_sz - exact_sz) <= 1e-2
+  @test abs.(bp_sz - exact_sz) <= 1e-5
 end

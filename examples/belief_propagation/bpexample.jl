@@ -4,7 +4,6 @@ using Metis
 using ITensorNetworks
 using Random
 using SplitApplyCombine
-using OMEinsumContractionOrders
 
 using ITensorNetworks:
   compute_message_tensors,
@@ -66,9 +65,16 @@ function main()
   )
 
   #Now do General Belief Propagation with Matrix Product State Message Tensors Measure Sz on Site v
-  vertex_groups = nested_graph_leaf_vertices(
-    partition(ψψ, group(v -> v[1][1], vertices(ψψ)))
-  )
+  ψψ = flatten_networks(ψ, dag(ψ); combine_linkinds=false, map_bra_linkinds=prime)
+  Oψ = copy(ψ)
+  Oψ[v] = apply(op("Sz", s[v]), ψ[v])
+  ψOψ = flatten_networks(ψ, dag(Oψ); combine_linkinds=false, map_bra_linkinds=prime)
+
+  combiners = linkinds_combiners(ψψ)
+  ψψ = combine_linkinds(ψψ, combiners)
+  ψOψ = combine_linkinds(ψOψ, combiners)
+
+  vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1], vertices(ψψ))))
   maxdim = 8
 
   mts = compute_message_tensors(
@@ -78,23 +84,20 @@ function main()
       alg="density_matrix",
       output_structure=path_graph_structure,
       maxdim,
-      contraction_sequence_alg="greedy",
+      contraction_sequence_alg="optimal",
     ),
     init_contract_kwargs=(;
       alg="density_matrix",
       output_structure=path_graph_structure,
       cutoff=1e-16,
-      contraction_sequence_alg="greedy",
+      contraction_sequence_alg="optimal",
     ),
   )
   numerator_network = calculate_contraction_network(
-    ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
+    ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v])
   )
-  denominator_network = calculate_contraction_network(ψψ, mts, [(v, 1)])
-  contract_sequence = contraction_sequence(numerator_network; alg="greedy")
-  sz_bp =
-    contract(numerator_network; sequence=contract_sequence)[] /
-    contract(denominator_network; sequence=contract_sequence)[]
+  denominator_network = calculate_contraction_network(ψψ, mts, [v])
+  sz_bp = contract(numerator_network)[] / contract(denominator_network)[]
 
   println(
     "General Belief Propagation with Column Partitioning and MPS Message Tensors (Max dim 8) Gives Sz on Site " *
@@ -104,9 +107,7 @@ function main()
   )
 
   #Now do it exactly
-  Oψ = copy(ψ)
-  Oψ[v] = apply(op("Sz", s[v]), ψ[v])
-  sz_exact = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
+  sz_exact = contract(ψOψ)[] / contract(ψψ)[]
 
   return println("The exact value of Sz on Site " * string(v) * " is " * string(sz_exact))
 end
