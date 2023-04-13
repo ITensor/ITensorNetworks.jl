@@ -2,15 +2,12 @@ function message_tensors(
   tn::ITensorNetwork, nvertices_per_partition::Integer; partition_kwargs=(;), kwargs...
 )
   return message_tensors(
-    tn, partition(tn; nvertices_per_partition, partition_kwargs...); kwargs...
+    partition(tn; nvertices_per_partition, partition_kwargs...); kwargs...
   )
 end
 
 function message_tensors(
-  tn::ITensorNetwork,
-  subgraphs::DataGraph;
-  contract_kwargs=(;),
-  init=(I...) -> allequal(I) ? 1 : 0,
+  subgraphs::DataGraph; contract_kwargs=(;), init=(I...) -> allequal(I) ? 1 : 0
 )
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
@@ -39,11 +36,15 @@ function message_tensors(
       )
       boundary_tensors = ITensor[]
       for v in boundary_vertices_s
-        inds_boundary = flatten(unique([inds(tn[vn]) for vn in boundary_vertices_sn]))
-        inds_internal = flatten(
-          unique([inds(tn[v]) for v in setdiff(boundary_vertices_s, [v])])
+        inds_boundary = flatten(
+          unique([inds(subgraphs[subgraph_neighbor][vn]) for vn in boundary_vertices_sn])
         )
-        new_inds = intersect(inds(tn[v]), vcat(inds_boundary, inds_internal))
+        inds_internal = flatten(
+          unique([inds(subgraphs[subgraph][v]) for v in setdiff(boundary_vertices_s, [v])])
+        )
+        new_inds = intersect(
+          inds(subgraphs[subgraph][v]), vcat(inds_boundary, inds_internal)
+        )
         push!(
           boundary_tensors,
           itensor(
@@ -176,7 +177,7 @@ function compute_message_tensors(
 )
   Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
 
-  mts = message_tensors(tn, Z; contract_kwargs=init_contract_kwargs, init_kwargs...)
+  mts = message_tensors(Z; contract_kwargs=init_contract_kwargs, init_kwargs...)
   mts = belief_propagation(tn, mts, niters; contract_kwargs)
   return mts
 end
