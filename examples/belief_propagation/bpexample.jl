@@ -6,7 +6,7 @@ using Random
 using SplitApplyCombine
 
 using ITensorNetworks:
-  compute_message_tensors, approx_network_region, contract_inner, nested_graph_leaf_vertices
+  belief_propagation, approx_network_region, contract_inner, nested_graph_leaf_vertices
 
 function main()
   n = 4
@@ -31,7 +31,7 @@ function main()
   vertex_groups = nested_graph_leaf_vertices(
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
   )
-  mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
+  mts = belief_propagation(ψψ; vertex_groups=vertex_groups)
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
@@ -47,7 +47,7 @@ function main()
   vertex_groups = nested_graph_leaf_vertices(
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
   )
-  mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
+  mts = belief_propagation(ψψ; vertex_groups=vertex_groups)
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
@@ -74,7 +74,7 @@ function main()
   vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1], vertices(ψψ))))
   maxdim = 8
 
-  mts = compute_message_tensors(
+  mts = belief_propagation(
     ψψ;
     vertex_groups=vertex_groups,
     contract_kwargs=(;

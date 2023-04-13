@@ -1,6 +1,6 @@
 using ITensorNetworks
 using ITensorNetworks:
-  compute_message_tensors, get_environment, nested_graph_leaf_vertices, contract_inner
+  belief_propagation, get_environment, nested_graph_leaf_vertices, contract_inner
 using Test
 using Compat
 using ITensors
@@ -26,14 +26,14 @@ using SplitApplyCombine
   vertex_groupsSBP = nested_graph_leaf_vertices(
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=1)
   )
-  mtsSBP = compute_message_tensors(ψψ; vertex_groups=vertex_groupsSBP)
+  mtsSBP = belief_propagation(ψψ; vertex_groups=vertex_groupsSBP)
   envsSBP = get_environment(ψψ, mtsSBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
   vertex_groupsGBP = nested_graph_leaf_vertices(
     partition(partition(ψψ, group(v -> v[1][1], vertices(ψψ))); nvertices_per_partition=1)
   )
-  mtsGBP = compute_message_tensors(ψψ; vertex_groups=vertex_groupsGBP)
+  mtsGBP = belief_propagation(ψψ; vertex_groups=vertex_groupsGBP)
   envsGBP = get_environment(ψψ, mtsGBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
   ngates = 5

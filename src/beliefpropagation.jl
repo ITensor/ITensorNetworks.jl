@@ -130,6 +130,26 @@ function belief_propagation(
 end
 
 """
+Simulaneously initialise and update message tensors of a tensornetwork
+"""
+function belief_propagation(
+  tn::ITensorNetwork;
+  niters=10,
+  nvertices_per_partition=nothing,
+  npartitions=nothing,
+  vertex_groups=nothing,
+  contract_kwargs=(;),
+  init_contract_kwargs=(;),
+  init_kwargs...,
+)
+  Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
+
+  mts = message_tensors(Z; contract_kwargs=init_contract_kwargs, init_kwargs...)
+  mts = belief_propagation(tn, mts, niters; contract_kwargs)
+  return mts
+end
+
+"""
 Given a subet of vertices of a given Tensor Network and the Message Tensors for that network, return a Dictionary with the involved subgraphs as keys and the vector of tensors associated with that subgraph as values
 Specifically, the contraction of the environment tensors and tn[vertices] will be a scalar.
 """
@@ -160,24 +180,4 @@ function approx_network_region(
   environment_tn = get_environment(tn, mts, verts)
 
   return environment_tn ⊗ verts_tn
-end
-
-"""
-Simulaneously initialise and update message tensors of a tensornetwork
-"""
-function compute_message_tensors(
-  tn::ITensorNetwork;
-  niters=10,
-  nvertices_per_partition=nothing,
-  npartitions=nothing,
-  vertex_groups=nothing,
-  contract_kwargs=(;),
-  init_contract_kwargs=(;),
-  init_kwargs...,
-)
-  Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
-
-  mts = message_tensors(Z; contract_kwargs=init_contract_kwargs, init_kwargs...)
-  mts = belief_propagation(tn, mts, niters; contract_kwargs)
-  return mts
 end

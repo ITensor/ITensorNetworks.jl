@@ -1,7 +1,7 @@
 using ITensors
 using ITensorNetworks
 using ITensorNetworks:
-  compute_message_tensors, nested_graph_leaf_vertices, contract_inner, symmetric_gauge
+  belief_propagation, nested_graph_leaf_vertices, contract_inner, symmetric_gauge
 using NamedGraphs
 using Test
 using Compat
@@ -27,7 +27,7 @@ using SplitApplyCombine
   vertex_groups = nested_graph_leaf_vertices(
     partition(ψψ_symm, group(v -> v[1], vertices(ψψ_symm)))
   )
-  ψ_symm_mts_V2 = compute_message_tensors(ψψ_symm; vertex_groups=vertex_groups, niters=50)
+  ψ_symm_mts_V2 = belief_propagation(ψψ_symm; vertex_groups=vertex_groups, niters=50)
 
   for e in edges(ψ_symm_mts_V2)
     #Test all message tensors are approximately diagonal

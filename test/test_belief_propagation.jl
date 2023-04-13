@@ -1,7 +1,7 @@
 using ITensorNetworks
 using ITensorNetworks:
   ising_network,
-  compute_message_tensors,
+  belief_propagation,
   nested_graph_leaf_vertices,
   approx_network_region,
   split_index,
@@ -41,7 +41,7 @@ ITensors.disable_warn_order()
   vertex_groups = nested_graph_leaf_vertices(
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
   )
-  mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
+  mts = belief_propagation(ψψ; vertex_groups=vertex_groups)
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
   )
@@ -66,7 +66,7 @@ ITensors.disable_warn_order()
     ITensors.contract(ψψ; sequence=contract_seq)[]
 
   nsites = 2
-  mts = compute_message_tensors(ψψ; nvertices_per_partition=nsites)
+  mts = belief_propagation(ψψ; nvertices_per_partition=nsites)
   numerator_network = approx_network_region(
     ψψ, mts, vs; verts_tn=ITensorNetwork(ITensor[ψOψ[v] for v in vs])
   )
@@ -88,7 +88,7 @@ ITensors.disable_warn_order()
   vertex_groups = nested_graph_leaf_vertices(
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
   )
-  mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
+  mts = belief_propagation(ψψ; vertex_groups=vertex_groups)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   rdm = contract(
@@ -127,7 +127,7 @@ ITensors.disable_warn_order()
 
   nsites = 1
   vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1], vertices(ψψ))))
-  mts = compute_message_tensors(
+  mts = belief_propagation(
     ψψ;
     vertex_groups=vertex_groups,
     contract_kwargs=(;
