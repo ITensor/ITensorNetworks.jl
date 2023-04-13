@@ -92,7 +92,7 @@ ITensors.disable_warn_order()
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   rdm = contract(
-    calculate_contraction_network(
+    approx_network_region(
       ψψ,
       mts,
       [(v, 2) for v in vs];
@@ -137,9 +137,7 @@ ITensors.disable_warn_order()
       alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16
     ),
   )
-  numerator_network = approx_network_region(
-    ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v])
-  )
+  numerator_network = approx_network_region(ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v]))
 
   denominator_network = approx_network_region(ψψ, mts, [v])
   bp_sz = contract(numerator_network)[] / contract(denominator_network)[]

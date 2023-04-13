@@ -103,7 +103,9 @@ end
 """
 Do an update of all message tensors for a given ITensornetwork and its partition into sub graphs
 """
-function belief_propagation_iteration(tn::ITensorNetwork, mts::DataGraph; contract_kwargs=(;))
+function belief_propagation_iteration(
+  tn::ITensorNetwork, mts::DataGraph; contract_kwargs=(;)
+)
   new_mts = copy(mts)
   for e in edges(mts)
     environment_tensornetworks = ITensorNetwork[
@@ -182,6 +184,6 @@ function compute_message_tensors(
   Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
 
   mts = message_tensors(tn, Z; contract_kwargs=init_contract_kwargs, init_kwargs...)
-  mts = update_all_mts(tn, mts, niters; contract_kwargs)
+  mts = belief_propagation(tn, mts, niters; contract_kwargs)
   return mts
 end
