@@ -143,14 +143,7 @@ function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir=
   central_tn = ITensorNetwork([
     tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)
   ])
-  return vcat(env_tns, ITensorNetwork[central_tn])
-end
-
-function get_environment(
-  output_type::Type, tn::ITensorNetwork, mts::DataGraph, verts::Vector; kwargs...
-)
-  itns = get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; kwargs...)
-  return _convert_itensornetworks(output_type, itns)
+  return ITensorNetwork(vcat(env_tns, ITensorNetwork[central_tn]))
 end
 
 """
@@ -163,9 +156,9 @@ function approx_network_region(
   verts::Vector;
   verts_tn=ITensorNetwork([tn[v] for v in verts]),
 )
-  environment_tns = get_environment(tn, mts, verts)
+  environment_tn = get_environment(tn, mts, verts)
 
-  return reduce(⊗, vcat(environment_tns, ITensorNetwork[verts_tn]))
+  return environment_tn ⊗ verts_tn
 end
 
 """

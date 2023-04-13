@@ -258,11 +258,4 @@ function insert_links(ψ::ITensorNetwork, edges::Vector=edges(ψ); cutoff=1e-15)
   return ψ
 end
 
-_convert_itensornetworks(::Type{<:Vector{<:ITensorNetwork}}, itns) = itns
-
-_convert_itensornetworks(::Type{<:ITensorNetwork}, itns) = reduce(⊗, itns)
-
-function _convert_itensornetworks(::Type{Vector{ITensor}}, itns)
-  itn = _convert_itensornetworks(ITensorNetwork, itns)
-  return ITensor[itn[v] for v in vertices(itn)]
-end
+ITensorNetwork(itns::Vector{ITensorNetwork}) = reduce(⊗, itns)
