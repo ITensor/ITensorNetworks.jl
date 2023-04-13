@@ -7,7 +7,7 @@ using SplitApplyCombine
 
 using ITensorNetworks:
   compute_message_tensors,
-  calculate_contraction_network,
+  approx_network_region,
   contract_inner,
   nested_graph_leaf_vertices
 
@@ -38,7 +38,7 @@ function main()
   numerator_network = calculate_contraction_network(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
-  denominator_network = calculate_contraction_network(ψψ, mts, [(v, 1)])
+  denominator_network = approx_network_region(ψψ, mts, [(v, 1)])
   sz_bp = contract(numerator_network)[] / contract(denominator_network)[]
 
   println(
@@ -51,10 +51,10 @@ function main()
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
   )
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
-  numerator_network = calculate_contraction_network(
+  numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
-  denominator_network = calculate_contraction_network(ψψ, mts, [(v, 1)])
+  denominator_network = approx_network_region(ψψ, mts, [(v, 1)])
   sz_bp = contract(numerator_network)[] / contract(denominator_network)[]
 
   println(
@@ -93,10 +93,10 @@ function main()
       contraction_sequence_alg="optimal",
     ),
   )
-  numerator_network = calculate_contraction_network(
+  numerator_network = approx_network_region(
     ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v])
   )
-  denominator_network = calculate_contraction_network(ψψ, mts, [v])
+  denominator_network = approx_network_region(ψψ, mts, [v])
   sz_bp = contract(numerator_network)[] / contract(denominator_network)[]
 
   println(

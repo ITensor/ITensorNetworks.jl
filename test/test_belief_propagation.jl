@@ -3,7 +3,7 @@ using ITensorNetworks:
   ising_network,
   compute_message_tensors,
   nested_graph_leaf_vertices,
-  calculate_contraction_network,
+  approx_network_region,
   split_index,
   contract_inner,
   contract_boundary_mps
@@ -42,10 +42,10 @@ ITensors.disable_warn_order()
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
   )
   mts = compute_message_tensors(ψψ; vertex_groups=vertex_groups)
-  numerator_network = calculate_contraction_network(
+  numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
   )
-  denominator_network = calculate_contraction_network(ψψ, mts, [(v, 1)])
+  denominator_network = approx_network_region(ψψ, mts, [(v, 1)])
   bp_sz = contract(numerator_network)[] / contract(denominator_network)[]
 
   @test abs.(bp_sz - exact_sz) <= 1e-14
@@ -67,10 +67,10 @@ ITensors.disable_warn_order()
 
   nsites = 2
   mts = compute_message_tensors(ψψ; nvertices_per_partition=nsites)
-  numerator_network = calculate_contraction_network(
+  numerator_network = approx_network_region(
     ψψ, mts, vs; verts_tn=ITensorNetwork(ITensor[ψOψ[v] for v in vs])
   )
-  denominator_network = calculate_contraction_network(ψψ, mts, vs)
+  denominator_network = approx_network_region(ψψ, mts, vs)
   bp_szsz = contract(numerator_network)[] / contract(denominator_network)[]
 
   @test abs.(bp_szsz - actual_szsz) <= 0.05
@@ -137,11 +137,11 @@ ITensors.disable_warn_order()
       alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16
     ),
   )
-  numerator_network = calculate_contraction_network(
+  numerator_network = approx_network_region(
     ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v])
   )
 
-  denominator_network = calculate_contraction_network(ψψ, mts, [v])
+  denominator_network = approx_network_region(ψψ, mts, [v])
   bp_sz = contract(numerator_network)[] / contract(denominator_network)[]
 
   exact_sz =

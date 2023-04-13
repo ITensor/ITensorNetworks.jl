@@ -1,12 +1,12 @@
-function construct_initial_mts(
+function message_tensors(
   tn::ITensorNetwork, nvertices_per_partition::Integer; partition_kwargs=(;), kwargs...
 )
-  return construct_initial_mts(
+  return message_tensors(
     tn, partition(tn; nvertices_per_partition, partition_kwargs...); kwargs...
   )
 end
 
-function construct_initial_mts(
+function message_tensors(
   tn::ITensorNetwork,
   subgraphs::DataGraph;
   contract_kwargs=(;),
@@ -69,7 +69,7 @@ end
 """
 DO a single update of a message tensor using the current subgraph and the incoming mts
 """
-function update_mt(
+function update_message_tensor(
   tn::ITensorNetwork,
   subgraph_vertices::Vector,
   mts::Vector{ITensorNetwork};
@@ -94,34 +94,34 @@ function update_mt(
   return itn
 end
 
-function update_mt(
+function update_message_tensor(
   tn::ITensorNetwork, subgraph::ITensorNetwork, mts::Vector{ITensorNetwork}; kwargs...
 )
-  return update_mt(tn, vertices(subgraph), mts; kwargs...)
+  return update_message_tensor(tn, vertices(subgraph), mts; kwargs...)
 end
 
 """
 Do an update of all message tensors for a given ITensornetwork and its partition into sub graphs
 """
-function update_all_mts(tn::ITensorNetwork, mts::DataGraph; contract_kwargs=(;))
-  update_mts = copy(mts)
+function belief_propagation_iteration(tn::ITensorNetwork, mts::DataGraph; contract_kwargs=(;))
+  new_mts = copy(mts)
   for e in edges(mts)
     environment_tensornetworks = ITensorNetwork[
       mts[e_in] for e_in in setdiff(boundary_edges(mts, src(e); dir=:in), [reverse(e)])
     ]
 
-    update_mts[src(e) => dst(e)] = update_mt(
+    new_mts[src(e) => dst(e)] = update_message_tensor(
       tn, mts[src(e)], environment_tensornetworks; contract_kwargs
     )
   end
-  return update_mts
+  return new_mts
 end
 
-function update_all_mts(
+function belief_propagation(
   tn::ITensorNetwork, mts::DataGraph, niters::Int; contract_kwargs=(;)
 )
   for i in 1:niters
-    mts = update_all_mts(tn, mts; contract_kwargs)
+    mts = belief_propagation_iteration(tn, mts; contract_kwargs)
   end
   return mts
 end
@@ -148,26 +148,14 @@ function get_environment(
   output_type::Type, tn::ITensorNetwork, mts::DataGraph, verts::Vector; kwargs...
 )
   itns = get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; kwargs...)
-
-  if output_type == Vector{ITensorNetwork}
-    return itns
-  else
-    itn = reduce(⊗, itns)
-    if output_type == ITensorNetwork
-      return itn
-    elseif output_type == Vector{ITensor}
-      return ITensor[itn[v] for v in vertices(itn)]
-    else
-      error("Output Type for get_environment not Supported!")
-    end
-  end
+  return _convert_itensornetworks(output_type, itns)
 end
 
 """
 Calculate the contraction of a tensor network centred on the vertices verts. Using message tensors.
 Defaults to using tn[verts] as the local network but can be overriden
 """
-function calculate_contraction_network(
+function approx_network_region(
   tn::ITensorNetwork,
   mts::DataGraph,
   verts::Vector;
@@ -193,7 +181,7 @@ function compute_message_tensors(
 )
   Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
 
-  mts = construct_initial_mts(tn, Z; contract_kwargs=init_contract_kwargs, init_kwargs...)
+  mts = message_tensors(tn, Z; contract_kwargs=init_contract_kwargs, init_kwargs...)
   mts = update_all_mts(tn, mts, niters; contract_kwargs)
   return mts
 end
