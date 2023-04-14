@@ -152,8 +152,9 @@ function belief_propagation(
   tn::ITensorNetwork,
   niters::Int;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  nvertices_per_partition = 1
 )
-  mts = message_tensors(tn; nvertices_per_partition=1)
+  mts = message_tensors(tn; nvertices_per_partition)
   for i in 1:niters
     mts = belief_propagation_iteration(tn, mts; contract_kwargs)
   end
