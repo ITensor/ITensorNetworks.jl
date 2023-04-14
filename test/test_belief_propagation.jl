@@ -6,7 +6,8 @@ using ITensorNetworks:
   approx_network_region,
   split_index,
   contract_inner,
-  contract_boundary_mps
+  contract_boundary_mps,
+  message_tensors
 using Test
 using Compat
 using ITensors
@@ -38,10 +39,10 @@ ITensors.disable_warn_order()
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
   nsites = 1
-  vertex_groups = nested_graph_leaf_vertices(
-    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
-  )
-  mts = belief_propagation(ψψ; vertex_groups=vertex_groups)
+  Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
+  mts = message_tensors(ψψ, Z; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts, 10; contract_kwargs=(; alg="exact"))
+
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
   )
@@ -66,7 +67,9 @@ ITensors.disable_warn_order()
     ITensors.contract(ψψ; sequence=contract_seq)[]
 
   nsites = 2
-  mts = belief_propagation(ψψ; nvertices_per_partition=nsites)
+  Z = partition(ψψ; nvertices_per_partition=2)
+  mts = message_tensors(Z; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts, 10; contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(
     ψψ, mts, vs; verts_tn=ITensorNetwork(ITensor[ψOψ[v] for v in vs])
   )
@@ -85,10 +88,11 @@ ITensors.disable_warn_order()
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
   nsites = 2
-  vertex_groups = nested_graph_leaf_vertices(
-    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
+  Z = partition(
+    partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites
   )
-  mts = belief_propagation(ψψ; vertex_groups=vertex_groups)
+  mts = message_tensors(ψψ, Z; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts, 10; contract_kwargs=(; alg="exact"))
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   rdm = contract(
@@ -126,17 +130,17 @@ ITensors.disable_warn_order()
   ψOψ = combine_linkinds(ψOψ, combiners)
 
   nsites = 1
-  vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1], vertices(ψψ))))
+  Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
+  mts = message_tensors(Z)
   mts = belief_propagation(
-    ψψ;
-    vertex_groups=vertex_groups,
+    ψψ,
+    mts,
+    10;
     contract_kwargs=(;
       alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16, maxdim
     ),
-    init_contract_kwargs=(;
-      alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16
-    ),
   )
+
   numerator_network = approx_network_region(ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v]))
 
   denominator_network = approx_network_region(ψψ, mts, [v])

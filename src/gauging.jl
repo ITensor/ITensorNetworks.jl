@@ -6,8 +6,9 @@ function symmetric_gauge(
   niters=30,
 )
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
-  vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1], vertices(ψψ))))
-  mts = belief_propagation(ψψ; vertex_groups, niters)
+  Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
+  mts = message_tensors(ψψ, Z; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts, niters; contract_kwargs=(; alg="exact"))
 
   ψsymm = copy(ψ)
   symm_mts = copy(mts)

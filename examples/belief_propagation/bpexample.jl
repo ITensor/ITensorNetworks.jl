@@ -6,7 +6,7 @@ using Random
 using SplitApplyCombine
 
 using ITensorNetworks:
-  belief_propagation, approx_network_region, contract_inner, nested_graph_leaf_vertices
+  belief_propagation, approx_network_region, contract_inner, message_tensors
 
 function main()
   n = 4
@@ -28,10 +28,9 @@ function main()
   #Now do Simple Belief Propagation to Measure Sz on Site v
   nsites = 1
 
-  vertex_groups = nested_graph_leaf_vertices(
-    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
-  )
-  mts = belief_propagation(ψψ; vertex_groups=vertex_groups)
+  Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
+  mts = message_tensors(ψψ, Z; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts, 10; contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
@@ -44,10 +43,11 @@ function main()
 
   #Now do General Belief Propagation to Measure Sz on Site v
   nsites = 4
-  vertex_groups = nested_graph_leaf_vertices(
-    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites)
+  Z = partition(
+    partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites
   )
-  mts = belief_propagation(ψψ; vertex_groups=vertex_groups)
+  mts = message_tensors(ψψ, Z; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts, 10; contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
@@ -71,22 +71,18 @@ function main()
   ψψ = combine_linkinds(ψψ, combiners)
   ψOψ = combine_linkinds(ψOψ, combiners)
 
-  vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1], vertices(ψψ))))
+  Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
+  mts = message_tensors(Z)
   maxdim = 8
 
   mts = belief_propagation(
-    ψψ;
-    vertex_groups=vertex_groups,
+    ψψ,
+    mts,
+    10;
     contract_kwargs=(;
       alg="density_matrix",
       output_structure=path_graph_structure,
       maxdim,
-      contraction_sequence_alg="optimal",
-    ),
-    init_contract_kwargs=(;
-      alg="density_matrix",
-      output_structure=path_graph_structure,
-      cutoff=1e-16,
       contraction_sequence_alg="optimal",
     ),
   )

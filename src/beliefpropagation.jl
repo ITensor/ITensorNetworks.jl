@@ -7,7 +7,20 @@ function message_tensors(
 end
 
 function message_tensors(
-  subgraphs::DataGraph; contract_kwargs=(;), init=(I...) -> allequal(I) ? 1 : 0
+  tn::ITensorNetwork,
+  subgraphs::DataGraph;
+  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  kwargs...,
+)
+  vertex_groups = nested_graph_leaf_vertices(subgraphs)
+  Z = partition(tn; subgraph_vertices=vertex_groups)
+  return message_tensors(Z; contract_kwargs, kwargs...)
+end
+
+function message_tensors(
+  subgraphs::DataGraph;
+  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  init=(I...) -> allequal(I) ? 1 : 0,
 )
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
@@ -15,6 +28,7 @@ function message_tensors(
   for v in vertices(mts)
     mts[v] = subgraphs[v]
   end
+
   for subgraph in vertices(subgraphs)
     for subgraph_neighbor in neighbors(subgraphs, subgraph)
       boundary_vertices_s = setdiff(
@@ -74,7 +88,7 @@ function update_message_tensor(
   tn::ITensorNetwork,
   subgraph_vertices::Vector,
   mts::Vector{ITensorNetwork};
-  contract_kwargs=(;),
+  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
   contract_list = ITensorNetwork[mts; ITensorNetwork([tn[v] for v in subgraph_vertices])]
 
@@ -105,7 +119,9 @@ end
 Do an update of all message tensors for a given ITensornetwork and its partition into sub graphs
 """
 function belief_propagation_iteration(
-  tn::ITensorNetwork, mts::DataGraph; contract_kwargs=(;)
+  tn::ITensorNetwork,
+  mts::DataGraph;
+  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
   new_mts = copy(mts)
   for e in edges(mts)
@@ -121,7 +137,10 @@ function belief_propagation_iteration(
 end
 
 function belief_propagation(
-  tn::ITensorNetwork, mts::DataGraph, niters::Int; contract_kwargs=(;)
+  tn::ITensorNetwork,
+  mts::DataGraph,
+  niters::Int;
+  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
   for i in 1:niters
     mts = belief_propagation_iteration(tn, mts; contract_kwargs)
@@ -129,23 +148,15 @@ function belief_propagation(
   return mts
 end
 
-"""
-Simulaneously initialise and update message tensors of a tensornetwork
-"""
 function belief_propagation(
-  tn::ITensorNetwork;
-  niters=10,
-  nvertices_per_partition=nothing,
-  npartitions=nothing,
-  vertex_groups=nothing,
-  contract_kwargs=(;),
-  init_contract_kwargs=(;),
-  init_kwargs...,
+  tn::ITensorNetwork,
+  niters::Int;
+  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
-  Z = partition(tn; nvertices_per_partition, npartitions, subgraph_vertices=vertex_groups)
-
-  mts = message_tensors(Z; contract_kwargs=init_contract_kwargs, init_kwargs...)
-  mts = belief_propagation(tn, mts, niters; contract_kwargs)
+  mts = message_tensors(tn; nvertices_per_partition=1)
+  for i in 1:niters
+    mts = belief_propagation_iteration(tn, mts; contract_kwargs)
+  end
   return mts
 end
 

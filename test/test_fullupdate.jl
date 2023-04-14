@@ -1,6 +1,5 @@
 using ITensorNetworks
-using ITensorNetworks:
-  belief_propagation, get_environment, nested_graph_leaf_vertices, contract_inner
+using ITensorNetworks: belief_propagation, get_environment, contract_inner, message_tensors
 using Test
 using Compat
 using ITensors
@@ -26,14 +25,18 @@ using SplitApplyCombine
   vertex_groupsSBP = nested_graph_leaf_vertices(
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=1)
   )
-  mtsSBP = belief_propagation(ψψ; vertex_groups=vertex_groupsSBP)
+  Z = partition(ψψ; subgraph_vertices=vertex_groupsSBP)
+  mtsSBP = message_tensors(Z; contract_kwargs=(; alg="exact"))
+  mtsSBP = belief_propagation(ψψ, mtsSBP, 50; contract_kwargs=(; alg="exact"))
   envsSBP = get_environment(ψψ, mtsSBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
   vertex_groupsGBP = nested_graph_leaf_vertices(
     partition(partition(ψψ, group(v -> v[1][1], vertices(ψψ))); nvertices_per_partition=1)
   )
-  mtsGBP = belief_propagation(ψψ; vertex_groups=vertex_groupsGBP)
+  Z = partition(ψψ; subgraph_vertices=vertex_groupsSBP)
+  mtsGBP = message_tensors(Z; contract_kwargs=(; alg="exact"))
+  mtsGBP = belief_propagation(ψψ, mtsGBP, 50; contract_kwargs=(; alg="exact"))
   envsGBP = get_environment(ψψ, mtsGBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
   ngates = 5
