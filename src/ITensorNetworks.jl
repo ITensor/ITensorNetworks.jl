@@ -3,6 +3,7 @@ module ITensorNetworks
 using AbstractTrees
 using Combinatorics
 using Compat
+using DataFrames: DataFrames
 using DataGraphs
 using DataStructures
 using Dictionaries

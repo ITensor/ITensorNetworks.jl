@@ -14,7 +14,7 @@ function update_sweep(nsite, graph::AbstractGraph; kwargs...)
   )
 end
 
-function _step_printer(; cutoff, maxdim, mindim, outputlevel, psi, region, spec, sweep_step)
+function step_printer(; cutoff, maxdim, mindim, outputlevel, psi, region, spec, sweep_step)
   if outputlevel >= 2
     #if get(data(sweep_step),:time_direction,0) == +1
     #  @printf("Sweep %d, direction %s, position (%s,) \n", sw, direction, pos(step))
@@ -46,8 +46,8 @@ function update_step(
   normalize::Bool=false,
   nsite::Int=2,
   outputlevel::Int=0,
-  step_printer=_step_printer,
-  (step_observer!)::Observer=Observer(),
+  step_printer=step_printer,
+  (step_observer!)=Observer(),
   sw::Int=1,
   sweep_regions=update_sweep(nsite, psi),
   kwargs...,
@@ -56,7 +56,7 @@ function update_step(
   PH = copy(PH)
   psi = copy(psi)
 
-  step_observer!["step_printer"] = step_printer
+  insert_function!(step_observer!, "step_printer" => step_printer)
 
   # Append empty namedtuple to each element if not already present
   # (Needed to handle user-provided sweep_regions)
@@ -102,6 +102,7 @@ function update_step(
       step_kwargs...,
     )
   end
+  DataFrames.select!(step_observer!, DataFrames.Not("step_printer")) # remove step_printer
   # Just to be sure:
   normalize && normalize!(psi)
   return psi, PH, (; maxtruncerr)

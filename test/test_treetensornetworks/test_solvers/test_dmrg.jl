@@ -3,6 +3,7 @@ using ITensorNetworks
 using Dictionaries
 using Random
 using Test
+using Observers
 
 @testset "MPS DMRG" for nsite in [1, 2]
   N = 10

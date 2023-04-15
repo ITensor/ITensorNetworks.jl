@@ -26,7 +26,7 @@ function process_sweeps(
   return maxdim, mindim, cutoff, noise, kwargs
 end
 
-function _sweep_printer(; info, outputlevel, psi, sweep, sw_time)
+function sweep_printer(; info, outputlevel, psi, sweep, sw_time)
   if outputlevel >= 1
     print("After sweep ", sweep, ":")
     print(" maxlinkdim=", maxlinkdim(psi))
@@ -45,8 +45,8 @@ function alternating_update(
   checkdone=(; kws...) -> false,
   outputlevel::Integer=0,
   nsweeps::Integer=1,
-  (sweep_observer!)::Observer=Observer(),
-  sweep_printer=_sweep_printer,
+  (sweep_observer!)=observer(),
+  sweep_printer=sweep_printer,
   write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
   kwargs...,
 )
@@ -54,7 +54,7 @@ function alternating_update(
 
   psi = copy(psi0)
 
-  sweep_observer!["sweep_printer"] = sweep_printer
+  insert_function!(sweep_observer!, "sweep_printer" => sweep_printer)
 
   for sw in 1:nsweeps
     if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
@@ -85,6 +85,7 @@ function alternating_update(
 
     checkdone(; psi, sweep=sw, outputlevel, kwargs...) && break
   end
+  DataFrames.select!(sweep_observer!, DataFrames.Not("sweep_printer")) # remove sweep_printer
   return psi
 end
 
