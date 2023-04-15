@@ -47,6 +47,43 @@ using Observers
   @test new_E ≈ orig_E
 end
 
+@testset "Observers" begin
+  N = 10
+  cutoff = 1e-12
+  s = siteinds("S=1/2", N)
+  os = OpSum()
+  for j in 1:(N - 1)
+    os += 0.5, "S+", j, "S-", j + 1
+    os += 0.5, "S-", j, "S+", j + 1
+    os += "Sz", j, "Sz", j + 1
+  end
+  H = mpo(os, s)
+  psi = random_mps(s; internal_inds_space=20)
+
+  nsweeps = 4
+  maxdim = [20, 40, 80, 80]
+  cutoff = [1e-10]
+
+  #
+  # Make observers
+  #
+  sweep(; sweep, kw...) = sweep
+  energy(; info, kw...) = info[:energies][1]
+  sweep_observer! = observer(sweep, energy)
+
+  region(; region, kw...) = region
+  step_observer! = observer(region, sweep, energy)
+
+  psi = dmrg(H, psi; nsweeps, maxdim, cutoff, sweep_observer!, step_observer!)
+
+  #
+  # Test out certain values
+  #
+  @test step_observer![9, :region] == [2, 1]
+  @test step_observer![30, :energy] < -4.258
+  @test sweep_observer![3, :energy] < -4.258
+end
+
 @testset "Regression test: Arrays of Parameters" begin
   N = 10
   cutoff = 1e-12
