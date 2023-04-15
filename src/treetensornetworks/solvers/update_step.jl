@@ -47,8 +47,8 @@ function update_step(
   nsite::Int=2,
   outputlevel::Int=0,
   step_printer=step_printer,
-  (step_observer!)=Observer(),
-  sw::Int=1,
+  (step_observer!)=observer(),
+  sweep::Int=1,
   sweep_regions=update_sweep(nsite, psi),
   kwargs...,
 )
@@ -95,7 +95,7 @@ function update_step(
       end_of_sweep=(sweep_step == length(sweep_regions)),
       psi,
       region,
-      sweep=sw,
+      sweep,
       spec,
       outputlevel,
       info,
@@ -105,7 +105,7 @@ function update_step(
   DataFrames.select!(step_observer!, DataFrames.Not("step_printer")) # remove step_printer
   # Just to be sure:
   normalize && normalize!(psi)
-  return psi, PH, (; maxtruncerr)
+  return psi, PH, info
 end
 
 #

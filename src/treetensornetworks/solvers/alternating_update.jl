@@ -56,11 +56,11 @@ function alternating_update(
 
   insert_function!(sweep_observer!, "sweep_printer" => sweep_printer)
 
-  for sw in 1:nsweeps
-    if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
+  for sweep in 1:nsweeps
+    if !isnothing(write_when_maxdim_exceeds) && maxdim[sweep] > write_when_maxdim_exceeds
       if outputlevel >= 2
         println(
-          "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim(sweeps, sw) = $(maxdim(sweeps, sw)), writing environment tensors to disk",
+          "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim[sweep] = $(maxdim[sweep]), writing environment tensors to disk",
         )
       end
       PH = disk(PH)
@@ -72,18 +72,18 @@ function alternating_update(
         PH,
         psi;
         outputlevel,
-        sweep=sw,
-        maxdim=maxdim[sw],
-        mindim=mindim[sw],
-        cutoff=cutoff[sw],
-        noise=noise[sw],
+        sweep,
+        maxdim=maxdim[sweep],
+        mindim=mindim[sweep],
+        cutoff=cutoff[sweep],
+        noise=noise[sweep],
         kwargs...,
       )
     end
 
-    update!(sweep_observer!; info, psi, sweep=sw, sw_time, outputlevel)
+    update!(sweep_observer!; info, psi, sweep, sw_time, outputlevel)
 
-    checkdone(; psi, sweep=sw, outputlevel, kwargs...) && break
+    checkdone(; psi, sweep, outputlevel, kwargs...) && break
   end
   DataFrames.select!(sweep_observer!, DataFrames.Not("sweep_printer")) # remove sweep_printer
   return psi
