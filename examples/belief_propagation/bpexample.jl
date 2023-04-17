@@ -6,7 +6,11 @@ using Random
 using SplitApplyCombine
 
 using ITensorNetworks:
-  belief_propagation, approx_network_region, contract_inner, message_tensors
+  belief_propagation,
+  approx_network_region,
+  contract_inner,
+  message_tensors,
+  nested_graph_leaf_vertices
 
 function main()
   n = 4
@@ -76,18 +80,17 @@ function main()
   maxdim = 8
   mts = message_tensors(Z)
 
-  # mts = belief_propagation(
-  #   ψψ,
-  #   mts;
-  #   contract_kwargs=(;
-  #     alg="density_matrix",
-  #     output_structure=path_graph_structure,
-  #     maxdim,
-  #     contraction_sequence_alg="optimal",
-  #   ),
-  # )
+  mts = belief_propagation(
+    ψψ,
+    mts;
+    contract_kwargs=(;
+      alg="density_matrix",
+      output_structure=path_graph_structure,
+      maxdim,
+      contraction_sequence_alg="optimal",
+    ),
+  )
 
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v]))
   denominator_network = approx_network_region(ψψ, mts, [v])
   sz_bp = contract(numerator_network)[] / contract(denominator_network)[]

@@ -827,6 +827,16 @@ function insert_missing_internal_inds(
   return insert_internal_inds(tn, edges(tn); internal_inds_space)
 end
 
+function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
+  inds = Index[]
+  for v1 in vertices(tn1)
+    for v2 in vertices(tn2)
+      append!(inds, commoninds(tn1[v1], tn2[v2]))
+    end
+  end
+  return inds
+end
+
 ## # TODO: should this make sure that internal indices
 ## # don't clash?
 ## function hvncat(

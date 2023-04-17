@@ -23,7 +23,7 @@ function message_tensors(subgraphs::DataGraph; init=delta_network, maxdim=1)
     for e in edges(indsnetwork_e)
       indsnetwork_e[e] = [Index(maxdim, edge_tag(e))]
     end
-    mts[e] = init(indsnetwork_e)
+    mts[e] = map_vertex_data(dense, init(indsnetwork_e))
     mts[reverse(e)] = dag(mts[e])
   end
   return mts

@@ -26,7 +26,7 @@ using SplitApplyCombine
     partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=1)
   )
   Z = partition(ψψ; subgraph_vertices=vertex_groupsSBP)
-  mtsSBP = message_tensors(Z; contract_kwargs=(; alg="exact"))
+  mtsSBP = message_tensors(Z)
   mtsSBP = belief_propagation(ψψ, mtsSBP; contract_kwargs=(; alg="exact"), niters=50)
   envsSBP = get_environment(ψψ, mtsSBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
@@ -35,7 +35,7 @@ using SplitApplyCombine
     partition(partition(ψψ, group(v -> v[1][1], vertices(ψψ))); nvertices_per_partition=1)
   )
   Z = partition(ψψ; subgraph_vertices=vertex_groupsSBP)
-  mtsGBP = message_tensors(Z; contract_kwargs=(; alg="exact"))
+  mtsGBP = message_tensors(Z)
   mtsGBP = belief_propagation(ψψ, mtsGBP; contract_kwargs=(; alg="exact"), niters=50)
   envsGBP = get_environment(ψψ, mtsGBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
