@@ -10,7 +10,7 @@ function message_tensors(
   )
 end
 
-function message_tensors(subgraphs::DataGraph; init=delta_network, maxdim=1)
+function message_tensors(subgraphs::DataGraph; itensor_constructor = inds_e -> dense(delta(inds_e)))
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
   )
@@ -19,11 +19,7 @@ function message_tensors(subgraphs::DataGraph; init=delta_network, maxdim=1)
   end
   for e in edges(subgraphs)
     inds_e = commoninds(subgraphs[src(e)], subgraphs[dst(e)])
-    indsnetwork_e = path_indsnetwork(inds_e)
-    for e in edges(indsnetwork_e)
-      indsnetwork_e[e] = [Index(maxdim, edge_tag(e))]
-    end
-    mts[e] = map_vertex_data(dense, init(indsnetwork_e))
+    mts[e] = ITensorNetwork(map(itensor_constructor, inds_e))
     mts[reverse(e)] = dag(mts[e])
   end
   return mts
