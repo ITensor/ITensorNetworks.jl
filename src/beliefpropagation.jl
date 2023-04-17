@@ -10,7 +10,9 @@ function message_tensors(
   )
 end
 
-function message_tensors(subgraphs::DataGraph; itensor_constructor = inds_e -> dense(delta(inds_e)))
+function message_tensors(
+  subgraphs::DataGraph; itensor_constructor=inds_e -> dense(delta(inds_e))
+)
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
   )
