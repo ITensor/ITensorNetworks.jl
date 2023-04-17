@@ -38,10 +38,9 @@ ITensors.disable_warn_order()
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
-  nsites = 1
-  Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
-  mts = message_tensors(ψψ, Z; contract_kwargs=(; alg="exact"))
-  mts = belief_propagation(ψψ, mts, 10; contract_kwargs=(; alg="exact"))
+  Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
+  mts = message_tensors(Z)
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
 
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
@@ -67,12 +66,13 @@ ITensors.disable_warn_order()
     ITensors.contract(ψψ; sequence=contract_seq)[]
 
   nsites = 2
-  Z = partition(ψψ; nvertices_per_partition=2)
-  mts = message_tensors(Z; contract_kwargs=(; alg="exact"))
-  mts = belief_propagation(ψψ, mts, 10; contract_kwargs=(; alg="exact"))
+  Z = partition(ψψ; nvertices_per_partition=nsites)
+  mts = message_tensors(Z)
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(
     ψψ, mts, vs; verts_tn=ITensorNetwork(ITensor[ψOψ[v] for v in vs])
   )
+
   denominator_network = approx_network_region(ψψ, mts, vs)
   bp_szsz = contract(numerator_network)[] / contract(denominator_network)[]
 
@@ -88,11 +88,12 @@ ITensors.disable_warn_order()
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
   nsites = 2
-  Z = partition(
+  Zp = partition(
     partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites
   )
-  mts = message_tensors(ψψ, Z; contract_kwargs=(; alg="exact"))
-  mts = belief_propagation(ψψ, mts, 10; contract_kwargs=(; alg="exact"))
+  Zpp = partition(ψψ; subgraph_vertices=nested_graph_leaf_vertices(Zp))
+  mts = message_tensors(Zpp)
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   rdm = contract(
@@ -129,13 +130,11 @@ ITensors.disable_warn_order()
   ψψ = combine_linkinds(ψψ, combiners)
   ψOψ = combine_linkinds(ψOψ, combiners)
 
-  nsites = 1
   Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
   mts = message_tensors(Z)
   mts = belief_propagation(
     ψψ,
-    mts,
-    10;
+    mts;
     contract_kwargs=(;
       alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16, maxdim
     ),

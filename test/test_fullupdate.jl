@@ -27,7 +27,7 @@ using SplitApplyCombine
   )
   Z = partition(ψψ; subgraph_vertices=vertex_groupsSBP)
   mtsSBP = message_tensors(Z; contract_kwargs=(; alg="exact"))
-  mtsSBP = belief_propagation(ψψ, mtsSBP, 50; contract_kwargs=(; alg="exact"))
+  mtsSBP = belief_propagation(ψψ, mtsSBP; contract_kwargs=(; alg="exact"), niters=50)
   envsSBP = get_environment(ψψ, mtsSBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
@@ -36,7 +36,7 @@ using SplitApplyCombine
   )
   Z = partition(ψψ; subgraph_vertices=vertex_groupsSBP)
   mtsGBP = message_tensors(Z; contract_kwargs=(; alg="exact"))
-  mtsGBP = belief_propagation(ψψ, mtsGBP, 50; contract_kwargs=(; alg="exact"))
+  mtsGBP = belief_propagation(ψψ, mtsGBP; contract_kwargs=(; alg="exact"), niters=50)
   envsGBP = get_environment(ψψ, mtsGBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
   ngates = 5

@@ -1,82 +1,30 @@
 function message_tensors(
-  tn::ITensorNetwork, nvertices_per_partition::Integer; partition_kwargs=(;), kwargs...
+  tn::ITensorNetwork;
+  nvertices_per_partition=nothing,
+  npartitions=nothing,
+  subgraph_vertices=nothing,
+  kwargs...,
 )
   return message_tensors(
-    partition(tn; nvertices_per_partition, partition_kwargs...); kwargs...
+    partition(tn; nvertices_per_partition, npartitions, subgraph_vertices); kwargs...
   )
 end
 
-function message_tensors(
-  tn::ITensorNetwork,
-  subgraphs::DataGraph;
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  kwargs...,
-)
-  vertex_groups = nested_graph_leaf_vertices(subgraphs)
-  Z = partition(tn; subgraph_vertices=vertex_groups)
-  return message_tensors(Z; contract_kwargs, kwargs...)
-end
-
-function message_tensors(
-  subgraphs::DataGraph;
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  init=(I...) -> allequal(I) ? 1 : 0,
-)
+function message_tensors(subgraphs::DataGraph; init=delta_network, maxdim=1)
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
   )
   for v in vertices(mts)
     mts[v] = subgraphs[v]
   end
-
-  for subgraph in vertices(subgraphs)
-    for subgraph_neighbor in neighbors(subgraphs, subgraph)
-      boundary_vertices_s = setdiff(
-        vertices(subgraphs[subgraph]),
-        unique(
-          flatten([
-            neighbors(subgraphs[subgraph_neighbor], vn) for
-            vn in vertices(subgraphs[subgraph_neighbor])
-          ]),
-        ),
-      )
-      boundary_vertices_sn = setdiff(
-        vertices(subgraphs[subgraph_neighbor]),
-        unique(
-          flatten([
-            neighbors(subgraphs[subgraph], vn) for vn in vertices(subgraphs[subgraph])
-          ]),
-        ),
-      )
-      boundary_tensors = ITensor[]
-      for v in boundary_vertices_s
-        inds_boundary = flatten(
-          unique([inds(subgraphs[subgraph_neighbor][vn]) for vn in boundary_vertices_sn])
-        )
-        inds_internal = flatten(
-          unique([inds(subgraphs[subgraph][v]) for v in setdiff(boundary_vertices_s, [v])])
-        )
-        new_inds = intersect(
-          inds(subgraphs[subgraph][v]), vcat(inds_boundary, inds_internal)
-        )
-        push!(
-          boundary_tensors,
-          itensor(
-            [init(Tuple(I)...) for I in CartesianIndices(tuple(dim.(new_inds)...))],
-            new_inds,
-          ),
-        )
-      end
-
-      mt = ITensorNetwork(Dictionaries.Dictionary(boundary_vertices_s, boundary_tensors))
-
-      contract_output = contract(mt; contract_kwargs...)
-      mts[subgraph => subgraph_neighbor] = if typeof(contract_output) == ITensor
-        ITensorNetwork(contract_output)
-      else
-        first(contract_output)
-      end
+  for e in edges(subgraphs)
+    inds_e = commoninds(subgraphs[src(e)], subgraphs[dst(e)])
+    indsnetwork_e = path_indsnetwork(inds_e)
+    for e in edges(indsnetwork_e)
+      indsnetwork_e[e] = [Index(maxdim, edge_tag(e))]
     end
+    mts[e] = init(indsnetwork_e)
+    mts[reverse(e)] = dag(mts[e])
   end
   return mts
 end
@@ -138,9 +86,9 @@ end
 
 function belief_propagation(
   tn::ITensorNetwork,
-  mts::DataGraph,
-  niters::Int;
+  mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  niters=20,
 )
   for i in 1:niters
     mts = belief_propagation_iteration(tn, mts; contract_kwargs)
@@ -149,12 +97,14 @@ function belief_propagation(
 end
 
 function belief_propagation(
-  tn::ITensorNetwork,
-  niters::Int;
+  tn::ITensorNetwork;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  nvertices_per_partition = 1
+  nvertices_per_partition=nothing,
+  npartitions=nothing,
+  subgraph_vertices=nothing,
+  niters=20,
 )
-  mts = message_tensors(tn; nvertices_per_partition)
+  mts = message_tensors(tn; nvertices_per_partition, npartitions, subgraph_vertices)
   for i in 1:niters
     mts = belief_propagation_iteration(tn, mts; contract_kwargs)
   end

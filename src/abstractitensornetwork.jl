@@ -251,6 +251,14 @@ function linkinds(tn::AbstractITensorNetwork, edge)
   return commoninds(tn, edge)
 end
 
+function internalinds(tn::AbstractITensorNetwork)
+  return unique(flatten([commoninds(tn, e) for e in edges(tn)]))
+end
+
+function externalinds(tn::AbstractITensorNetwork)
+  return unique(flatten([uniqueinds(tn, e) for e in edges(tn)]))
+end
+
 # Priming and tagging (changing Index identifiers)
 function replaceinds(tn::AbstractITensorNetwork, is_is′::Pair{<:IndsNetwork,<:IndsNetwork})
   tn = copy(tn)

@@ -6,9 +6,9 @@ function symmetric_gauge(
   niters=30,
 )
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
-  Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
-  mts = message_tensors(ψψ, Z; contract_kwargs=(; alg="exact"))
-  mts = belief_propagation(ψψ, mts, niters; contract_kwargs=(; alg="exact"))
+  Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
+  mts = message_tensors(Z)
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters)
 
   ψsymm = copy(ψ)
   symm_mts = copy(mts)

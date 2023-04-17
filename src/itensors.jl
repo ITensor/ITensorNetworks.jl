@@ -64,3 +64,13 @@ is_delta(t::ITensors.Tensor) = false
 function is_delta(t::ITensors.NDTensors.UniformDiagTensor)
   return isone(ITensors.NDTensors.getdiagindex(t, 1))
 end
+
+function ITensors.commoninds(tn1::ITensorNetwork, tn2::ITensorNetwork)
+  inds = Index[]
+  for v1 in vertices(tn1)
+    for v2 in vertices(tn2)
+      append!(inds, commoninds(tn1[v1], tn2[v2]))
+    end
+  end
+  return inds
+end

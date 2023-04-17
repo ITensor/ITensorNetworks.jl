@@ -23,10 +23,12 @@ using SplitApplyCombine
         sqrt(contract_inner(ψ_symm, ψ_symm) * contract_inner(ψ, ψ)) ≈ 1.0
 
   ψψ_symm = ψ_symm ⊗ prime(dag(ψ_symm); sites=[])
-  Z = partition(ψψ_symm, group(v -> v[1], vertices(ψψ_symm)))
-  ψ_symm_mts_V2 = message_tensors(ψψ_symm, Z; contract_kwargs=(; alg="exact"))
+  Z = partition(
+    ψψ_symm; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ_symm))))
+  )
+  ψ_symm_mts_V2 = message_tensors(Z; contract_kwargs=(; alg="exact"))
   ψ_symm_mts_V2 = belief_propagation(
-    ψψ_symm, ψ_symm_mts_V2, 50; contract_kwargs=(; alg="exact")
+    ψψ_symm, ψ_symm_mts_V2; contract_kwargs=(; alg="exact"), niters=50
   )
 
   for e in edges(ψ_symm_mts_V2)

@@ -26,11 +26,11 @@ function main()
   v = (1, 1)
 
   #Now do Simple Belief Propagation to Measure Sz on Site v
-  nsites = 1
+  mts = message_tensors(
+    ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ))))
+  )
 
-  Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
-  mts = message_tensors(ψψ, Z; contract_kwargs=(; alg="exact"))
-  mts = belief_propagation(ψψ, mts, 10; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
@@ -43,11 +43,12 @@ function main()
 
   #Now do General Belief Propagation to Measure Sz on Site v
   nsites = 4
-  Z = partition(
+  Zp = partition(
     partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites
   )
-  mts = message_tensors(ψψ, Z; contract_kwargs=(; alg="exact"))
-  mts = belief_propagation(ψψ, mts, 10; contract_kwargs=(; alg="exact"))
+  Zpp = partition(ψψ; subgraph_vertices=nested_graph_leaf_vertices(Zp))
+  mts = message_tensors(Zpp)
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
@@ -72,20 +73,21 @@ function main()
   ψOψ = combine_linkinds(ψOψ, combiners)
 
   Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
-  mts = message_tensors(Z)
   maxdim = 8
+  mts = message_tensors(Z)
 
-  mts = belief_propagation(
-    ψψ,
-    mts,
-    10;
-    contract_kwargs=(;
-      alg="density_matrix",
-      output_structure=path_graph_structure,
-      maxdim,
-      contraction_sequence_alg="optimal",
-    ),
-  )
+  # mts = belief_propagation(
+  #   ψψ,
+  #   mts;
+  #   contract_kwargs=(;
+  #     alg="density_matrix",
+  #     output_structure=path_graph_structure,
+  #     maxdim,
+  #     contraction_sequence_alg="optimal",
+  #   ),
+  # )
+
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v]))
   denominator_network = approx_network_region(ψψ, mts, [v])
   sz_bp = contract(numerator_network)[] / contract(denominator_network)[]
