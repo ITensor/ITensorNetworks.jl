@@ -3,7 +3,6 @@ module ITensorNetworks
 using AbstractTrees
 using Combinatorics
 using Compat
-using DataFrames: DataFrames
 using DataGraphs
 using DataStructures
 using Dictionaries
@@ -21,6 +20,7 @@ using IterTools
 using KrylovKit: KrylovKit
 using NamedGraphs
 using Observers
+using Observers.DataFrames: select!
 using Printf
 using Requires
 using SimpleTraits

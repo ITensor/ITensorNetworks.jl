@@ -102,7 +102,7 @@ function update_step(
       step_kwargs...,
     )
   end
-  DataFrames.select!(step_observer!, DataFrames.Not("step_printer")) # remove step_printer
+  select!(step_observer!, Observers.DataFrames.Not("step_printer")) # remove step_printer
   # Just to be sure:
   normalize && normalize!(psi)
   return psi, PH, info

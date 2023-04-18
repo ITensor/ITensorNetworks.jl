@@ -85,7 +85,7 @@ function alternating_update(
 
     checkdone(; psi, sweep, outputlevel, kwargs...) && break
   end
-  DataFrames.select!(sweep_observer!, DataFrames.Not("sweep_printer")) # remove sweep_printer
+  select!(sweep_observer!, Observers.DataFrames.Not("sweep_printer")) # remove sweep_printer
   return psi
 end
 
