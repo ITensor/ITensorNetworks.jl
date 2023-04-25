@@ -46,6 +46,7 @@ function ITensors.apply(
       )
     end
 
+    envs = Vector{ITensor}(envs)
     if !isempty(envs)
       extended_envs = vcat(envs, Qᵥ₁, prime(dag(Qᵥ₁)), Qᵥ₂, prime(dag(Qᵥ₂)))
       Rᵥ₁, Rᵥ₂ = optimise_p_q(

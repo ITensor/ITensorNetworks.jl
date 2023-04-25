@@ -66,6 +66,11 @@ function ITensorNetwork{V}(ts::ITensorCollection) where {V}
   return tn
 end
 
+function ITensorNetwork(t::ITensor)
+  ts = ITensor[t]
+  return ITensorNetwork{keytype(ts)}(ts)
+end
+
 #
 # Construction from underyling named graph
 #
@@ -252,3 +257,5 @@ function insert_links(ψ::ITensorNetwork, edges::Vector=edges(ψ); cutoff=1e-15)
   end
   return ψ
 end
+
+ITensorNetwork(itns::Vector{ITensorNetwork}) = reduce(⊗, itns)

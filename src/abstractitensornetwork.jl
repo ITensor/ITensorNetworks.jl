@@ -251,6 +251,14 @@ function linkinds(tn::AbstractITensorNetwork, edge)
   return commoninds(tn, edge)
 end
 
+function internalinds(tn::AbstractITensorNetwork)
+  return unique(flatten([commoninds(tn, e) for e in edges(tn)]))
+end
+
+function externalinds(tn::AbstractITensorNetwork)
+  return unique(flatten([uniqueinds(tn, e) for e in edges(tn)]))
+end
+
 # Priming and tagging (changing Index identifiers)
 function replaceinds(tn::AbstractITensorNetwork, is_is′::Pair{<:IndsNetwork,<:IndsNetwork})
   tn = copy(tn)
@@ -817,6 +825,16 @@ function insert_missing_internal_inds(
   tn::AbstractITensorNetwork; internal_inds_space=trivial_space(tn)
 )
   return insert_internal_inds(tn, edges(tn); internal_inds_space)
+end
+
+function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
+  inds = Index[]
+  for v1 in vertices(tn1)
+    for v2 in vertices(tn2)
+      append!(inds, commoninds(tn1[v1], tn2[v2]))
+    end
+  end
+  return inds
 end
 
 ## # TODO: should this make sure that internal indices
