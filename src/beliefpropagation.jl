@@ -10,15 +10,22 @@ function message_tensors(
   )
 end
 
-function message_tensors(
-  subgraphs::DataGraph; itensor_constructor=inds_e -> dense(delta(inds_e))
-)
+function message_tensors_skeleton(
+  subgraphs::DataGraph)
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
   )
   for v in vertices(mts)
     mts[v] = subgraphs[v]
   end
+  
+  return mts
+end
+
+function message_tensors(
+  subgraphs::DataGraph; itensor_constructor=inds_e -> dense(delta(inds_e))
+)
+  mts = message_tensors_skeleton(subgraphs)
   for e in edges(subgraphs)
     inds_e = commoninds(subgraphs[src(e)], subgraphs[dst(e)])
     mts[e] = ITensorNetwork(map(itensor_constructor, inds_e))

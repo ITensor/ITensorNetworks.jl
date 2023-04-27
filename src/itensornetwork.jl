@@ -259,3 +259,12 @@ function insert_links(ψ::ITensorNetwork, edges::Vector=edges(ψ); cutoff=1e-15)
 end
 
 ITensorNetwork(itns::Vector{ITensorNetwork}) = reduce(⊗, itns)
+
+function ITensors.ITensor(ψ::ITensorNetwork; contract_kwargs...)
+  vs = vertices(ψ)
+  if length(vs) == 1
+    return ψ[first(vs)]
+  else
+    return ITensors.contract(ψ; contract_kwargs...)
+  end
+end
