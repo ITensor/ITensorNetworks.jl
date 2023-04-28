@@ -276,7 +276,7 @@ partial = (f, a...; c...) -> (b...) -> f(a..., b...; c...)
 
 """Vidal Gauge Apply()"""
 function apply_vidal_itn(
-  ψ::ITensorNetwork,
+  ψ::AbstractITensorNetwork,
   bond_tensors::DataGraph,
   o::ITensor;
   regularization=10 * eps(real(scalartype(ψ))),
