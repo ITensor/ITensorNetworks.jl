@@ -260,11 +260,11 @@ end
 
 ITensorNetwork(itns::Vector{ITensorNetwork}) = reduce(⊗, itns)
 
-function ITensors.ITensor(ψ::ITensorNetwork; contract_kwargs...)
+function ITensors.ITensor(ψ::ITensorNetwork)
   vs = vertices(ψ)
   if length(vs) == 1
     return ψ[first(vs)]
   else
-    return ITensors.contract(ψ; contract_kwargs...)
+    return ITensor[ψ[v] for v in vertices(ψ)]
   end
 end

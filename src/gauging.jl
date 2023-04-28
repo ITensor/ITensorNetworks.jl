@@ -34,12 +34,14 @@ function vidal_gauge(
 
     U, S, V = svd(Ce, edge_ind; svd_kwargs...)
 
-    ψ_vidal[vsrc] = replaceinds(ψ_vidal[vsrc] * U, commoninds(S, U), edge_ind)
+    new_edge_ind = Index[Index(dim(commoninds(S, U)), tags(edge_ind[1]))]
+
+    ψ_vidal[vsrc] = replaceinds(ψ_vidal[vsrc] * U, commoninds(S, U), new_edge_ind)
     ψ_vidal[vdst] = replaceinds(ψ_vidal[vdst], edge_ind, edge_ind_sim)
-    ψ_vidal[vdst] = replaceinds(ψ_vidal[vdst] * V, commoninds(V, S), edge_ind)
+    ψ_vidal[vdst] = replaceinds(ψ_vidal[vdst] * V, commoninds(V, S), new_edge_ind)
 
     S = replaceinds(
-      S, [commoninds(S, U)..., commoninds(S, V)...] => [edge_ind..., prime(edge_ind)...]
+      S, [commoninds(S, U)..., commoninds(S, V)...] => [new_edge_ind..., prime(new_edge_ind)...]
     )
     bond_tensors[e] = S
   end
@@ -71,7 +73,7 @@ function vidal_gauge(
     iter = 1
     while canonicalness > target_canonicalness && iter < niters
       mts = belief_propagation_iteration(ψψ, mts; contract_kwargs=(; alg="exact"))
-      ψ_vidal, bond_tensors = vidal_gauge(ψ, mts; eigen_message_tensor_cutoff, regularization, niters, svd_kwargs...)
+      ψ_vidal, bond_tensors = vidal_gauge(ψ, mts; eigen_message_tensor_cutoff, regularization, svd_kwargs...)
       canonicalness = vidal_itn_canonicalness(ψ_vidal, bond_tensors)
       iter += 1
     end

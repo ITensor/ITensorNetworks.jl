@@ -278,14 +278,15 @@ partial = (f, a...; c...) -> (b...) -> f(a..., b...; c...)
 function apply_vidal_itn(
   ψ::AbstractITensorNetwork,
   bond_tensors::DataGraph,
-  o::ITensor;
+  o::Union{ITensor, Nothing};
   regularization=10 * eps(real(scalartype(ψ))),
   normalize = false,
+  edge_to_act_on,
   svd_kwargs...
 )
   ψ = copy(ψ)
   bond_tensors = copy(bond_tensors)
-  v⃗ = neighbor_vertices(ψ, o)
+  v⃗ = o == nothing ? [src(edge_to_act_on), dst(edge_to_act_on)] : neighbor_vertices(ψ, o)
   if length(v⃗) == 2
     e = NamedEdge(v⃗[1] => v⃗[2])
     ψv1, ψv2 = copy(ψ[src(e)]), copy(ψ[dst(e)])
@@ -305,12 +306,14 @@ function apply_vidal_itn(
 
     ψv2 = noprime(ψv2 * bond_tensors[e])
 
-    G1, G2 = factorize(o, Index[commonind(ψv1, o), commonind(ψv1, o)']; cutoff = 1e-16)
-    ψv1 = noprime(ψv1 * G1)
-    ψv2 = noprime(ψv2 * G2)
+    if o != nothing
+      G1, G2 = factorize(o, Index[commonind(ψv1, o), commonind(ψv1, o)']; cutoff = 1e-16)
+      ψv1 = noprime(ψv1 * G1)
+      ψv2 = noprime(ψv2 * G2)
+    end
 
-    Qᵥ₁, Rᵥ₁ = factorize(ψv1, uniqueinds(uniqueinds(ψv1, ψv2), uniqueinds(ψ, src(e))); cutoff = 1e-16)
-    Qᵥ₂, Rᵥ₂ = factorize(ψv2, uniqueinds(uniqueinds(ψv2, ψv1), uniqueinds(ψ, dst(e))); cutoff = 1e-16)
+    Qᵥ₁, Rᵥ₁ = factorize(ψv1, uniqueinds(ψv1, ψv2); cutoff = 1e-16)
+    Qᵥ₂, Rᵥ₂ = factorize(ψv2, uniqueinds(ψv2, ψv1); cutoff = 1e-16)
 
     theta = Rᵥ₁ * Rᵥ₂
 

@@ -44,12 +44,16 @@ function update_message_tensor(
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
 
-  contract_list = ITensorNetwork[mts; ITensorNetwork([tn[v] for v in subgraph_vertices])]
+  mts_itensors = ITensor.(mts)
+  if typeof(mts_itensors) == Vector{Vector{ITensor}}
+    mts_itensors = flatten(mts_itensors)
+  end
+  contract_list = ITensor[mts_itensors; ITensor[tn[v] for v in subgraph_vertices]]
 
   tn = if isone(length(contract_list))
     copy(only(contract_list))
   else
-    reduce(⊗, contract_list)
+    ITensorNetwork(contract_list)
   end
 
   if contract_kwargs.alg != "exact"
@@ -57,7 +61,6 @@ function update_message_tensor(
   else
     contract_output = contract(tn; sequence = contraction_sequence(tn; alg = "optimal"))
   end
-
   
   itn = if typeof(contract_output) == ITensor
     ITensorNetwork(contract_output)
