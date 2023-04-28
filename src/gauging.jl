@@ -1,4 +1,4 @@
-"""Put an ITensorNetwork ψ into the vidal gauge, return the bond tensors and ψ_vidal."""
+"""Use an ITensorNetwork ψ and its mts to put ψ into the vidal gauge, return the bond tensors and ψ_vidal."""
 function vidal_gauge(
   ψ::ITensorNetwork, mts::DataGraph;
   eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
@@ -73,6 +73,7 @@ function vidal_gauge(
       mts = belief_propagation_iteration(ψψ, mts; contract_kwargs=(; alg="exact"))
       ψ_vidal, bond_tensors = vidal_gauge(ψ, mts; eigen_message_tensor_cutoff, regularization, niters, svd_kwargs...)
       canonicalness = vidal_itn_canonicalness(ψ_vidal, bond_tensors)
+      iter += 1
     end
 
     return ψ_vidal, bond_tensors

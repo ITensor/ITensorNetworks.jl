@@ -43,6 +43,7 @@ function update_message_tensor(
   mts::Vector{ITensorNetwork};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
+
   contract_list = ITensorNetwork[mts; ITensorNetwork([tn[v] for v in subgraph_vertices])]
 
   tn = if isone(length(contract_list))
@@ -51,7 +52,13 @@ function update_message_tensor(
     reduce(⊗, contract_list)
   end
 
-  contract_output = contract(tn; contract_kwargs...)
+  if contract_kwargs.alg != "exact"
+    contract_output = contract(tn; contract_kwargs...)
+  else
+    contract_output = contract(tn; sequence = contraction_sequence(tn; alg = "optimal"))
+  end
+
+  
   itn = if typeof(contract_output) == ITensor
     ITensorNetwork(contract_output)
   else

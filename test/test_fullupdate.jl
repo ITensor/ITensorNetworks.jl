@@ -1,5 +1,5 @@
 using ITensorNetworks
-using ITensorNetworks: belief_propagation, get_environment, contract_inner, message_tensors
+using ITensorNetworks: belief_propagation, get_environment, contract_inner, message_tensors, nested_graph_leaf_vertices
 using Test
 using Compat
 using ITensors
@@ -44,7 +44,7 @@ using SplitApplyCombine
   for i in 1:ngates
     o = ITensors.op("RandomUnitary", s[v1]..., s[v2]...)
 
-    ψOexact = apply(o, ψ; maxdim=4 * χ)
+    ψOexact = apply(o, ψ; cutoff = 1e-16)
     ψOSBP = apply(
       o,
       ψ;
