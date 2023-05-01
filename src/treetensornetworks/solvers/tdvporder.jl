@@ -1,22 +1,24 @@
 
-struct TDVPOrder{order} end
+struct TrotterOrder{order} end
 
-TDVPOrder(order::Int) = TDVPOrder{order}()
+TrotterOrder(order::Int) = TrotterOrder{order}()
 
-directions(::TDVPOrder) = error("Not implemented")
-sub_time_steps(::TDVPOrder) = error("Not implemented")
+directions(::TrotterOrder) = error("Not implemented")
+sub_time_steps(::TrotterOrder) = error("Not implemented")
 
-directions(::TDVPOrder{1}) = [Base.Forward, Base.Reverse]
-sub_time_steps(::TDVPOrder{1}) = [1.0, 0.0]
+#directions(::TrotterOrder{1}) = [Base.Forward]
+sub_time_steps(::TrotterOrder{1}) = [1.0]
 
-directions(::TDVPOrder{2}) = [Base.Forward, Base.Reverse]
-sub_time_steps(::TDVPOrder{2}) = [1 / 2, 1 / 2]
+#directions(::TrotterOrder{2}) = [Base.Forward, Base.Reverse]
+sub_time_steps(::TrotterOrder{2}) = [1 / 2, 1 / 2]
 
-directions(::TDVPOrder{4}) = [Base.Forward, Base.Reverse, Base.Forward, Base.Reverse]
-function sub_time_steps(::TDVPOrder{4})
+#directions(::TrotterOrder{4}) = [Base.Forward, Base.Reverse, Base.Forward, Base.Reverse]
+function sub_time_steps(::TrotterOrder{4})
   s = 1.0 / (2 - 2^(1 / 3))
   return [s / 2, s / 2, (1 - 2 * s) / 2, (1 - 2 * s) / 2, s / 2, s / 2]
 end
+
+direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
 
 function tdvp_one_site_region(edge; last_edge=false, substep, time_step, kwargs...)
   site = ([src(edge)], (; substep, time_step))
@@ -39,7 +41,7 @@ end
 function tdvp_sweep(
   order::Int, nsite::Int, time_step::Number, graph::AbstractGraph; kwargs...
 )
-  tdvp_order = TDVPOrder(order)
+  tdvp_order = TrotterOrder(order)
 
   half_sweep_func = nothing
   if nsite == 1
