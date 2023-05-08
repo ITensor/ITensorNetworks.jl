@@ -134,9 +134,10 @@ function symmetric_to_vidal_gauge(ψ::ITensorNetwork, mts::DataGraph; regulariza
   return ψ_vidal, bond_tensors
 end
 
-"""Function to measure the 'canonicalness' of a state in the Vidal Gauge"""
-function vidal_itn_canonicalness(ψ::ITensorNetwork, bond_tensors::DataGraph)
-  f = 0
+"""Function to measure the 'isometries' of a state in the Vidal Gauge"""
+function vidal_itn_isometries(ψ::ITensorNetwork, bond_tensors::DataGraph)
+
+  isometries = DataGraph{vertextype(ψ),ITensor,ITensor}(directed_graph(underlying_graph(ψ)))
 
   for e in vcat(edges(ψ), reverse.(edges(ψ)))
     vsrc, vdst = src(e), dst(e)
@@ -147,16 +148,28 @@ function vidal_itn_canonicalness(ψ::ITensorNetwork, bond_tensors::DataGraph)
 
     ψvdag = dag(ψv)
     replaceind!(ψvdag, commonind(ψv, ψ[vdst]), commonind(ψv, ψ[vdst])')
-    LHS = ψvdag * ψv
-    LHS /= sum(diag(LHS))
+    isometries[e] = ψvdag * ψv
+  end
+
+  return isometries
+end
+
+"""Function to measure the 'canonicalness' of a state in the Vidal Gauge"""
+function vidal_itn_canonicalness(ψ::ITensorNetwork, bond_tensors::DataGraph)
+  f = 0
+
+  isometries = vidal_itn_isometries(ψ, bond_tensors)
+
+  for e in edges(isometries)
+
+    LHS = isometries[e] / sum(diag(isometries[e]))
     id = dense(delta(inds(LHS)))
     id /= sum(diag(id))
-
     f += 0.5 * norm(id - LHS)
 
   end
 
-  return f / (2 * length(edges(ψ)))
+  return f / (length(edges(isometries)))
 end
 
 """Function to measure the 'canonicalness' of a state in the Symmetric Gauge"""

@@ -281,7 +281,7 @@ function apply_vidal_itn(
   o::Union{ITensor, Nothing};
   regularization=10 * eps(real(scalartype(ψ))),
   normalize = false,
-  edge_to_act_on,
+  edge_to_act_on = first(edges(ψ)),
   svd_kwargs...
 )
   ψ = copy(ψ)
