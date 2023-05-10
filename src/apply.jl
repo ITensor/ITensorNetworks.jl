@@ -128,6 +128,88 @@ function ITensors.apply(
   return apply(ITensor(o, siteinds(ψ)), ψ; normalize, ortho, svd_kwargs...)
 end
 
+#We should re-write this function so that it merges with apply(). This means apply should probably SVD the gate down first and
+#deal with an edge instead of a gate etc
+"""Apply() function for an ITN in the Vidal Gauge. Uses Simple Update procedure assuming gate is two-site"""
+function apply_vidal_itn(
+  ψ::AbstractITensorNetwork,
+  bond_tensors::DataGraph,
+  o::Union{ITensor, Nothing};
+  normalize = false,
+  edge_to_act_on = first(edges(ψ)),
+  svd_kwargs...
+)
+  ψ = copy(ψ)
+  bond_tensors = copy(bond_tensors)
+  v⃗ = o == nothing ? [src(edge_to_act_on), dst(edge_to_act_on)] : neighbor_vertices(ψ, o)
+  if length(v⃗) == 2
+    e = NamedEdge(v⃗[1] => v⃗[2])
+    ψv1, ψv2 = copy(ψ[src(e)]), copy(ψ[dst(e)])
+    e_ind = commonind(ψv1, ψv2)
+
+    for vn in neighbors(ψ, src(e))
+      if (vn != dst(e))
+        ψv1 = noprime(ψv1 * bond_tensors[vn => src(e)])
+      end
+    end
+
+    for vn in neighbors(ψ, dst(e))
+      if (vn != src(e))
+        ψv2 = noprime(ψv2 * bond_tensors[vn => dst(e)])
+      end
+    end
+
+    ψv2 = noprime(ψv2 * bond_tensors[e])
+
+    if o != nothing
+      G1, G2 = factorize(o, Index[commonind(ψv1, o), commonind(ψv1, o)']; cutoff = 1e-16)
+      ψv1 = noprime(ψv1 * G1)
+      ψv2 = noprime(ψv2 * G2)
+    end
+
+    Qᵥ₁, Rᵥ₁ = factorize(ψv1, uniqueinds(ψv1, ψv2); cutoff = 1e-16)
+    Qᵥ₂, Rᵥ₂ = factorize(ψv2, uniqueinds(ψv2, ψv1); cutoff = 1e-16)
+
+    theta = Rᵥ₁ * Rᵥ₂
+
+    U, S, V = ITensors.svd(theta, uniqueinds(Rᵥ₁, Rᵥ₂); lefttags = ITensorNetworks.edge_tag(e), righttags = ITensorNetworks.edge_tag(e), svd_kwargs...)
+
+    ind_to_replace = commonind(V, S)
+    ind_to_replace_with = commonind(U, S)
+    replaceind!(S, ind_to_replace, ind_to_replace_with')
+    replaceind!(V, ind_to_replace, ind_to_replace_with)
+
+    ψv1, bond_tensors[e], ψv2 = U * Qᵥ₁, S, V * Qᵥ₂
+
+    for vn in neighbors(ψ, src(e))
+      if (vn != dst(e))
+        ψv1 = noprime(ψv1 * inv_diag(bond_tensors[vn => src(e)]))
+      end
+    end
+
+    for vn in neighbors(ψ, dst(e))
+      if (vn != src(e))
+        ψv2 = noprime(ψv2 * inv_diag(bond_tensors[vn => dst(e)]))
+      end
+    end
+
+    if normalize
+      normalize!(ψv1)
+      normalize!(ψv2)
+      normalize!(bond_tensors[e])
+    end
+
+    ψ[src(e)], ψ[dst(e)] = ψv1, ψv2
+
+    return ψ, bond_tensors
+
+  else
+    ψ = apply(o, ψ; normalize)
+    return ψ, bond_tensors
+  end
+
+end
+
 ### Full Update Routines ###
 
 """Calculate the overlap of the gate acting on the previous p and q versus the new p and q in the presence of environments. This is the cost function that optimise_p_q will minimise"""
@@ -273,86 +355,3 @@ function optimise_p_q(
 end
 
 partial = (f, a...; c...) -> (b...) -> f(a..., b...; c...)
-
-"""Vidal Gauge Apply()"""
-function apply_vidal_itn(
-  ψ::AbstractITensorNetwork,
-  bond_tensors::DataGraph,
-  o::Union{ITensor, Nothing};
-  regularization=10 * eps(real(scalartype(ψ))),
-  normalize = false,
-  edge_to_act_on = first(edges(ψ)),
-  svd_kwargs...
-)
-  ψ = copy(ψ)
-  bond_tensors = copy(bond_tensors)
-  v⃗ = o == nothing ? [src(edge_to_act_on), dst(edge_to_act_on)] : neighbor_vertices(ψ, o)
-  if length(v⃗) == 2
-    e = NamedEdge(v⃗[1] => v⃗[2])
-    ψv1, ψv2 = copy(ψ[src(e)]), copy(ψ[dst(e)])
-    e_ind = commonind(ψv1, ψv2)
-
-    for vn in neighbors(ψ, src(e))
-      if (vn != dst(e))
-        ψv1 = noprime(ψv1 * bond_tensors[vn => src(e)])
-      end
-    end
-
-    for vn in neighbors(ψ, dst(e))
-      if (vn != src(e))
-        ψv2 = noprime(ψv2 * bond_tensors[vn => dst(e)])
-      end
-    end
-
-    ψv2 = noprime(ψv2 * bond_tensors[e])
-
-    if o != nothing
-      G1, G2 = factorize(o, Index[commonind(ψv1, o), commonind(ψv1, o)']; cutoff = 1e-16)
-      ψv1 = noprime(ψv1 * G1)
-      ψv2 = noprime(ψv2 * G2)
-    end
-
-    Qᵥ₁, Rᵥ₁ = factorize(ψv1, uniqueinds(ψv1, ψv2); cutoff = 1e-16)
-    Qᵥ₂, Rᵥ₂ = factorize(ψv2, uniqueinds(ψv2, ψv1); cutoff = 1e-16)
-
-    theta = Rᵥ₁ * Rᵥ₂
-
-    U, S, V = ITensors.svd(theta, uniqueinds(Rᵥ₁, Rᵥ₂); lefttags = ITensorNetworks.edge_tag(e), righttags = ITensorNetworks.edge_tag(e), svd_kwargs...)
-
-    ind_to_replace = commonind(V, S)
-    ind_to_replace_with = commonind(U, S)
-    replaceind!(S, ind_to_replace, ind_to_replace_with')
-    replaceind!(V, ind_to_replace, ind_to_replace_with)
-
-
-    ψv1, bond_tensors[e], ψv2 = U * Qᵥ₁, S, V * Qᵥ₂
-
-
-    for vn in neighbors(ψ, src(e))
-      if (vn != dst(e))
-        ψv1 = noprime(ψv1 * inv_diag(bond_tensors[vn => src(e)]))
-      end
-    end
-
-    for vn in neighbors(ψ, dst(e))
-      if (vn != src(e))
-        ψv2 = noprime(ψv2 * inv_diag(bond_tensors[vn => dst(e)]))
-      end
-    end
-
-    if normalize
-      normalize!(ψv1)
-      normalize!(ψv2)
-      normalize!(bond_tensors[e])
-    end
-
-    ψ[src(e)], ψ[dst(e)] = ψv1, ψv2
-
-    return ψ, bond_tensors
-
-  else
-    ψ = apply(o, ψ)
-    return ψ, bond_tensors
-  end
-
-end

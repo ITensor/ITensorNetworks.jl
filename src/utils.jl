@@ -25,3 +25,34 @@ function line_to_tree(line::Vector)
   end
   return [line_to_tree(line[1:(end - 1)]), line[end]]
 end
+
+"""Given a vector of gates acting on siteinds within s, separate them into groups of commuting gates"""
+function group_gates(s::IndsNetwork, gates::Vector{ITensor})
+
+  remaining_gates = copy(gates)
+  gate_groups = Vector{ITensor}[]
+
+  while !isempty(remaining_gates)
+      cur_group = ITensor[]
+      cur_vertices = []
+      inds_to_remove = []
+      for i in 1:length(remaining_gates)
+          gate = remaining_gates[i]
+          vs =  vertices(s)[findall(i -> (length(commoninds(s[i], inds(gate))) != 0), vertices(s))]
+
+          if isempty(vs)
+            error("Gate does not appear to have any indices within the indsnetwork provided")
+          end
+
+          if all([v ∉ cur_vertices for v in vs])
+              push!(cur_group, gate)
+              push!(cur_vertices, vs...)
+              push!(inds_to_remove, i)
+          end
+      end
+      remaining_gates = ITensor[remaining_gates[i] for i in setdiff([i for i in 1:length(remaining_gates)], inds_to_remove)]
+      push!(gate_groups, cur_group)
+  end
+
+  return gate_groups
+end
