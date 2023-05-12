@@ -1,3 +1,15 @@
+"""Initialise bond tensors of an ITN to identity matrices"""
+function intialise_bond_tensors(ψ::ITensorNetwork; index_map = prime)
+  bond_tensors = DataGraph{vertextype(ψ),ITensor,ITensor}(underlying_graph(ψ))
+
+  for e in edges(ψ)
+    index = commoninds(ψ[src(e)], ψ[dst(e)])
+    bond_tensors[e] = dense(delta(index, index_map(index)))
+  end
+
+  return bond_tensors
+end
+
 """Use an ITensorNetwork ψ, its bond tensors and gauging mts to put ψ into the vidal gauge, return the bond tensors and ψ_vidal."""
 function vidal_gauge(
   ψ::ITensorNetwork, mts::DataGraph, bond_tensors::DataGraph;
@@ -32,12 +44,14 @@ function vidal_gauge(
     if haskey(edge_data(bond_tensors), e)
       Ce = rootX * prime(bond_tensors[e]) 
       replaceinds!(Ce, edge_ind'', edge_ind')
+    else
+      Ce = rootX
     end
-    Ce = rootX * replaceinds(rootY, edge_ind, edge_ind_sim)
+    Ce = Ce * replaceinds(rootY, edge_ind, edge_ind_sim)
 
     U, S, V = svd(Ce, edge_ind; svd_kwargs...)
 
-    new_edge_ind = Index[Index(dim(commoninds(S, U)), tags(edge_ind[1]))]
+    new_edge_ind = Index[Index(dim(commoninds(S, U)), tags(first(edge_ind)))]
 
     ψ_vidal[vsrc] = replaceinds(ψ_vidal[vsrc] * U, commoninds(S, U), new_edge_ind)
     ψ_vidal[vdst] = replaceinds(ψ_vidal[vdst], edge_ind, edge_ind_sim)
@@ -195,3 +209,4 @@ function symmetric_itn_canonicalness(ψ::ITensorNetwork, mts::DataGraph)
   return vidal_itn_canonicalness(ψ_vidal, bond_tensors)
 
 end
+

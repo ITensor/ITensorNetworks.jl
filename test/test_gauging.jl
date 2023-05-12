@@ -1,13 +1,13 @@
 using ITensors
 using ITensorNetworks
-using ITensorNetworks: belief_propagation, contract_inner, symmetric_gauge, message_tensors
+using ITensorNetworks: belief_propagation, contract_inner, symmetric_gauge, symmetric_to_vidal_gauge, message_tensors, vidal_itn_canonicalness, vidal_gauge
 using NamedGraphs
 using Test
 using Compat
 using Random
 using SplitApplyCombine
 
-@testset "symmetrise_itensornetwork" begin
+@testset "gauging" begin
   n = 3
   dims = (n, n)
   g = named_grid(dims)
@@ -36,4 +36,10 @@ using SplitApplyCombine
     m_e = ψ_symm_mts_V2[e][first(vertices(ψ_symm_mts_V2[e]))]
     @test diagITensor(vector(diag(m_e)), inds(m_e)) ≈ m_e atol = 1e-8
   end
+
+  ψ_vidal, bond_tensors = vidal_gauge(ψ; target_canonicalness = 1e-6)
+  @test vidal_itn_canonicalness(ψ_vidal, bond_tensors) < 1e-6
+
+  ψ_vidal, bond_tensors = symmetric_to_vidal_gauge(ψ_symm, ψ_symm_mts)
+  @test vidal_itn_canonicalness(ψ_vidal, bond_tensors) < 1e-6
 end
