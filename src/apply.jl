@@ -131,9 +131,9 @@ end
 """Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
 Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site"""
 function ITensors.apply(
+  o::Union{ITensor, NamedEdge},
   ψ::AbstractITensorNetwork,
-  bond_tensors::DataGraph,
-  o::Union{ITensor, NamedEdge};
+  bond_tensors::DataGraph;
   normalize = false,
   svd_kwargs...
 )
