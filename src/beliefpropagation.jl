@@ -44,12 +44,9 @@ function update_message_tensor(
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
 
-  mts_itensors = ITensor.(mts)
-  if typeof(mts_itensors) == Vector{Vector{ITensor}}
-    mts_itensors = flatten(mts_itensors)
-  end
-  contract_list = ITensor[mts_itensors; ITensor[tn[v] for v in subgraph_vertices]]
+  mts_itensors = reduce(vcat,  ITensor.(mts); init = ITensor[])
 
+  contract_list = ITensor[mts_itensors; ITensor[tn[v] for v in subgraph_vertices]]
   tn = if isone(length(contract_list))
     copy(only(contract_list))
   else
