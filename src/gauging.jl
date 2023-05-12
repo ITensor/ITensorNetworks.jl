@@ -1,12 +1,11 @@
-"""Use an ITensorNetwork ψ and its mts to put ψ into the vidal gauge, return the bond tensors and ψ_vidal."""
+"""Use an ITensorNetwork ψ, its bond tensors and gauging mts to put ψ into the vidal gauge, return the bond tensors and ψ_vidal."""
 function vidal_gauge(
-  ψ::ITensorNetwork, mts::DataGraph;
+  ψ::ITensorNetwork, mts::DataGraph, bond_tensors::DataGraph;
   eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
   regularization=10 * eps(real(scalartype(ψ))),
   svd_kwargs...
 )
 
-  bond_tensors = DataGraph{vertextype(ψ),ITensor,ITensor}(underlying_graph(ψ))
   ψ_vidal = copy(ψ)
 
   for e in edges(ψ_vidal)
@@ -29,7 +28,11 @@ function vidal_gauge(
 
     ψ_vidal[vsrc] = noprime(ψ_vidal[vsrc] * inv_rootX)
     ψ_vidal[vdst] = noprime(ψ_vidal[vdst] * inv_rootY)
-
+ 
+    if haskey(edge_data(bond_tensors), e)
+      Ce = rootX * prime(bond_tensors[e]) 
+      replaceinds!(Ce, edge_ind'', edge_ind')
+    end
     Ce = rootX * replaceinds(rootY, edge_ind, edge_ind_sim)
 
     U, S, V = svd(Ce, edge_ind; svd_kwargs...)
@@ -47,6 +50,18 @@ function vidal_gauge(
   end
 
   return ψ_vidal, bond_tensors
+end
+
+"""Use an ITensorNetwork ψ and its mts to put ψ into the vidal gauge, bond tensors are initialised and made empty. Return the bond tensors and ψ_vidal."""
+function vidal_gauge(
+  ψ::ITensorNetwork, mts::DataGraph;
+  eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
+  regularization=10 * eps(real(scalartype(ψ))),
+  svd_kwargs...
+)
+  bond_tensors = DataGraph{vertextype(ψ),ITensor,ITensor}(underlying_graph(ψ))
+  return vidal_gauge(ψ, mts, bond_tensors; eigen_message_tensor_cutoff, regularization, svd_kwargs...)
+
 end
 
 """Put an ITensorNetwork into the vidal gauge, return the network and the bond tensors. Will also return the mts that were constructed"""
