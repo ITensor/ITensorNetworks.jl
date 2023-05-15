@@ -1,6 +1,13 @@
 using ITensors
 using ITensorNetworks
-using ITensorNetworks: belief_propagation, contract_inner, symmetric_gauge, symmetric_to_vidal_gauge, message_tensors, vidal_itn_canonicalness, vidal_gauge,
+using ITensorNetworks:
+  belief_propagation,
+  contract_inner,
+  symmetric_gauge,
+  symmetric_to_vidal_gauge,
+  message_tensors,
+  vidal_itn_canonicalness,
+  vidal_gauge,
   symmetric_itn_canonicalness
 using NamedGraphs
 using Test
@@ -40,7 +47,7 @@ using SplitApplyCombine
 
   @test symmetric_itn_canonicalness(ψ_symm, ψ_symm_mts) < 1e-6
 
-  ψ_vidal, bond_tensors = vidal_gauge(ψ; target_canonicalness = 1e-6)
+  ψ_vidal, bond_tensors = vidal_gauge(ψ; target_canonicalness=1e-6)
   @test vidal_itn_canonicalness(ψ_vidal, bond_tensors) < 1e-6
 
   ψ_vidal, bond_tensors = symmetric_to_vidal_gauge(ψ_symm, ψ_symm_mts)

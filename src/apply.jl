@@ -7,7 +7,7 @@ function ITensors.apply(
   nfullupdatesweeps=10,
   print_fidelity_loss=true,
   envisposdef=false,
-  svd_kwargs...
+  svd_kwargs...,
 )
   ψ = copy(ψ)
   v⃗ = neighbor_vertices(ψ, o)
@@ -56,7 +56,7 @@ function ITensors.apply(
         nfullupdatesweeps,
         print_fidelity_loss,
         envisposdef,
-        svd_kwargs...
+        svd_kwargs...,
       )
     else
       Rᵥ₁, Rᵥ₂ = factorize(
@@ -98,22 +98,14 @@ function ITensors.apply(
 end
 
 function ITensors.apply(
-  o⃗::Scaled,
-  ψ::AbstractITensorNetwork;
-  normalize=false,
-  ortho=false,
-  svd_kwargs...,
+  o⃗::Scaled, ψ::AbstractITensorNetwork; normalize=false, ortho=false, svd_kwargs...
 )
   return maybe_real(Ops.coefficient(o⃗)) *
          apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho, svd_kwargs...)
 end
 
 function ITensors.apply(
-  o⃗::Prod,
-  ψ::AbstractITensorNetwork;
-  normalize=false,
-  ortho=false,
-  svd_kwargs...,
+  o⃗::Prod, ψ::AbstractITensorNetwork; normalize=false, ortho=false, svd_kwargs...
 )
   o⃗ψ = ψ
   for oᵢ in o⃗
@@ -128,18 +120,19 @@ function ITensors.apply(
   return apply(ITensor(o, siteinds(ψ)), ψ; normalize, ortho, svd_kwargs...)
 end
 
+#In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
 """Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
 Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site"""
 function ITensors.apply(
-  o::Union{ITensor, NamedEdge},
+  o::Union{ITensor,NamedEdge},
   ψ::AbstractITensorNetwork,
   bond_tensors::DataGraph;
-  normalize = false,
-  svd_kwargs...
+  normalize=false,
+  svd_kwargs...,
 )
   ψ = copy(ψ)
   bond_tensors = copy(bond_tensors)
-  v⃗ = typeof(o) == ITensor ?  neighbor_vertices(ψ, o) : [src(o), dst(o)]
+  v⃗ = typeof(o) == ITensor ? neighbor_vertices(ψ, o) : [src(o), dst(o)]
   if length(v⃗) == 2
     e = NamedEdge(v⃗[1] => v⃗[2])
     ψv1, ψv2 = copy(ψ[src(e)]), copy(ψ[dst(e)])
@@ -158,19 +151,25 @@ function ITensors.apply(
     end
 
     if typeof(o) == ITensor
-      G1, G2 = factorize(o, Index[commonind(ψv1, o), commonind(ψv1, o)']; cutoff = 1e-16)
+      G1, G2 = factorize(o, Index[commonind(ψv1, o), commonind(ψv1, o)']; cutoff=1e-16)
       ψv1 = noprime(ψv1 * G1)
       ψv2 = noprime(ψv2 * G2)
     end
 
     ψv2 = noprime(ψv2 * bond_tensors[e])
 
-    Qᵥ₁, Rᵥ₁ = factorize(ψv1, uniqueinds(ψv1, ψv2); cutoff = 1e-16)
-    Qᵥ₂, Rᵥ₂ = factorize(ψv2, uniqueinds(ψv2, ψv1); cutoff = 1e-16)
+    Qᵥ₁, Rᵥ₁ = factorize(ψv1, uniqueinds(ψv1, ψv2); cutoff=1e-16)
+    Qᵥ₂, Rᵥ₂ = factorize(ψv2, uniqueinds(ψv2, ψv1); cutoff=1e-16)
 
     theta = Rᵥ₁ * Rᵥ₂
 
-    U, S, V = ITensors.svd(theta, uniqueinds(Rᵥ₁, Rᵥ₂); lefttags = ITensorNetworks.edge_tag(e), righttags = ITensorNetworks.edge_tag(e), svd_kwargs...)
+    U, S, V = ITensors.svd(
+      theta,
+      uniqueinds(Rᵥ₁, Rᵥ₂);
+      lefttags=ITensorNetworks.edge_tag(e),
+      righttags=ITensorNetworks.edge_tag(e),
+      svd_kwargs...,
+    )
 
     ind_to_replace = commonind(V, S)
     ind_to_replace_with = commonind(U, S)
@@ -205,7 +204,6 @@ function ITensors.apply(
     ψ = ITensors.apply(o, ψ; normalize)
     return ψ, bond_tensors
   end
-
 end
 
 ### Full Update Routines ###
@@ -268,9 +266,11 @@ function optimise_p_q(
   nfullupdatesweeps=10,
   print_fidelity_loss=false,
   envisposdef=true,
-  svd_kwargs...
+  svd_kwargs...,
 )
-  p_cur, q_cur = factorize(apply(o, p * q), inds(p); tags=tags(commonind(p, q)), svd_kwargs...)
+  p_cur, q_cur = factorize(
+    apply(o, p * q), inds(p); tags=tags(commonind(p, q)), svd_kwargs...
+  )
 
   fstart = print_fidelity_loss ? fidelity(envs, p_cur, q_cur, p, q, o) : 0
 

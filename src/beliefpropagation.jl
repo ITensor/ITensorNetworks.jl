@@ -10,15 +10,14 @@ function message_tensors(
   )
 end
 
-function message_tensors_skeleton(
-  subgraphs::DataGraph)
+function message_tensors_skeleton(subgraphs::DataGraph)
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
   )
   for v in vertices(mts)
     mts[v] = subgraphs[v]
   end
-  
+
   return mts
 end
 
@@ -43,8 +42,7 @@ function update_message_tensor(
   mts::Vector{ITensorNetwork};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
-
-  mts_itensors = reduce(vcat,  ITensor.(mts); init = ITensor[])
+  mts_itensors = reduce(vcat, ITensor.(mts); init=ITensor[])
 
   contract_list = ITensor[mts_itensors; ITensor[tn[v] for v in subgraph_vertices]]
   tn = if isone(length(contract_list))
@@ -56,9 +54,9 @@ function update_message_tensor(
   if contract_kwargs.alg != "exact"
     contract_output = contract(tn; contract_kwargs...)
   else
-    contract_output = contract(tn; sequence = contraction_sequence(tn; alg = "optimal"))
+    contract_output = contract(tn; sequence=contraction_sequence(tn; alg="optimal"))
   end
-  
+
   itn = if typeof(contract_output) == ITensor
     ITensorNetwork(contract_output)
   else
