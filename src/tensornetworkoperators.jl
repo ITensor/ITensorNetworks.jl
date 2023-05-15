@@ -1,36 +1,30 @@
-"""Given a vector of gates acting on siteinds within s, separate them into groups of commuting gates (i.e. gates in the same group act on different physical indices)"""
-function group_gates(s::IndsNetwork, gates::Vector{ITensor})
-  remaining_gates = copy(gates)
-  gate_groups = Vector{ITensor}[]
+"""Given a vector of ITensors, separate them into groups of commuting itensors (i.e. itensors in the same group do not share any common indices)"""
+function group_ITensors(its::Vector{ITensor})
+  remaining_its = copy(its)
+  it_groups = Vector{ITensor}[]
 
-  while !isempty(remaining_gates)
+  while !isempty(remaining_its)
     cur_group = ITensor[]
-    cur_vertices = []
+    cur_indices = Index[]
     inds_to_remove = []
-    for i in 1:length(remaining_gates)
-      gate = remaining_gates[i]
-      vs = vertices(s)[findall(
-        i -> (length(commoninds(s[i], inds(gate))) != 0), vertices(s)
-      )]
+    for i in 1:length(remaining_its)
+      it = remaining_its[i]
+      it_inds = inds(it)
 
-      if isempty(vs)
-        error("Gate does not appear to have any indices within the indsnetwork provided")
-      end
-
-      if all([v ∉ cur_vertices for v in vs])
-        push!(cur_group, gate)
-        push!(cur_vertices, vs...)
+      if all([i ∉ cur_indices for i in it_inds])
+        push!(cur_group, it)
+        push!(cur_indices, it_inds...)
         push!(inds_to_remove, i)
       end
     end
-    remaining_gates = ITensor[
-      remaining_gates[i] for
-      i in setdiff([i for i in 1:length(remaining_gates)], inds_to_remove)
+    remaining_its = ITensor[
+      remaining_its[i] for
+      i in setdiff([i for i in 1:length(remaining_its)], inds_to_remove)
     ]
-    push!(gate_groups, cur_group)
+    push!(it_groups, cur_group)
   end
 
-  return gate_groups
+  return it_groups
 end
 
 """Take a vector of gates which act on different edges/ vertices of an Inds network and construct the tno which represents prod(gates)"""
@@ -39,7 +33,7 @@ function gate_group_to_tno(s::IndsNetwork, gates::Vector{ITensor}; check_commuta
   #Construct indsnetwork for TNO
   s_O = union_all_inds(s, prime(s; links=[]))
 
-  if check_commutativity && length(group_gates(s, gates)) != 1
+  if check_commutativity && length(group_gates(gates)) != 1
     error(
       "Gates do not all act on different physical degrees of freedom. TNO construction for this is not currently supported.",
     )
@@ -60,7 +54,9 @@ function gate_group_to_tno(s::IndsNetwork, gates::Vector{ITensor}; check_commuta
       O[v⃗[1]] = Osrc
       O[v⃗[2]] = Odst
     else
-      error("Can only deal with gates acting on one or two sites for now.")
+      error(
+        "Can only deal with gates acting on one or two sites for now. Physical indices of the gates must also match those in the IndsNetwork/",
+      )
     end
   end
 
@@ -71,7 +67,7 @@ end
 whose product represents prod(gates)"""
 function get_tnos(s::IndsNetwork, gates::Vector{ITensor})
   tnos = ITensorNetwork[]
-  gate_groups = group_gates(s, gates)
+  gate_groups = group_ITensors(gates)
   for group in gate_groups
     push!(tnos, gate_group_to_tno(s, group; check_commutativity=false))
   end
