@@ -26,7 +26,7 @@ function line_to_tree(line::Vector)
   return [line_to_tree(line[1:(end - 1)]), line[end]]
 end
 
-"""Given a vector of gates acting on siteinds within s, separate them into groups of commuting gates"""
+"""Given a vector of gates acting on siteinds within s, separate them into groups of commuting gates (i.e. gates in the same group act on different physical indices)"""
 function group_gates(s::IndsNetwork, gates::Vector{ITensor})
 
   remaining_gates = copy(gates)
