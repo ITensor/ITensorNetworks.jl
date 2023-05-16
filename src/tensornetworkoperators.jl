@@ -1,32 +1,3 @@
-"""Given a vector of ITensors, separate them into groups of commuting itensors (i.e. itensors in the same group do not share any common indices)"""
-function group_ITensors(its::Vector{ITensor})
-  remaining_its = copy(its)
-  it_groups = Vector{ITensor}[]
-
-  while !isempty(remaining_its)
-    cur_group = ITensor[]
-    cur_indices = Index[]
-    inds_to_remove = []
-    for i in 1:length(remaining_its)
-      it = remaining_its[i]
-      it_inds = inds(it)
-
-      if all([i ∉ cur_indices for i in it_inds])
-        push!(cur_group, it)
-        push!(cur_indices, it_inds...)
-        push!(inds_to_remove, i)
-      end
-    end
-    remaining_its = ITensor[
-      remaining_its[i] for
-      i in setdiff([i for i in 1:length(remaining_its)], inds_to_remove)
-    ]
-    push!(it_groups, cur_group)
-  end
-
-  return it_groups
-end
-
 """Take a vector of gates which act on different edges/ vertices of an Inds network and construct the tno which represents prod(gates)"""
 function gate_group_to_tno(s::IndsNetwork, gates::Vector{ITensor}; check_commutativity=true)
 
@@ -55,7 +26,7 @@ function gate_group_to_tno(s::IndsNetwork, gates::Vector{ITensor}; check_commuta
       O[v⃗[2]] = Odst
     else
       error(
-        "Can only deal with gates acting on one or two sites for now. Physical indices of the gates must also match those in the IndsNetwork/",
+        "Can only deal with gates acting on one or two sites for now. Physical indices of the gates must also match those in the IndsNetwork.",
       )
     end
   end

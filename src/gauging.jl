@@ -47,12 +47,8 @@ function vidal_gauge(
     ψ_vidal[vsrc] = noprime(ψ_vidal[vsrc] * inv_rootX)
     ψ_vidal[vdst] = noprime(ψ_vidal[vdst] * inv_rootY)
 
-    if haskey(edge_data(bond_tensors), e)
-      Ce = rootX * prime(bond_tensors[e])
-      replaceinds!(Ce, edge_ind'', edge_ind')
-    else
-      Ce = rootX
-    end
+    Ce = rootX * prime(bond_tensors[e])
+    replaceinds!(Ce, edge_ind'', edge_ind')
     Ce = Ce * replaceinds(rootY, edge_ind, edge_ind_sim)
 
     U, S, V = svd(Ce, edge_ind; svd_kwargs...)
@@ -74,7 +70,7 @@ function vidal_gauge(
   return ψ_vidal, bond_tensors
 end
 
-"""Use an ITensorNetwork ψ and its mts to put ψ into the vidal gauge, bond tensors are initialised and made empty. Return the bond tensors and ψ_vidal."""
+"""Use an ITensorNetwork ψ in the symmetric gauge and its mts to put ψ into the vidal gauge. Return the bond tensors and ψ_vidal."""
 function vidal_gauge(
   ψ::ITensorNetwork,
   mts::DataGraph;
@@ -82,13 +78,13 @@ function vidal_gauge(
   regularization=10 * eps(real(scalartype(ψ))),
   svd_kwargs...,
 )
-  bond_tensors = DataGraph{vertextype(ψ),ITensor,ITensor}(underlying_graph(ψ))
+  bond_tensors = intialise_bond_tensors(ψ)
   return vidal_gauge(
     ψ, mts, bond_tensors; eigen_message_tensor_cutoff, regularization, svd_kwargs...
   )
 end
 
-"""Put an ITensorNetwork into the vidal gauge, return the network and the bond tensors. Will also return the mts that were constructed"""
+"""Put an ITensorNetwork into the vidal gauge (by computing the message tensors), return the network and the bond tensors. Will also return the mts that were constructed"""
 function vidal_gauge(
   ψ::ITensorNetwork;
   eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
@@ -127,7 +123,7 @@ function vidal_gauge(
   end
 end
 
-"""Transform from the Vidal Gauge to the Symmetric Gauge"""
+"""Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (message tensors)"""
 function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
   ψsymm = copy(ψ)
   ψψsymm = ψsymm ⊗ prime(dag(ψsymm); sites=[])
@@ -170,7 +166,7 @@ function symmetric_gauge(
   return vidal_to_symmetric_gauge(ψsymm, bond_tensors)
 end
 
-"""Transform from the Symmetric Gauge to the Vidal Gauge"""
+"""Transform from the Symmetric Gauge (message tensors) to the Vidal Gauge (bond tensors)"""
 function symmetric_to_vidal_gauge(
   ψ::ITensorNetwork, mts::DataGraph; regularization=10 * eps(real(scalartype(ψ)))
 )
