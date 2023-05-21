@@ -327,30 +327,31 @@ function _rem_vertex!(
   rem_vertex!(alg_graph.out_tree, root)
   # update es_to_pdm
   truncate_dfs_tree = dfs_tree(alg_graph.out_tree, alg_graph.root)
-  for es in keys(caches.es_to_pdm)
-    if dst(first(es)) == root
-      delete!(caches.es_to_pdm, es)
-    elseif dst(first(es)) == new_root
-      parent_edge = NamedEdge(parent_vertex(truncate_dfs_tree, new_root), new_root)
-      edge_to_remove = NamedEdge(root, new_root)
-      if intersect(es, [parent_edge]) == []
-        new_es = setdiff(es, [edge_to_remove])
-        caches.es_to_pdm[new_es] = _optcontract(
-          [caches.es_to_pdm[es], root_tensor];
-          contraction_sequence_alg,
-          contraction_sequence_kwargs,
-        )
+  for es in filter(es -> dst(first(es)) == root, keys(caches.es_to_pdm))
+    delete!(caches.es_to_pdm, es)
+  end
+  for es in filter(es -> dst(first(es)) == new_root, keys(caches.es_to_pdm))
+    parent_edge = NamedEdge(parent_vertex(truncate_dfs_tree, new_root), new_root)
+    edge_to_remove = NamedEdge(root, new_root)
+    if intersect(es, Set([parent_edge])) == Set()
+      new_es = setdiff(es, [edge_to_remove])
+      if new_es == Set()
+        new_es = Set([NamedEdge(nothing, new_root)])
       end
-      # Remove old caches since they won't be used anymore,
-      # and removing them saves later contraction costs.
-      delete!(caches.es_to_pdm, es)
+      @assert length(new_es) >= 1
+      caches.es_to_pdm[new_es] = _optcontract(
+        [caches.es_to_pdm[es], root_tensor];
+        contraction_sequence_alg,
+        contraction_sequence_kwargs,
+      )
     end
+    # Remove old caches since they won't be used anymore,
+    # and removing them saves later contraction costs.
+    delete!(caches.es_to_pdm, es)
   end
   # update e_to_dm
-  for edge in keys(caches.e_to_dm)
-    if dst(edge) in [root, new_root]
-      delete!(caches.e_to_dm, edge)
-    end
+  for edge in filter(e -> dst(e) in [root, new_root], keys(caches.e_to_dm))
+    delete!(caches.e_to_dm, edge)
   end
   return U
 end
