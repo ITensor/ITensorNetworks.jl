@@ -1,10 +1,14 @@
 using ITensors, OMEinsumContractionOrders
+using Graphs, NamedGraphs
+using ITensors: contract
 using ITensorNetworks:
   _root,
   _mps_partition_inds_order,
   _mincut_partitions,
   _is_rooted_directed_binary_tree,
-  _contract_deltas_ignore_leaf_partitions
+  _contract_deltas_ignore_leaf_partitions,
+  _rem_vertex!,
+  _DensityMartrixAlgGraph
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")
@@ -83,17 +87,54 @@ end
     out2 = contract(network2...)
     @test isapprox(out1, out2)
     # test approx_itensornetwork (here we call `contract` to test the interface)
-    approx_tn, lognorm = contract(
-      tn;
-      alg="density_matrix",
-      output_structure=binary_tree_structure,
-      contraction_sequence_alg="sa_bipartite",
-    )
-    network3 = Vector{ITensor}(approx_tn)
-    out3 = contract(network3...) * exp(lognorm)
-    i1 = noncommoninds(network...)
-    i3 = noncommoninds(network3...)
-    @test (length(i1) == length(i3))
-    @test isapprox(out1, out3)
+    for structure in [path_graph_structure, binary_tree_structure]
+      approx_tn, lognorm = contract(
+        tn;
+        alg="density_matrix",
+        output_structure=structure,
+        contraction_sequence_alg="sa_bipartite",
+      )
+      network3 = Vector{ITensor}(approx_tn)
+      out3 = contract(network3...) * exp(lognorm)
+      i1 = noncommoninds(network...)
+      i3 = noncommoninds(network3...)
+      @test (length(i1) == length(i3))
+      @test isapprox(out1, out3)
+    end
   end
+end
+
+@testset "test caching in approx_itensornetwork" begin
+  i = Index(2, "i")
+  j = Index(2, "j")
+  k = Index(2, "k")
+  l = Index(2, "l")
+  m = Index(2, "m")
+  T = randomITensor(i, j, k, l, m)
+  M = MPS(T, (i, j, k, l, m); cutoff=1e-5, maxdim=5)
+  tn = ITensorNetwork(M[:])
+  out_tree = path_graph_structure(tn)
+  input_partition = partition(tn, out_tree; alg="mincut_recursive_bisection")
+  underlying_tree = underlying_graph(input_partition)
+  # Change type of each partition[v] since they will be updated
+  # with potential data type chage.
+  p = DataGraph()
+  for v in vertices(input_partition)
+    add_vertex!(p, v)
+    p[v] = ITensorNetwork{Any}(input_partition[v])
+  end
+  alg_graph = _DensityMartrixAlgGraph(p, underlying_tree, _root(out_tree))
+  path = post_order_dfs_vertices(underlying_tree, _root(out_tree))
+  for v in path[1:2]
+    _rem_vertex!(
+      alg_graph,
+      v;
+      cutoff=1e-15,
+      maxdim=10000,
+      contraction_sequence_alg="optimal",
+      contraction_sequence_kwargs=(;),
+    )
+  end
+  # Check that a specific density matrix info has been cached
+  @test haskey(alg_graph.caches.es_to_pdm, Set([NamedEdge(nothing, path[3])]))
 end
