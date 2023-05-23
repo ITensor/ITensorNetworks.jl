@@ -21,7 +21,7 @@ pinv_diag(it::ITensor) = map_diag(pinv, it)
 pinvsqrt_diag(it::ITensor) = map_diag(pinv ∘ sqrt, it)
 
 """Given a vector of ITensors, separate them into groups of commuting itensors (i.e. itensors in the same group do not share any common indices)"""
-function group_ITensors(its::Vector{ITensor})
+function group_commuting_itensors(its::Vector{ITensor})
   remaining_its = copy(its)
   it_groups = Vector{ITensor}[]
 

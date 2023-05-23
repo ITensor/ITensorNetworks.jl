@@ -3,7 +3,7 @@ using ITensorNetworks
 using ITensors
 using Random
 
-using ITensorNetworks: gate_group_to_tno, get_tnos, group_ITensors, contract_inner
+using ITensorNetworks: gate_group_to_tno, get_tnos, group_commuting_itensors, contract_inner
 
 @testset "TN operator Basics" begin
   L = 3
@@ -12,7 +12,7 @@ using ITensorNetworks: gate_group_to_tno, get_tnos, group_ITensors, contract_inn
 
   ℋ = ising(g; h=1.5)
   gates = Vector{ITensor}(ℋ, s)
-  gate_groups = group_ITensors(gates)
+  gate_groups = group_commuting_itensors(gates)
 
   @test typeof(gate_groups) == Vector{Vector{ITensor}}
   tnos = get_tnos(s, gates)

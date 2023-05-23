@@ -7,7 +7,7 @@ function ITensors.apply(
   nfullupdatesweeps=10,
   print_fidelity_loss=true,
   envisposdef=false,
-  svd_kwargs...,
+  apply_kwargs...,
 )
   ψ = copy(ψ)
   v⃗ = neighbor_vertices(ψ, o)
@@ -56,11 +56,11 @@ function ITensors.apply(
         nfullupdatesweeps,
         print_fidelity_loss,
         envisposdef,
-        svd_kwargs...,
+        apply_kwargs...,
       )
     else
       Rᵥ₁, Rᵥ₂ = factorize(
-        apply(o, Rᵥ₁ * Rᵥ₂), inds(Rᵥ₁); tags=ITensorNetworks.edge_tag(e), svd_kwargs...
+        apply(o, Rᵥ₁ * Rᵥ₂), inds(Rᵥ₁); tags=ITensorNetworks.edge_tag(e), apply_kwargs...
       )
     end
 
@@ -88,36 +88,36 @@ function ITensors.apply(
   ψ::AbstractITensorNetwork;
   normalize=false,
   ortho=false,
-  svd_kwargs...,
+  apply_kwargs...,
 )
   o⃗ψ = ψ
   for oᵢ in o⃗
-    o⃗ψ = apply(oᵢ, o⃗ψ; normalize, ortho, svd_kwargs...)
+    o⃗ψ = apply(oᵢ, o⃗ψ; normalize, ortho, apply_kwargs...)
   end
   return o⃗ψ
 end
 
 function ITensors.apply(
-  o⃗::Scaled, ψ::AbstractITensorNetwork; normalize=false, ortho=false, svd_kwargs...
+  o⃗::Scaled, ψ::AbstractITensorNetwork; normalize=false, ortho=false, apply_kwargs...
 )
   return maybe_real(Ops.coefficient(o⃗)) *
-         apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho, svd_kwargs...)
+         apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho, apply_kwargs...)
 end
 
 function ITensors.apply(
-  o⃗::Prod, ψ::AbstractITensorNetwork; normalize=false, ortho=false, svd_kwargs...
+  o⃗::Prod, ψ::AbstractITensorNetwork; normalize=false, ortho=false, apply_kwargs...
 )
   o⃗ψ = ψ
   for oᵢ in o⃗
-    o⃗ψ = apply(oᵢ, o⃗ψ; normalize, ortho, svd_kwargs...)
+    o⃗ψ = apply(oᵢ, o⃗ψ; normalize, ortho, apply_kwargs...)
   end
   return o⃗ψ
 end
 
 function ITensors.apply(
-  o::Op, ψ::AbstractITensorNetwork; normalize=false, ortho=false, svd_kwargs...
+  o::Op, ψ::AbstractITensorNetwork; normalize=false, ortho=false, apply_kwargs...
 )
-  return apply(ITensor(o, siteinds(ψ)), ψ; normalize, ortho, svd_kwargs...)
+  return apply(ITensor(o, siteinds(ψ)), ψ; normalize, ortho, apply_kwargs...)
 end
 
 #In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
@@ -128,7 +128,7 @@ function ITensors.apply(
   ψ::AbstractITensorNetwork,
   bond_tensors::DataGraph;
   normalize=false,
-  svd_kwargs...,
+  apply_kwargs...,
 )
   ψ = copy(ψ)
   bond_tensors = copy(bond_tensors)
@@ -168,7 +168,7 @@ function ITensors.apply(
       uniqueinds(Rᵥ₁, Rᵥ₂);
       lefttags=ITensorNetworks.edge_tag(e),
       righttags=ITensorNetworks.edge_tag(e),
-      svd_kwargs...,
+      apply_kwargs...,
     )
 
     ind_to_replace = commonind(V, S)
@@ -266,10 +266,10 @@ function optimise_p_q(
   nfullupdatesweeps=10,
   print_fidelity_loss=false,
   envisposdef=true,
-  svd_kwargs...,
+  apply_kwargs...,
 )
   p_cur, q_cur = factorize(
-    apply(o, p * q), inds(p); tags=tags(commonind(p, q)), svd_kwargs...
+    apply(o, p * q), inds(p); tags=tags(commonind(p, q)), apply_kwargs...
   )
 
   fstart = print_fidelity_loss ? fidelity(envs, p_cur, q_cur, p, q, o) : 0

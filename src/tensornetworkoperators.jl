@@ -4,7 +4,7 @@ function gate_group_to_tno(s::IndsNetwork, gates::Vector{ITensor}; check_commuta
   #Construct indsnetwork for TNO
   s_O = union_all_inds(s, prime(s; links=[]))
 
-  if check_commutativity && length(group_gates(gates)) != 1
+  if check_commutativity && length(group_commuting_itensors(gates)) != 1
     error(
       "Gates do not all act on different physical degrees of freedom. TNO construction for this is not currently supported.",
     )
@@ -38,7 +38,7 @@ end
 whose product represents prod(gates)"""
 function get_tnos(s::IndsNetwork, gates::Vector{ITensor})
   tnos = ITensorNetwork[]
-  gate_groups = group_ITensors(gates)
+  gate_groups = group_commuting_itensors(gates)
   for group in gate_groups
     push!(tnos, gate_group_to_tno(s, group; check_commutativity=false))
   end

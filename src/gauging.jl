@@ -1,5 +1,5 @@
-"""Initialise bond tensors of an ITN to identity matrices"""
-function intialise_bond_tensors(ψ::ITensorNetwork; index_map=prime)
+"""initialize bond tensors of an ITN to identity matrices"""
+function initialize_bond_tensors(ψ::ITensorNetwork; index_map=prime)
   bond_tensors = DataGraph{vertextype(ψ),ITensor,ITensor}(underlying_graph(ψ))
 
   for e in edges(ψ)
@@ -78,7 +78,7 @@ function vidal_gauge(
   regularization=10 * eps(real(scalartype(ψ))),
   svd_kwargs...,
 )
-  bond_tensors = intialise_bond_tensors(ψ)
+  bond_tensors = initialize_bond_tensors(ψ)
   return vidal_gauge(
     ψ, mts, bond_tensors; eigen_message_tensor_cutoff, regularization, svd_kwargs...
   )
