@@ -1,13 +1,26 @@
 
-function one_site_region(edge; last_edge=false)
-  if last_edge
-    return [src(edge)], [dst(edge)]
+function make_region(edge; last_edge=false, nsite=1, region_args=(;), reverse_args=region_args, reverse_step=false)
+  if nsite == 1
+    site = ([src(edge)], region_args)
+    bond = (edge, reverse_args)
+    region = reverse_step ? (site, bond) : (site,)
+    if last_edge
+      return (region..., ([dst(edge)], region_args))
+    else
+      return region
+    end
+  elseif nsite == 2
+    sites_two = ([src(edge),dst(edge)],region_args)
+    sites_one = ([dst(edge)],reverse_args)
+    region = reverse_step ? (sites_two, sites_one) : (sites_two,)
+    if last_edge
+      return (sites_two,)
+    else
+      return region
+    end
+  else
+    error("nsite=$nsite not supported in alternating_update / update_step")
   end
-  return ([src(edge)],)
-end
-
-function two_site_region(edge; last_edge=false)
-  return ([src(edge), dst(edge)],)
 end
 
 put_kwargs(t::Tuple{Any,NamedTuple}) = t

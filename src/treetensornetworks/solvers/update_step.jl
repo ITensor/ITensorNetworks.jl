@@ -1,15 +1,8 @@
 
 function update_sweep(nsite, graph::AbstractGraph; kwargs...)
-  if nsite == 1
-    region_function = one_site_region
-  elseif nsite == 2
-    region_function = two_site_region
-  else
-    error("nsite=$nsite not supported in alternating_update / update_step")
-  end
   return vcat(
     map(
-      dir -> half_sweep(dir, graph, region_function; kwargs...),
+      dir -> half_sweep(dir, graph, make_region; nsite, kwargs...),
       [Base.Forward, Base.Reverse], # use direction function here (move from tdvporder file)
     )...,
   )
