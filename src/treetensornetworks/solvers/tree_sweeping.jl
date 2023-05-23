@@ -1,3 +1,4 @@
+direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
 
 function make_region(edge; last_edge=false, nsite=1, region_args=(;), reverse_args=region_args, reverse_step=false)
   if nsite == 1

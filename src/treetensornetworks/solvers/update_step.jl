@@ -1,11 +1,6 @@
 
 function update_sweep(nsite, graph::AbstractGraph; kwargs...)
-  return vcat(
-    map(
-      dir -> half_sweep(dir, graph, make_region; nsite, kwargs...),
-      [Base.Forward, Base.Reverse], # use direction function here (move from tdvporder file)
-    )...,
-  )
+  return vcat([half_sweep(direction(half),graph, make_region; nsite, kwargs...) for half=1:2]...)
 end
 
 function update_step(
