@@ -590,8 +590,10 @@ end
 function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combiners(tn))
   combined_tn = copy(tn)
   for e in edges(tn)
-    combined_tn[src(e)] = combined_tn[src(e)] * combiners[e]
-    combined_tn[dst(e)] = combined_tn[dst(e)] * combiners[reverse(e)]
+    if !isempty(linkinds(tn, e))
+      combined_tn[src(e)] = combined_tn[src(e)] * combiners[e]
+      combined_tn[dst(e)] = combined_tn[dst(e)] * combiners[reverse(e)]
+    end
   end
   return combined_tn
 end
