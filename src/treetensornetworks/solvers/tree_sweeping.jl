@@ -37,13 +37,9 @@ end
 #
 prepend_missing_namedtuple(t::Tuple) = ((;), t...)
 prepend_missing_namedtuple(t::Tuple{<:NamedTuple,Vararg}) = t
-
 function append_missing_namedtuple(t::Tuple)
   return reverse(prepend_missing_namedtuple(reverse(t)))
 end
-
-to_tuple(x) = (x,)
-to_tuple(x::Tuple) = x
 
 function half_sweep(
   dir::Base.ForwardOrdering,
