@@ -39,10 +39,10 @@ using Test
   @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
 
   # Test custom sweep regions
-  orig_E = inner(psi',H,psi)
-  sweep_regions = [[1],[2],[3],[3],[2],[1]]
+  orig_E = inner(psi', H, psi)
+  sweep_regions = [[1], [2], [3], [3], [2], [1]]
   psi = dmrg(H, psi; nsweeps, maxdim, cutoff, sweep_regions)
-  new_E = inner(psi',H,psi)
+  new_E = inner(psi', H, psi)
   @test new_E ≈ orig_E
 end
 
