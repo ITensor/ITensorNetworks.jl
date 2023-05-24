@@ -54,9 +54,7 @@ function half_sweep(
 )
   edges = post_order_dfs_edges(graph, root_vertex)
   steps = collect(
-    Iterators.flatmap(
-      e -> region_function(e; last_edge=(e == edges[end]), kwargs...), edges
-    ),
+    flatten(map(e -> region_function(e; last_edge=(e == edges[end]), kwargs...), edges))
   )
   # Append empty namedtuple to each element if not already present
   steps = append_missing_namedtuple.(to_tuple.(steps))
