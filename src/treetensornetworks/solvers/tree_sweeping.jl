@@ -24,14 +24,19 @@ function make_region(edge; last_edge=false, nsite=1, region_args=(;), reverse_ar
   end
 end
 
-put_kwargs(t::Tuple{Any,NamedTuple}) = t
-put_kwargs(t::Tuple{Any,Any,NamedTuple}) = t
-put_kwargs(t::Tuple{Any,Any,Any,NamedTuple}) = t
+#
+# Helper functions to take a tuple like ([1],[2])
+# and append an empty named tuple to it, giving ([1],[2],(;))
+#
+prepend_missing_namedtuple(t::Tuple) = ((;), t...)
+prepend_missing_namedtuple(t::Tuple{<:NamedTuple,Vararg}) = t
 
-put_kwargs(v::Vector) = (v, (;))
-put_kwargs(j::Integer) = ([j], (;))
-put_kwargs(t::Tuple{<:Integer}) = (t, (;))
-put_kwargs(t::Tuple{<:Integer,<:Integer}) = (t, (;))
+function append_missing_namedtuple(t::Tuple)
+  return reverse(prepend_missing_namedtuple(reverse(t)))
+end
+
+to_tuple(x) = (x,)
+to_tuple(x::Tuple) = x
 
 function half_sweep(
   dir::Base.ForwardOrdering,
@@ -49,7 +54,7 @@ function half_sweep(
   end
   push!(steps, region_function(edges[end]; last_edge=true, kwargs...)...)
 
-  steps = put_kwargs.(steps)
+  steps = append_missing_namedtuple.(to_tuple.(steps))
 
   return steps
 end
