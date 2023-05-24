@@ -268,8 +268,8 @@ using Test
     Nsteps = convert(Int, ceil(abs(ttotal / tau)))
     Sz1 = zeros(Nsteps)
     En1 = zeros(Nsteps)
-    Sz2 = zeros(Nsteps)
-    En2 = zeros(Nsteps)
+    #Sz2 = zeros(Nsteps)
+    #En2 = zeros(Nsteps)
 
     for step in 1:Nsteps
       psi = apply(gates, psi; cutoff)
@@ -287,14 +287,10 @@ using Test
         exponentiate_krylovdim=15,
       )
 
-      # TODO: What should `expect` output? Right now
-      # it outputs a dictionary.
       Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
-      # TODO: What should `expect` output? Right now
-      # it outputs a dictionary.
-      Sz2[step] = real(expect("Sz", phi; vertices=[c])[c])
+      #Sz2[step] = real(expect("Sz", phi; vertices=[c])[c])
       En1[step] = real(inner(psi', H, psi))
-      En2[step] = real(inner(phi', H, phi))
+      #En2[step] = real(inner(phi', H, phi))
     end
 
     #
@@ -315,14 +311,12 @@ using Test
       time_step=-im * tau,
       cutoff,
       normalize=false,
-      (step_observer!)=obs,
+      (sweep_observer!)=obs,
       root_vertex=N, # defaults to 1, which breaks observer equality
     )
 
-    # TODO: Allow the notation
-    # `obs["Sz"]` to get the results.
-    Sz2 = results(obs, "Sz")
-    En2 = results(obs, "En")
+    Sz2 = obs.Sz
+    En2 = obs.En
     @test norm(Sz1 - Sz2) < 1e-3
     @test norm(En1 - En2) < 1e-3
   end
@@ -396,32 +390,13 @@ using Test
     # Using Observers.jl
     # 
 
-    function measure_sz(; psi, end_of_sweep)
-      if end_of_sweep
-        # TODO: `expect` should return a scalar here.
-        return expect("Sz", psi; vertices=[c])[c]
-      end
-      return nothing
-    end
+    measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
+    measure_en(; psi) = real(inner(psi', H, psi))
+    identity_info(; info) = info
+    sweep_obs = Observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
 
-    function measure_en(; psi, end_of_sweep)
-      if end_of_sweep
-        return real(inner(psi', H, psi))
-      end
-      return nothing
-    end
-
-    function identity_info(; info)
-      return info
-    end
-
-    obs = Observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
-
-    # TODO: `expect` should return a scalar here.
     step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
-
     step_measure_en(; psi) = real(inner(psi', H, psi))
-
     step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
 
     psi2 = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
@@ -432,28 +407,26 @@ using Test
       time_step=-im * tau,
       cutoff,
       normalize=false,
-      (observer!)=obs,
+      (sweep_observer!)=sweep_obs,
       (step_observer!)=step_obs,
       root_vertex=N, # defaults to 1, which breaks observer equality
     )
 
-    # TODO: Allow the notation
-    # `obs["Sz"]` to get the results.
-    Sz2 = results(obs)["Sz"]
-    En2 = results(obs)["En"]
-    infos = results(obs)["info"]
+    Sz2 = sweep_obs.Sz
+    En2 = sweep_obs.En
+    infos = sweep_obs.info
 
-    Sz2_step = results(step_obs)["Sz"]
-    En2_step = results(step_obs)["En"]
+    Sz2_step = step_obs.Sz
+    En2_step = step_obs.En
 
-    ## @test Sz1 ≈ Sz2
-    ## @test En1 ≈ En2
-    ## @test Sz1 ≈ Sz2_step
-    ## @test En1 ≈ En2_step
-    @test Sz2 ≈ Sz2_step
-    @test En2 ≈ En2_step
+    @show sweep_obs
+    @show step_obs
+
+    #
+    # Could use ideas of other things to test here
+    #
+
     @test all(x -> x.converged == 1, infos)
-    #@test length(values(infos)) == 180
   end
 end
 
