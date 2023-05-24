@@ -76,25 +76,24 @@ function _compute_nsweeps(nsteps, t, time_step)
   return nsweeps
 end
 
-struct TrotterOrder{order} end
-TrotterOrder(order::Int) = TrotterOrder{order}()
-
-sub_time_steps(::TrotterOrder) = error("Not implemented")
-
-sub_time_steps(::TrotterOrder{1}) = [1.0]
-
-sub_time_steps(::TrotterOrder{2}) = [1 / 2, 1 / 2]
-
-function sub_time_steps(::TrotterOrder{4})
-  s = 1.0 / (2 - 2^(1 / 3))
-  return [s / 2, s / 2, (1 - 2 * s) / 2, (1 - 2 * s) / 2, s / 2, s / 2]
+function sub_time_steps(order)
+  if order == 1
+    return [1.0]
+  elseif order == 2
+    return [1/2, 1/2]
+  elseif order == 4
+    s = 1.0 / (2 - 2^(1 / 3))
+    return [s / 2, s / 2, (1 - 2 * s) / 2, (1 - 2 * s) / 2, s / 2, s / 2]
+  else
+    error("Trotter order of $order not supported")
+  end
 end
 
 function tdvp_sweep(
   order::Int, nsite::Int, time_step::Number, graph::AbstractGraph; kwargs...
 )
   sweep = []
-  for (substep, fac) in enumerate(sub_time_steps(TrotterOrder(order)))
+  for (substep, fac) in enumerate(sub_time_steps(order))
     sub_time_step = time_step*fac
     half = half_sweep(direction(substep), graph, make_region; nsite, region_args=(;substep, time_step=sub_time_step), reverse_args=(;substep, time_step=-sub_time_step), reverse_step=true)
     append!(sweep, half)
