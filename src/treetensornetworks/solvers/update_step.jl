@@ -82,7 +82,7 @@ function update_step(
   end
   # Just to be sure:
   normalize && normalize!(psi)
-  return psi, PH, TDVPInfo(maxtruncerr)
+  return psi, PH, (; maxtruncerr)
 end
 
 #
