@@ -80,7 +80,7 @@ function sub_time_steps(order)
   if order == 1
     return [1.0]
   elseif order == 2
-    return [1/2, 1/2]
+    return [1 / 2, 1 / 2]
   elseif order == 4
     s = 1.0 / (2 - 2^(1 / 3))
     return [s / 2, s / 2, (1 - 2 * s) / 2, (1 - 2 * s) / 2, s / 2, s / 2]
@@ -94,8 +94,16 @@ function tdvp_sweep(
 )
   sweep = []
   for (substep, fac) in enumerate(sub_time_steps(order))
-    sub_time_step = time_step*fac
-    half = half_sweep(direction(substep), graph, make_region; nsite, region_args=(;substep, time_step=sub_time_step), reverse_args=(;substep, time_step=-sub_time_step), reverse_step=true)
+    sub_time_step = time_step * fac
+    half = half_sweep(
+      direction(substep),
+      graph,
+      make_region;
+      nsite,
+      region_args=(; substep, time_step=sub_time_step),
+      reverse_args=(; substep, time_step=-sub_time_step),
+      reverse_step=true,
+    )
     append!(sweep, half)
   end
   return sweep

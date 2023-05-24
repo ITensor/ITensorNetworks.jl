@@ -1,6 +1,13 @@
 direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
 
-function make_region(edge; last_edge=false, nsite=1, region_args=(;), reverse_args=region_args, reverse_step=false)
+function make_region(
+  edge;
+  last_edge=false,
+  nsite=1,
+  region_args=(;),
+  reverse_args=region_args,
+  reverse_step=false,
+)
   if nsite == 1
     site = ([src(edge)], region_args)
     bond = (edge, reverse_args)
@@ -11,8 +18,8 @@ function make_region(edge; last_edge=false, nsite=1, region_args=(;), reverse_ar
       return region
     end
   elseif nsite == 2
-    sites_two = ([src(edge),dst(edge)],region_args)
-    sites_one = ([dst(edge)],reverse_args)
+    sites_two = ([src(edge), dst(edge)], region_args)
+    sites_one = ([dst(edge)], reverse_args)
     region = reverse_step ? (sites_two, sites_one) : (sites_two,)
     if last_edge
       return (sites_two,)
@@ -46,12 +53,19 @@ function half_sweep(
   kwargs...,
 )
   edges = post_order_dfs_edges(graph, root_vertex)
-  steps = collect(Iterators.flatmap(e->region_function(e; last_edge=(e==edges[end]), kwargs...),edges))
+  steps = collect(
+    Iterators.flatmap(
+      e -> region_function(e; last_edge=(e == edges[end]), kwargs...), edges
+    ),
+  )
   # Append empty namedtuple to each element if not already present
   steps = append_missing_namedtuple.(to_tuple.(steps))
   return steps
 end
 
 function half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
-  return map(region -> (reverse(region[1]), region[2:end]...), reverse(half_sweep(Base.Forward, args...; kwargs...)))
+  return map(
+    region -> (reverse(region[1]), region[2:end]...),
+    reverse(half_sweep(Base.Forward, args...; kwargs...)),
+  )
 end

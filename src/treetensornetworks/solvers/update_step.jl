@@ -1,6 +1,17 @@
 
 function update_sweep(nsite, graph::AbstractGraph; kwargs...)
-  return vcat([half_sweep(direction(half), graph, make_region; nsite, region_args=(;half_sweep=half), kwargs...) for half=1:2]...)
+  return vcat(
+    [
+      half_sweep(
+        direction(half),
+        graph,
+        make_region;
+        nsite,
+        region_args=(; half_sweep=half),
+        kwargs...,
+      ) for half in 1:2
+    ]...,
+  )
 end
 
 function update_step(
