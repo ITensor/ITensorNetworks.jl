@@ -1,6 +1,6 @@
 
 function update_sweep(nsite, graph::AbstractGraph; kwargs...)
-  return vcat([half_sweep(direction(half),graph, make_region; nsite, kwargs...) for half=1:2]...)
+  return vcat([half_sweep(direction(half), graph, make_region; nsite, region_args=(;half_sweep=half), kwargs...) for half=1:2]...)
 end
 
 function update_step(
@@ -22,6 +22,10 @@ function update_step(
   psi = copy(psi)
 
   observer = get(kwargs, :observer!, nothing)
+
+  # Append empty namedtuple to each element if not already present
+  # (Needed to handle user-provided sweep_regions)
+  sweep_regions = append_missing_namedtuple.(to_tuple.(sweep_regions))
 
   if nv(psi) == 1
     error(

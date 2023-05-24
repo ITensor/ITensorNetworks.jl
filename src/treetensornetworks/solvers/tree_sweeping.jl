@@ -46,23 +46,12 @@ function half_sweep(
   kwargs...,
 )
   edges = post_order_dfs_edges(graph, root_vertex)
-  V = vertextype(graph)
-  E = edgetype(graph)
-  steps = []
-  for e in edges[1:(end - 1)]
-    push!(steps, region_function(e; last_edge=false, kwargs...)...)
-  end
-  push!(steps, region_function(edges[end]; last_edge=true, kwargs...)...)
-
+  steps = collect(Iterators.flatmap(e->region_function(e; last_edge=(e==edges[end]), kwargs...),edges))
+  # Append empty namedtuple to each element if not already present
   steps = append_missing_namedtuple.(to_tuple.(steps))
-
   return steps
 end
 
 function half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
-  rev_sweep = []
-  for region in reverse(half_sweep(Base.Forward, args...; kwargs...))
-    push!(rev_sweep, (reverse(region[1]), region[2:end]...))
-  end
-  return rev_sweep
+  return map(region -> (reverse(region[1]), region[2:end]...), reverse(half_sweep(Base.Forward, args...; kwargs...)))
 end
