@@ -1,5 +1,5 @@
 
-function update_sweep(nsite, graph::AbstractGraph; kwargs...)
+function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)
   return vcat(
     [
       half_sweep(
@@ -49,7 +49,7 @@ function update_step(
   step_printer=step_printer,
   (step_observer!)=observer(),
   sweep::Int=1,
-  sweep_regions=update_sweep(nsite, psi),
+  sweep_regions=default_sweep_regions(nsite, psi),
   kwargs...,
 )
   info = nothing
