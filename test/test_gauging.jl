@@ -8,7 +8,8 @@ using ITensorNetworks:
   message_tensors,
   vidal_itn_canonicalness,
   vidal_gauge,
-  symmetric_itn_canonicalness
+  symmetric_itn_canonicalness,
+  belief_propagation_iteration
 using NamedGraphs
 using Test
 using Compat

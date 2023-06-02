@@ -97,30 +97,12 @@ function vidal_gauge(
   Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(Z)
 
-  if target_canonicalness == nothing
-    mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters)
-    return vidal_gauge(
-      ψ, mts; eigen_message_tensor_cutoff, regularization, niters, svd_kwargs...
-    )
-  else
-    mts = belief_propagation_iteration(ψψ, mts; contract_kwargs=(; alg="exact"))
-    ψ_vidal, bond_tensors = vidal_gauge(
-      ψ, mts; eigen_message_tensor_cutoff, regularization, niters, svd_kwargs...
-    )
-    canonicalness = vidal_itn_canonicalness(ψ_vidal, bond_tensors)
-
-    iter = 1
-    while canonicalness > target_canonicalness && iter < niters
-      mts = belief_propagation_iteration(ψψ, mts; contract_kwargs=(; alg="exact"))
-      ψ_vidal, bond_tensors = vidal_gauge(
-        ψ, mts; eigen_message_tensor_cutoff, regularization, svd_kwargs...
-      )
-      canonicalness = vidal_itn_canonicalness(ψ_vidal, bond_tensors)
-      iter += 1
-    end
-
-    return ψ_vidal, bond_tensors
-  end
+  mts = belief_propagation(
+    ψψ, mts; contract_kwargs=(; alg="exact"), niters, target_precision=target_canonicalness
+  )
+  return vidal_gauge(
+    ψ, mts; eigen_message_tensor_cutoff, regularization, niters, svd_kwargs...
+  )
 end
 
 """Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (message tensors)"""

@@ -80,9 +80,12 @@ function belief_propagation_iteration(
   tn::ITensorNetwork,
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  compute_norm=false,
 )
   new_mts = copy(mts)
-  for e in edges(mts)
+  c = 0
+  es = edges(mts)
+  for e in es
     environment_tensornetworks = ITensorNetwork[
       mts[e_in] for e_in in setdiff(boundary_edges(mts, src(e); dir=:in), [reverse(e)])
     ]
@@ -90,8 +93,16 @@ function belief_propagation_iteration(
     new_mts[src(e) => dst(e)] = update_message_tensor(
       tn, mts[src(e)], environment_tensornetworks; contract_kwargs
     )
+
+    if compute_norm
+      LHS, RHS = ITensors.contract(ITensor(mts[src(e) => dst(e)])),
+      ITensors.contract(ITensor(new_mts[src(e) => dst(e)]))
+      LHS /= sum(diag(LHS))
+      RHS /= sum(diag(RHS))
+      c += 0.5 * norm(LHS - RHS)
+    end
   end
-  return new_mts
+  return new_mts, c / (length(es))
 end
 
 function belief_propagation(
@@ -99,9 +110,19 @@ function belief_propagation(
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   niters=20,
+  target_precision::Union{Float64,Nothing}=nothing,
 )
+  compute_norm = target_precision == nothing ? false : true
   for i in 1:niters
-    mts = belief_propagation_iteration(tn, mts; contract_kwargs)
+    mts, c = belief_propagation_iteration(tn, mts; contract_kwargs, compute_norm)
+    if compute_norm && c <= target_precision
+      println(
+        "Belief Propagation finished. Reached a canonicalness of " *
+        string(c) *
+        " after $i iterations. ",
+      )
+      break
+    end
   end
   return mts
 end
@@ -113,12 +134,10 @@ function belief_propagation(
   npartitions=nothing,
   subgraph_vertices=nothing,
   niters=20,
+  target_precision::Union{Float64,Nothing}=nothing,
 )
   mts = message_tensors(tn; nvertices_per_partition, npartitions, subgraph_vertices)
-  for i in 1:niters
-    mts = belief_propagation_iteration(tn, mts; contract_kwargs)
-  end
-  return mts
+  return belief_propagation(tn, mts; contract_kwargs, niters, target_precision)
 end
 
 """
