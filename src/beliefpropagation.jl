@@ -87,7 +87,7 @@ function belief_propagation_iteration(
   es = edges(mts)
   for e in es
     environment_tensornetworks = ITensorNetwork[
-      mts[e_in] for e_in in setdiff(boundary_edges(mts, src(e); dir=:in), [reverse(e)])
+      mts[e_in] for e_in in setdiff(boundary_edges(mts, [src(e)]; dir=:in), [reverse(e)])
     ]
 
     new_mts[src(e) => dst(e)] = update_message_tensor(
