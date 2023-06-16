@@ -10,15 +10,21 @@ function message_tensors(
   )
 end
 
-function message_tensors(
-  subgraphs::DataGraph; itensor_constructor=inds_e -> dense(delta(inds_e))
-)
+function message_tensors_skeleton(subgraphs::DataGraph)
   mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
     directed_graph(underlying_graph(subgraphs))
   )
   for v in vertices(mts)
     mts[v] = subgraphs[v]
   end
+
+  return mts
+end
+
+function message_tensors(
+  subgraphs::DataGraph; itensor_constructor=inds_e -> dense(delta(inds_e))
+)
+  mts = message_tensors_skeleton(subgraphs)
   for e in edges(subgraphs)
     inds_e = commoninds(subgraphs[src(e)], subgraphs[dst(e)])
     mts[e] = ITensorNetwork(map(itensor_constructor, inds_e))
@@ -36,15 +42,21 @@ function update_message_tensor(
   mts::Vector{ITensorNetwork};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
-  contract_list = ITensorNetwork[mts; ITensorNetwork([tn[v] for v in subgraph_vertices])]
+  mts_itensors = reduce(vcat, ITensor.(mts); init=ITensor[])
 
+  contract_list = ITensor[mts_itensors; ITensor[tn[v] for v in subgraph_vertices]]
   tn = if isone(length(contract_list))
     copy(only(contract_list))
   else
-    reduce(⊗, contract_list)
+    ITensorNetwork(contract_list)
   end
 
-  contract_output = contract(tn; contract_kwargs...)
+  if contract_kwargs.alg != "exact"
+    contract_output = contract(tn; contract_kwargs...)
+  else
+    contract_output = contract(tn; sequence=contraction_sequence(tn; alg="optimal"))
+  end
+
   itn = if typeof(contract_output) == ITensor
     ITensorNetwork(contract_output)
   else
@@ -68,18 +80,29 @@ function belief_propagation_iteration(
   tn::ITensorNetwork,
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  compute_norm=false,
 )
   new_mts = copy(mts)
-  for e in edges(mts)
+  c = 0
+  es = edges(mts)
+  for e in es
     environment_tensornetworks = ITensorNetwork[
-      mts[e_in] for e_in in setdiff(boundary_edges(mts, src(e); dir=:in), [reverse(e)])
+      mts[e_in] for e_in in setdiff(boundary_edges(mts, [src(e)]; dir=:in), [reverse(e)])
     ]
 
     new_mts[src(e) => dst(e)] = update_message_tensor(
       tn, mts[src(e)], environment_tensornetworks; contract_kwargs
     )
+
+    if compute_norm
+      LHS, RHS = ITensors.contract(ITensor(mts[src(e) => dst(e)])),
+      ITensors.contract(ITensor(new_mts[src(e) => dst(e)]))
+      LHS /= sum(diag(LHS))
+      RHS /= sum(diag(RHS))
+      c += 0.5 * norm(LHS - RHS)
+    end
   end
-  return new_mts
+  return new_mts, c / (length(es))
 end
 
 function belief_propagation(
@@ -87,9 +110,19 @@ function belief_propagation(
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   niters=20,
+  target_precision::Union{Float64,Nothing}=nothing,
 )
+  compute_norm = target_precision == nothing ? false : true
   for i in 1:niters
-    mts = belief_propagation_iteration(tn, mts; contract_kwargs)
+    mts, c = belief_propagation_iteration(tn, mts; contract_kwargs, compute_norm)
+    if compute_norm && c <= target_precision
+      println(
+        "Belief Propagation finished. Reached a canonicalness of " *
+        string(c) *
+        " after $i iterations. ",
+      )
+      break
+    end
   end
   return mts
 end
@@ -101,12 +134,10 @@ function belief_propagation(
   npartitions=nothing,
   subgraph_vertices=nothing,
   niters=20,
+  target_precision::Union{Float64,Nothing}=nothing,
 )
   mts = message_tensors(tn; nvertices_per_partition, npartitions, subgraph_vertices)
-  for i in 1:niters
-    mts = belief_propagation_iteration(tn, mts; contract_kwargs)
-  end
-  return mts
+  return belief_propagation(tn, mts; contract_kwargs, niters, target_precision)
 end
 
 """

@@ -19,3 +19,32 @@ inv_diag(it::ITensor) = map_diag(inv, it)
 invsqrt_diag(it::ITensor) = map_diag(inv ∘ sqrt, it)
 pinv_diag(it::ITensor) = map_diag(pinv, it)
 pinvsqrt_diag(it::ITensor) = map_diag(pinv ∘ sqrt, it)
+
+"""Given a vector of ITensors, separate them into groups of commuting itensors (i.e. itensors in the same group do not share any common indices)"""
+function group_commuting_itensors(its::Vector{ITensor})
+  remaining_its = copy(its)
+  it_groups = Vector{ITensor}[]
+
+  while !isempty(remaining_its)
+    cur_group = ITensor[]
+    cur_indices = Index[]
+    inds_to_remove = []
+    for i in 1:length(remaining_its)
+      it = remaining_its[i]
+      it_inds = inds(it)
+
+      if all([i ∉ cur_indices for i in it_inds])
+        push!(cur_group, it)
+        push!(cur_indices, it_inds...)
+        push!(inds_to_remove, i)
+      end
+    end
+    remaining_its = ITensor[
+      remaining_its[i] for
+      i in setdiff([i for i in 1:length(remaining_its)], inds_to_remove)
+    ]
+    push!(it_groups, cur_group)
+  end
+
+  return it_groups
+end
