@@ -7,7 +7,7 @@ function dmrg_x_solver(PH, init; kwargs...)
   return U_max, nothing
 end
 
-function dmrg_x(PH, init::AbstractTTN; reverse_step=false, kwargs...)
-  psi = alternating_update(dmrg_x_solver, PH, init; reverse_step, kwargs...)
+function dmrg_x(PH, init::AbstractTTN; kwargs...)
+  psi = alternating_update(dmrg_x_solver, PH, init; kwargs...)
   return psi
 end

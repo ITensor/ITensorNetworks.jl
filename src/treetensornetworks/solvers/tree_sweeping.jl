@@ -1,76 +1,65 @@
-# 
-# Sweep step
-# 
+direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
 
-"""
-  struct SweepStep{V}
-
-Auxiliary object specifying a single local update step in a tree sweeping algorithm.
-"""
-struct SweepStep{V} # TODO: parametrize on position type instead of vertex type
-  pos::Union{Vector{<:V},NamedEdge{V}}
-  time_direction::Int
-end
-
-# field access
-pos(st::SweepStep) = st.pos
-nsite(st::SweepStep) = isa(pos(st), AbstractEdge) ? 0 : length(pos(st))
-time_direction(st::SweepStep) = st.time_direction
-
-# utility
-current_ortho(st::SweepStep) = current_ortho(typeof(pos(st)), st)
-current_ortho(::Type{<:Vector{<:V}}, st::SweepStep{V}) where {V} = first(pos(st)) # not very clean...
-current_ortho(::Type{NamedEdge{V}}, st::SweepStep{V}) where {V} = src(pos(st))
-
-# reverse
-Base.reverse(s::SweepStep{V}) where {V} = SweepStep{V}(reverse(pos(s)), time_direction(s))
-
-function Base.:(==)(s1::SweepStep{V}, s2::SweepStep{V}) where {V}
-  return pos(s1) == pos(s2) && time_direction(s1) == time_direction(s2)
-end
-
-# 
-# Pre-defined sweeping paradigms
-# 
-
-function one_site_sweep(
-  direction::Base.ForwardOrdering,
-  graph::AbstractGraph{V},
-  root_vertex::V,
-  reverse_step;
-  kwargs...,
-) where {V}
-  edges = post_order_dfs_edges(graph, root_vertex)
-  steps = SweepStep{V}[]
-  for e in edges
-    push!(steps, SweepStep{V}([src(e)], +1))
-    reverse_step && push!(steps, SweepStep{V}(e, -1))
+function make_region(
+  edge;
+  last_edge=false,
+  nsite=1,
+  region_args=(;),
+  reverse_args=region_args,
+  reverse_step=false,
+)
+  if nsite == 1
+    site = ([src(edge)], region_args)
+    bond = (edge, reverse_args)
+    region = reverse_step ? (site, bond) : (site,)
+    if last_edge
+      return (region..., ([dst(edge)], region_args))
+    else
+      return region
+    end
+  elseif nsite == 2
+    sites_two = ([src(edge), dst(edge)], region_args)
+    sites_one = ([dst(edge)], reverse_args)
+    region = reverse_step ? (sites_two, sites_one) : (sites_two,)
+    if last_edge
+      return (sites_two,)
+    else
+      return region
+    end
+  else
+    error("nsite=$nsite not supported in alternating_update / update_step")
   end
-  push!(steps, SweepStep{V}([root_vertex], +1))
+end
+
+#
+# Helper functions to take a tuple like ([1],[2])
+# and append an empty named tuple to it, giving ([1],[2],(;))
+#
+prepend_missing_namedtuple(t::Tuple) = ((;), t...)
+prepend_missing_namedtuple(t::Tuple{<:NamedTuple,Vararg}) = t
+function append_missing_namedtuple(t::Tuple)
+  return reverse(prepend_missing_namedtuple(reverse(t)))
+end
+
+function half_sweep(
+  dir::Base.ForwardOrdering,
+  graph::AbstractGraph,
+  region_function;
+  root_vertex=default_root_vertex(graph),
+  kwargs...,
+)
+  edges = post_order_dfs_edges(graph, root_vertex)
+  steps = collect(
+    flatten(map(e -> region_function(e; last_edge=(e == edges[end]), kwargs...), edges))
+  )
+  # Append empty namedtuple to each element if not already present
+  steps = append_missing_namedtuple.(to_tuple.(steps))
   return steps
 end
 
-function one_site_sweep(direction::Base.ReverseOrdering, args...; kwargs...)
-  return reverse(reverse.(one_site_sweep(Base.Forward, args...; kwargs...)))
-end
-
-function two_site_sweep(
-  direction::Base.ForwardOrdering,
-  graph::AbstractGraph{V},
-  root_vertex::V,
-  reverse_step;
-  kwargs...,
-) where {V}
-  edges = post_order_dfs_edges(graph, root_vertex)
-  steps = SweepStep{V}[]
-  for e in edges[1:(end - 1)]
-    push!(steps, SweepStep{V}([src(e), dst(e)], +1))
-    reverse_step && push!(steps, SweepStep{V}([dst(e)], -1))
-  end
-  push!(steps, SweepStep{V}([src(edges[end]), dst(edges[end])], +1))
-  return steps
-end
-
-function two_site_sweep(direction::Base.ReverseOrdering, args...; kwargs...)
-  return reverse(reverse.(two_site_sweep(Base.Forward, args...; kwargs...)))
+function half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
+  return map(
+    region -> (reverse(region[1]), region[2:end]...),
+    reverse(half_sweep(Base.Forward, args...; kwargs...)),
+  )
 end

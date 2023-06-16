@@ -4,6 +4,7 @@ function exponentiate_solver(; kwargs...)
     init;
     ishermitian=true,
     issymmetric=true,
+    region,
     solver_krylovdim=30,
     solver_maxiter=100,
     solver_outputlevel=0,
@@ -75,19 +76,53 @@ function _compute_nsweeps(nsteps, t, time_step)
   return nsweeps
 end
 
+function sub_time_steps(order)
+  if order == 1
+    return [1.0]
+  elseif order == 2
+    return [1 / 2, 1 / 2]
+  elseif order == 4
+    s = 1.0 / (2 - 2^(1 / 3))
+    return [s / 2, s / 2, (1 - 2 * s) / 2, (1 - 2 * s) / 2, s / 2, s / 2]
+  else
+    error("Trotter order of $order not supported")
+  end
+end
+
+function tdvp_sweep(
+  order::Int, nsite::Int, time_step::Number, graph::AbstractGraph; kwargs...
+)
+  sweep = []
+  for (substep, fac) in enumerate(sub_time_steps(order))
+    sub_time_step = time_step * fac
+    half = half_sweep(
+      direction(substep),
+      graph,
+      make_region;
+      nsite,
+      region_args=(; substep, time_step=sub_time_step),
+      reverse_args=(; substep, time_step=-sub_time_step),
+      reverse_step=true,
+    )
+    append!(sweep, half)
+  end
+  return sweep
+end
+
 function tdvp(
   solver,
   H,
   t::Number,
   init::AbstractTTN;
   time_step::Number=t,
+  nsite=2,
   nsteps=nothing,
   order::Integer=2,
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step)
-  tdvp_order = TDVPOrder(order, Base.Forward)
-  return alternating_update(solver, H, init; nsweeps, tdvp_order, time_step, kwargs...)
+  sweep_regions = tdvp_sweep(order, nsite, time_step, init; kwargs...)
+  return alternating_update(solver, H, init; nsweeps, sweep_regions, nsite, kwargs...)
 end
 
 """

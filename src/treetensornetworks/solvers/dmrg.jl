@@ -20,14 +20,10 @@ end
 Overload of `ITensors.dmrg`.
 """
 function dmrg(H, init::AbstractTTN; kwargs...)
-  reverse_step = false
-  psi = alternating_update(eigsolve_solver(; kwargs...), H, init; reverse_step, kwargs...)
-  return psi
+  return alternating_update(eigsolve_solver(; kwargs...), H, init; kwargs...)
 end
 
 """
 Overload of `KrylovKit.eigsolve`.
 """
-function eigsolve(H, init::AbstractTTN; kwargs...)
-  return dmrg(H, init; kwargs...)
-end
+eigsolve(H, init::AbstractTTN; kwargs...) = dmrg(H, init; kwargs...)

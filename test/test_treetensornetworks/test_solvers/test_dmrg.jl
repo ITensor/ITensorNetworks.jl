@@ -29,10 +29,6 @@ using Test
   psi_mps = MPS([psi[v] for v in 1:nv(psi)])
   e2, psi2 = dmrg(H_mpo, psi_mps; nsweeps, maxdim, normalize=false, outputlevel=0)
 
-  ## sweeps = Sweeps(nsweeps) # number of sweeps is 5
-  ## maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
-  ## cutoff!(sweeps, cutoff)
-
   psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1)
   @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
 
@@ -41,6 +37,38 @@ using Test
     H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
   )
   @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
+
+  # Test custom sweep regions
+  orig_E = inner(psi', H, psi)
+  sweep_regions = [[1], [2], [3], [3], [2], [1]]
+  psi = dmrg(H, psi; nsweeps, maxdim, cutoff, sweep_regions)
+  new_E = inner(psi', H, psi)
+  @test new_E ≈ orig_E
+end
+
+@testset "Regression test: Arrays of Parameters" begin
+  N = 10
+  cutoff = 1e-12
+
+  s = siteinds("S=1/2", N)
+
+  os = OpSum()
+  for j in 1:(N - 1)
+    os += 0.5, "S+", j, "S-", j + 1
+    os += 0.5, "S-", j, "S+", j + 1
+    os += "Sz", j, "Sz", j + 1
+  end
+
+  H = mpo(os, s)
+
+  psi = random_mps(s; internal_inds_space=20)
+
+  # Choose nsweeps to be less than length of arrays
+  nsweeps = 5
+  maxdim = [200, 250, 400, 600, 800, 1200, 2000, 2400, 2600, 3000]
+  cutoff = [1e-10, 1e-10, 1e-12, 1e-12, 1e-12, 1e-12, 1e-14, 1e-14, 1e-14, 1e-14]
+
+  psi = dmrg(H, psi; nsweeps, maxdim, cutoff)
 end
 
 @testset "Tree DMRG" for nsite in [1, 2]
