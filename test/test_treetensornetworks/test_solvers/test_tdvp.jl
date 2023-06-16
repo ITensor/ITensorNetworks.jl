@@ -419,8 +419,8 @@ using Test
     Sz2_step = step_obs.Sz
     En2_step = step_obs.En
 
-    @show sweep_obs
-    @show step_obs
+    #@show sweep_obs
+    #@show step_obs
 
     #
     # Could use ideas of other things to test here
