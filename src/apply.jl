@@ -120,6 +120,20 @@ function ITensors.apply(
   return apply(ITensor(o, siteinds(ψ)), ψ; normalize, ortho, apply_kwargs...)
 end
 
+_gate_vertices(o::ITensor, ψ) = neighbor_vertices(ψ, o)
+_gate_vertices(o::AbstractEdge, ψ) = [src(o), dst(o)]
+
+function _contract_factorized_gate(o::ITensor, ψv1, ψv2)
+  G1, G2 = factorize(o, Index[commonind(ψv1, o), commonind(ψv1, o)']; cutoff=1e-16)
+  ψv1 = noprime(ψv1 * G1)
+  ψv2 = noprime(ψv2 * G2)
+  return ψv1, ψv2
+end
+
+function _contract_factorized_gate(o::AbstractEdge, ψv1, ψv2)
+  return ψv1, ψv2
+end
+
 #In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
 """Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
 Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site"""
@@ -132,7 +146,7 @@ function ITensors.apply(
 )
   ψ = copy(ψ)
   bond_tensors = copy(bond_tensors)
-  v⃗ = typeof(o) == ITensor ? neighbor_vertices(ψ, o) : [src(o), dst(o)]
+  v⃗ = _gate_vertices(o, ψ)
   if length(v⃗) == 2
     e = NamedEdge(v⃗[1] => v⃗[2])
     ψv1, ψv2 = copy(ψ[src(e)]), copy(ψ[dst(e)])
@@ -150,11 +164,7 @@ function ITensors.apply(
       end
     end
 
-    if typeof(o) == ITensor
-      G1, G2 = factorize(o, Index[commonind(ψv1, o), commonind(ψv1, o)']; cutoff=1e-16)
-      ψv1 = noprime(ψv1 * G1)
-      ψv2 = noprime(ψv2 * G2)
-    end
+    ψv1, ψv2 = _contract_factorized_gate(o, ψv1, ψv2)
 
     ψv2 = noprime(ψv2 * bond_tensors[e])
 
