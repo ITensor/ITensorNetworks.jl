@@ -51,13 +51,16 @@ function applyexp_solver(; kwargs...)
   return solver
 end
 
-function _compute_nsweeps(nsteps, t, time_step)
+function _compute_nsweeps(nsteps, t, time_step, order)
+  nsweeps_per_step = order/2
   nsweeps = 1
   if !isnothing(nsteps) && time_step != t
     error("Cannot specify both nsteps and time_step in tdvp")
   elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsteps)
-    nsweeps = convert(Int, ceil(abs(t / time_step)))
-    if !(nsweeps * time_step ≈ t)
+    nsweeps = convert(Int, nsweeps_per_step * ceil(abs(t / time_step)))
+    if !(nsweeps/nsweeps_per_step * time_step ≈ t)
+      println("Time that will be reached = nsweeps/nsweeps_per_step * time_step = ",nsweeps/nsweeps_per_step * time_step)
+      println("Requested total time t = ", t)
       error("Time step $time_step not commensurate with total time t=$t")
     end
   end
@@ -114,7 +117,7 @@ function tdvp(
   (step_observer!)=observer(),
   kwargs...,
 )
-  nsweeps = _compute_nsweeps(nsteps, t, time_step)
+  nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
   sweep_regions = tdvp_sweep(order, nsite, time_step, init; kwargs...)
 
   insert_function!(step_observer!, "_current_time_printer" => _current_time_printer)

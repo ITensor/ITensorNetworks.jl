@@ -111,6 +111,41 @@ using Test
     @test abs(inner(ψ0, ψ2)) > 0.99
   end
 
+  @testset "Higher-Order TDVP" begin
+    N = 10
+    cutoff = 1e-12
+    order = 4
+
+    s = siteinds("S=1/2", N)
+
+    os = OpSum()
+    for j in 1:(N - 1)
+      os += 0.5, "S+", j, "S-", j + 1
+      os += 0.5, "S-", j, "S+", j + 1
+      os += "Sz", j, "Sz", j + 1
+    end
+
+    H = mpo(os, s)
+
+    ψ0 = random_mps(s; internal_inds_space=10)
+
+    # Time evolve forward:
+    ψ1 = tdvp(H, -0.1im, ψ0; time_step=-0.05im, order, cutoff, nsite=1)
+
+    @test norm(ψ1) ≈ 1.0
+
+    # Average energy should be conserved:
+    @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
+
+    # Time evolve backwards:
+    ψ2 = tdvp(H, +0.1im, ψ1; time_step=+0.05im, order, cutoff)
+
+    @test norm(ψ2) ≈ 1.0
+
+    # Should rotate back to original state:
+    @test abs(inner(ψ0, ψ2)) > 0.99
+  end
+
   @testset "Custom solver in TDVP" begin
     N = 10
     cutoff = 1e-12
