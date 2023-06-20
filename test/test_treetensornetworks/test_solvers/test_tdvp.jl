@@ -132,8 +132,8 @@ using Test
       solver_kwargs = (;
         ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
       )
-      psi, info = exponentiate(PH, time_step, psi0; solver_kwargs...)
-      return psi, info
+      psi, exp_info = exponentiate(PH, time_step, psi0; solver_kwargs...)
+      return psi, (;info=exp_info)
     end
 
     ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
@@ -392,12 +392,12 @@ using Test
 
     measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
     measure_en(; psi) = real(inner(psi', H, psi))
-    identity_info(; info) = info
-    sweep_obs = Observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
+    sweep_obs = Observer("Sz" => measure_sz, "En" => measure_en)
 
+    get_info(; info) = info
     step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
     step_measure_en(; psi) = real(inner(psi', H, psi))
-    step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
+    step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en, "info" => get_info)
 
     psi2 = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
     tdvp(
@@ -414,10 +414,10 @@ using Test
 
     Sz2 = sweep_obs.Sz
     En2 = sweep_obs.En
-    infos = sweep_obs.info
 
     Sz2_step = step_obs.Sz
     En2_step = step_obs.En
+    infos = step_obs.info
 
     #@show sweep_obs
     #@show step_obs
@@ -525,8 +525,8 @@ end
       solver_kwargs = (;
         ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
       )
-      psi, info = exponentiate(PH, time_step, psi0; solver_kwargs...)
-      return psi, info
+      psi, exp_info = exponentiate(PH, time_step, psi0; solver_kwargs...)
+      return psi, (; info=exp_info)
     end
 
     ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)

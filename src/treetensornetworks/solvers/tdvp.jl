@@ -147,9 +147,9 @@ Optional keyword arguments:
 """
 function tdvp(H, t::Number, init::AbstractTTN; solver_backend="exponentiate", kwargs...)
   if solver_backend == "exponentiate"
-    solver = exponentiate_solver(; kwargs...)
+    solver = exponentiate_solver
   elseif solver_backend == "applyexp"
-    solver = applyexp_solver(; kwargs...)
+    solver = applyexp_solver
   else
     error(
       "solver_backend=$solver_backend not recognized (options are \"applyexp\" or \"exponentiate\")",
