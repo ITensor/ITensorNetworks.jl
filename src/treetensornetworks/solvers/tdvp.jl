@@ -23,8 +23,8 @@ function exponentiate_solver(; kwargs...)
       eager=true,
     )
 
-    psi, info = KrylovKit.exponentiate(H, time_step, init; solver_kwargs...)
-    return psi, info
+    psi, exp_info = KrylovKit.exponentiate(H, time_step, init; solver_kwargs...)
+    return psi, (; info=exp_info)
   end
   return solver
 end
@@ -45,22 +45,10 @@ function applyexp_solver(; kwargs...)
 
     #applyexp tol is absolute, compute from tol_per_unit_time:
     tol = abs(time_step) * tol_per_unit_time
-    psi, info = applyexp(H, time_step, init; tol, solver_kwargs..., kws...)
-    return psi, info
+    psi, exp_info = applyexp(H, time_step, init; tol, solver_kwargs..., kws...)
+    return psi, (; info=exp_info)
   end
   return solver
-end
-
-function tdvp_solver(; solver_backend="exponentiate", kwargs...)
-  if solver_backend == "exponentiate"
-    return exponentiate_solver(; kwargs...)
-  elseif solver_backend == "applyexp"
-    return applyexp_solver(; kwargs...)
-  else
-    error(
-      "solver_backend=$solver_backend not recognized (options are \"applyexp\" or \"exponentiate\")",
-    )
-  end
 end
 
 function _compute_nsweeps(nsteps, t, time_step)
@@ -109,6 +97,11 @@ function tdvp_sweep(
   return sweep
 end
 
+function _current_time_printer(;kwargs...)
+  #print(" current_time=", round(current_time; digits=3))
+  return
+end
+
 function tdvp(
   solver,
   H,
@@ -118,11 +111,20 @@ function tdvp(
   nsite=2,
   nsteps=nothing,
   order::Integer=2,
+  (step_observer!)=observer(),
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step)
   sweep_regions = tdvp_sweep(order, nsite, time_step, init; kwargs...)
-  return alternating_update(solver, H, init; nsweeps, sweep_regions, nsite, kwargs...)
+
+  insert_function!(step_observer!, "_current_time_printer" => _current_time_printer)
+
+  psi = alternating_update(solver, H, init; nsweeps, sweep_regions, nsite, kwargs...)
+
+  # remove _current_time_printer
+  select!(step_observer!, Observers.DataFrames.Not("_current_time_printer"))
+
+  return psi
 end
 
 """
@@ -143,6 +145,15 @@ Optional keyword arguments:
 * `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
-function tdvp(H, t::Number, init::AbstractTTN; kwargs...)
-  return tdvp(tdvp_solver(; kwargs...), H, t, init; kwargs...)
+function tdvp(H, t::Number, init::AbstractTTN; solver_backend="exponentiate", kwargs...)
+  if solver_backend == "exponentiate"
+    solver = exponentiate_solver(; kwargs...)
+  elseif solver_backend == "applyexp"
+    solver = applyexp_solver(; kwargs...)
+  else
+    error(
+      "solver_backend=$solver_backend not recognized (options are \"applyexp\" or \"exponentiate\")",
+    )
+  end
+  return tdvp(solver(; kwargs...), H, t, init; kwargs...)
 end

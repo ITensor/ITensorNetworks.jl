@@ -26,11 +26,11 @@ function process_sweeps(
   return maxdim, mindim, cutoff, noise, kwargs
 end
 
-function sweep_printer(; info, outputlevel, psi, sweep, sw_time)
+function sweep_printer(; outputlevel, psi, sweep, sw_time)
   if outputlevel >= 1
     print("After sweep ", sweep, ":")
     print(" maxlinkdim=", maxlinkdim(psi))
-    @printf(" maxerr=%.2E", info.maxtruncerr)
+    #@printf(" maxerr=%.2E", info.maxtruncerr)
     #print(" current_time=", round(current_time; digits=3))
     print(" time=", round(sw_time; digits=3))
     println()
@@ -67,7 +67,7 @@ function alternating_update(
     end
 
     sw_time = @elapsed begin
-      psi, PH, info = update_step(
+      psi, PH  = update_step(
         solver,
         PH,
         psi;
@@ -81,7 +81,7 @@ function alternating_update(
       )
     end
 
-    update!(sweep_observer!; info, psi, sweep, sw_time, outputlevel)
+    update!(sweep_observer!; psi, sweep, sw_time, outputlevel)
 
     checkdone(; psi, sweep, outputlevel, kwargs...) && break
   end

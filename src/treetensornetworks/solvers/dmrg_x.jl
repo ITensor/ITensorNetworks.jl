@@ -4,7 +4,7 @@ function dmrg_x_solver(PH, init; kwargs...)
   u = uniqueind(U, H)
   max_overlap, max_ind = findmax(abs, array(dag(init) * U))
   U_max = U * dag(onehot(u => max_ind))
-  return U_max, nothing
+  return U_max, (;)
 end
 
 function dmrg_x(PH, init::AbstractTTN; kwargs...)

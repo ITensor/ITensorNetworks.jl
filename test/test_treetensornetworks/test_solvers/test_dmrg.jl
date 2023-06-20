@@ -68,10 +68,10 @@ end
   # Make observers
   #
   sweep(; sweep, kw...) = sweep
-  energy(; info, kw...) = info[:energies][1]
-  sweep_observer! = observer(sweep, energy)
+  sweep_observer! = observer(sweep)
 
   region(; region, kw...) = region
+  energy(; energies, kw...) = energies[1]
   step_observer! = observer(region, sweep, energy)
 
   psi = dmrg(H, psi; nsweeps, maxdim, cutoff, sweep_observer!, step_observer!)
@@ -81,7 +81,6 @@ end
   #
   @test step_observer![9, :region] == [2, 1]
   @test step_observer![30, :energy] < -4.258
-  @test sweep_observer![3, :energy] < -4.258
 end
 
 @testset "Regression test: Arrays of Parameters" begin

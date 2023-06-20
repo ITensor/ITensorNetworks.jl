@@ -14,7 +14,7 @@ function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)
   )
 end
 
-function step_printer(; cutoff, maxdim, mindim, outputlevel, psi, region, spec, sweep_step)
+function step_printer(; cutoff, maxdim, mindim, outputlevel::Int=0, psi, region, spec, sweep_step)
   if outputlevel >= 2
     #if get(data(sweep_step),:time_direction,0) == +1
     #  @printf("Sweep %d, direction %s, position (%s,) \n", sw, direction, pos(step))
@@ -40,19 +40,14 @@ function update_step(
   solver,
   PH,
   psi::AbstractTTN;
-  cutoff::AbstractFloat=1E-16,
-  maxdim::Int=typemax(Int),
-  mindim::Int=1,
   normalize::Bool=false,
   nsite::Int=2,
-  outputlevel::Int=0,
   step_printer=step_printer,
   (step_observer!)=observer(),
   sweep::Int=1,
   sweep_regions=default_sweep_regions(nsite, psi),
   kwargs...,
 )
-  info = nothing
   PH = copy(PH)
   psi = copy(psi)
 
@@ -68,44 +63,27 @@ function update_step(
     )
   end
 
-  maxtruncerr = 0.0
   for (sweep_step, (region, step_kwargs)) in enumerate(sweep_regions)
-    psi, PH, spec, info = local_update(
+    psi, PH = local_update(
       solver,
       PH,
       psi,
       region;
-      outputlevel,
-      cutoff,
-      maxdim,
-      mindim,
       normalize,
       step_kwargs,
+      step_observer!,
+      sweep,
+      sweep_regions,
+      sweep_step,
       kwargs...,
     )
-    maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
-
-    update!(
-      step_observer!;
-      cutoff,
-      maxdim,
-      mindim,
-      sweep_step,
-      total_sweep_steps=length(sweep_regions),
-      end_of_sweep=(sweep_step == length(sweep_regions)),
-      psi,
-      region,
-      sweep,
-      spec,
-      outputlevel,
-      info,
-      step_kwargs...,
-    )
   end
+
   select!(step_observer!, Observers.DataFrames.Not("step_printer")) # remove step_printer
   # Just to be sure:
   normalize && normalize!(psi)
-  return psi, PH, info
+
+  return psi, PH 
 end
 
 #
@@ -170,7 +148,7 @@ current_ortho(::Type{NamedEdge{V}}, st) where {V} = src(st)
 current_ortho(st) = current_ortho(typeof(st), st)
 
 function local_update(
-  solver, PH, psi, region; normalize, noise, step_kwargs=NamedTuple(), kwargs...
+  solver, PH, psi, region; normalize, noise, cutoff::AbstractFloat=1E-16, maxdim::Int=typemax(Int), mindim::Int=1, outputlevel::Int=0, step_kwargs=NamedTuple(), step_observer!, sweep, sweep_regions, sweep_step, kwargs...
 )
   psi = orthogonalize(psi, current_ortho(region))
   psi, phi = extract_local_tensor(psi, region)
@@ -191,5 +169,22 @@ function local_update(
   psi, spec = insert_local_tensor(
     psi, phi, region; eigen_perturbation=drho, ortho, normalize, kwargs...
   )
-  return psi, PH, spec, info
+
+  update!(
+    step_observer!;
+    cutoff,
+    maxdim,
+    mindim,
+    sweep_step,
+    total_sweep_steps=length(sweep_regions),
+    end_of_sweep=(sweep_step == length(sweep_regions)),
+    psi,
+    region,
+    sweep,
+    spec,
+    outputlevel,
+    info...,
+    step_kwargs...,
+  )
+  return psi, PH
 end
