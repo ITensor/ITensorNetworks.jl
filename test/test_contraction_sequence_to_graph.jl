@@ -1,10 +1,12 @@
 using ITensorNetworks
 using ITensorNetworks:
+  contraction_sequence_to_directed_graph,
   contraction_sequence_to_graph,
   internal_edges,
   contraction_tree_leaf_bipartition,
   distance_to_leaf,
-  leaf_vertices
+  leaf_vertices,
+  _root
 using Test
 using ITensors
 using NamedGraphs
@@ -20,12 +22,15 @@ using NamedGraphs
 
   seq = contraction_sequence(ψψ)
 
-  g_seq = contraction_sequence_to_graph(seq)
-
-  #Get all leaf nodes (should match number of tensors in original network)
-  g_seq_leaves = leaf_vertices(g_seq)
-
+  g_directed_seq = contraction_sequence_to_directed_graph(seq)
+  g_seq_leaves = leaf_vertices(g_directed_seq)
   @test length(g_seq_leaves) == n * n
+  @test 2 * length(g_seq_leaves) - 1 == length(vertices(g_directed_seq))
+  @test _root(g_directed_seq)[3] == []
+
+  g_seq = contraction_sequence_to_graph(seq)
+  @test length(g_seq_leaves) == n * n
+  @test 2 * length(g_seq_leaves) - 2 == length(vertices(g_seq))
 
   for eb in internal_edges(g_seq)
     vs = contraction_tree_leaf_bipartition(g_seq, eb)
