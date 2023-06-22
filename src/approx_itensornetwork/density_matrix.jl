@@ -142,27 +142,6 @@ function _DensityMartrixAlgGraph(partition::DataGraph, out_tree::NamedGraph, roo
   )
 end
 
-"""
-Contract of a vector of tensors, `network`, with a contraction sequence generated via sa_bipartite
-"""
-function _optcontract(
-  network::Vector; contraction_sequence_alg="optimal", contraction_sequence_kwargs=(;)
-)
-  @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: _optcontract" begin
-    if length(network) == 0
-      return ITensor(1.0)
-    end
-    @assert network isa Vector{ITensor}
-    @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: contraction_sequence" begin
-      seq = contraction_sequence(
-        network; alg=contraction_sequence_alg, contraction_sequence_kwargs...
-      )
-    end
-    output = contract(network; sequence=seq)
-    return output
-  end
-end
-
 function _get_low_rank_projector(tensor, inds1, inds2; cutoff, maxdim)
   @assert length(inds(tensor)) <= 4
   @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: eigen" begin
@@ -357,33 +336,10 @@ function _rem_vertex!(
 end
 
 """
-For a given ITensorNetwork `tn` and a `root` vertex, remove leaf vertices in the directed tree
-with root `root` without changing the tensor represented by tn.
-In particular, the tensor of each leaf vertex is contracted with the tensor of its parent vertex
-to keep the tensor unchanged.
-"""
-function _rem_leaf_vertices!(
-  tn::ITensorNetwork;
-  root=first(vertices(tn)),
-  contraction_sequence_alg,
-  contraction_sequence_kwargs,
-)
-  dfs_t = dfs_tree(tn, root)
-  leaves = leaf_vertices(dfs_t)
-  parents = [parent_vertex(dfs_t, leaf) for leaf in leaves]
-  for (l, p) in zip(leaves, parents)
-    tn[p] = _optcontract(
-      [tn[p], tn[l]]; contraction_sequence_alg, contraction_sequence_kwargs
-    )
-    rem_vertex!(tn, l)
-  end
-end
-
-"""
 Approximate a `partition` into an output ITensorNetwork
 with the binary tree structure defined by `out_tree`.
 """
-function _approx_binary_tree_itensornetwork!(
+function _approx_itensornetwork_density_matrix!(
   input_partition::DataGraph,
   out_tree::NamedGraph;
   root=first(vertices(partition)),
@@ -418,159 +374,4 @@ function _approx_binary_tree_itensornetwork!(
   root_tensor /= root_norm
   output_tn[root] = root_tensor
   return output_tn, log(root_norm)
-end
-
-"""
-Approximate a `binary_tree_partition` into an output ITensorNetwork
-with the same binary tree structure. `root` is the root vertex of the
-pre-order depth-first-search traversal used to perform the truncations.
-"""
-function approx_itensornetwork(
-  ::Algorithm"density_matrix",
-  binary_tree_partition::DataGraph;
-  root,
-  cutoff=1e-15,
-  maxdim=10000,
-  contraction_sequence_alg,
-  contraction_sequence_kwargs,
-)
-  @assert is_tree(binary_tree_partition)
-  @assert root in vertices(binary_tree_partition)
-  @assert _is_rooted_directed_binary_tree(dfs_tree(binary_tree_partition, root))
-  # The `binary_tree_partition` may contain multiple delta tensors to make sure
-  # the partition has a binary tree structure. These delta tensors could hurt the
-  # performance when computing density matrices so we remove them first.
-  partition_wo_deltas = _contract_deltas_ignore_leaf_partitions(
-    binary_tree_partition; root=root
-  )
-  return _approx_binary_tree_itensornetwork!(
-    partition_wo_deltas,
-    underlying_graph(binary_tree_partition);
-    root,
-    cutoff,
-    maxdim,
-    contraction_sequence_alg,
-    contraction_sequence_kwargs,
-  )
-end
-
-"""
-Approximate a given ITensorNetwork `tn` into an output ITensorNetwork with `output_structure`.
-`output_structure` outputs a directed binary tree DataGraph defining the desired graph structure.
-"""
-function approx_itensornetwork(
-  ::Algorithm"density_matrix",
-  tn::ITensorNetwork,
-  output_structure::Function=path_graph_structure;
-  cutoff=1e-15,
-  maxdim=10000,
-  contraction_sequence_alg="optimal",
-  contraction_sequence_kwargs=(;),
-)
-  inds_btree = output_structure(tn)
-  return approx_itensornetwork(
-    tn,
-    inds_btree;
-    alg="density_matrix",
-    cutoff=cutoff,
-    maxdim=maxdim,
-    contraction_sequence_alg=contraction_sequence_alg,
-    contraction_sequence_kwargs=contraction_sequence_kwargs,
-  )
-end
-
-"""
-Approximate a given ITensorNetwork `tn` into an output ITensorNetwork
-with a binary tree structure. The binary tree structure is defined based
-on `inds_btree`, which is a directed binary tree DataGraph of indices.
-"""
-function approx_itensornetwork(
-  ::Algorithm"density_matrix",
-  tn::ITensorNetwork,
-  inds_btree::DataGraph;
-  cutoff=1e-15,
-  maxdim=10000,
-  contraction_sequence_alg="optimal",
-  contraction_sequence_kwargs=(;),
-)
-  par = partition(tn, inds_btree; alg="mincut_recursive_bisection")
-  output_tn, log_root_norm = approx_itensornetwork(
-    par;
-    alg="density_matrix",
-    root=_root(inds_btree),
-    cutoff=cutoff,
-    maxdim=maxdim,
-    contraction_sequence_alg=contraction_sequence_alg,
-    contraction_sequence_kwargs=contraction_sequence_kwargs,
-  )
-  # Each leaf vertex in `output_tn` is adjacent to one output index.
-  # We remove these leaf vertices so that each non-root vertex in `output_tn`
-  # is an order 3 tensor.
-  _rem_leaf_vertices!(
-    output_tn;
-    root=_root(inds_btree),
-    contraction_sequence_alg=contraction_sequence_alg,
-    contraction_sequence_kwargs=contraction_sequence_kwargs,
-  )
-  return output_tn, log_root_norm
-end
-
-function approx_itensornetwork(
-  partitioned_tn::DataGraph;
-  alg::String,
-  root,
-  cutoff=1e-15,
-  maxdim=10000,
-  contraction_sequence_alg="optimal",
-  contraction_sequence_kwargs=(;),
-)
-  return approx_itensornetwork(
-    Algorithm(alg),
-    partitioned_tn;
-    root,
-    cutoff,
-    maxdim,
-    contraction_sequence_alg,
-    contraction_sequence_kwargs,
-  )
-end
-
-function approx_itensornetwork(
-  tn::ITensorNetwork,
-  inds_btree::DataGraph;
-  alg::String,
-  cutoff=1e-15,
-  maxdim=10000,
-  contraction_sequence_alg="optimal",
-  contraction_sequence_kwargs=(;),
-)
-  return approx_itensornetwork(
-    Algorithm(alg),
-    tn,
-    inds_btree;
-    cutoff,
-    maxdim,
-    contraction_sequence_alg,
-    contraction_sequence_kwargs,
-  )
-end
-
-function approx_itensornetwork(
-  tn::ITensorNetwork,
-  output_structure::Function=path_graph_structure;
-  alg::String,
-  cutoff=1e-15,
-  maxdim=10000,
-  contraction_sequence_alg="optimal",
-  contraction_sequence_kwargs=(;),
-)
-  return approx_itensornetwork(
-    Algorithm(alg),
-    tn,
-    output_structure;
-    cutoff,
-    maxdim,
-    contraction_sequence_alg,
-    contraction_sequence_kwargs,
-  )
 end
