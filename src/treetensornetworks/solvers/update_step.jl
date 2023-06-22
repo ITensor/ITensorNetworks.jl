@@ -16,9 +16,7 @@ end
 
 function step_printer(; cutoff, maxdim, mindim, outputlevel::Int=0, psi, region, spec, sweep_step)
   if outputlevel >= 2
-    #if get(data(sweep_step),:time_direction,0) == +1
-    #  @printf("Sweep %d, direction %s, position (%s,) \n", sw, direction, pos(step))
-    #end
+    @printf("Sweep %d, region=%s \n", sweep, region)
     print("  Truncated using")
     @printf(" cutoff=%.1E", cutoff)
     @printf(" maxdim=%d", maxdim)
