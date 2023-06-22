@@ -30,9 +30,7 @@ function sweep_printer(; outputlevel, psi, sweep, sw_time)
   if outputlevel >= 1
     print("After sweep ", sweep, ":")
     print(" maxlinkdim=", maxlinkdim(psi))
-    #@printf(" maxerr=%.2E", info.maxtruncerr)
-    #print(" current_time=", round(current_time; digits=3))
-    print(" time=", round(sw_time; digits=3))
+    print(" cpu_time=", round(sw_time; digits=3))
     println()
     flush(stdout)
   end

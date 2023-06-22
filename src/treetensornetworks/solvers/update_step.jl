@@ -23,7 +23,6 @@ function step_printer(; cutoff, maxdim, mindim, outputlevel::Int=0, psi, region,
     @printf(" cutoff=%.1E", cutoff)
     @printf(" maxdim=%d", maxdim)
     @printf(" mindim=%d", mindim)
-    #print(" current_time=", round(current_time; digits=3))
     println()
     if spec != nothing
       @printf(

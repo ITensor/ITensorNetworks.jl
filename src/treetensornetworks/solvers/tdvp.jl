@@ -100,10 +100,6 @@ function tdvp_sweep(
   return sweep
 end
 
-function _current_time_printer(;kwargs...)
-  #print(" current_time=", round(current_time; digits=3))
-  return
-end
 
 function tdvp(
   solver,
@@ -114,18 +110,29 @@ function tdvp(
   nsite=2,
   nsteps=nothing,
   order::Integer=2,
-  (step_observer!)=observer(),
+  (sweep_observer!)=observer(),
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
   sweep_regions = tdvp_sweep(order, nsite, time_step, init; kwargs...)
 
-  insert_function!(step_observer!, "_current_time_printer" => _current_time_printer)
+  function sweep_time_printer(; outputlevel, sweep, kwargs...)
+    if outputlevel >= 1
+      sweeps_per_step = order ÷ 2
+      if sweep % sweeps_per_step == 0
+        current_time = (sweep / sweeps_per_step) * time_step
+        println("Current time (sweep $sweep) = ", round(current_time; digits=3))
+      end
+    end
+    return nothing
+  end
 
-  psi = alternating_update(solver, H, init; nsweeps, sweep_regions, nsite, kwargs...)
+  insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
+
+  psi = alternating_update(solver, H, init; nsweeps, sweep_observer!, sweep_regions, nsite, kwargs...)
 
   # remove _current_time_printer
-  select!(step_observer!, Observers.DataFrames.Not("_current_time_printer"))
+  select!(sweep_observer!, Observers.DataFrames.Not("sweep_time_printer"))
 
   return psi
 end
