@@ -88,18 +88,17 @@ end
     @test isapprox(out1, out2)
     # test approx_itensornetwork (here we call `contract` to test the interface)
     for structure in [path_graph_structure, binary_tree_structure]
-      approx_tn, lognorm = contract(
-        tn;
-        alg="density_matrix",
-        output_structure=structure,
-        contraction_sequence_alg="sa_bipartite",
-      )
-      network3 = Vector{ITensor}(approx_tn)
-      out3 = contract(network3...) * exp(lognorm)
-      i1 = noncommoninds(network...)
-      i3 = noncommoninds(network3...)
-      @test (length(i1) == length(i3))
-      @test isapprox(out1, out3)
+      for alg in ["density_matrix", "ttn_svd"]
+        approx_tn, lognorm = contract(
+          tn; alg=alg, output_structure=structure, contraction_sequence_alg="sa_bipartite"
+        )
+        network3 = Vector{ITensor}(approx_tn)
+        out3 = contract(network3...) * exp(lognorm)
+        i1 = noncommoninds(network...)
+        i3 = noncommoninds(network3...)
+        @test (length(i1) == length(i3))
+        @test isapprox(out1, out3)
+      end
     end
   end
 end
