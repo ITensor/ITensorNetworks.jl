@@ -65,7 +65,7 @@ function alternating_update(
     end
 
     sw_time = @elapsed begin
-      psi, PH  = update_step(
+      psi, PH = update_step(
         solver,
         PH,
         psi;

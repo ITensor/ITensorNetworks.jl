@@ -14,7 +14,9 @@ function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)
   )
 end
 
-function step_printer(; cutoff, maxdim, mindim, outputlevel::Int=0, psi, region, spec, sweep_step)
+function step_printer(;
+  cutoff, maxdim, mindim, outputlevel::Int=0, psi, region, spec, sweep_step
+)
   if outputlevel >= 2
     @printf("Sweep %d, region=%s \n", sweep, region)
     print("  Truncated using")
@@ -80,7 +82,7 @@ function update_step(
   # Just to be sure:
   normalize && normalize!(psi)
 
-  return psi, PH 
+  return psi, PH
 end
 
 #
@@ -145,7 +147,22 @@ current_ortho(::Type{NamedEdge{V}}, st) where {V} = src(st)
 current_ortho(st) = current_ortho(typeof(st), st)
 
 function local_update(
-  solver, PH, psi, region; normalize, noise, cutoff::AbstractFloat=1E-16, maxdim::Int=typemax(Int), mindim::Int=1, outputlevel::Int=0, step_kwargs=NamedTuple(), step_observer!, sweep, sweep_regions, sweep_step, kwargs...
+  solver,
+  PH,
+  psi,
+  region;
+  normalize,
+  noise,
+  cutoff::AbstractFloat=1E-16,
+  maxdim::Int=typemax(Int),
+  mindim::Int=1,
+  outputlevel::Int=0,
+  step_kwargs=NamedTuple(),
+  step_observer!,
+  sweep,
+  sweep_regions,
+  sweep_step,
+  kwargs...,
 )
   psi = orthogonalize(psi, current_ortho(region))
   psi, phi = extract_local_tensor(psi, region)

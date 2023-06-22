@@ -52,14 +52,17 @@ function applyexp_solver(; kwargs...)
 end
 
 function _compute_nsweeps(nsteps, t, time_step, order)
-  nsweeps_per_step = order/2
+  nsweeps_per_step = order / 2
   nsweeps = 1
   if !isnothing(nsteps) && time_step != t
     error("Cannot specify both nsteps and time_step in tdvp")
   elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsteps)
     nsweeps = convert(Int, nsweeps_per_step * ceil(abs(t / time_step)))
-    if !(nsweeps/nsweeps_per_step * time_step ≈ t)
-      println("Time that will be reached = nsweeps/nsweeps_per_step * time_step = ",nsweeps/nsweeps_per_step * time_step)
+    if !(nsweeps / nsweeps_per_step * time_step ≈ t)
+      println(
+        "Time that will be reached = nsweeps/nsweeps_per_step * time_step = ",
+        nsweeps / nsweeps_per_step * time_step,
+      )
       println("Requested total time t = ", t)
       error("Time step $time_step not commensurate with total time t=$t")
     end
@@ -100,7 +103,6 @@ function tdvp_sweep(
   return sweep
 end
 
-
 function tdvp(
   solver,
   H,
@@ -129,7 +131,9 @@ function tdvp(
 
   insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
 
-  psi = alternating_update(solver, H, init; nsweeps, sweep_observer!, sweep_regions, nsite, kwargs...)
+  psi = alternating_update(
+    solver, H, init; nsweeps, sweep_observer!, sweep_regions, nsite, kwargs...
+  )
 
   # remove _current_time_printer
   select!(sweep_observer!, Observers.DataFrames.Not("sweep_time_printer"))

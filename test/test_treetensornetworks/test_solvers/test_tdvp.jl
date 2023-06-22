@@ -168,7 +168,7 @@ using Test
         ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
       )
       psi, exp_info = exponentiate(PH, time_step, psi0; solver_kwargs...)
-      return psi, (;info=exp_info)
+      return psi, (; info=exp_info)
     end
 
     ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
@@ -432,7 +432,9 @@ using Test
     get_info(; info) = info
     step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
     step_measure_en(; psi) = real(inner(psi', H, psi))
-    step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en, "info" => get_info)
+    step_obs = Observer(
+      "Sz" => step_measure_sz, "En" => step_measure_en, "info" => get_info
+    )
 
     psi2 = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
     tdvp(
