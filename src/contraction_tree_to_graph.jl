@@ -1,7 +1,7 @@
 """
 Take a contraction sequence and return a directed graph.
 """
-function contraction_sequence_to_directed_graph(contract_sequence)
+function contraction_sequence_to_graph(contract_sequence)
   g = NamedDiGraph()
   leaves = collect(Leaves(contract_sequence))
   seq_to_v = Dict()
@@ -25,24 +25,7 @@ function contraction_sequence_to_directed_graph(contract_sequence)
   return g
 end
 
-"""
-Take a contraction_sequence and return a graphical representation of it. The leaves of the graph represent the leaves of the sequence whilst the internal_nodes of the graph
-define a tripartition of the graph and thus are named as an n = 3 element tuples, which each element specifying the keys involved.
-Edges connect parents/children within the contraction sequence.
-"""
-function contraction_sequence_to_graph(contract_sequence)
-  direct_g = contraction_sequence_to_directed_graph(contract_sequence)
-  g = NamedGraph(vertices(direct_g))
-  for e in edges(direct_g)
-    add_edge!(g, e)
-  end
-  root = _root(direct_g)
-  c1, c2 = child_vertices(direct_g, root)
-  rem_vertex!(g, root)
-  add_edge!(g, c1 => c2)
-  return g
-end
-
+#=
 """Get the vertex bi-partition that a given edge represents"""
 function contraction_tree_leaf_bipartition(g::AbstractGraph, e)
   if (!is_leaf_edge(g, e))
@@ -75,3 +58,4 @@ function contraction_tree_leaf_bipartition(g::AbstractGraph, e)
 
   return left_bipartition, right_bipartition
 end
+=#
