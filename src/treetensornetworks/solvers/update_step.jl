@@ -172,6 +172,10 @@ function local_update(
   PH = position(PH, psi, region)
 
   phi, info = solver(PH, phi; normalize, region, step_kwargs..., kwargs...)
+  if !(phi isa ITensor && info isa NamedTuple)
+    println("Solver returned the following types: $(typeof(phi)), $(typeof(info))")
+    error("In alternating_update, solver must return an ITensor and a NamedTuple")
+  end
   normalize && (phi /= norm(phi))
 
   drho = nothing

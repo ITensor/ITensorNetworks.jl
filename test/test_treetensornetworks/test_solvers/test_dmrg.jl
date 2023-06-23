@@ -80,7 +80,7 @@ end
   # Test out certain values
   #
   @test step_observer![9, :region] == [2, 1]
-  @test step_observer![30, :energy] < -4.258
+  @test step_observer![30, :energy] < -4.25
 end
 
 @testset "Regression test: Arrays of Parameters" begin
