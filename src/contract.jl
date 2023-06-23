@@ -17,3 +17,12 @@ function contract(
 )
   return approx_itensornetwork(alg, tn, output_structure; kwargs...)
 end
+
+function contract(
+  alg::Algorithm"partitioned_contraction",
+  tn::AbstractITensorNetwork;
+  output_structure::Function=path_graph_structure,
+  kwargs...,
+)
+  return approx_itensornetwork(alg, tn, output_structure; kwargs...)
+end
