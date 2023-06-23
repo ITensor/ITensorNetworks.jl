@@ -31,7 +31,7 @@ define a tripartition of the graph and thus are named as an n = 3 element tuples
 Edges connect parents/children within the contraction sequence.
 """
 function contraction_sequence_to_graph(contract_sequence)
-  direct_g = contraction_sequence_to_directed_graph(contract_sequence)
+  direct_g = contraction_sequence_to_digraph(contract_sequence)
   g = NamedGraph(vertices(direct_g))
   for e in edges(direct_g)
     add_edge!(g, e)
