@@ -1,6 +1,12 @@
 using ITensorNetworks
 using ITensorNetworks:
-  contraction_sequence_to_graph, internal_edges, distance_to_leaf, leaf_vertices, _root
+  contraction_sequence_to_digraph,
+  contraction_sequence_to_graph,
+  internal_edges,
+  contraction_tree_leaf_bipartition,
+  distance_to_leaf,
+  leaf_vertices,
+  _root
 using Test
 using ITensors
 using NamedGraphs
@@ -16,17 +22,21 @@ using NamedGraphs
 
   seq = contraction_sequence(ψψ)
 
-  g_seq = contraction_sequence_to_graph(seq)
-  g_seq_leaves = leaf_vertices(g_seq)
+  g_directed_seq = contraction_sequence_to_digraph(seq)
+  g_seq_leaves = leaf_vertices(g_directed_seq)
   @test length(g_seq_leaves) == n * n
-  @test 2 * length(g_seq_leaves) - 1 == length(vertices(g_seq))
-  @test _root(g_seq)[3] == []
+  @test 2 * length(g_seq_leaves) - 1 == length(vertices(g_directed_seq))
+  @test _root(g_directed_seq)[3] == []
 
-  # for eb in internal_edges(g_seq)
-  #   vs = contraction_tree_leaf_bipartition(g_seq, eb)
-  #   @test length(vs) == 2
-  #   @test Set([v.I for v in vcat(vs[1], vs[2])]) == Set(vertices(ψψ))
-  # end
+  g_seq = contraction_sequence_to_graph(seq)
+  @test length(g_seq_leaves) == n * n
+  @test 2 * length(g_seq_leaves) - 2 == length(vertices(g_seq))
+
+  for eb in internal_edges(g_seq)
+    vs = contraction_tree_leaf_bipartition(g_seq, eb)
+    @test length(vs) == 2
+    @test Set([v.I for v in vcat(vs[1], vs[2])]) == Set(vertices(ψψ))
+  end
   #Check all internal vertices define a correct tripartition and all leaf vertices define a bipartition (tensor on that leafs vs tensor on rest of tree)
   for v in vertices(g_seq)
     if (!is_leaf(g_seq, v))

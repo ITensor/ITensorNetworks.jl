@@ -9,136 +9,87 @@ function partitioned_contract(
   contraction_sequence_kwargs,
 )
   @timeit_debug ITensors.timer "partitioned_contract" begin
-    tn_leaves = get_leaves(ctree)
-    ctrees = topo_sort(ctree; leaves=tn_leaves)
-    @info "start _approximate_contract_pre_process"
-    ctree_to_igs, ctree_to_adj_tree, ig_to_linear_order = _approximate_contract_pre_process(
-      tn_leaves, ctrees
-    )
-    ctree_to_reference_order = Dict{Vector,Vector}()
-    ctree_to_edgeset_order = Dict{Vector,Vector}()
-    for leaf in tn_leaves
-      reference_order = _mps_partition_inds_set_order(
-        ITensorNetwork(leaf), ctree_to_igs[leaf]
-      )
-      order, _ = mindist_ordering(ctree_to_adj_tree[leaf], reference_order, vectorize(leaf))
-      ctree_to_edgeset_order[leaf] = order
-    end
-    for (ii, c) in enumerate(ctrees)
-      @info "$(ii)/$(length(ctrees))", "th pre-process"
-      if ctree_to_igs[c] == []
-        continue
-      end
-      ctree_to_reference_order[c], ctree_to_edgeset_order[c] = mindist_ordering(
-        ctree_to_adj_tree[c],
-        ctree_to_edgeset_order[c[1]],
-        ctree_to_edgeset_order[c[2]],
-        c[1] in tn_leaves,
-        c[2] in tn_leaves,
-        vectorize(c),
-      )
-      # @info "reference ordering", ctree_to_reference_order[c]
-      # @info "edge set ordering", ctree_to_edgeset_order[c]
-    end
-    # return [ITensor(1.0)], 1.0
-    # mapping each contraction tree to its contract igs
-    ctree_to_contract_igs = Dict{Vector,Vector{IndexGroup}}()
-    for c in ctrees
-      if c[1] in tn_leaves
-        contract_igs = intersect(ctree_to_edgeset_order[c[2]], ctree_to_edgeset_order[c[1]])
-        l_igs_c1, r_igs_c1 = split_igs(ctree_to_edgeset_order[c[1]], contract_igs)
-        ctree_to_edgeset_order[c[1]] = Vector{IndexGroup}([
-          l_igs_c1..., contract_igs..., r_igs_c1...
-        ])
+    leaves = leaf_vertices(contraction_tree)
+    traversal = post_order_dfs_vertices(contraction_tree, _root(contraction_tree))
+    contractions = setdiff(traversal, leaves)
+    p_edge_to_ordered_inds = _ind_orderings(partition)
+    # build the orderings used for the ansatz tree
+    # For each pair in `v_to_ordered_p_edges`, the first item
+    # is the ordering of uncontracted edges for the contraction `v`,
+    # and the second item is the ordering of part of the uncontracted edges
+    # that are to be contracted in the next contraction (first contraction
+    # in the path of `v`).
+    v_to_ordered_p_edges = Dict{Tuple,Pair}()
+    for (ii, v) in enumerate(contractions)
+      @info "$(ii)/$(length(contractions)) th ansatz tree construction"
+      p_leaves = [v[1]..., v[2]...]
+      tn = ITensorNetwork(mapreduce(l -> Vector{ITensor}(partition[l]), vcat, p_leaves))
+      path = filter(u -> issubset(p_leaves, u[1]) || issubset(p_leaves, u[2]), contractions)
+      p_edges = _neighbor_edges(partition, p_leaves)
+      inds_set = [Set(p_edge_to_ordered_inds[e]) for e in p_edges]
+      ordering = _constrained_minswap_inds_ordering(inds_set, tn, path)
+      p_edges = p_edges[sortperm(ordering)]
+      # update the contracted ordering and `v_to_ordered_p_edges[v]`.
+      # path[1] is the vertex to be contracted with `v` next.
+      if haskey(v_to_ordered_p_edges, path[1])
+        contract_edges = v_to_ordered_p_edges[path[1]].second
+        @assert(_is_neighbored_subset(p_edges, Set(contract_edges)))
+        p_edges = _replace_subarray(p_edges, contract_edges)
       else
-        contract_igs = intersect(ctree_to_edgeset_order[c[1]], ctree_to_edgeset_order[c[2]])
-        l_igs_c2, r_igs_c2 = split_igs(ctree_to_edgeset_order[c[2]], contract_igs)
-        ctree_to_edgeset_order[c[2]] = Vector{IndexGroup}([
-          l_igs_c2..., contract_igs..., r_igs_c2...
-        ])
+        p_leaves_2 = [path[1][1]..., path[1][2]...]
+        p_edges_2 = _neighbor_edges(partition, p_leaves_2)
+        contract_edges = intersect(p_edges, p_edges_2)
+        contract_edges = filter(e -> e in contract_edges, p_edges)
       end
-      ctree_to_contract_igs[c[1]] = contract_igs
-      ctree_to_contract_igs[c[2]] = contract_igs
+      v_to_ordered_p_edges[v] = Pair(p_edges, contract_edges)
     end
-    # special case when the network contains uncontracted inds
-    if haskey(ctree_to_edgeset_order, ctrees[end])
-      ctree_to_contract_igs[ctrees[end]] = ctree_to_edgeset_order[ctrees[end]]
+    # start approx_itensornetwork
+    v_to_tn = Dict{Tuple,ITensorNetwork}()
+    for v in leaves
+      @assert length(v[1]) == 1
+      v_to_tn[v] = partition[v[1][1]]
     end
-    # mapping each contraction tree to a tensor network
-    ctree_to_tn_tree = Dict{Vector,Union{Dict{Vector,ITensor},Vector{ITensor}}}()
-    # accumulate norm
     log_accumulated_norm = 0.0
-    for (ii, c) in enumerate(ctrees)
-      t00 = time()
-      @info "$(ii)/$(length(ctrees))", "th tree approximation"
-      if ctree_to_igs[c] == []
-        @assert c == ctrees[end]
-        tn1 = get_child_tn(ctree_to_tn_tree, c[1])
-        tn2 = get_child_tn(ctree_to_tn_tree, c[2])
-        tn = vcat(tn1, tn2)
-        out = _optcontract(tn)
-        out_nrm = norm(out)
-        out /= out_nrm
-        return [out], log_accumulated_norm + log(out_nrm)
+    for (ii, v) in enumerate(contractions)
+      @info "$(ii)/$(length(contractions)) th tree approximation"
+      c1, c2 = child_vertices(contraction_tree, v)
+      tn = disjoint_union(v_to_tn[c1], v_to_tn[c2])
+      # TODO: rename tn since the names will be too long.
+      p_edges = v_to_ordered_p_edges[v].first
+      if p_edges == []
+        # TODO: edge case with output being a scalar
       end
-      tn1 = get_child_tn(ctree_to_tn_tree, c[1])
-      tn2 = get_child_tn(ctree_to_tn_tree, c[2])
-      # TODO: change new_igs into a vector of igs
-      inds_btree = ordered_igs_to_binary_tree(
-        ctree_to_edgeset_order[c],
-        ctree_to_contract_igs[c],
-        ig_to_linear_order;
-        ansatz=ansatz,
-      )
-      ctree_to_tn_tree[c], log_root_norm = approximate_contract_ctree_to_tensor(
-        [tn1..., tn2...], inds_btree; cutoff=cutoff, maxdim=maxdim, algorithm=algorithm
+      inds_orderings = [p_edge_to_ordered_inds[e] for e in p_edges]
+      v_to_tn[v], log_root_norm = approx_itensornetwork(
+        tn,
+        _ansatz_tree(inds_orderings, ansatz);
+        alg=approx_itensornetwork_alg,
+        cutoff=cutoff,
+        maxdim=maxdim,
+        contraction_sequence_alg=contraction_sequence_alg,
+        contraction_sequence_kwargs=contraction_sequence_kwargs,
       )
       log_accumulated_norm += log_root_norm
-      # release the memory
-      delete!(ctree_to_tn_tree, c[1])
-      delete!(ctree_to_tn_tree, c[2])
-      t11 = time() - t00
-      @info "time of this contraction is", t11
     end
-    tn = vcat(collect(values(ctree_to_tn_tree[ctrees[end]]))...)
-    return tn, log_accumulated_norm
   end
 end
 
-function _approximate_contract_pre_process(tn_leaves, ctrees)
-  @timeit_debug ITensors.timer "_approximate_contract_pre_process" begin
-    # mapping each contraction tree to its uncontracted index groups
-    ctree_to_igs = Dict{Vector,Vector{IndexGroup}}()
-    index_groups = get_index_groups(ctrees[end])
-    for c in vcat(tn_leaves, ctrees)
-      # TODO: the order here is not optimized
-      ctree_to_igs[c] = neighbor_index_groups(c, index_groups)
-    end
-    ctree_to_path = _get_paths(ctrees[end])
-    # mapping each contraction tree to its index adjacency tree
-    ctree_to_adj_tree = Dict{Vector,NamedDiGraph{Tuple{Tuple,String}}}()
-    for leaf in tn_leaves
-      ctree_to_adj_tree[leaf] = _generate_adjacency_tree(
-        leaf, ctree_to_path[leaf], ctree_to_igs
-      )
-    end
-    for c in ctrees
-      adj_tree = _generate_adjacency_tree(c, ctree_to_path[c], ctree_to_igs)
-      if adj_tree != nothing
-        ctree_to_adj_tree[c] = adj_tree
-        # @info "ctree_to_adj_tree[c]", ctree_to_adj_tree[c]
-      end
-    end
-    # mapping each index group to a linear ordering
-    ig_to_linear_order = Dict{IndexGroup,Vector}()
-    for leaf in tn_leaves
-      for ig in ctree_to_igs[leaf]
-        if !haskey(ig_to_linear_order, ig)
-          inds_order = _mps_partition_inds_order(ITensorNetwork(leaf), ig.data)
-          ig_to_linear_order[ig] = [[i] for i in inds_order]
-        end
-      end
-    end
-    return ctree_to_igs, ctree_to_adj_tree, ig_to_linear_order
-  end
+# TODO: replace the subarray of `v1` with `v2`
+function _replace_subarray(v1::Vector, v2::Vector)
+end
+
+function _neighbor_edges(graph, vs)
+  return filter(e -> (e.src in vs and !(e.dst in vs)) || (e.dst in vs and !(e.src in vs)), edges(graph))
+end
+
+function _ind_orderings(partition::DataGraph)
+  input_tn = # TODO
+end
+
+function _constrained_mincost_inds_ordering(inds_set::Set, tn::ITensorNetwork, path::Vector)
+  # TODO: edge set ordering of tn
+end
+
+function _ansatz_tree(inds_orderings::Vector, ansatz::String)
+  # TODO
 end
