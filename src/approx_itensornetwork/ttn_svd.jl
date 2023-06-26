@@ -15,6 +15,8 @@ function _approx_itensornetwork_ttn_svd!(
   tn = ITensorNetwork()
   for v in vertices(input_partition)
     add_vertex!(tn, v)
+    # TODO: use `dense(optcontract(ts))` to convert Diag type to dense
+    # for QR decomposition TODO: raise an error in ITensors
     tn[v] = _optcontract(
       Vector{ITensor}(input_partition[v]);
       contraction_sequence_alg=contraction_sequence_alg,

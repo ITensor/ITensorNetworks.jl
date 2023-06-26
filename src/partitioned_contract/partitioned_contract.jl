@@ -62,7 +62,7 @@ function partitioned_contract(
       inds_orderings = [p_edge_to_ordered_inds[e] for e in p_edges]
       v_to_tn[v], log_root_norm = approx_itensornetwork(
         tn,
-        _ansatz_tree(inds_orderings, ansatz);
+        _ansatz_tree(inds_orderings, _ortho_center(v_to_ordered_p_edges[v]), ansatz);
         alg=approx_itensornetwork_alg,
         cutoff=cutoff,
         maxdim=maxdim,
@@ -74,12 +74,43 @@ function partitioned_contract(
   end
 end
 
-# TODO: replace the subarray of `v1` with `v2`
+function _is_neighbored_subset(v::Vector, set::Set)
+  if set == Set()
+    return true
+  end
+  @assert issubset(set, Set(v))
+  i_begin = 1
+  while !(i_begin in set)
+    i_begin += 1
+  end
+  i_end = length(v)
+  while !(i_end in set)
+    i_end -= 1
+  end
+  return Set(v[i_begin:i_end]) == set
+end
+
+# replace the subarray of `v1` with `v2`
 function _replace_subarray(v1::Vector, v2::Vector)
+  if v2 == []
+    return v1
+  end
+  v1 = copy(v1)
+  num = 0
+  for i in 1:length(v1)
+    if v1[i] in v2
+      num += 1
+      v1[i] = v2[num]
+    end
+  end
+  @assert num == length(v2)
+  return v1
 end
 
 function _neighbor_edges(graph, vs)
-  return filter(e -> (e.src in vs and !(e.dst in vs)) || (e.dst in vs and !(e.src in vs)), edges(graph))
+  return filter(
+    e -> (e.src in vs && !(e.dst in vs)) || (e.dst in vs && !(e.src in vs)), edges(graph)
+  )
 end
 
 function _ind_orderings(partition::DataGraph)
@@ -90,6 +121,87 @@ function _constrained_mincost_inds_ordering(inds_set::Set, tn::ITensorNetwork, p
   # TODO: edge set ordering of tn
 end
 
-function _ansatz_tree(inds_orderings::Vector, ansatz::String)
+function _ansatz_tree(inds_orderings::Vector, ortho_center::Integer, ansatz::String)
   # TODO
 end
+
+function _ortho_center(edges_to_contract_edges)
+  # TODO
+end
+
+# function ordered_igs_to_binary_tree(ordered_igs, contract_igs, ig_to_linear_order; ansatz)
+#   @assert ansatz in ["comb", "mps"]
+#   @timeit_debug ITensors.timer "ordered_igs_to_binary_tree" begin
+#     if contract_igs == []
+#       @info "contract_igs is empty vector"
+#     end
+#     # @assert contract_igs != []
+#     left_igs, right_igs = split_igs(ordered_igs, contract_igs)
+#     if ansatz == "comb"
+#       return ordered_igs_to_binary_tree_comb(
+#         left_igs, right_igs, contract_igs, ig_to_linear_order
+#       )
+#     elseif ansatz == "mps"
+#       return ordered_igs_to_binary_tree_mps(
+#         left_igs, right_igs, contract_igs, ig_to_linear_order
+#       )
+#     end
+#   end
+# end
+
+# function ordered_igs_to_binary_tree(igs, ig_to_linear_order; ansatz, direction)
+#   @assert ansatz in ["comb", "mps"]
+#   @assert direction in ["left", "right"]
+#   if ansatz == "comb"
+#     return line_to_tree([line_to_tree(ig_to_linear_order[ig]) for ig in igs])
+#   end
+#   if direction == "left"
+#     order = vcat([ig_to_linear_order[ig] for ig in igs]...)
+#     return line_to_tree(order)
+#   else
+#     # First reverse get the order from middle to boundary,
+#     # and second reverse get the overall inds order from boundary to middle.
+#     order = vcat([ig_to_linear_order[ig] for ig in reverse(igs)]...)
+#     return line_to_tree(reverse(order))
+#   end
+# end
+
+# function ordered_igs_to_binary_tree_mps(
+#   left_igs, right_igs, contract_igs, ig_to_linear_order
+# )
+#   left_order = get_leaves([ig_to_linear_order[ig] for ig in left_igs])
+#   right_order = get_leaves([ig_to_linear_order[ig] for ig in right_igs])
+#   contract_order = get_leaves([ig_to_linear_order[ig] for ig in contract_igs])
+#   if length(left_order) <= length(right_order)
+#     left_order = [left_order..., contract_order...]
+#   else
+#     right_order = [contract_order..., right_order...]
+#   end
+#   return merge_tree(line_to_tree(left_order), line_to_tree(reverse(right_order)))
+# end
+
+# function ordered_igs_to_binary_tree_comb(
+#   left_igs, right_igs, contract_igs, ig_to_linear_order
+# )
+#   tree_1 = ordered_igs_to_binary_tree(
+#     left_igs, ig_to_linear_order; ansatz="comb", direction="left"
+#   )
+#   tree_contract = ordered_igs_to_binary_tree(
+#     contract_igs, ig_to_linear_order; ansatz="comb", direction="left"
+#   )
+#   tree_2 = ordered_igs_to_binary_tree(
+#     reverse(right_igs), ig_to_linear_order; ansatz="comb", direction="left"
+#   )
+#   # make the binary tree more balanced to save tree approximation cost
+#   if tree_1 == []
+#     return merge_tree(merge_tree(tree_1, tree_contract), tree_2)
+#   end
+#   if tree_2 == []
+#     return merge_tree(tree_1, merge_tree(tree_contract, tree_2))
+#   end
+#   if length(vectorize(tree_1)) <= length(vectorize(tree_2))
+#     return merge_tree(merge_tree(tree_1, tree_contract), tree_2)
+#   else
+#     return merge_tree(tree_1, merge_tree(tree_contract, tree_2))
+#   end
+# end
