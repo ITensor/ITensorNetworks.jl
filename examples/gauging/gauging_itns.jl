@@ -18,7 +18,7 @@ using ITensorNetworks:
   vidal_to_symmetric_gauge,
   initialize_bond_tensors,
   vidal_itn_isometries,
-  unflattened_norm_network
+  norm_network
 
 using NamedGraphs
 using NamedGraphs: add_edges!, rem_vertex!, hexagonal_lattice_graph
@@ -53,7 +53,7 @@ function benchmark_state_gauging(
   times_iters = zeros((no_iterations))
   times_gauging = zeros((no_iterations))
 
-  ψψ = unflattened_norm_network(ψ)
+  ψψ = norm_network(ψ)
   ψinit = copy(ψ)
   vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1], vertices(ψψ))))
   mts = message_tensors(partition(ψψ; subgraph_vertices=vertex_groups))

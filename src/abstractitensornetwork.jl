@@ -330,9 +330,8 @@ end
 
 adjoint(tn::Union{IndsNetwork,AbstractITensorNetwork}) = prime(tn)
 
-dag(tn::AbstractITensorNetwork) = map_vertex_data(dag, tn)
-#Faster version!
-function fast_dag(tn::AbstractITensorNetwork)
+#dag(tn::AbstractITensorNetwork) = map_vertex_data(dag, tn)
+function dag(tn::AbstractITensorNetwork)
   tndag = copy(tn)
   for v in vertices(tndag)
     setindex_preserve_graph!(tndag, dag(tndag[v]), v)
@@ -655,11 +654,11 @@ function flatten_networks(
 end
 
 #Ideally this will dispatch to inner_network but this is a temporary fast version for now
-function unflattened_norm_network(tn::AbstractITensorNetwork)
+function norm_network(tn::AbstractITensorNetwork)
   tnbra = rename_vertices(v -> (v, 1), data_graph(tn))
   tndag = copy(tn)
   for v in vertices(tndag)
-    ITensorNetworks.setindex_preserve_graph!(tndag, dag(tndag[v]), v)
+    setindex_preserve_graph!(tndag, dag(tndag[v]), v)
   end
   tnket = rename_vertices(v -> (v, 2), data_graph(prime(tndag; sites=[])))
   tntn = ITensorNetwork(union(tnbra, tnket))

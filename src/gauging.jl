@@ -96,7 +96,7 @@ function vidal_gauge(
   target_canonicalness::Union{Nothing,Float64}=nothing,
   svd_kwargs...,
 )
-  ψψ = unflattened_norm_network(ψ)
+  ψψ = norm_network(ψ)
   Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(Z)
 
@@ -111,7 +111,7 @@ end
 """Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (message tensors)"""
 function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
   ψsymm = copy(ψ)
-  ψψsymm = unflattened_norm_network(ψsymm)
+  ψψsymm = norm_network(ψsymm)
   Z = partition(
     ψψsymm; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψsymm))))
   )
