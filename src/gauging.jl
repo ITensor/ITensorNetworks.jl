@@ -44,8 +44,10 @@ function vidal_gauge(
     inv_rootX = X_U * inv_rootX_D * prime(dag(X_U))
     inv_rootY = Y_U * inv_rootY_D * prime(dag(Y_U))
 
-    ψ_vidal[vsrc] = noprime(ψ_vidal[vsrc] * inv_rootX)
-    ψ_vidal[vdst] = noprime(ψ_vidal[vdst] * inv_rootY)
+    # ψ_vidal[vsrc] = noprime(ψ_vidal[vsrc] * inv_rootX)
+    # ψ_vidal[vdst] = noprime(ψ_vidal[vdst] * inv_rootY)
+    setindex_preserve_graph!(ψ_vidal, noprime(ψ_vidal[vsrc] * inv_rootX), vsrc)
+    setindex_preserve_graph!(ψ_vidal, noprime(ψ_vidal[vdst] * inv_rootY), vdst)
 
     Ce = rootX * prime(bond_tensors[e])
     replaceinds!(Ce, edge_ind'', edge_ind')
@@ -55,9 +57,12 @@ function vidal_gauge(
 
     new_edge_ind = Index[Index(dim(commoninds(S, U)), tags(first(edge_ind)))]
 
-    ψ_vidal[vsrc] = replaceinds(ψ_vidal[vsrc] * U, commoninds(S, U), new_edge_ind)
-    ψ_vidal[vdst] = replaceinds(ψ_vidal[vdst], edge_ind, edge_ind_sim)
-    ψ_vidal[vdst] = replaceinds(ψ_vidal[vdst] * V, commoninds(V, S), new_edge_ind)
+    # ψ_vidal[vsrc] = replaceinds(ψ_vidal[vsrc] * U, commoninds(S, U), new_edge_ind)
+    # ψ_vidal[vdst] = replaceinds(ψ_vidal[vdst], edge_ind, edge_ind_sim)
+    # ψ_vidal[vdst] = replaceinds(ψ_vidal[vdst] * V, commoninds(V, S), new_edge_ind)
+    setindex_preserve_graph!(ψ_vidal, replaceinds(ψ_vidal[vsrc] * U, commoninds(S, U), new_edge_ind), vsrc)
+    setindex_preserve_graph!(ψ_vidal, replaceinds(ψ_vidal[vdst], edge_ind, edge_ind_sim), vdst)
+    setindex_preserve_graph!(ψ_vidal, replaceinds(ψ_vidal[vdst] * V, commoninds(V, S), new_edge_ind), vdst)
 
     S = replaceinds(
       S,

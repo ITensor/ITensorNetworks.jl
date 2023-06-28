@@ -168,8 +168,10 @@ function ITensors.apply(
 
     ψv2 = noprime(ψv2 * bond_tensors[e])
 
-    Qᵥ₁, Rᵥ₁ = factorize(ψv1, uniqueinds(ψv1, ψv2); cutoff=1e-16)
-    Qᵥ₂, Rᵥ₂ = factorize(ψv2, uniqueinds(ψv2, ψv1); cutoff=1e-16)
+    # Qᵥ₁, Rᵥ₁ = factorize(ψv1, uniqueinds(ψv1, ψv2); cutoff=1e-16)
+    # Qᵥ₂, Rᵥ₂ = factorize(ψv2, uniqueinds(ψv2, ψv1); cutoff=1e-16)
+    Qᵥ₁, Rᵥ₁ = qr(ψv1, uniqueinds(ψv1, ψv2))
+    Qᵥ₂, Rᵥ₂ = qr(ψv2, uniqueinds(ψv2, ψv1))
 
     theta = Rᵥ₁ * Rᵥ₂
 
@@ -206,7 +208,9 @@ function ITensors.apply(
       normalize!(bond_tensors[e])
     end
 
-    ψ[src(e)], ψ[dst(e)] = ψv1, ψv2
+    # ψ[src(e)], ψ[dst(e)] = ψv1, ψv2
+    setindex_preserve_graph!(ψ, ψv1, src(e))
+    setindex_preserve_graph!(ψ, ψv2, dst(e))
 
     return ψ, bond_tensors
 
