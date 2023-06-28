@@ -199,8 +199,8 @@ function ITensors.apply(
     end
 
     if normalize
-      ψv1 ./= norm(ψv1)
-      ψv2 ./= norm(ψv2)
+      ψv1 /= norm(ψv1)
+      ψv2 /= norm(ψv2)
       normalize!(bond_tensors[e])
     end
 
