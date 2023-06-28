@@ -88,30 +88,34 @@ function benchmark_state_gauging(
   return simulation_times, C
 end
 
-L, χ = 10, 10
+L, χ = 10, 20
 g = named_grid((L, L))
 s = siteinds("S=1/2", g)
 ψ = randomITensorNetwork(s; link_space=χ)
 
-BPG_simulation_times, BPG_Cs = benchmark_state_gauging(ψ; no_iterations=40)
+BPG_simulation_times, BPG_Cs = benchmark_state_gauging(ψ; no_iterations=10)
 Eager_simulation_times, Eager_Cs = benchmark_state_gauging(
-  ψ; mode="Eager", no_iterations=40
+  ψ; mode="Eager", no_iterations=10
 )
-SU_simulation_times, SU_Cs = benchmark_state_gauging(ψ; mode="SU", no_iterations=40)
+SU_simulation_times, SU_Cs = benchmark_state_gauging(ψ; mode="SU", no_iterations=10)
 
-epsilon = 1e-8
-println(
-  "Time for BPG to reach C < epsilon was " *
-  string(BPG_simulation_times[findfirst(x -> x < 0, BPG_Cs .- epsilon)]) *
-  " seconds",
-)
-println(
-  "Time for Eager to reach C < epsilon was " *
-  string(Eager_simulation_times[findfirst(x -> x < 0, Eager_Cs .- epsilon)]) *
-  " seconds",
-)
-println(
-  "Time for SU to reach C < epsilon was " *
-  string(SU_simulation_times[findfirst(x -> x < 0, SU_Cs .- epsilon)]) *
-  " seconds",
-)
+@show BPG_simulation_times
+@show Eager_simulation_times
+@show SU_simulation_times
+
+# epsilon = 1
+# println(
+#   "Time for BPG to reach C < epsilon was " *
+#   string(BPG_simulation_times[findfirst(x -> x < 0, BPG_Cs .- epsilon)]) *
+#   " seconds",
+# )
+# println(
+#   "Time for Eager to reach C < epsilon was " *
+#   string(Eager_simulation_times[findfirst(x -> x < 0, Eager_Cs .- epsilon)]) *
+#   " seconds",
+# )
+# println(
+#   "Time for SU to reach C < epsilon was " *
+#   string(SU_simulation_times[findfirst(x -> x < 0, SU_Cs .- epsilon)]) *
+#   " seconds",
+# )

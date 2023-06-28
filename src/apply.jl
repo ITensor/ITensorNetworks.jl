@@ -19,7 +19,7 @@ function ITensors.apply(
     if normalize
       oψᵥ ./= norm(oψᵥ)
     end
-    ψ[v⃗[1]] = oψᵥ
+    setindex_preserve_graph!(ψ, oψᵥ, v⃗[1])
   elseif length(v⃗) == 2
     e = v⃗[1] => v⃗[2]
     if !has_edge(ψ, e)
@@ -72,8 +72,8 @@ function ITensors.apply(
       ψᵥ₂ ./= norm(ψᵥ₂)
     end
 
-    ψ[v⃗[1]] = ψᵥ₁
-    ψ[v⃗[2]] = ψᵥ₂
+    setindex_preserve_graph!(ψ, ψᵥ₁, v⃗[1])
+    setindex_preserve_graph!(ψ, ψᵥ₂, v⃗[2])
 
   elseif length(v⃗) < 1
     error("Gate being applied does not share indices with tensor network.")
@@ -126,7 +126,7 @@ _gate_vertices(o::AbstractEdge, ψ) = [src(o), dst(o)]
 function _contract_gate(o::ITensor, ψv1, ψv2)
   Qᵥ₁, Rᵥ₁ = qr(ψv1, setdiff(uniqueinds(ψv1, ψv2), commoninds(ψv1, o)))
   Qᵥ₂, Rᵥ₂ = qr(ψv2, setdiff(uniqueinds(ψv2, ψv1), commoninds(ψv2, o)))
-  theta = Rᵥ₁ * Rᵥ₂ * o
+  theta = noprime(Rᵥ₁ * Rᵥ₂ * o)
   return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
 end
 
@@ -152,7 +152,7 @@ function ITensors.apply(
   v⃗ = _gate_vertices(o, ψ)
   if length(v⃗) == 2
     e = NamedEdge(v⃗[1] => v⃗[2])
-    ψv1, ψv2 = copy(ψ[src(e)]), copy(ψ[dst(e)])
+    ψv1, ψv2 = ψ[src(e)], ψ[dst(e)]
     e_ind = commonind(ψv1, ψv2)
 
     for vn in neighbors(ψ, src(e))
@@ -199,8 +199,8 @@ function ITensors.apply(
     end
 
     if normalize
-      normalize!(ψv1)
-      normalize!(ψv2)
+      ψv1 ./= norm(ψv1)
+      ψv2 ./= norm(ψv2)
       normalize!(bond_tensors[e])
     end
 

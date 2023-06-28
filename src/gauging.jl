@@ -23,7 +23,7 @@ function vidal_gauge(
 
   for e in edges(ψ_vidal)
     vsrc, vdst = src(e), dst(e)
-    ψvsrc, ψvdst = copy(ψ_vidal[vsrc]), copy(ψ_vidal[vdst])
+    ψvsrc, ψvdst = ψ_vidal[vsrc], ψ_vidal[vdst]
 
     s1, s2 = find_subgraph((vsrc, 1), mts), find_subgraph((vdst, 1), mts)
     edge_ind = commoninds(ψ_vidal[vsrc], ψ_vidal[vdst])
@@ -121,8 +121,8 @@ function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
     vsrc, vdst = src(e), dst(e)
     s1, s2 = find_subgraph((vsrc, 1), ψsymm_mts), find_subgraph((vdst, 1), ψsymm_mts)
     root_S = sqrt_diag(bond_tensors[e])
-    setindex_preserve_graph!(ψsymm, root_S * ψsymm[vsrc], vsrc)
-    setindex_preserve_graph!(ψsymm, root_S * ψsymm[vdst], vdst)
+    setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vsrc]), vsrc)
+    setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vdst]), vdst)
 
     ψsymm_mts[s1 => s2], ψsymm_mts[s2 => s1] = ITensorNetwork(bond_tensors[e]),
     ITensorNetwork(bond_tensors[e])
@@ -165,8 +165,8 @@ function symmetric_to_vidal_gauge(
     s1, s2 = find_subgraph((vsrc, 1), mts), find_subgraph((vdst, 1), mts)
     bond_tensors[e] = ITensor(mts[s1 => s2])
     invroot_S = invsqrt_diag(map_diag(x -> x + regularization, bond_tensors[e]))
-    setindex_preserve_graph!(ψ_vidal, invroot_S * ψ_vidal[vsrc], vsrc)
-    setindex_preserve_graph!(ψ_vidal, invroot_S * ψ_vidal[vdst], vdst)
+    setindex_preserve_graph!(ψ_vidal, noprime(invroot_S * ψ_vidal[vsrc]), vsrc)
+    setindex_preserve_graph!(ψ_vidal, noprime(invroot_S * ψ_vidal[vdst]), vdst)
   end
 
   return ψ_vidal, bond_tensors
