@@ -124,15 +124,17 @@ _gate_vertices(o::ITensor, ψ) = neighbor_vertices(ψ, o)
 _gate_vertices(o::AbstractEdge, ψ) = [src(o), dst(o)]
 
 function _contract_gate(o::ITensor, ψv1, Λ, ψv2)
-  Qᵥ₁, Rᵥ₁ = qr(ψv1, setdiff(uniqueinds(ψv1, noncommoninds(Λ, ψv2)), commoninds(ψv1, o)))
-  Qᵥ₂, Rᵥ₂ = qr(ψv2, setdiff(uniqueinds(ψv2, noncommoninds(Λ, ψv1)), commoninds(ψv2, o)))
+  indsᵥ₁ = noncommoninds(ψv1, Λ)
+  Qᵥ₁, Rᵥ₁ = qr(ψv1, setdiff(uniqueinds(indsᵥ₁, ψv2), commoninds(indsᵥ₁, o)))
+  Qᵥ₂, Rᵥ₂ = qr(ψv2, setdiff(uniqueinds(ψv2, indsᵥ₁), commoninds(ψv2, o)))
   theta = noprime(Rᵥ₁ * Λ * Rᵥ₂ * o)
   return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
 end
 
 function _contract_gate(o::AbstractEdge, ψv1, Λ, ψv2)
-  Qᵥ₁, Rᵥ₁ = qr(ψv1, uniqueinds(ψv1, noncommoninds(Λ, ψv2)))
-  Qᵥ₂, Rᵥ₂ = qr(ψv2, uniqueinds(ψv2, noncommoninds(Λ, ψv1)))
+  indsᵥ₁ = noncommoninds(ψv1, Λ)
+  Qᵥ₁, Rᵥ₁ = qr(ψv1, uniqueinds(indsᵥ₁, ψv2))
+  Qᵥ₂, Rᵥ₂ = qr(ψv2, uniqueinds(ψv2, indsᵥ₁))
   theta = Rᵥ₁ * Λ * Rᵥ₂
   return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
 end
