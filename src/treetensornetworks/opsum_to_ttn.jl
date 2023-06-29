@@ -59,7 +59,9 @@ function finite_state_machine(
   ValType = ITensors.determineValType(ITensors.terms(os))
 
   # sparse symbolic representation of the TTN Hamiltonian as a DataGraph of SparseArrays
-  sparseTTN = DataGraph{V,SparseArray{Sum{Scaled{ValType,Prod{Op}}}}}(underlying_graph(sites))
+  sparseTTN = DataGraph{V,SparseArray{Sum{Scaled{ValType,Prod{Op}}}}}(
+    underlying_graph(sites)
+  )
 
   # some things to keep track of
   vs = post_order_dfs_vertices(sites, root_vertex)                                          # store vertices in fixed ordering relative to root
@@ -426,13 +428,20 @@ function isfermionic(t::Vector{Op}, sites::IndsNetwork{V,<:Index}) where {V}
   return (p == -1)
 end
 
-function computeSiteSum(sites::IndsNetwork{V,<:Index}, ops::Sum{Scaled{C,Prod{Op}}})::ITensor where {V,C}
+function computeSiteSum(
+  sites::IndsNetwork{V,<:Index}, ops::Sum{Scaled{C,Prod{Op}}}
+)::ITensor where {V,C}
   ValType = ITensors.determineValType(ITensors.terms(ops))
   v = ITensors.site(ITensors.argument(ops[1])[1])
-  T = convert(ValType, coefficient(ops[1])) * computeSiteProd(sites, ITensors.argument(ops[1]))
+  T =
+    convert(ValType, coefficient(ops[1])) *
+    computeSiteProd(sites, ITensors.argument(ops[1]))
   for j in 2:length(ops)
-    (ITensors.site(ITensors.argument(ops[j])[1]) != v) && error("Mismatch of vertex labels in computeSiteSum")
-    T += convert(ValType, coefficient(ops[j])) * computeSiteProd(sites, ITensors.argument(ops[j]))
+    (ITensors.site(ITensors.argument(ops[j])[1]) != v) &&
+      error("Mismatch of vertex labels in computeSiteSum")
+    T +=
+      convert(ValType, coefficient(ops[j])) *
+      computeSiteProd(sites, ITensors.argument(ops[j]))
   end
   return T
 end

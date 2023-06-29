@@ -77,7 +77,7 @@ using Test
     grid_dims = (2, 1)
     g = named_grid(grid_dims)
     s = siteinds("S=1/2", g)
-    
+
     os1 = OpSum()
     os1 += 1.0, "Sx", (1, 1)
     os2 = OpSum()
@@ -85,7 +85,7 @@ using Test
     H1 = TTN(os1, s)
     H2 = TTN(os2, s)
     H3 = TTN(os1 + os2, s)
-    
+
     @test H1 + H2 ≈ H3 rtol = 1e-6
   end
 end
