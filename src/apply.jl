@@ -123,17 +123,17 @@ end
 _gate_vertices(o::ITensor, ψ) = neighbor_vertices(ψ, o)
 _gate_vertices(o::AbstractEdge, ψ) = [src(o), dst(o)]
 
-function _contract_gate(o::ITensor, ψv1, ψv2)
-  Qᵥ₁, Rᵥ₁ = qr(ψv1, setdiff(uniqueinds(ψv1, ψv2), commoninds(ψv1, o)))
-  Qᵥ₂, Rᵥ₂ = qr(ψv2, setdiff(uniqueinds(ψv2, ψv1), commoninds(ψv2, o)))
-  theta = noprime(Rᵥ₁ * Rᵥ₂ * o)
+function _contract_gate(o::ITensor, ψv1, Λ, ψv2)
+  Qᵥ₁, Rᵥ₁ = qr(ψv1, setdiff(uniqueinds(ψv1, noncommoninds(Λ, ψv2)), commoninds(ψv1, o)))
+  Qᵥ₂, Rᵥ₂ = qr(ψv2, setdiff(uniqueinds(ψv2, noncommoninds(Λ, ψv1)), commoninds(ψv2, o)))
+  theta = noprime(Rᵥ₁ * Λ * Rᵥ₂ * o)
   return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
 end
 
-function _contract_gate(o::AbstractEdge, ψv1, ψv2)
-  Qᵥ₁, Rᵥ₁ = qr(ψv1, uniqueinds(ψv1, ψv2))
-  Qᵥ₂, Rᵥ₂ = qr(ψv2, uniqueinds(ψv2, ψv1))
-  theta = Rᵥ₁ * Rᵥ₂
+function _contract_gate(o::AbstractEdge, ψv1, Λ, ψv2)
+  Qᵥ₁, Rᵥ₁ = qr(ψv1, uniqueinds(ψv1, noncommoninds(Λ, ψv2)))
+  Qᵥ₂, Rᵥ₂ = qr(ψv2, uniqueinds(ψv2, noncommoninds(Λ, ψv1)))
+  theta = Rᵥ₁ * Λ * Rᵥ₂
   return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
 end
 
@@ -167,9 +167,7 @@ function ITensors.apply(
       end
     end
 
-    ψv2 = noprime(ψv2 * bond_tensors[e])
-
-    Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta = _contract_gate(o, ψv1, ψv2)
+    Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta = _contract_gate(o, ψv1, bond_tensors[e], ψv2)
 
     U, S, V = ITensors.svd(
       theta,
