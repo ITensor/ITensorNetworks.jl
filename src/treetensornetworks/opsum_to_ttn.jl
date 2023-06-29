@@ -32,12 +32,11 @@ function crosses_vertex(t::Scaled{C,Prod{Op}}, g::AbstractGraph, v) where {C}
   return v ∈ span(t, g)
 end
 
-# annoying thing to allow sparse arrays with ITensors.Op entries
-# TODO: get rid of this
-function Base.zero(::Type{Scaled{C,Prod{Op}}}) where {C}
-  return zero(C) * Prod([Op("0")])
+# allow sparse arrays with ITensors.Sum entries
+function Base.zero(::Type{S}) where {S<:Sum}
+  return S()
 end
-Base.zero(t::Scaled) = zero(typeof(t))
+Base.zero(t::Sum) = zero(typeof(t))
 
 # 
 # Tree adaptations of functionalities in ITensors.jl/src/physics/autompo/opsum_to_mpo.jl
@@ -60,19 +59,19 @@ function finite_state_machine(
   ValType = ITensors.determineValType(ITensors.terms(os))
 
   # sparse symbolic representation of the TTN Hamiltonian as a DataGraph of SparseArrays
-  sparseTTN = DataGraph{V,SparseArray{Scaled{ValType,Prod{Op}}}}(underlying_graph(sites))
+  sparseTTN = DataGraph{V,SparseArray{Sum{Scaled{ValType,Prod{Op}}}}}(underlying_graph(sites))
 
   # some things to keep track of
   vs = post_order_dfs_vertices(sites, root_vertex)                                          # store vertices in fixed ordering relative to root
   es = post_order_dfs_edges(sites, root_vertex)                                             # store edges in fixed ordering relative to root
-  ranks = Dict(v => degree(sites, v) for v in vs)                                    # rank of every TTN tensor in network
+  ranks = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
   linkmaps = Dict(e => Dict{Prod{Op},Int}() for e in es)                                    # map from term in Hamiltonian to edge channel index for every edge
   site_coef_done = Prod{Op}[]                                                               # list of Hamiltonian terms for which the coefficient has been added to a site factor
   edge_orders = DataGraph{V,Vector{edgetype(sites)}}(underlying_graph(sites))               # relate indices of sparse TTN tensor to incident graph edges for each site
 
   for v in vs
     # collect all nontrivial entries of the TTN tensor at vertex v
-    entries = Tuple{MVector{ranks[v],Int},Scaled{C,Prod{Op}}}[]                             # MVector might be overkill...
+    entries = Tuple{MVector{ranks[v],Int},Scaled{ValType,Prod{Op}}}[]                       # MVector might be overkill...
 
     # for every vertex, find all edges that contain this vertex
     edges = filter(e -> dst(e) == v || src(e) == v, es)
@@ -104,7 +103,7 @@ function finite_state_machine(
         t -> edge_out ∈ edge_path(sites, v, ITensors.site(t)), ITensors.terms(term)
       )
 
-      # translate into tensor entry
+      # translate into sparse tensor entry
       T_inds = fill(-1, ranks[v])
       for din in dims_in
         if !isempty(incoming[edges[din]])
@@ -115,7 +114,7 @@ function finite_state_machine(
         T_inds[dim_out] = ITensors.posInLink!(linkmaps[edge_out], ITensors.argument(term)) # add outgoing channel
       end
       # if term starts at this site, add its coefficient as a site factor
-      site_coef = one(C)
+      site_coef = one(ValType)
       if (isempty(dims_in) || all(T_inds[dims_in] .== -1)) &&
         ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
@@ -138,7 +137,7 @@ function finite_state_machine(
     linkdims = Tuple([
       (isempty(linkmaps[e]) ? 0 : maximum(values(linkmaps[e]))) + 2 for e in edges
     ])
-    T = SparseArray{Scaled{ValType,Prod{Op}},ranks[v]}(undef, linkdims)
+    T = SparseArray{Sum{Scaled{ValType,Prod{Op}}},ranks[v]}(undef, linkdims)
     for (T_inds, t) in entries
       if !isempty(dims_in)
         start_dims = filter(d -> T_inds[d] == -1, dims_in)
@@ -153,11 +152,11 @@ function finite_state_machine(
           T_inds[dim_out] += 1 # shift regular channel
         end
       end
-      T[T_inds...] = t
+      T[T_inds...] += t
     end
     # add starting and ending identity operators
     if !isnothing(dim_out)
-      T[ones(Int, ranks[v])...] = 1 * Prod([Op("Id", v)]) # starting identity is easy
+      T[ones(Int, ranks[v])...] += one(ValType) * Prod([Op("Id", v)]) # starting identity is easy
     end
     # ending identities not so much
     idT_end_inds = ones(Int, ranks[v])
@@ -166,7 +165,7 @@ function finite_state_machine(
     end
     for din in dims_in
       idT_end_inds[din] = linkdims[din]
-      T[idT_end_inds...] = 1 * Prod([Op("Id", v)])
+      T[idT_end_inds...] += one(ValType) * Prod([Op("Id", v)])
       idT_end_inds[din] = 1 # reset
     end
     sparseTTN[v] = T
@@ -202,12 +201,11 @@ function fsmTTN(
     linkdims = dim.(linkinds)
     H[v] = ITensor()
     for (T_ind, t) in nonzero_pairs(fsm[v])
-      (abs(coefficient(t)) > eps()) || continue
+      any(map(x -> abs(coefficient(x)) > eps(), t)) || continue
       T = zeros(ValType, linkdims...)
-      ct = convert(ValType, coefficient(t))
-      T[T_ind] += ct
+      T[T_ind] += one(ValType)
       T = itensor(T, linkinds)
-      H[v] += T * computeSiteProd(sites, ITensors.argument(t))
+      H[v] += T * computeSiteSum(sites, t)
     end
   end
   return H
@@ -426,6 +424,17 @@ function isfermionic(t::Vector{Op}, sites::IndsNetwork{V,<:Index}) where {V}
     end
   end
   return (p == -1)
+end
+
+function computeSiteSum(sites::IndsNetwork{V,<:Index}, ops::Sum{Scaled{C,Prod{Op}}})::ITensor where {V,C}
+  ValType = ITensors.determineValType(ITensors.terms(ops))
+  v = ITensors.site(ITensors.argument(ops[1])[1])
+  T = convert(ValType, coefficient(ops[1])) * computeSiteProd(sites, ITensors.argument(ops[1]))
+  for j in 2:length(ops)
+    (ITensors.site(ITensors.argument(ops[j])[1]) != v) && error("Mismatch of vertex labels in computeSiteSum")
+    T += convert(ValType, coefficient(ops[j])) * computeSiteProd(sites, ITensors.argument(ops[j]))
+  end
+  return T
 end
 
 # only(site(ops[1])) in ITensors breaks for Tuple site labels, had to drop the only
