@@ -4,31 +4,31 @@ MAX_WEIGHT = 1e32
 """
 Outputs a maximimally unbalanced directed binary tree DataGraph defining the desired graph structure
 """
-function path_graph_structure(tn::ITensorNetwork)
-  return path_graph_structure(tn, noncommoninds(Vector{ITensor}(tn)...))
+function path_graph_structure(tn::ITensorNetwork; alg="top_down")
+  return path_graph_structure(tn, noncommoninds(Vector{ITensor}(tn)...); alg=alg)
 end
 
 """
 Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a maximimally unbalanced
 directed binary tree DataGraph of `outinds` defining the desired graph structure
 """
-function path_graph_structure(tn::ITensorNetwork, outinds::Vector{<:Index})
-  return _binary_tree_structure(tn, outinds; maximally_unbalanced=true)
+function path_graph_structure(tn::ITensorNetwork, outinds::Vector{<:Index}; alg="top_down")
+  return _binary_tree_structure(Algorithm(alg), tn, outinds; maximally_unbalanced=true)
 end
 
 """
 Outputs a directed binary tree DataGraph defining the desired graph structure
 """
-function binary_tree_structure(tn::ITensorNetwork)
-  return binary_tree_structure(tn, noncommoninds(Vector{ITensor}(tn)...))
+function binary_tree_structure(tn::ITensorNetwork; alg="top_down")
+  return binary_tree_structure(tn, noncommoninds(Vector{ITensor}(tn)...); alg=alg)
 end
 
 """
 Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a
 directed binary tree DataGraph of `outinds` defining the desired graph structure
 """
-function binary_tree_structure(tn::ITensorNetwork, outinds::Vector{<:Index})
-  return _binary_tree_structure(tn, outinds; maximally_unbalanced=false)
+function binary_tree_structure(tn::ITensorNetwork, outinds::Vector{<:Index}; alg="top_down")
+  return _binary_tree_structure(Algorithm(alg), tn, outinds; maximally_unbalanced=false)
 end
 
 """
@@ -126,7 +126,10 @@ Example:
 # TODO
 """
 function _binary_tree_structure(
-  tn::ITensorNetwork, outinds::Vector{<:Index}; maximally_unbalanced::Bool=false
+  ::Algorithm"bottom_up",
+  tn::ITensorNetwork,
+  outinds::Vector{<:Index};
+  maximally_unbalanced::Bool=false,
 )
   inds_tree_vector = _binary_tree_partition_inds(
     tn, outinds; maximally_unbalanced=maximally_unbalanced
