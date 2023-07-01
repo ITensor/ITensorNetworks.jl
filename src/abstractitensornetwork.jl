@@ -330,7 +330,14 @@ end
 
 adjoint(tn::Union{IndsNetwork,AbstractITensorNetwork}) = prime(tn)
 
-dag(tn::AbstractITensorNetwork) = map_vertex_data(dag, tn)
+#dag(tn::AbstractITensorNetwork) = map_vertex_data(dag, tn)
+function dag(tn::AbstractITensorNetwork)
+  tndag = copy(tn)
+  for v in vertices(tndag)
+    setindex_preserve_graph!(tndag, dag(tndag[v]), v)
+  end
+  return tndag
+end
 
 # TODO: should this make sure that internal indices
 # don't clash?
@@ -644,6 +651,23 @@ function flatten_networks(
   kwargs...,
 )
   return flatten_networks(flatten_networks(tn1, tn2; kwargs...), tn3, tn_tail...; kwargs...)
+end
+
+#Ideally this will dispatch to inner_network but this is a temporary fast version for now
+function norm_network(tn::AbstractITensorNetwork)
+  tnbra = rename_vertices(v -> (v, 1), data_graph(tn))
+  tndag = copy(tn)
+  for v in vertices(tndag)
+    setindex_preserve_graph!(tndag, dag(tndag[v]), v)
+  end
+  tnket = rename_vertices(v -> (v, 2), data_graph(prime(tndag; sites=[])))
+  tntn = ITensorNetwork(union(tnbra, tnket))
+  for v in vertices(tn)
+    if !isempty(commoninds(tntn[(v, 1)], tntn[(v, 2)]))
+      add_edge!(tntn, (v, 1) => (v, 2))
+    end
+  end
+  return tntn
 end
 
 # TODO: Use or replace with `flatten_networks`

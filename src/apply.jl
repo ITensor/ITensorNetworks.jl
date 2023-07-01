@@ -19,7 +19,7 @@ function ITensors.apply(
     if normalize
       oψᵥ ./= norm(oψᵥ)
     end
-    ψ[v⃗[1]] = oψᵥ
+    setindex_preserve_graph!(ψ, oψᵥ, v⃗[1])
   elseif length(v⃗) == 2
     e = v⃗[1] => v⃗[2]
     if !has_edge(ψ, e)
@@ -72,8 +72,8 @@ function ITensors.apply(
       ψᵥ₂ ./= norm(ψᵥ₂)
     end
 
-    ψ[v⃗[1]] = ψᵥ₁
-    ψ[v⃗[2]] = ψᵥ₂
+    setindex_preserve_graph!(ψ, ψᵥ₁, v⃗[1])
+    setindex_preserve_graph!(ψ, ψᵥ₂, v⃗[2])
 
   elseif length(v⃗) < 1
     error("Gate being applied does not share indices with tensor network.")
@@ -123,15 +123,20 @@ end
 _gate_vertices(o::ITensor, ψ) = neighbor_vertices(ψ, o)
 _gate_vertices(o::AbstractEdge, ψ) = [src(o), dst(o)]
 
-function _contract_factorized_gate(o::ITensor, ψv1, ψv2)
-  G1, G2 = factorize(o, Index[commonind(ψv1, o), commonind(ψv1, o)']; cutoff=1e-16)
-  ψv1 = noprime(ψv1 * G1)
-  ψv2 = noprime(ψv2 * G2)
-  return ψv1, ψv2
+function _contract_gate(o::ITensor, ψv1, Λ, ψv2)
+  indsᵥ₁ = noprime(noncommoninds(ψv1, Λ))
+  Qᵥ₁, Rᵥ₁ = qr(ψv1, setdiff(uniqueinds(indsᵥ₁, ψv2), commoninds(indsᵥ₁, o)))
+  Qᵥ₂, Rᵥ₂ = qr(ψv2, setdiff(uniqueinds(ψv2, indsᵥ₁), commoninds(ψv2, o)))
+  theta = noprime(noprime(Rᵥ₁ * Λ) * Rᵥ₂ * o)
+  return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
 end
 
-function _contract_factorized_gate(o::AbstractEdge, ψv1, ψv2)
-  return ψv1, ψv2
+function _contract_gate(o::AbstractEdge, ψv1, Λ, ψv2)
+  indsᵥ₁ = noprime(noncommoninds(ψv1, Λ))
+  Qᵥ₁, Rᵥ₁ = qr(ψv1, uniqueinds(indsᵥ₁, ψv2))
+  Qᵥ₂, Rᵥ₂ = qr(ψv2, uniqueinds(ψv2, indsᵥ₁))
+  theta = noprime(Rᵥ₁ * Λ) * Rᵥ₂
+  return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
 end
 
 #In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
@@ -149,7 +154,7 @@ function ITensors.apply(
   v⃗ = _gate_vertices(o, ψ)
   if length(v⃗) == 2
     e = NamedEdge(v⃗[1] => v⃗[2])
-    ψv1, ψv2 = copy(ψ[src(e)]), copy(ψ[dst(e)])
+    ψv1, ψv2 = ψ[src(e)], ψ[dst(e)]
     e_ind = commonind(ψv1, ψv2)
 
     for vn in neighbors(ψ, src(e))
@@ -164,14 +169,7 @@ function ITensors.apply(
       end
     end
 
-    ψv1, ψv2 = _contract_factorized_gate(o, ψv1, ψv2)
-
-    ψv2 = noprime(ψv2 * bond_tensors[e])
-
-    Qᵥ₁, Rᵥ₁ = factorize(ψv1, uniqueinds(ψv1, ψv2); cutoff=1e-16)
-    Qᵥ₂, Rᵥ₂ = factorize(ψv2, uniqueinds(ψv2, ψv1); cutoff=1e-16)
-
-    theta = Rᵥ₁ * Rᵥ₂
+    Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta = _contract_gate(o, ψv1, bond_tensors[e], ψv2)
 
     U, S, V = ITensors.svd(
       theta,
@@ -201,12 +199,13 @@ function ITensors.apply(
     end
 
     if normalize
-      normalize!(ψv1)
-      normalize!(ψv2)
+      ψv1 /= norm(ψv1)
+      ψv2 /= norm(ψv2)
       normalize!(bond_tensors[e])
     end
 
-    ψ[src(e)], ψ[dst(e)] = ψv1, ψv2
+    setindex_preserve_graph!(ψ, ψv1, src(e))
+    setindex_preserve_graph!(ψ, ψv2, dst(e))
 
     return ψ, bond_tensors
 

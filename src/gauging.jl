@@ -23,6 +23,7 @@ function vidal_gauge(
 
   for e in edges(ψ_vidal)
     vsrc, vdst = src(e), dst(e)
+    ψvsrc, ψvdst = ψ_vidal[vsrc], ψ_vidal[vdst]
 
     s1, s2 = find_subgraph((vsrc, 1), mts), find_subgraph((vdst, 1), mts)
     edge_ind = commoninds(ψ_vidal[vsrc], ψ_vidal[vdst])
@@ -44,8 +45,7 @@ function vidal_gauge(
     inv_rootX = X_U * inv_rootX_D * prime(dag(X_U))
     inv_rootY = Y_U * inv_rootY_D * prime(dag(Y_U))
 
-    ψ_vidal[vsrc] = noprime(ψ_vidal[vsrc] * inv_rootX)
-    ψ_vidal[vdst] = noprime(ψ_vidal[vdst] * inv_rootY)
+    ψvsrc, ψvdst = noprime(ψvsrc * inv_rootX), noprime(ψvdst * inv_rootY)
 
     Ce = rootX * prime(bond_tensors[e])
     replaceinds!(Ce, edge_ind'', edge_ind')
@@ -55,9 +55,12 @@ function vidal_gauge(
 
     new_edge_ind = Index[Index(dim(commoninds(S, U)), tags(first(edge_ind)))]
 
-    ψ_vidal[vsrc] = replaceinds(ψ_vidal[vsrc] * U, commoninds(S, U), new_edge_ind)
-    ψ_vidal[vdst] = replaceinds(ψ_vidal[vdst], edge_ind, edge_ind_sim)
-    ψ_vidal[vdst] = replaceinds(ψ_vidal[vdst] * V, commoninds(V, S), new_edge_ind)
+    ψvsrc = replaceinds(ψvsrc * U, commoninds(S, U), new_edge_ind)
+    ψvdst = replaceinds(ψvdst, edge_ind, edge_ind_sim)
+    ψvdst = replaceinds(ψvdst * V, commoninds(V, S), new_edge_ind)
+
+    setindex_preserve_graph!(ψ_vidal, ψvsrc, vsrc)
+    setindex_preserve_graph!(ψ_vidal, ψvdst, vdst)
 
     S = replaceinds(
       S,
@@ -93,7 +96,7 @@ function vidal_gauge(
   target_canonicalness::Union{Nothing,Float64}=nothing,
   svd_kwargs...,
 )
-  ψψ = ψ ⊗ prime(dag(ψ); sites=[])
+  ψψ = norm_network(ψ)
   Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(Z)
 
@@ -108,17 +111,18 @@ end
 """Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (message tensors)"""
 function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
   ψsymm = copy(ψ)
-  ψψsymm = ψsymm ⊗ prime(dag(ψsymm); sites=[])
+  ψψsymm = norm_network(ψsymm)
   Z = partition(
     ψψsymm; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψsymm))))
   )
   ψsymm_mts = message_tensors_skeleton(Z)
 
   for e in edges(ψsymm)
-    s1, s2 = find_subgraph((src(e), 1), ψsymm_mts), find_subgraph((dst(e), 1), ψsymm_mts)
+    vsrc, vdst = src(e), dst(e)
+    s1, s2 = find_subgraph((vsrc, 1), ψsymm_mts), find_subgraph((vdst, 1), ψsymm_mts)
     root_S = sqrt_diag(bond_tensors[e])
-    ψsymm[src(e)] = noprime(ψsymm[src(e)] * root_S)
-    ψsymm[dst(e)] = noprime(ψsymm[dst(e)] * root_S)
+    setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vsrc]), vsrc)
+    setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vdst]), vdst)
 
     ψsymm_mts[s1 => s2], ψsymm_mts[s2 => s1] = ITensorNetwork(bond_tensors[e]),
     ITensorNetwork(bond_tensors[e])
@@ -157,11 +161,12 @@ function symmetric_to_vidal_gauge(
   ψ_vidal = copy(ψ)
 
   for e in edges(ψ)
-    s1, s2 = find_subgraph((src(e), 1), mts), find_subgraph((dst(e), 1), mts)
+    vsrc, vdst = src(e), dst(e)
+    s1, s2 = find_subgraph((vsrc, 1), mts), find_subgraph((vdst, 1), mts)
     bond_tensors[e] = ITensor(mts[s1 => s2])
     invroot_S = invsqrt_diag(map_diag(x -> x + regularization, bond_tensors[e]))
-    ψ_vidal[src(e)] = noprime(invroot_S * ψ_vidal[src(e)])
-    ψ_vidal[dst(e)] = noprime(invroot_S * ψ_vidal[dst(e)])
+    setindex_preserve_graph!(ψ_vidal, noprime(invroot_S * ψ_vidal[vsrc]), vsrc)
+    setindex_preserve_graph!(ψ_vidal, noprime(invroot_S * ψ_vidal[vdst]), vdst)
   end
 
   return ψ_vidal, bond_tensors

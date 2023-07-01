@@ -6,7 +6,8 @@ using ITensorNetworks:
   message_tensors,
   nested_graph_leaf_vertices,
   vidal_gauge,
-  vidal_to_symmetric_gauge
+  vidal_to_symmetric_gauge,
+  norm_network
 using Test
 using Compat
 using ITensors
@@ -26,7 +27,7 @@ using SplitApplyCombine
   ψ = randomITensorNetwork(s; link_space=χ)
   v1, v2 = (2, 2), (1, 2)
 
-  ψψ = ψ ⊗ prime(dag(ψ); sites=[])
+  ψψ = norm_network(ψ)
 
   #Simple Belief Propagation Grouping
   vertex_groupsSBP = nested_graph_leaf_vertices(
