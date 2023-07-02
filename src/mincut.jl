@@ -4,31 +4,31 @@ MAX_WEIGHT = 1e32
 """
 Outputs a maximimally unbalanced directed binary tree DataGraph defining the desired graph structure
 """
-function path_graph_structure(tn::ITensorNetwork)
-  return path_graph_structure(tn, noncommoninds(Vector{ITensor}(tn)...))
+function path_graph_structure(tn::ITensorNetwork; alg="top_down")
+  return path_graph_structure(tn, noncommoninds(Vector{ITensor}(tn)...); alg=alg)
 end
 
 """
 Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a maximimally unbalanced
 directed binary tree DataGraph of `outinds` defining the desired graph structure
 """
-function path_graph_structure(tn::ITensorNetwork, outinds::Vector{<:Index})
-  return _binary_tree_structure(tn, outinds; maximally_unbalanced=true)
+function path_graph_structure(tn::ITensorNetwork, outinds::Vector{<:Index}; alg="top_down")
+  return _binary_tree_structure(Algorithm(alg), tn, outinds; maximally_unbalanced=true)
 end
 
 """
 Outputs a directed binary tree DataGraph defining the desired graph structure
 """
-function binary_tree_structure(tn::ITensorNetwork)
-  return binary_tree_structure(tn, noncommoninds(Vector{ITensor}(tn)...))
+function binary_tree_structure(tn::ITensorNetwork; alg="top_down")
+  return binary_tree_structure(tn, noncommoninds(Vector{ITensor}(tn)...); alg=alg)
 end
 
 """
 Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a
 directed binary tree DataGraph of `outinds` defining the desired graph structure
 """
-function binary_tree_structure(tn::ITensorNetwork, outinds::Vector{<:Index})
-  return _binary_tree_structure(tn, outinds; maximally_unbalanced=false)
+function binary_tree_structure(tn::ITensorNetwork, outinds::Vector{<:Index}; alg="top_down")
+  return _binary_tree_structure(Algorithm(alg), tn, outinds; maximally_unbalanced=false)
 end
 
 """
@@ -116,6 +116,89 @@ function _maxweightoutinds_tn(tn::ITensorNetwork, outinds::Union{Nothing,Vector{
   return maxweight_tn, out_to_maxweight_ind
 end
 
+function _binary_tree_structure(
+  alg::Algorithm"top_down",
+  tn::ITensorNetwork,
+  outinds::Vector{<:Index};
+  maximally_unbalanced::Bool=false,
+  backend="Metis",
+)
+  nested_vector = _binary_tree_partition_inds_recursive_bisection(
+    tn, outinds; backend=backend
+  )
+  if maximally_unbalanced
+    ordering = collect(Leaves(nested_vector))
+    nested_vector = line_to_tree(ordering)
+  end
+  return _nested_vector_to_digraph(nested_vector)
+end
+
+function _map_nested_vector(dict::Dict, nested_vector)
+  if haskey(dict, nested_vector)
+    return dict[nested_vector]
+  end
+  return map(v -> _map_nested_vector(dict, v), nested_vector)
+end
+
+function _binary_tree_partition_inds_recursive_bisection(
+  tn::ITensorNetwork, outinds::Union{Vector{<:Vector},Vector{<:Index}}; backend="Metis"
+)
+  tn = copy(tn)
+  tensor_to_inds = Dict()
+  ts = Vector{ITensor}()
+  for is in outinds
+    new_t = ITensor(is)
+    push!(ts, new_t)
+    tensor_to_inds[new_t] = is
+  end
+  new_tn = disjoint_union(tn, ITensorNetwork(ts))
+  ts_nested_vector = _tensor_order_recursive_bisection(new_tn, ts; backend=backend)
+  return _map_nested_vector(tensor_to_inds, ts_nested_vector)
+end
+
+function _tensor_order_recursive_bisection(
+  tn::ITensorNetwork,
+  tensors::Vector{ITensor};
+  backend="Metis",
+  left_inds=Set(),
+  right_inds=Set(),
+)
+  ts = intersect(tensors, Vector{ITensor}(tn))
+  if length(ts) <= 1
+    return length(ts) == 1 ? ts[1] : nothing
+  end
+  g_parts = partition(tn; npartitions=2, backend=backend)
+  # order g_parts
+  outinds_1 = noncommoninds(Vector{ITensor}(g_parts[1])...)
+  outinds_2 = noncommoninds(Vector{ITensor}(g_parts[2])...)
+  left_inds_1 = intersect(left_inds, outinds_1)
+  left_inds_2 = intersect(left_inds, outinds_2)
+  right_inds_1 = intersect(right_inds, outinds_1)
+  right_inds_2 = intersect(right_inds, outinds_2)
+  if length(left_inds_2) + length(right_inds_1) > length(left_inds_1) + length(right_inds_2)
+    g_parts[1], g_parts[2] = g_parts[2], g_parts[1]
+  end
+  intersect_inds = intersect(outinds_1, outinds_2)
+  ts1 = _tensor_order_recursive_bisection(
+    g_parts[1],
+    tensors;
+    backend=backend,
+    left_inds=left_inds,
+    right_inds=union(right_inds, intersect_inds),
+  )
+  ts2 = _tensor_order_recursive_bisection(
+    g_parts[2],
+    tensors;
+    backend=backend,
+    left_inds=union(left_inds, intersect_inds),
+    right_inds=right_inds,
+  )
+  if ts1 == nothing || ts2 == nothing
+    return ts1 == nothing ? ts2 : ts1
+  end
+  return [ts1, ts2]
+end
+
 """
 Given a tn and outinds (a subset of noncommoninds of tn), get a `DataGraph`
 with binary tree structure of outinds that will be used in the binary tree partition.
@@ -126,12 +209,15 @@ Example:
 # TODO
 """
 function _binary_tree_structure(
-  tn::ITensorNetwork, outinds::Vector{<:Index}; maximally_unbalanced::Bool=false
+  ::Algorithm"bottom_up",
+  tn::ITensorNetwork,
+  outinds::Vector{<:Index};
+  maximally_unbalanced::Bool=false,
 )
   inds_tree_vector = _binary_tree_partition_inds(
     tn, outinds; maximally_unbalanced=maximally_unbalanced
   )
-  return _nested_vector_to_directed_tree(inds_tree_vector)
+  return _nested_vector_to_digraph(inds_tree_vector)
 end
 
 function _binary_tree_partition_inds(
@@ -146,24 +232,24 @@ function _binary_tree_partition_inds(
     return _binary_tree_partition_inds_mincut(tn_pair, out_to_maxweight_ind)
   else
     return line_to_tree(
-      _binary_tree_partition_inds_maximally_unbalanced(tn_pair, out_to_maxweight_ind)
+      _binary_tree_partition_inds_order_maximally_unbalanced(tn_pair, out_to_maxweight_ind)
     )
   end
 end
 
-function _nested_vector_to_directed_tree(inds_tree_vector::Vector)
-  if length(inds_tree_vector) == 1 && inds_tree_vector[1] isa Index
-    inds_btree = DataGraph(NamedDiGraph([1]), Index)
-    inds_btree[1] = inds_tree_vector[1]
+function _nested_vector_to_digraph(nested_vector::Vector)
+  if length(nested_vector) == 1 && !(nested_vector[1] isa Vector)
+    inds_btree = DataGraph(NamedDiGraph([1]), Any)
+    inds_btree[1] = nested_vector[1]
     return inds_btree
   end
   treenode_to_v = Dict{Union{Vector,Index},Int}()
-  graph = DataGraph(NamedDiGraph(), Index)
+  graph = DataGraph(NamedDiGraph(), Any)
   v = 1
-  for treenode in PostOrderDFS(inds_tree_vector)
+  for treenode in PostOrderDFS(nested_vector)
     add_vertex!(graph, v)
     treenode_to_v[treenode] = v
-    if treenode isa Index
+    if !(treenode isa Vector)
       graph[v] = treenode
     else
       @assert length(treenode) == 2
@@ -179,19 +265,32 @@ end
 Given a tn and outinds, returns a vector of indices representing MPS inds ordering.
 """
 function _mps_partition_inds_order(
-  tn::ITensorNetwork, outinds::Union{Nothing,Vector{<:Index}}
+  tn::ITensorNetwork,
+  outinds::Union{Nothing,Vector{<:Index},Vector{<:Vector}};
+  alg="top_down",
+  backend="Metis",
 )
+  @assert alg in ["top_down", "bottom_up"]
   if outinds == nothing
     outinds = noncommoninds(Vector{ITensor}(tn)...)
   end
   if length(outinds) == 1
     return outinds
   end
-  tn2, out_to_maxweight_ind = _maxweightoutinds_tn(tn, outinds)
-  return _binary_tree_partition_inds_maximally_unbalanced(tn => tn2, out_to_maxweight_ind)
+  if alg == "bottom_up"
+    tn2, out_to_maxweight_ind = _maxweightoutinds_tn(tn, outinds)
+    return _binary_tree_partition_inds_order_maximally_unbalanced(
+      tn => tn2, out_to_maxweight_ind
+    )
+  else
+    nested_vector = _binary_tree_partition_inds_recursive_bisection(
+      tn, outinds; backend=backend
+    )
+    return filter(v -> v in outinds, collect(PreOrderDFS(nested_vector)))
+  end
 end
 
-function _binary_tree_partition_inds_maximally_unbalanced(
+function _binary_tree_partition_inds_order_maximally_unbalanced(
   tn_pair::Pair{<:ITensorNetwork,<:ITensorNetwork}, out_to_maxweight_ind::Dict{Index,Index}
 )
   outinds = collect(keys(out_to_maxweight_ind))
