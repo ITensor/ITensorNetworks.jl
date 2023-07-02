@@ -1,5 +1,6 @@
 using ITensors, OMEinsumContractionOrders
 using Graphs, NamedGraphs
+using KaHyPar, Metis
 using ITensors: contract
 using ITensorNetworks:
   _root,
@@ -10,7 +11,7 @@ using ITensorNetworks:
   _rem_vertex!,
   _DensityMartrixAlgGraph
 
-@testset "test mincut functions on top of MPS" begin
+@testset "test mincut and partition functions on top of MPS" begin
   i = Index(2, "i")
   j = Index(2, "j")
   k = Index(2, "k")
@@ -23,13 +24,15 @@ using ITensorNetworks:
   T = randomITensor(i, j, k, l, m, n, o, p)
   M = MPS(T, (i, j, k, l, m, n, o, p); cutoff=1e-5, maxdim=500)
   tn = ITensorNetwork(M[:])
-  for out in [binary_tree_structure(tn), path_graph_structure(tn)]
-    @test out isa DataGraph
-    @test _is_rooted_directed_binary_tree(out)
-    @test length(vertex_data(out).values) == 8
+  for alg in ["top_down", "bottom_up"]
+    for out in [binary_tree_structure(tn; alg=alg), path_graph_structure(tn; alg=alg)]
+      @test out isa DataGraph
+      @test _is_rooted_directed_binary_tree(out)
+      @test length(vertex_data(out).values) == 8
+    end
+    out = _mps_partition_inds_order(tn, [o, p, i, j, k, l, m, n]; alg=alg)
+    @test out in [[i, j, k, l, m, n, o, p], [p, o, n, m, l, k, j, i]]
   end
-  out = _mps_partition_inds_order(tn, [o, p, i, j, k, l, m, n])
-  @test out in [[i, j, k, l, m, n, o, p], [p, o, n, m, l, k, j, i]]
   p1, p2 = _mincut_partitions(tn, [k, l], [m, n])
   # When MPS bond dimensions are large, the partition will not across internal inds
   @test (length(p1) == 0) || (length(p2) == 0)
@@ -51,20 +54,26 @@ end
     tn[v...] = network[v...]
   end
   tn = ITensorNetwork(vec(tn[:, :, 1]))
-  for out in [binary_tree_structure(tn), path_graph_structure(tn)]
-    @test out isa DataGraph
-    @test _is_rooted_directed_binary_tree(out)
-    @test length(vertex_data(out).values) == 9
+  for alg in ["top_down", "bottom_up"]
+    for out in [binary_tree_structure(tn; alg=alg), path_graph_structure(tn; alg=alg)]
+      @test out isa DataGraph
+      @test _is_rooted_directed_binary_tree(out)
+      @test length(vertex_data(out).values) == 9
+    end
   end
 end
 
 @testset "test partition with mincut_recursive_bisection alg of disconnected tn" begin
   inds = [Index(2, "$i") for i in 1:5]
   tn = ITensorNetwork([randomITensor(i) for i in inds])
-  par = partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
-  networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
-  network = vcat(networks...)
-  @test isapprox(contract(Vector{ITensor}(tn)), contract(network...))
+  for alg in ["top_down", "bottom_up"]
+    par = partition(
+      tn, binary_tree_structure(tn; alg=alg); alg="mincut_recursive_bisection"
+    )
+    networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
+    network = vcat(networks...)
+    @test isapprox(contract(Vector{ITensor}(tn)), contract(network...))
+  end
 end
 
 @testset "test partition with mincut_recursive_bisection alg and approx_itensornetwork" begin
