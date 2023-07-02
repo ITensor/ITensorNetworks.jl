@@ -45,6 +45,20 @@ using ITensorNetworks:
   @test sort(p2) == [5, 6, 7, 8]
 end
 
+@testset "test _mps_partition_inds_order of a sub 2D grid" begin
+  N = (8, 8)
+  linkdim = 2
+  network = randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  tn = Array{ITensor,length(N)}(undef, N...)
+  for v in vertices(network)
+    tn[v...] = network[v...]
+  end
+  tensors = vec(tn)[1:20]
+  tn = ITensorNetwork(tensors)
+  @info _mps_partition_inds_order(tn, noncommoninds(tensors...); alg="top_down")
+  # TODO: think about how to check this
+end
+
 @testset "test _binary_tree_partition_inds of a 2D network" begin
   N = (3, 3, 3)
   linkdim = 2

@@ -130,19 +130,42 @@ function _binary_tree_structure(
     ordering = collect(Leaves(nested_vector))
     nested_vector = line_to_tree(ordering)
   end
-  return _nested_vector_to_directed_tree(nested_vector)
+  return _nested_vector_to_digraph(nested_vector)
+end
+
+function _map_nested_vector(dict::Dict, nested_vector)
+  if haskey(dict, nested_vector)
+    return dict[nested_vector]
+  end
+  return map(v -> _map_nested_vector(dict, v), nested_vector)
 end
 
 function _binary_tree_partition_inds_recursive_bisection(
+  tn::ITensorNetwork, outinds::Union{Vector{<:Vector},Vector{<:Index}}; backend="Metis"
+)
+  tn = copy(tn)
+  tensor_to_inds = Dict()
+  ts = Vector{ITensor}()
+  for is in outinds
+    new_t = ITensor(is)
+    push!(ts, new_t)
+    tensor_to_inds[new_t] = is
+  end
+  new_tn = disjoint_union(tn, ITensorNetwork(ts))
+  ts_nested_vector = _tensor_order_recursive_bisection(new_tn, ts; backend=backend)
+  return _map_nested_vector(tensor_to_inds, ts_nested_vector)
+end
+
+function _tensor_order_recursive_bisection(
   tn::ITensorNetwork,
-  outinds::Vector{<:Index};
+  tensors::Vector{ITensor};
   backend="Metis",
   left_inds=Set(),
   right_inds=Set(),
 )
-  inds = intersect(outinds, noncommoninds(Vector{ITensor}(tn)...))
-  if length(inds) <= 1
-    return length(inds) == 1 ? inds[1] : nothing
+  ts = intersect(tensors, Vector{ITensor}(tn))
+  if length(ts) <= 1
+    return length(ts) == 1 ? ts[1] : nothing
   end
   g_parts = partition(tn; npartitions=2, backend=backend)
   # order g_parts
@@ -156,24 +179,24 @@ function _binary_tree_partition_inds_recursive_bisection(
     g_parts[1], g_parts[2] = g_parts[2], g_parts[1]
   end
   intersect_inds = intersect(outinds_1, outinds_2)
-  inds1 = _binary_tree_partition_inds_recursive_bisection(
+  ts1 = _tensor_order_recursive_bisection(
     g_parts[1],
-    outinds;
+    tensors;
     backend=backend,
     left_inds=left_inds,
     right_inds=union(right_inds, intersect_inds),
   )
-  inds2 = _binary_tree_partition_inds_recursive_bisection(
+  ts2 = _tensor_order_recursive_bisection(
     g_parts[2],
-    outinds;
+    tensors;
     backend=backend,
     left_inds=union(left_inds, intersect_inds),
     right_inds=right_inds,
   )
-  if inds1 == nothing || inds2 == nothing
-    return inds1 == nothing ? inds2 : inds1
+  if ts1 == nothing || ts2 == nothing
+    return ts1 == nothing ? ts2 : ts1
   end
-  return [inds1, inds2]
+  return [ts1, ts2]
 end
 
 """
@@ -194,7 +217,7 @@ function _binary_tree_structure(
   inds_tree_vector = _binary_tree_partition_inds(
     tn, outinds; maximally_unbalanced=maximally_unbalanced
   )
-  return _nested_vector_to_directed_tree(inds_tree_vector)
+  return _nested_vector_to_digraph(inds_tree_vector)
 end
 
 function _binary_tree_partition_inds(
@@ -214,19 +237,19 @@ function _binary_tree_partition_inds(
   end
 end
 
-function _nested_vector_to_directed_tree(inds_tree_vector::Vector)
-  if length(inds_tree_vector) == 1 && inds_tree_vector[1] isa Index
-    inds_btree = DataGraph(NamedDiGraph([1]), Index)
-    inds_btree[1] = inds_tree_vector[1]
+function _nested_vector_to_digraph(nested_vector::Vector)
+  if length(nested_vector) == 1 && !(nested_vector[1] isa Vector)
+    inds_btree = DataGraph(NamedDiGraph([1]), Any)
+    inds_btree[1] = nested_vector[1]
     return inds_btree
   end
   treenode_to_v = Dict{Union{Vector,Index},Int}()
-  graph = DataGraph(NamedDiGraph(), Index)
+  graph = DataGraph(NamedDiGraph(), Any)
   v = 1
-  for treenode in PostOrderDFS(inds_tree_vector)
+  for treenode in PostOrderDFS(nested_vector)
     add_vertex!(graph, v)
     treenode_to_v[treenode] = v
-    if treenode isa Index
+    if !(treenode isa Vector)
       graph[v] = treenode
     else
       @assert length(treenode) == 2
@@ -243,7 +266,7 @@ Given a tn and outinds, returns a vector of indices representing MPS inds orderi
 """
 function _mps_partition_inds_order(
   tn::ITensorNetwork,
-  outinds::Union{Nothing,Vector{<:Index}};
+  outinds::Union{Nothing,Vector{<:Index},Vector{<:Vector}};
   alg="top_down",
   backend="Metis",
 )
@@ -263,7 +286,7 @@ function _mps_partition_inds_order(
     nested_vector = _binary_tree_partition_inds_recursive_bisection(
       tn, outinds; backend=backend
     )
-    return collect(Leaves(nested_vector))
+    return filter(v -> v in outinds, collect(PreOrderDFS(nested_vector)))
   end
 end
 
