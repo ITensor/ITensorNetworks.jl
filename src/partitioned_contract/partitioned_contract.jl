@@ -20,7 +20,6 @@ function partitioned_contract(
     # ordering of part of the uncontracted edges that are to be contracted
     # in the next contraction (first contraction in the path of `v`).
     v_to_ordered_p_edges = Dict{Tuple,Tuple}()
-    # TODO: children
     for (ii, v) in enumerate(traversal)
       @info "$(ii)/$(length(traversal)) th ansatz tree construction"
       p_leaves = vcat(v[1:(end - 1)]...)
@@ -30,6 +29,7 @@ function partitioned_contract(
       # Get the reference ordering and target ordering of `v`
       v_inds = map(e -> Set(p_edge_to_ordered_inds[e]), p_edges)
       if v in leaves
+        # TODO
         ref_ordering, ordering = _constrained_minswap_inds_ordering(v_inds, tn, path)
       else
         c1, c2 = child_vertices(contraction_tree, v)
@@ -39,6 +39,7 @@ function partitioned_contract(
         c2_inds_ordering = map(
           e -> Set(p_edge_to_ordered_inds[e]), v_to_ordered_p_edges[c2][2]
         )
+        # TODO
         ref_ordering, ordering = _constrained_minswap_inds_ordering(
           v_inds, tn, path, c1_inds_ordering, c2_inds_ordering
         )
@@ -133,10 +134,6 @@ end
 function _ind_orderings(partition::DataGraph)
   input_tn = # TODO
   # TODO: use `_mps_partition_inds_order` with default `alg` and `backend`
-end
-
-function _constrained_mincost_inds_ordering(inds_set::Set, tn::ITensorNetwork, path::Vector)
-  # TODO: edge set ordering of tn
 end
 
 function _ansatz_tree(inds_orderings::Vector, ortho_center::Integer, ansatz::String)
