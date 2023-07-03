@@ -13,35 +13,51 @@ function partitioned_contract(
     traversal = post_order_dfs_vertices(contraction_tree, _root(contraction_tree))
     contractions = setdiff(traversal, leaves)
     p_edge_to_ordered_inds = _ind_orderings(partition)
-    # build the orderings used for the ansatz tree
-    # For each pair in `v_to_ordered_p_edges`, the first item
-    # is the ordering of uncontracted edges for the contraction `v`,
-    # and the second item is the ordering of part of the uncontracted edges
-    # that are to be contracted in the next contraction (first contraction
-    # in the path of `v`).
-    v_to_ordered_p_edges = Dict{Tuple,Pair}()
-    for (ii, v) in enumerate(contractions)
-      @info "$(ii)/$(length(contractions)) th ansatz tree construction"
-      p_leaves = [v[1]..., v[2]...]
+    # Build the orderings used for the ansatz tree.
+    # For each tuple in `v_to_ordered_p_edges`, the first item is the
+    # reference ordering of uncontracted edges for the contraction `v`,
+    # the second item is the target ordering, and the third item is the
+    # ordering of part of the uncontracted edges that are to be contracted
+    # in the next contraction (first contraction in the path of `v`).
+    v_to_ordered_p_edges = Dict{Tuple,Tuple}()
+    # TODO: children
+    for (ii, v) in enumerate(traversal)
+      @info "$(ii)/$(length(traversal)) th ansatz tree construction"
+      p_leaves = vcat(v[1:(end - 1)]...)
       tn = ITensorNetwork(mapreduce(l -> Vector{ITensor}(partition[l]), vcat, p_leaves))
       path = filter(u -> issubset(p_leaves, u[1]) || issubset(p_leaves, u[2]), contractions)
       p_edges = _neighbor_edges(partition, p_leaves)
-      inds_set = [Set(p_edge_to_ordered_inds[e]) for e in p_edges]
-      ordering = _constrained_minswap_inds_ordering(inds_set, tn, path)
-      p_edges = p_edges[sortperm(ordering)]
-      # update the contracted ordering and `v_to_ordered_p_edges[v]`.
-      # path[1] is the vertex to be contracted with `v` next.
-      if haskey(v_to_ordered_p_edges, path[1])
-        contract_edges = v_to_ordered_p_edges[path[1]].second
+      # Get the reference ordering and target ordering of `v`
+      v_inds = map(e -> Set(p_edge_to_ordered_inds[e]), p_edges)
+      if v in leaves
+        ref_ordering, ordering = _constrained_minswap_inds_ordering(v_inds, tn, path)
+      else
+        c1, c2 = child_vertices(contraction_tree, v)
+        c1_inds_ordering = map(
+          e -> Set(p_edge_to_ordered_inds[e]), v_to_ordered_p_edges[c1][2]
+        )
+        c2_inds_ordering = map(
+          e -> Set(p_edge_to_ordered_inds[e]), v_to_ordered_p_edges[c2][2]
+        )
+        ref_ordering, ordering = _constrained_minswap_inds_ordering(
+          v_inds, tn, path, c1_inds_ordering, c2_inds_ordering
+        )
+      end
+      ref_p_edges = p_edges[ref_ordering]
+      p_edges = p_edges[ordering]
+      # Update the contracted ordering and `v_to_ordered_p_edges[v]`.
+      # `sibling` is the vertex to be contracted with `v` next.
+      sibling = setdiff(child_vertices(contractions, path[1]), [v])[1]
+      if haskey(v_to_ordered_p_edges, sibling)
+        contract_edges = v_to_ordered_p_edges[sibling][3]
         @assert(_is_neighbored_subset(p_edges, Set(contract_edges)))
         p_edges = _replace_subarray(p_edges, contract_edges)
       else
-        p_leaves_2 = [path[1][1]..., path[1][2]...]
+        p_leaves_2 = vcat(sibling[1:(end - 1)]...)
         p_edges_2 = _neighbor_edges(partition, p_leaves_2)
         contract_edges = intersect(p_edges, p_edges_2)
-        contract_edges = filter(e -> e in contract_edges, p_edges)
       end
-      v_to_ordered_p_edges[v] = Pair(p_edges, contract_edges)
+      v_to_ordered_p_edges[v] = (ref_p_edges, p_edges, contract_edges)
     end
     # start approx_itensornetwork
     v_to_tn = Dict{Tuple,ITensorNetwork}()
@@ -55,7 +71,8 @@ function partitioned_contract(
       c1, c2 = child_vertices(contraction_tree, v)
       tn = disjoint_union(v_to_tn[c1], v_to_tn[c2])
       # TODO: rename tn since the names will be too long.
-      p_edges = v_to_ordered_p_edges[v].first
+      # TODO: swap size
+      p_edges = v_to_ordered_p_edges[v][2]
       if p_edges == []
         # TODO: edge case with output being a scalar
       end
@@ -115,6 +132,7 @@ end
 
 function _ind_orderings(partition::DataGraph)
   input_tn = # TODO
+  # TODO: use `_mps_partition_inds_order` with default `alg` and `backend`
 end
 
 function _constrained_mincost_inds_ordering(inds_set::Set, tn::ITensorNetwork, path::Vector)

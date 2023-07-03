@@ -19,10 +19,11 @@ function contract(
 end
 
 function contract(
-  alg::Algorithm"partitioned_contraction",
+  alg::Algorithm"partitioned_contract",
   tn::AbstractITensorNetwork;
   output_structure::Function=path_graph_structure,
   kwargs...,
 )
+  # TODO
   return approx_itensornetwork(alg, tn, output_structure; kwargs...)
 end
