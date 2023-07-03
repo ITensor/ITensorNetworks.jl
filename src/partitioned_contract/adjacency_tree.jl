@@ -232,21 +232,3 @@ function _adjacency_tree(v::Tuple, path::Vector, partition::DataGraph, p_edge_to
     return adjacency_tree
   end
 end
-
-function _constrained_mincost_inds_ordering(
-  inds_set::Vector{Set},
-  constraint_tree::NamedDiGraph{Tuple{Tuple,String}},
-  tn::ITensorNetwork,
-)
-  # TODO: edge set ordering of tn
-end
-
-function _constrained_mincost_inds_ordering(
-  inds_set::Vector{Set},
-  constraint_tree::NamedDiGraph{Tuple{Tuple,String}},
-  tn::ITensorNetwork,
-  input_order_1::Vector{Set},
-  input_order_2::Vector{Set},
-)
-  # TODO: edge set ordering of tn
-end

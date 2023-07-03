@@ -30,9 +30,9 @@ function partitioned_contract(
       v_inds = map(e -> Set(p_edge_to_ordered_inds[e]), p_edges)
       constraint_tree = _adjacency_tree(v, path, partition, p_edge_to_ordered_inds)
       if v in leaves
-        # TODO
-        ref_ordering, ordering = _constrained_minswap_inds_ordering(
-          v_inds, constraint_tree, tn
+        ref_inds_ordering = _mps_partition_inds_order(tn, v_inds; alg="top_down")
+        inds_ordering = _constrained_minswap_inds_ordering(
+          constraint_tree, ref_inds_ordering, tn
         )
       else
         c1, c2 = child_vertices(contraction_tree, v)
@@ -42,13 +42,12 @@ function partitioned_contract(
         c2_inds_ordering = map(
           e -> Set(p_edge_to_ordered_inds[e]), v_to_ordered_p_edges[c2][2]
         )
-        # TODO
-        ref_ordering, ordering = _constrained_minswap_inds_ordering(
-          v_inds, constraint_tree, tn, c1_inds_ordering, c2_inds_ordering
+        ref_inds_ordering, inds_ordering = _constrained_minswap_inds_ordering(
+          constraint_tree, c1_inds_ordering, c2_inds_ordering, tn
         )
       end
-      ref_p_edges = p_edges[ref_ordering]
-      p_edges = p_edges[ordering]
+      ref_p_edges = p_edges[_findperm(v_inds, ref_inds_ordering)]
+      p_edges = p_edges[_findperm(v_inds, inds_ordering)]
       # Update the contracted ordering and `v_to_ordered_p_edges[v]`.
       # `sibling` is the vertex to be contracted with `v` next.
       sibling = setdiff(child_vertices(contractions, path[1]), [v])[1]
@@ -93,45 +92,6 @@ function partitioned_contract(
       log_accumulated_norm += log_root_norm
     end
   end
-end
-
-function _is_neighbored_subset(v::Vector, set::Set)
-  if set == Set()
-    return true
-  end
-  @assert issubset(set, Set(v))
-  i_begin = 1
-  while !(i_begin in set)
-    i_begin += 1
-  end
-  i_end = length(v)
-  while !(i_end in set)
-    i_end -= 1
-  end
-  return Set(v[i_begin:i_end]) == set
-end
-
-# replace the subarray of `v1` with `v2`
-function _replace_subarray(v1::Vector, v2::Vector)
-  if v2 == []
-    return v1
-  end
-  v1 = copy(v1)
-  num = 0
-  for i in 1:length(v1)
-    if v1[i] in v2
-      num += 1
-      v1[i] = v2[num]
-    end
-  end
-  @assert num == length(v2)
-  return v1
-end
-
-function _neighbor_edges(graph, vs)
-  return filter(
-    e -> (e.src in vs && !(e.dst in vs)) || (e.dst in vs && !(e.src in vs)), edges(graph)
-  )
 end
 
 function _ind_orderings(partition::DataGraph)
