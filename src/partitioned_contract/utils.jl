@@ -31,6 +31,20 @@ function _replace_subarray(v1::Vector, v2::Vector)
   return v1
 end
 
+function _split_array(v::Vector, sub_v::Vector)
+  left_v = []
+  right_v = []
+  target_array = left_v
+  for i in v
+    if i in sub_v
+      target_array = right_v
+      continue
+    end
+    push!(target_array, i)
+  end
+  return left_v, right_v
+end
+
 function _neighbor_edges(graph, vs)
   return filter(
     e -> (e.src in vs && !(e.dst in vs)) || (e.dst in vs && !(e.src in vs)), edges(graph)

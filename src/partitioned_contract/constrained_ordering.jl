@@ -41,8 +41,8 @@ function _constrained_minswap_inds_ordering(
   tn::ITensorNetwork,
 )
   inter_igs = intersect(input_order_1, input_order_2)
-  left_1, right_1 = _split_vector(input_order_1, inter_igs)
-  left_2, right_2 = _split_vector(input_order_2, inter_igs)
+  left_1, right_1 = _split_array(input_order_1, inter_igs)
+  left_2, right_2 = _split_array(input_order_2, inter_igs)
   # @info "lengths of the input partitions",
   # sort([length(left_1), length(right_2), length(left_2), length(right_2)])
   num_swaps_1 = min(length(left_1), length(left_2)) + min(length(right_1), length(right_2))
@@ -119,18 +119,4 @@ function _low_swap_merge(l1_left, l1_right, l2_left, l2_right)
     right_lists = [[l2_right..., l1_right...], [l1_right..., l2_right...]]
   end
   return _make_list(left_lists, right_lists)
-end
-
-function _split_vector(v::Vector, sub_v::Vector)
-  left_v = []
-  right_v = []
-  target_array = left_v
-  for i in v
-    if i in sub_v
-      target_array = right_v
-      continue
-    end
-    push!(target_array, i)
-  end
-  return left_v, right_v
 end
