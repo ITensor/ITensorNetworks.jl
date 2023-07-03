@@ -28,9 +28,12 @@ function partitioned_contract(
       p_edges = _neighbor_edges(partition, p_leaves)
       # Get the reference ordering and target ordering of `v`
       v_inds = map(e -> Set(p_edge_to_ordered_inds[e]), p_edges)
+      constraint_tree = _adjacency_tree(v, path, partition, p_edge_to_ordered_inds)
       if v in leaves
         # TODO
-        ref_ordering, ordering = _constrained_minswap_inds_ordering(v_inds, tn, path)
+        ref_ordering, ordering = _constrained_minswap_inds_ordering(
+          v_inds, constraint_tree, tn
+        )
       else
         c1, c2 = child_vertices(contraction_tree, v)
         c1_inds_ordering = map(
@@ -41,7 +44,7 @@ function partitioned_contract(
         )
         # TODO
         ref_ordering, ordering = _constrained_minswap_inds_ordering(
-          v_inds, tn, path, c1_inds_ordering, c2_inds_ordering
+          v_inds, constraint_tree, tn, c1_inds_ordering, c2_inds_ordering
         )
       end
       ref_p_edges = p_edges[ref_ordering]
@@ -132,7 +135,7 @@ function _neighbor_edges(graph, vs)
 end
 
 function _ind_orderings(partition::DataGraph)
-  input_tn = # TODO
+  # input_tn = # TODO
   # TODO: use `_mps_partition_inds_order` with default `alg` and `backend`
 end
 

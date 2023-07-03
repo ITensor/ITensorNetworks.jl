@@ -183,26 +183,34 @@ function update_adjacency_tree!(
 end
 
 # Generate the adjacency tree of a contraction tree
-# Args:
-# ==========
-# ctree: the input contraction tree
-# path: the path containing ancestor ctrees of the input ctree
-# ctree_to_igs: mapping each ctree to neighboring index groups
-function _generate_adjacency_tree(ctree, path, ctree_to_open_edges)
+# TODO: add test
+function _adjacency_tree(v::Tuple, path::Vector, partition::DataGraph, p_edge_to_inds::Dict)
   @timeit_debug ITensors.timer "_generate_adjacency_tree" begin
     # mapping each index group to adjacent input igs
     ig_to_input_adj_igs = Dict{Any,Set}()
     # mapping each igs to an adjacency tree
     adjacency_tree = NamedDiGraph{Tuple{Tuple,String}}()
-    for ig in ctree_to_open_edges[ctree]
+    p_leaves = vcat(v[1:(end - 1)]...)
+    p_edges = _neighbor_edges(partition, p_leaves)
+    for ig in map(e -> Set(p_edge_to_inds[e]), p_edges)
       ig_to_input_adj_igs[ig] = Set([ig])
       v = ((ig,), "unordered")
       add_vertex!(adjacency_tree, v)
     end
-    for (i, a) in path
-      inter_igs = intersect(ctree_to_open_edges[a[1]], ctree_to_open_edges[a[2]])
-      new_igs_index = (i == 1) ? 2 : 1
-      new_igs = setdiff(ctree_to_open_edges[a[new_igs_index]], inter_igs)
+    for contraction in path
+      children = child_vertices(contractions, path[1])
+      ancester = filter(u -> p_leaves in vcat(u[1:(end - 1)]...), children)[1]
+      sibling = setdiff(children, [ancester])[1]
+      ancester_igs = map(
+        e -> Set(p_edge_to_inds[e]),
+        _neighbor_edges(partition, vcat(ancester[1:(end - 1)]...)),
+      )
+      sibling_igs = map(
+        e -> Set(p_edge_to_inds[e]),
+        _neighbor_edges(partition, vcat(sibling[1:(end - 1)]...)),
+      )
+      inter_igs = intersect(ancester_igs, sibling_igs)
+      new_igs = setdiff(sibling_igs, inter_igs)
       adjacent_igs = union([ig_to_input_adj_igs[ig] for ig in inter_igs]...)
       # `inter_igs != []` means it's a tensor product
       if inter_igs != []
@@ -225,14 +233,18 @@ function _generate_adjacency_tree(ctree, path, ctree_to_open_edges)
   end
 end
 
-function _constrained_mincost_inds_ordering(inds_set::Vector{Set}, tn::ITensorNetwork, path::Vector)
+function _constrained_mincost_inds_ordering(
+  inds_set::Vector{Set},
+  constraint_tree::NamedDiGraph{Tuple{Tuple,String}},
+  tn::ITensorNetwork,
+)
   # TODO: edge set ordering of tn
 end
 
 function _constrained_mincost_inds_ordering(
   inds_set::Vector{Set},
+  constraint_tree::NamedDiGraph{Tuple{Tuple,String}},
   tn::ITensorNetwork,
-  path::Vector,
   input_order_1::Vector{Set},
   input_order_2::Vector{Set},
 )

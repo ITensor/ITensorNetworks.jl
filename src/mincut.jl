@@ -141,13 +141,13 @@ function _map_nested_vector(dict::Dict, nested_vector)
 end
 
 function _binary_tree_partition_inds_recursive_bisection(
-  tn::ITensorNetwork, outinds::Union{Vector{<:Vector},Vector{<:Index}}; backend="Metis"
+  tn::ITensorNetwork, outinds::Union{Vector{Set},Vector{<:Index}}; backend="Metis"
 )
   tn = copy(tn)
   tensor_to_inds = Dict()
   ts = Vector{ITensor}()
   for is in outinds
-    new_t = ITensor(is)
+    new_t = ITensor(collect(is)...)
     push!(ts, new_t)
     tensor_to_inds[new_t] = is
   end
@@ -266,7 +266,7 @@ Given a tn and outinds, returns a vector of indices representing MPS inds orderi
 """
 function _mps_partition_inds_order(
   tn::ITensorNetwork,
-  outinds::Union{Nothing,Vector{<:Index},Vector{<:Vector}};
+  outinds::Union{Nothing,Vector{<:Index},Vector{Set}};
   alg="top_down",
   backend="Metis",
 )
