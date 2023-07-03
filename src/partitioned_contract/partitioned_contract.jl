@@ -5,6 +5,7 @@ function partitioned_contract(
   approx_itensornetwork_alg="density_matrix",
   cutoff=1e-15,
   maxdim=10000,
+  swap_size=1,
   contraction_sequence_alg,
   contraction_sequence_kwargs,
 )
@@ -50,6 +51,9 @@ function partitioned_contract(
       p_edges = p_edges[_findperm(v_inds, inds_ordering)]
       # Update the contracted ordering and `v_to_ordered_p_edges[v]`.
       # `sibling` is the vertex to be contracted with `v` next.
+      # Note: the contracted ordering in `ref_p_edges` is not changed,
+      # since `ref_p_edges` focuses on minimizing the number of swaps
+      # rather than making later contractions efficient.
       sibling = setdiff(child_vertices(contractions, path[1]), [v])[1]
       if haskey(v_to_ordered_p_edges, sibling)
         contract_edges = v_to_ordered_p_edges[sibling][3]
@@ -62,35 +66,55 @@ function partitioned_contract(
       end
       v_to_ordered_p_edges[v] = (ref_p_edges, p_edges, contract_edges)
     end
-    # start approx_itensornetwork
+    # start approximate contraction
     v_to_tn = Dict{Tuple,ITensorNetwork}()
     for v in leaves
       @assert length(v[1]) == 1
       v_to_tn[v] = partition[v[1][1]]
     end
-    log_accumulated_norm = 0.0
+    log_acc_norm = 0.0
     for (ii, v) in enumerate(contractions)
       @info "$(ii)/$(length(contractions)) th tree approximation"
       c1, c2 = child_vertices(contraction_tree, v)
-      tn = disjoint_union(v_to_tn[c1], v_to_tn[c2])
-      # TODO: rename tn since the names will be too long.
-      # TODO: swap size
-      p_edges = v_to_ordered_p_edges[v][2]
-      if p_edges == []
-        # TODO: edge case with output being a scalar
+      tn = ITensorNetwork()
+      ts = vcat(Vector{ITensor}(v_to_tn[c1]), Vector{ITensor}(v_to_tn[c2]))
+      for (i, t) in enumerate(ts)
+        add_vertex!(tn, i)
+        tn[i] = t
       end
-      inds_orderings = [p_edge_to_ordered_inds[e] for e in p_edges]
-      v_to_tn[v], log_root_norm = approx_itensornetwork(
-        tn,
-        _ansatz_tree(inds_orderings, _ortho_center(v_to_ordered_p_edges[v]), ansatz);
-        alg=approx_itensornetwork_alg,
-        cutoff=cutoff,
-        maxdim=maxdim,
-        contraction_sequence_alg=contraction_sequence_alg,
-        contraction_sequence_kwargs=contraction_sequence_kwargs,
-      )
-      log_accumulated_norm += log_root_norm
+      ref_p_edges, p_edges, contract_edges = v_to_ordered_p_edges[v]
+      if p_edges == []
+        @assert v == contractions[end]
+        out = _optcontract(
+          Vector{ITensor}(tn);
+          contraction_sequence_alg=contraction_sequence_alg,
+          contraction_sequence_kwargs=contraction_sequence_kwargs,
+        )
+        out_nrm = norm(out)
+        out /= out_nrm
+        return ITensorNetwork(out), log_acc_norm + log(out_nrm)
+      end
+      for edge_order in _intervals(ref_p_edges, p_edges; size=swap_size)
+        inds_ordering = map(e -> p_edge_to_ordered_inds[e], edge_order)
+        ortho_center = if edge_order == p_edges
+          _ortho_center(p_edges, contract_edges)
+        else
+          div(length(edge_order), 2, RoundUp)
+        end
+        tn, log_norm = approx_itensornetwork(
+          tn,
+          _ansatz_tree(inds_ordering, ansatz, ortho_center);
+          alg=approx_itensornetwork_alg,
+          cutoff=cutoff,
+          maxdim=maxdim,
+          contraction_sequence_alg=contraction_sequence_alg,
+          contraction_sequence_kwargs=contraction_sequence_kwargs,
+        )
+        log_acc_norm += log_norm
+      end
+      v_to_tn[v] = tn
     end
+    return v_to_tn[contractions[end]], log_acc_norm
   end
 end
 
@@ -99,12 +123,37 @@ function _ind_orderings(partition::DataGraph)
   # TODO: use `_mps_partition_inds_order` with default `alg` and `backend`
 end
 
-function _ansatz_tree(inds_orderings::Vector, ortho_center::Integer, ansatz::String)
+function _ansatz_tree(inds_orderings::Vector, ansatz::String, ortho_center::Integer)
   # TODO
 end
 
-function _ortho_center(edges_to_contract_edges)
+function _ortho_center(edges::Vector, contract_edges::Vector)
   # TODO
+end
+
+function _permute(v::Vector, perms)
+  v = copy(v)
+  for p in perms
+    temp = v[p]
+    v[p] = v[p + 1]
+    v[p + 1] = temp
+  end
+  return v
+end
+
+function _intervals(v1::Vector, v2::Vector; size)
+  if v1 == v2
+    return [v2]
+  end
+  perms_list = collect(Iterators.partition(_bubble_sort(v1, v2), size))
+  out = [v1]
+  current = v1
+  for perms in perms_list
+    v = _permute(current, perms)
+    push!(out, v)
+    current = v
+  end
+  return out
 end
 
 # function ordered_igs_to_binary_tree(ordered_igs, contract_igs, ig_to_linear_order; ansatz)
