@@ -52,7 +52,7 @@ function _neighbor_edges(graph, vs)
 end
 
 # Find the permutation to change `v1` into `v2`
-function _findperm(v1, v2)
+function _findperm(v1::Vector, v2::Vector)
   index_to_number = Dict()
   for (i, v) in enumerate(v2)
     index_to_number[v] = i

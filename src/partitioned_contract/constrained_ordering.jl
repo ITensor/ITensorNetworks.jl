@@ -1,17 +1,18 @@
+# TODO: test needed
 function _constrained_minswap_inds_ordering(
   constraint_tree::NamedDiGraph{Tuple{Tuple,String}},
-  ref_ordering::Vector{Set},
+  ref_ordering::Vector,
   tn::ITensorNetwork,
 )
   leaves = leaf_vertices(constraint_tree)
   root = _root(constraint_tree)
-  v_to_order = Dict{Tuple{Tuple,String},Vector{IndexGroup}}()
+  v_to_order = Dict{Tuple{Tuple,String},Vector{Set}}()
   for v in post_order_dfs_vertices(constraint_tree, root)
     if v in leaves
       v_to_order[v] = [v[1]...]
       continue
     end
-    child_orders = Vector{Vector{IndexGroup}}()
+    child_orders = Vector{Vector{Set}}()
     children = child_vertices(constraint_tree, v)
     for inds_tuple in v[1]
       cs = filter(c -> c[1] == inds_tuple, children)
@@ -30,14 +31,13 @@ function _constrained_minswap_inds_ordering(
     end
     v_to_order[v] = vcat(output_order...)
   end
-  nswap = length(_bubble_sort(v_to_order[root], ref_ordering))
-  return v_to_order[root], nswap
+  return v_to_order[root]
 end
 
 function _constrained_minswap_inds_ordering(
   constraint_tree::NamedDiGraph{Tuple{Tuple,String}},
-  input_order_1::Vector{Set},
-  input_order_2::Vector{Set},
+  input_order_1::Vector,
+  input_order_2::Vector,
   tn::ITensorNetwork,
 )
   inter_igs = intersect(input_order_1, input_order_2)
@@ -60,9 +60,9 @@ function _constrained_minswap_inds_ordering(
   outputs = []
   nswaps_list = []
   for (t, i) in zip(adj_tree_copies, inputs)
-    output, nswaps = _constrained_minswap_inds_ordering(t, i, tn)
+    output = _constrained_minswap_inds_ordering(t, i, tn)
     push!(outputs, output)
-    push!(nswaps_list, nswaps)
+    push!(nswaps_list, length(_bubble_sort(output, i)))
   end
   inputs = [inputs[i] for i in 1:length(inputs) if nswaps_list[i] == min(nswaps_list...)]
   outputs = [outputs[i] for i in 1:length(outputs) if nswaps_list[i] == min(nswaps_list...)]

@@ -3,7 +3,7 @@ function partitioned_contract(nested_vector::Vector; kwargs...)
     v -> v isa Vector && v[1] isa ITensor, collect(PreOrderDFS(nested_vector))
   )
   tn = ITensorNetwork()
-  subgraph_vs = Vector{<:Vector}()
+  subgraph_vs = []
   i = 1
   for ts in leaves
     vs = []
@@ -33,6 +33,7 @@ function partitioned_contract(
   swap_size=1,
   contraction_sequence_alg,
   contraction_sequence_kwargs,
+  linear_ordering_alg,
 )
   input_tn = ITensorNetwork(mapreduce(l -> Vector{ITensor}(par[l]), vcat, vertices(par)))
   # TODO: currently we assume that the tn represented by 'par' is closed.
@@ -41,7 +42,7 @@ function partitioned_contract(
     leaves = leaf_vertices(contraction_tree)
     traversal = post_order_dfs_vertices(contraction_tree, _root(contraction_tree))
     contractions = setdiff(traversal, leaves)
-    p_edge_to_ordered_inds = _ind_orderings(par, contractions)
+    p_edge_to_ordered_inds = _ind_orderings(par, contractions; linear_ordering_alg)
     # Build the orderings used for the ansatz tree.
     # For each tuple in `v_to_ordered_p_edges`, the first item is the
     # reference ordering of uncontracted edges for the contraction `v`,
@@ -59,7 +60,7 @@ function partitioned_contract(
       v_inds = map(e -> Set(p_edge_to_ordered_inds[e]), p_edges)
       constraint_tree = _adjacency_tree(v, path, par, p_edge_to_ordered_inds)
       if v in leaves
-        ref_inds_ordering = _mps_partition_inds_order(tn, v_inds; alg="top_down")
+        ref_inds_ordering = _mps_partition_inds_order(tn, v_inds; alg=linear_ordering_alg)
         inds_ordering = _constrained_minswap_inds_ordering(
           constraint_tree, ref_inds_ordering, tn
         )
@@ -149,7 +150,8 @@ function partitioned_contract(
 end
 
 # Note: currently this function assumes that the input tn represented by 'par' is closed
-function _ind_orderings(par::DataGraph, contractions::Vector)
+# TODO: test needed:
+function _ind_orderings(par::DataGraph, contractions::Vector; linear_ordering_alg)
   p_edge_to_ordered_inds = Dict{Any,Vector}()
   for v in contractions
     contract_edges = intersect(_neighbor_edges(par, v[1]), _neighbor_edges(par, v[2]))
@@ -162,10 +164,21 @@ function _ind_orderings(par::DataGraph, contractions::Vector)
       inds2 = noncommoninds(Vector{ITensor}(par[e.dst])...)
       source_inds = intersect(inds1, inds2)
       @assert issubset(source_inds, tn_inds)
+      # Note: another more efficient implementation is below, where we first get
+      # `sub_tn` of `tn` that is closely connected to `source_inds`, and then compute
+      # the ordering only on top of `sub_tn`. The problem is that for multiple graphs
+      # `sub_tn` will be empty. We keep the implementation below for reference.
+      #=
       terminal_inds = setdiff(tn_inds, source_inds)
       p, _ = _mincut_partitions(tn, source_inds, terminal_inds)
       sub_tn = subgraph(u -> u in p, tn)
       p_edge_to_ordered_inds[e] = _mps_partition_inds_order(sub_tn, source_inds)
+      =#
+      p_edge_to_ordered_inds[e] = _mps_partition_inds_order(
+        tn, source_inds; alg=linear_ordering_alg
+      )
+      # @info "tn has size", length(vertices(tn))
+      # @info "out ordering is", p_edge_to_ordered_inds[e]
     end
   end
   return p_edge_to_ordered_inds

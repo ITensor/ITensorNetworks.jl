@@ -198,15 +198,10 @@ function _adjacency_tree(v::Tuple, path::Vector, par::DataGraph, p_edge_to_inds:
       add_vertex!(adjacency_tree, v)
     end
     for contraction in path
-      children = child_vertices(contractions, path[1])
-      ancester = filter(u -> p_leaves in vcat(u[1:(end - 1)]...), children)[1]
-      sibling = setdiff(children, [ancester])[1]
-      ancester_igs = map(
-        e -> Set(p_edge_to_inds[e]), _neighbor_edges(par, vcat(ancester[1:(end - 1)]...))
-      )
-      sibling_igs = map(
-        e -> Set(p_edge_to_inds[e]), _neighbor_edges(par, vcat(sibling[1:(end - 1)]...))
-      )
+      ancester_leaves = filter(u -> issubset(p_leaves, u), contraction[1:2])[1]
+      sibling_leaves = setdiff(contraction[1:2], [ancester_leaves])[1]
+      ancester_igs = map(e -> Set(p_edge_to_inds[e]), _neighbor_edges(par, ancester_leaves))
+      sibling_igs = map(e -> Set(p_edge_to_inds[e]), _neighbor_edges(par, sibling_leaves))
       inter_igs = intersect(ancester_igs, sibling_igs)
       new_igs = setdiff(sibling_igs, inter_igs)
       adjacent_igs = union([ig_to_input_adj_igs[ig] for ig in inter_igs]...)
