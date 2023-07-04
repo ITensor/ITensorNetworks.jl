@@ -184,14 +184,14 @@ end
 
 # Generate the adjacency tree of a contraction tree
 # TODO: add test
-function _adjacency_tree(v::Tuple, path::Vector, partition::DataGraph, p_edge_to_inds::Dict)
+function _adjacency_tree(v::Tuple, path::Vector, par::DataGraph, p_edge_to_inds::Dict)
   @timeit_debug ITensors.timer "_generate_adjacency_tree" begin
     # mapping each index group to adjacent input igs
     ig_to_input_adj_igs = Dict{Any,Set}()
     # mapping each igs to an adjacency tree
     adjacency_tree = NamedDiGraph{Tuple{Tuple,String}}()
     p_leaves = vcat(v[1:(end - 1)]...)
-    p_edges = _neighbor_edges(partition, p_leaves)
+    p_edges = _neighbor_edges(par, p_leaves)
     for ig in map(e -> Set(p_edge_to_inds[e]), p_edges)
       ig_to_input_adj_igs[ig] = Set([ig])
       v = ((ig,), "unordered")
@@ -202,12 +202,10 @@ function _adjacency_tree(v::Tuple, path::Vector, partition::DataGraph, p_edge_to
       ancester = filter(u -> p_leaves in vcat(u[1:(end - 1)]...), children)[1]
       sibling = setdiff(children, [ancester])[1]
       ancester_igs = map(
-        e -> Set(p_edge_to_inds[e]),
-        _neighbor_edges(partition, vcat(ancester[1:(end - 1)]...)),
+        e -> Set(p_edge_to_inds[e]), _neighbor_edges(par, vcat(ancester[1:(end - 1)]...))
       )
       sibling_igs = map(
-        e -> Set(p_edge_to_inds[e]),
-        _neighbor_edges(partition, vcat(sibling[1:(end - 1)]...)),
+        e -> Set(p_edge_to_inds[e]), _neighbor_edges(par, vcat(sibling[1:(end - 1)]...))
       )
       inter_igs = intersect(ancester_igs, sibling_igs)
       new_igs = setdiff(sibling_igs, inter_igs)

@@ -104,6 +104,9 @@ export path_graph_structure, binary_tree_structure
 # ITensorNetworks: approx_itensornetwork.jl
 export approx_itensornetwork
 
+# ITensorNetworks: partitioned_contract.jl
+export partitioned_contract
+
 # ITensorNetworks: lattices.jl
 # TODO: DELETE
 export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
