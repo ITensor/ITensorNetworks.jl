@@ -123,9 +123,7 @@ function _binary_tree_structure(
   maximally_unbalanced::Bool=false,
   backend="Metis",
 )
-  nested_vector = _binary_tree_partition_inds_recursive_bisection(
-    tn, outinds; backend=backend
-  )
+  nested_vector = _recursive_bisection(tn, outinds; backend=backend)
   if maximally_unbalanced
     ordering = collect(Leaves(nested_vector))
     nested_vector = line_to_tree(ordering)
@@ -140,9 +138,7 @@ function _map_nested_vector(dict::Dict, nested_vector)
   return map(v -> _map_nested_vector(dict, v), nested_vector)
 end
 
-function _binary_tree_partition_inds_recursive_bisection(
-  tn::ITensorNetwork, outinds::Union{Vector{Set},Vector{<:Index}}; backend="Metis"
-)
+function _recursive_bisection(tn::ITensorNetwork, outinds::Vector{Set}; backend="Metis")
   tn = copy(tn)
   tensor_to_inds = Dict()
   ts = Vector{ITensor}()
@@ -152,20 +148,24 @@ function _binary_tree_partition_inds_recursive_bisection(
     tensor_to_inds[new_t] = is
   end
   new_tn = disjoint_union(tn, ITensorNetwork(ts))
-  ts_nested_vector = _tensor_order_recursive_bisection(new_tn, ts; backend=backend)
+  ts_nested_vector = _recursive_bisection(new_tn, ts; backend=backend)
   return _map_nested_vector(tensor_to_inds, ts_nested_vector)
 end
 
-function _tensor_order_recursive_bisection(
+function _recursive_bisection(
   tn::ITensorNetwork,
-  tensors::Vector{ITensor};
+  target_set::Union{Vector{ITensor},Vector{<:Index}};
   backend="Metis",
   left_inds=Set(),
   right_inds=Set(),
 )
-  ts = intersect(tensors, Vector{ITensor}(tn))
-  if length(ts) <= 1
-    return length(ts) == 1 ? ts[1] : nothing
+  if target_set isa Vector{ITensor}
+    set = intersect(target_set, Vector{ITensor}(tn))
+  else
+    set = intersect(target_set, noncommoninds(Vector{ITensor}(tn)...))
+  end
+  if length(set) <= 1
+    return length(set) == 1 ? set[1] : nothing
   end
   g_parts = partition(tn; npartitions=2, backend=backend)
   # order g_parts
@@ -179,24 +179,24 @@ function _tensor_order_recursive_bisection(
     g_parts[1], g_parts[2] = g_parts[2], g_parts[1]
   end
   intersect_inds = intersect(outinds_1, outinds_2)
-  ts1 = _tensor_order_recursive_bisection(
+  set1 = _recursive_bisection(
     g_parts[1],
-    tensors;
+    target_set;
     backend=backend,
     left_inds=left_inds,
     right_inds=union(right_inds, intersect_inds),
   )
-  ts2 = _tensor_order_recursive_bisection(
+  set2 = _recursive_bisection(
     g_parts[2],
-    tensors;
+    target_set;
     backend=backend,
     left_inds=union(left_inds, intersect_inds),
     right_inds=right_inds,
   )
-  if ts1 == nothing || ts2 == nothing
-    return ts1 == nothing ? ts2 : ts1
+  if set1 == nothing || set2 == nothing
+    return set1 == nothing ? set2 : set1
   end
-  return [ts1, ts2]
+  return [set1, set2]
 end
 
 """
@@ -283,9 +283,7 @@ function _mps_partition_inds_order(
       tn => tn2, out_to_maxweight_ind
     )
   else
-    nested_vector = _binary_tree_partition_inds_recursive_bisection(
-      tn, outinds; backend=backend
-    )
+    nested_vector = _recursive_bisection(tn, outinds; backend=backend)
     return filter(v -> v in outinds, collect(PreOrderDFS(nested_vector)))
   end
 end
@@ -385,18 +383,18 @@ function _mincut_inds(
   out_to_maxweight_ind::Dict{Index,Index},
   sourceinds_list::Vector{<:Vector{<:Index}},
 )
-  weights = _partition_mincuts_dist(tn_pair, out_to_maxweight_ind, sourceinds_list)
+  weights = _mincut_partitions_costs(tn_pair, out_to_maxweight_ind, sourceinds_list)
   i = argmin(weights)
   return sourceinds_list[i], i
 end
 
 function _mps_mincut_partition_cost(tn::ITensorNetwork, inds_vector::Vector{Set})
-  @timeit_debug ITensors.timer "_comb_mincuts_dist" begin
+  @timeit_debug ITensors.timer "_mps_mincut_partition_cost" begin
     inds_vector = map(inds -> collect(inds), inds_vector)
     outinds = vcat(inds_vector...)
     maxweight_tn, out_to_maxweight_ind = _maxweightoutinds_tn(tn, outinds)
     sourceinds_list = [vcat(inds_vector[1:i]...) for i in 1:(length(inds_vector) - 1)]
-    weights = _partition_mincuts_dist(
+    weights = _mincut_partitions_costs(
       tn => maxweight_tn, out_to_maxweight_ind, sourceinds_list
     )
     mincut_val = sum([w[1] for w in weights])
