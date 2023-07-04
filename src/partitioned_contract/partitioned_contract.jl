@@ -9,11 +9,16 @@ function partitioned_contract(
   contraction_sequence_alg,
   contraction_sequence_kwargs,
 )
+  input_tn = ITensorNetwork(
+    mapreduce(l -> Vector{ITensor}(partition[l]), vcat, vertices(partition))
+  )
+  # TODO: currently we assume that the tn represented by 'partition' is closed.
+  @assert noncommoninds(Vector{ITensor}(input_tn)...) == []
   @timeit_debug ITensors.timer "partitioned_contract" begin
     leaves = leaf_vertices(contraction_tree)
     traversal = post_order_dfs_vertices(contraction_tree, _root(contraction_tree))
     contractions = setdiff(traversal, leaves)
-    p_edge_to_ordered_inds = _ind_orderings(partition)
+    p_edge_to_ordered_inds = _ind_orderings(partition, contractions)
     # Build the orderings used for the ansatz tree.
     # For each tuple in `v_to_ordered_p_edges`, the first item is the
     # reference ordering of uncontracted edges for the contraction `v`,
@@ -120,9 +125,30 @@ function partitioned_contract(
   end
 end
 
-function _ind_orderings(partition::DataGraph)
-  # input_tn = # TODO
-  # TODO: use `_mps_partition_inds_order` with default `alg` and `backend`
+# Note: currently this function assumes that the input tn represented by
+# 'partition' is closed
+function _ind_orderings(partition::DataGraph, contractions::Vector)
+  p_edge_to_ordered_inds = Dict{Any,Vector}()
+  for v in contractions
+    contract_edges = intersect(
+      _neighbor_edges(partition, v[1]), _neighbor_edges(partition, v[2])
+    )
+    tn1 = ITensorNetwork(mapreduce(l -> Vector{ITensor}(partition[l]), vcat, v[1]))
+    tn2 = ITensorNetwork(mapreduce(l -> Vector{ITensor}(partition[l]), vcat, v[2]))
+    tn = length(vertices(tn1)) >= length(vertices(tn2)) ? tn1 : tn2
+    tn_inds = noncommoninds(Vector{ITensor}(tn)...)
+    for e in contract_edges
+      inds1 = noncommoninds(Vector{ITensor}(partition[e.src])...)
+      inds2 = noncommoninds(Vector{ITensor}(partition[e.dst])...)
+      source_inds = intersect(inds1, inds2)
+      @assert issubset(source_inds, tn_inds)
+      terminal_inds = setdiff(tn_inds, source_inds)
+      p, _ = _mincut_partitions(tn, source_inds, terminal_inds)
+      sub_tn = subgraph(u -> u in p, tn)
+      p_edge_to_ordered_inds[e] = _mps_partition_inds_order(sub_tn, source_inds)
+    end
+  end
+  return p_edge_to_ordered_inds
 end
 
 function _ansatz_tree(inds_orderings::Vector, ansatz::String, ortho_center::Integer)
