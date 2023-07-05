@@ -61,27 +61,6 @@ function build_recursive_tntree(tn, N; env_size)
   ]
 end
 
-# if ortho == true
-# @info "orthogonalize tn towards the first vertex"
-# itn = ITensorNetwork(named_grid(N); link_space=2)
-# for i in 1:N[1]
-#   for j in 1:N[2]
-#     for k in 1:N[3]
-#       itn[i, j, k] = tn[i, j, k]
-#     end
-#   end
-# end
-# itn = orthogonalize(itn, (1, 1, 1))
-# @info itn[1, 1, 1]
-# @info itn[1, 1, 1].tensor
-# for i in 1:N[1]
-#   for j in 1:N[2]
-#     for k in 1:N[3]
-#       tn[i, j, k] = itn[i, j, k]
-#     end
-#   end
-# end
-# end
 function build_tntree(N, network::ITensorNetwork; block_size::Tuple, env_size::Tuple)
   @assert length(block_size) == length(env_size)
   order = length(block_size)

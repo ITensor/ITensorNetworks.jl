@@ -2,13 +2,12 @@ using ITensors, Graphs, NamedGraphs, TimerOutputs
 using Distributions, Random
 using KaHyPar, Metis
 using ITensorNetworks
-using ITensorNetworks: ising_network
+using ITensorNetworks: ising_network, contract
 using OMEinsumContractionOrders
 
 include("exact_contract.jl")
 include("3d_cube.jl")
 include("sweep_contractor.jl")
-include("randregulargraph.jl")
 include("bench.jl")
 
 Random.seed!(1234)
@@ -123,21 +122,24 @@ random regular graph
 # deg = 3
 # distribution = Uniform{Float64}(-0.2, 1.0)
 # network = randomITensorNetwork(
-#   random_regular_graph(nvertices, deg); link_space=2, distribution=distribution
+#   distribution, random_regular_graph(nvertices, deg); link_space=2
 # )
 # # exact_contract(network; sc_target=30)
 # # -26.228887728408008 (-1.0, 1.0)
 # # 5.633462619348083 (-0.2, 1.0)
 # # nvertices_per_partition=10 works 15/20 not work
-# tntree = build_tntree_balanced(network; nvertices_per_partition=10)
+# # tntree = partitioned_contraction_sequence(network; nvertices_per_partition=10)
 # @time bench_lnZ(
-#   tntree;
+#   network;
 #   num_iter=2,
+#   nvertices_per_partition=10,
+#   backend="KaHyPar",
 #   cutoff=1e-12,
-#   maxdim=64,
+#   maxdim=512,
 #   ansatz="mps",
-#   algorithm="density_matrix",
-#   use_cache=true,
-#   ortho=false,
+#   approx_itensornetwork_alg="density_matrix",
 #   swap_size=4,
+#   contraction_sequence_alg="sa_bipartite",
+#   contraction_sequence_kwargs=(;),
+#   linear_ordering_alg="bottom_up",
 # )
