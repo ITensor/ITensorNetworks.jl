@@ -56,11 +56,17 @@ function partitioned_contract(
       tn = ITensorNetwork(mapreduce(l -> Vector{ITensor}(par[l]), vcat, p_leaves))
       path = filter(u -> issubset(p_leaves, u[1]) || issubset(p_leaves, u[2]), contractions)
       p_edges = _neighbor_edges(par, p_leaves)
+      if p_edges == []
+        v_to_ordered_p_edges[v] = ([], [], [])
+        continue
+      end
       # Get the reference ordering and target ordering of `v`
       v_inds = map(e -> Set(p_edge_to_ordered_inds[e]), p_edges)
       constraint_tree = _adjacency_tree(v, path, par, p_edge_to_ordered_inds)
       if v in leaves
-        ref_inds_ordering = _mps_partition_inds_order(tn, v_inds; alg=linear_ordering_alg)
+        # TODO: the "bottom_up" algorithm currently doesn't support `v_inds`
+        # being a vector of set of indices.
+        ref_inds_ordering = _mps_partition_inds_order(tn, v_inds; alg="top_down")
         inds_ordering = _constrained_minswap_inds_ordering(
           constraint_tree, ref_inds_ordering, tn
         )
@@ -83,7 +89,7 @@ function partitioned_contract(
       # Note: the contracted ordering in `ref_p_edges` is not changed,
       # since `ref_p_edges` focuses on minimizing the number of swaps
       # rather than making later contractions efficient.
-      sibling = setdiff(child_vertices(contractions, path[1]), [v])[1]
+      sibling = setdiff(child_vertices(contraction_tree, path[1]), [v])[1]
       if haskey(v_to_ordered_p_edges, sibling)
         contract_edges = v_to_ordered_p_edges[sibling][3]
         @assert(_is_neighbored_subset(p_edges, Set(contract_edges)))

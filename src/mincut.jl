@@ -138,7 +138,7 @@ function _map_nested_vector(dict::Dict, nested_vector)
   return map(v -> _map_nested_vector(dict, v), nested_vector)
 end
 
-function _recursive_bisection(tn::ITensorNetwork, outinds::Vector{Set}; backend="Metis")
+function _recursive_bisection(tn::ITensorNetwork, outinds::Vector{<:Set}; backend="Metis")
   tn = copy(tn)
   tensor_to_inds = Dict()
   ts = Vector{ITensor}()
@@ -266,7 +266,7 @@ Given a tn and outinds, returns a vector of indices representing MPS inds orderi
 """
 function _mps_partition_inds_order(
   tn::ITensorNetwork,
-  outinds::Union{Nothing,Vector{<:Index},Vector{Set}};
+  outinds::Union{Nothing,Vector{<:Index},Vector{<:Set}};
   alg="top_down",
   backend="Metis",
 )
@@ -388,7 +388,7 @@ function _mincut_inds(
   return sourceinds_list[i], i
 end
 
-function _mps_mincut_partition_cost(tn::ITensorNetwork, inds_vector::Vector{Set})
+function _mps_mincut_partition_cost(tn::ITensorNetwork, inds_vector::Vector{<:Set})
   @timeit_debug ITensors.timer "_mps_mincut_partition_cost" begin
     inds_vector = map(inds -> collect(inds), inds_vector)
     outinds = vcat(inds_vector...)

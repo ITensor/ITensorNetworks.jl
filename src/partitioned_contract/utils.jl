@@ -4,11 +4,11 @@ function _is_neighbored_subset(v::Vector, set::Set)
   end
   @assert issubset(set, Set(v))
   i_begin = 1
-  while !(i_begin in set)
+  while !(v[i_begin] in set)
     i_begin += 1
   end
   i_end = length(v)
-  while !(i_end in set)
+  while !(v[i_end] in set)
     i_end -= 1
   end
   return Set(v[i_begin:i_end]) == set

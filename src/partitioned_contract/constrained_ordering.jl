@@ -56,10 +56,10 @@ function _constrained_minswap_inds_ordering(
   else
     inputs = _low_swap_merge(left_1, right_1, left_2, right_2)
   end
-  adj_tree_copies = [copy(adj_tree) for _ in 1:length(inputs)]
+  constraint_tree_copies = [copy(constraint_tree) for _ in 1:length(inputs)]
   outputs = []
   nswaps_list = []
-  for (t, i) in zip(adj_tree_copies, inputs)
+  for (t, i) in zip(constraint_tree_copies, inputs)
     output = _constrained_minswap_inds_ordering(t, i, tn)
     push!(outputs, output)
     push!(nswaps_list, length(_bubble_sort(output, i)))
@@ -73,11 +73,11 @@ function _constrained_minswap_inds_ordering(
   return inputs[argmin(mincuts)], outputs[argmin(mincuts)]
 end
 
-function _mincut_permutation(perms::Vector{<:Vector}, tn::ITensorNetwork)
+function _mincut_permutation(perms::Vector{<:Vector{<:Vector}}, tn::ITensorNetwork)
   if length(perms) == 1
     return perms[1]
   end
-  mincuts_dist = map(p -> _mps_mincut_partition_cost(tn, p), perms)
+  mincuts_dist = map(p -> _mps_mincut_partition_cost(tn, vcat(p...)), perms)
   return perms[argmin(mincuts_dist)]
 end
 
