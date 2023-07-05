@@ -23,6 +23,7 @@ end
 
 """
 Contract of a vector of tensors, `network`, with a contraction sequence generated via sa_bipartite
+# TODO: rewrite using `contract`
 """
 function _optcontract(
   network::Vector; contraction_sequence_alg="optimal", contraction_sequence_kwargs=(;)

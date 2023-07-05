@@ -1,6 +1,6 @@
-function partitioned_contract(nested_vector::Vector; kwargs...)
+function partitioned_contract(contraction_sequence::Vector; kwargs...)
   leaves = filter(
-    v -> v isa Vector && v[1] isa ITensor, collect(PreOrderDFS(nested_vector))
+    v -> v isa Vector && v[1] isa ITensor, collect(PreOrderDFS(contraction_sequence))
   )
   tn = ITensorNetwork()
   subgraph_vs = []
@@ -16,10 +16,10 @@ function partitioned_contract(nested_vector::Vector; kwargs...)
     push!(subgraph_vs, vs)
   end
   par = partition(tn, subgraph_vs)
-  vs_nested_vector = _map_nested_vector(
-    Dict(leaves .=> collect(1:length(leaves))), nested_vector
+  vs_contraction_sequence = _map_nested_vector(
+    Dict(leaves .=> collect(1:length(leaves))), contraction_sequence
   )
-  contraction_tree = contraction_sequence_to_digraph(vs_nested_vector)
+  contraction_tree = contraction_sequence_to_digraph(vs_contraction_sequence)
   return partitioned_contract(par, contraction_tree; kwargs...)
 end
 
@@ -35,9 +35,18 @@ function partitioned_contract(
   contraction_sequence_kwargs,
   linear_ordering_alg,
 )
+  @info "ansatz: $(ansatz)"
+  @info "approx_itensornetwork_alg: $(approx_itensornetwork_alg)"
+  @info "cutoff: $(cutoff)"
+  @info "maxdim: $(maxdim)"
+  @info "swap_size: $(swap_size)"
+  @info "contraction_sequence_alg: $(contraction_sequence_alg)"
+  @info "contraction_sequence_kwargs: $(contraction_sequence_kwargs)"
+  @info "linear_ordering_alg: $(linear_ordering_alg)"
   input_tn = ITensorNetwork(mapreduce(l -> Vector{ITensor}(par[l]), vcat, vertices(par)))
   # TODO: currently we assume that the tn represented by 'par' is closed.
   @assert noncommoninds(Vector{ITensor}(input_tn)...) == []
+
   @timeit_debug ITensors.timer "partitioned_contract" begin
     leaves = leaf_vertices(contraction_tree)
     traversal = post_order_dfs_vertices(contraction_tree, _root(contraction_tree))
@@ -130,7 +139,7 @@ function partitioned_contract(
         return ITensorNetwork(out), log_acc_norm + log(out_nrm)
       end
       intervals = _intervals(ref_p_edges, p_edges; size=swap_size)
-      @info "number of approx_itensornetwork calls, $(length(intervals))"
+      @info "number of approx_itensornetwork calls: $(length(intervals))"
       for edge_order in intervals
         inds_ordering = map(e -> p_edge_to_ordered_inds[e], edge_order)
         # `ortho_center` denotes the number of edges arranged at
@@ -200,6 +209,9 @@ function _ansatz_tree(inds_orderings::Vector, ansatz::String, ortho_center::Inte
   if nested_vec_left == [] || nested_vec_right == []
     nested_vec = nested_vec_left == [] ? nested_vec_right : nested_vec_left
   else
+    nested_vec_left = length(nested_vec_left) == 1 ? nested_vec_left[1] : nested_vec_left
+    nested_vec_right =
+      length(nested_vec_right) == 1 ? nested_vec_right[1] : nested_vec_right
     nested_vec = [nested_vec_left, nested_vec_right]
   end
   return _nested_vector_to_digraph(nested_vec)

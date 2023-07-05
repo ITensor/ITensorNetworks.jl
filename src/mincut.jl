@@ -390,7 +390,7 @@ end
 
 function _mps_mincut_partition_cost(tn::ITensorNetwork, inds_vector::Vector{<:Set})
   @timeit_debug ITensors.timer "_mps_mincut_partition_cost" begin
-    inds_vector = map(inds -> collect(inds), inds_vector)
+    inds_vector = map(inds -> Vector{Index}(collect(inds)), inds_vector)
     outinds = vcat(inds_vector...)
     maxweight_tn, out_to_maxweight_ind = _maxweightoutinds_tn(tn, outinds)
     sourceinds_list = [vcat(inds_vector[1:i]...) for i in 1:(length(inds_vector) - 1)]
