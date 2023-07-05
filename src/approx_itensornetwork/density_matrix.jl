@@ -144,9 +144,12 @@ end
 
 function _get_low_rank_projector(tensor, inds1, inds2; cutoff, maxdim)
   @assert length(inds(tensor)) <= 4
+  # t00 = time()
   @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: eigen" begin
     F = eigen(tensor, inds1, inds2; cutoff=cutoff, maxdim=maxdim, ishermitian=true)
   end
+  # t11 = time() - t00
+  # @info "size of U", size(F.V), "size of diag", size(F.D), "costs", t11
   return F.Vt
 end
 

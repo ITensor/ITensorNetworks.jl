@@ -129,7 +129,9 @@ function partitioned_contract(
         out /= out_nrm
         return ITensorNetwork(out), log_acc_norm + log(out_nrm)
       end
-      for edge_order in _intervals(ref_p_edges, p_edges; size=swap_size)
+      intervals = _intervals(ref_p_edges, p_edges; size=swap_size)
+      @info "number of approx_itensornetwork calls, $(length(intervals))"
+      for edge_order in intervals
         inds_ordering = map(e -> p_edge_to_ordered_inds[e], edge_order)
         # `ortho_center` denotes the number of edges arranged at
         # the left of the center vertex.
