@@ -135,7 +135,7 @@ function tdvp(
     solver, H, init; nsweeps, sweep_observer!, sweep_regions, nsite, kwargs...
   )
 
-  # remove _current_time_printer
+  # remove sweep_time_printer from sweep_observer!
   select!(sweep_observer!, Observers.DataFrames.Not("sweep_time_printer"))
 
   return psi
