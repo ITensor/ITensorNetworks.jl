@@ -30,6 +30,7 @@ OPTIONAL ARGUMENT:
 function ising_network(
   eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0, szverts=nothing
 )
+  s = insert_missing_internal_inds(s, edges(s); internal_inds_space=2)
   tn = delta_network(eltype, s)
   if (szverts != nothing)
     for v in szverts
@@ -77,15 +78,15 @@ end
 """Build the wavefunction whose norm is equal to Z of the classical ising model
 s needs to have site indices in this case!"""
 function ising_network_state(eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0)
-  return ising_network(s, 0.5 * beta; h)
+  return ising_network(eltype, s, 0.5 * beta; h)
 end
 
 function ising_network_state(eltype::Type, g::NamedGraph, beta::Number; h::Number=0.0)
-  return ising_network(IndsNetwork(g, 2, 2), 0.5 * beta; h)
+  return ising_network(eltype, IndsNetwork(g, 2, 2), 0.5 * beta; h)
 end
 
 function ising_network_state(s::IndsNetwork, beta::Number; h::Number=0.0)
-  return square_root_ising_network(typeof(beta), s, 0.5 * beta; h)
+  return ising_network_state(typeof(beta), s, beta; h)
 end
 
 function ising_network_state(g::NamedGraph, beta::Number; h::Number=0.0)

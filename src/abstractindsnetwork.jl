@@ -56,3 +56,16 @@ function union_all_inds(is_in::AbstractIndsNetwork...)
   end
   return is_out
 end
+
+function insert_missing_internal_inds(
+  indsnetwork::AbstractIndsNetwork, edges=edges(indsnetwork); internal_inds_space=trivial_space(indsnetwork)
+)
+  indsnetwork = copy(indsnetwork)
+  for e in edges
+    if !isassigned(indsnetwork, e)
+      iₑ = Index(internal_inds_space, edge_tag(e))
+      indsnetwork[e] = [iₑ]
+    end
+  end
+  return indsnetwork
+end

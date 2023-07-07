@@ -14,6 +14,7 @@ using Test
     "peps.jl",
     "steiner_tree.jl",
     joinpath("belief_propagation", "bpexample.jl"),
+    joinpath("belief_propagation", "sqrt_bp.jl"),
     joinpath("peps", "ising_tebd.jl"),
     joinpath("treetensornetworks", "comb_tree.jl"),
     joinpath("treetensornetworks", "spanning_tree.jl"),
