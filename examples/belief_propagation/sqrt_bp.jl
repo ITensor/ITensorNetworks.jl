@@ -10,14 +10,7 @@ using ITensorNetworks:
   ising_network_state,
   message_tensors
 
-function main(;
-  n,
-  niters,
-  network="ising",
-  β=nothing,
-  h=nothing,
-  χ=nothing,
-)
+function main(; n, niters, network="ising", β=nothing, h=nothing, χ=nothing)
   g_dims = (n, n)
   @show g_dims
   g = named_grid(g_dims)
@@ -49,7 +42,12 @@ function main(;
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
   denominator_network = approx_network_region(ψψ, mts, [(v, 1)])
-  sz_bp = 2 * contract(numerator_network; sequence=contraction_sequence(numerator_network; alg="optimal"))[] / contract(denominator_network; sequence=contraction_sequence(denominator_network; alg="optimal"))[]
+  sz_bp =
+    2 * contract(
+      numerator_network; sequence=contraction_sequence(numerator_network; alg="optimal")
+    )[] / contract(
+      denominator_network; sequence=contraction_sequence(denominator_network; alg="optimal")
+    )[]
 
   println(
     "Simple Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp)
@@ -65,11 +63,14 @@ function main(;
     ψψ, mts_sqrt, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
   denominator_network = approx_network_region(ψψ, mts_sqrt, [(v, 1)])
-  sz_bp = 2 * contract(numerator_network; sequence=contraction_sequence(numerator_network; alg="optimal"))[] / contract(denominator_network; sequence=contraction_sequence(denominator_network; alg="optimal"))[]
+  sz_bp =
+    2 * contract(
+      numerator_network; sequence=contraction_sequence(numerator_network; alg="optimal")
+    )[] / contract(
+      denominator_network; sequence=contraction_sequence(denominator_network; alg="optimal")
+    )[]
 
-  println(
-    "Sqrt Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp)
-  )
+  println("Sqrt Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp))
 
   return (; mts, mts_sqrt)
 end

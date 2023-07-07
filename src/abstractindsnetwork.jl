@@ -58,7 +58,9 @@ function union_all_inds(is_in::AbstractIndsNetwork...)
 end
 
 function insert_missing_internal_inds(
-  indsnetwork::AbstractIndsNetwork, edges=edges(indsnetwork); internal_inds_space=trivial_space(indsnetwork)
+  indsnetwork::AbstractIndsNetwork,
+  edges=edges(indsnetwork);
+  internal_inds_space=trivial_space(indsnetwork),
 )
   indsnetwork = copy(indsnetwork)
   for e in edges

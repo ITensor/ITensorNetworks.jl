@@ -33,7 +33,8 @@ function sqrt_belief_propagation_iteration(
   es = edges(sqrt_mts)
   for e in es
     environment_tensornetworks = ITensorNetwork[
-      sqrt_mts[e_in] for e_in in setdiff(boundary_edges(sqrt_mts, [src(e)]; dir=:in), [reverse(e)])
+      sqrt_mts[e_in] for
+      e_in in setdiff(boundary_edges(sqrt_mts, [src(e)]; dir=:in), [reverse(e)])
     ]
 
     new_sqrt_mts[src(e) => dst(e)] = update_sqrt_message_tensor(
@@ -52,15 +53,15 @@ function sqrt_belief_propagation_iteration(
 end
 
 function update_sqrt_message_tensor(
-  tn::ITensorNetwork,
-  subgraph_vertices::Vector,
-  sqrt_mts::Vector{ITensorNetwork};
+  tn::ITensorNetwork, subgraph_vertices::Vector, sqrt_mts::Vector{ITensorNetwork};
 )
   sqrt_mts_itensors = reduce(vcat, ITensor.(sqrt_mts); init=ITensor[])
   v = only(unique(first.(subgraph_vertices)))
   site_itensor = tn[v]
   contract_list = ITensor[sqrt_mts_itensors; site_itensor]
-  contract_output = contract(contract_list; sequence=contraction_sequence(contract_list; alg="optimal"))
+  contract_output = contract(
+    contract_list; sequence=contraction_sequence(contract_list; alg="optimal")
+  )
   left_inds = [uniqueinds(contract_output, site_itensor); siteinds(tn, v)]
   Q, R = qr(contract_output, left_inds)
   normalize!(R)
@@ -107,9 +108,7 @@ function sqrt_message_tensors(
   return sqrt_mts
 end
 
-function sqr_message_tensors(
-  sqrt_mts::DataGraph
-)
+function sqr_message_tensors(sqrt_mts::DataGraph)
   mts = copy(sqrt_mts)
   for e in edges(sqrt_mts)
     sqrt_mt_tn = sqrt_mts[e]
