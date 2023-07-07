@@ -8,6 +8,7 @@ using OMEinsumContractionOrders
 include("exact_contract.jl")
 include("3d_cube.jl")
 include("sweep_contractor.jl")
+include("random_circuit.jl")
 include("bench.jl")
 
 Random.seed!(1234)
@@ -54,22 +55,22 @@ Bugs
 #=
 bench_3d_cube_lnZ
 =#
-N = (6, 6, 6)
-beta = 0.3
-network = ising_network(named_grid(N), beta; h=0.0, szverts=nothing)
-tntree = build_tntree(N, network; block_size=(1, 1, 1), env_size=(6, 1, 1))
-@time bench_lnZ(
-  tntree;
-  num_iter=1,
-  cutoff=1e-12,
-  maxdim=128,
-  ansatz="mps",
-  approx_itensornetwork_alg="density_matrix",
-  swap_size=10000,
-  contraction_sequence_alg="sa_bipartite",
-  contraction_sequence_kwargs=(;),
-  linear_ordering_alg="bottom_up",
-)
+# N = (6, 6, 6)
+# beta = 0.3
+# network = ising_network(named_grid(N), beta; h=0.0, szverts=nothing)
+# tntree = build_tntree(N, network; block_size=(1, 1, 1), env_size=(6, 1, 1))
+# @time bench_lnZ(
+#   tntree;
+#   num_iter=1,
+#   cutoff=1e-12,
+#   maxdim=128,
+#   ansatz="mps",
+#   approx_itensornetwork_alg="density_matrix",
+#   swap_size=10000,
+#   contraction_sequence_alg="sa_bipartite",
+#   contraction_sequence_kwargs=(;),
+#   linear_ordering_alg="bottom_up",
+# )
 
 #=
 bench_3d_cube_magnetization
@@ -143,3 +144,22 @@ random regular graph
 #   contraction_sequence_kwargs=(;),
 #   linear_ordering_alg="bottom_up",
 # )
+
+#=
+Simulation of random quantum circuit
+=#
+N = (6, 6)
+depth = 6
+sequence = random_circuit_line_partition_sequence(N, depth)
+@time bench_lnZ(
+  sequence;
+  num_iter=1,
+  cutoff=1e-12,
+  maxdim=256,
+  ansatz="mps",
+  approx_itensornetwork_alg="density_matrix",
+  swap_size=8,
+  contraction_sequence_alg="sa_bipartite",
+  contraction_sequence_kwargs=(;),
+  linear_ordering_alg="bottom_up",
+)

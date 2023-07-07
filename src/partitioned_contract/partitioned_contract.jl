@@ -52,6 +52,10 @@ function partitioned_contract(
     traversal = post_order_dfs_vertices(contraction_tree, _root(contraction_tree))
     contractions = setdiff(traversal, leaves)
     p_edge_to_ordered_inds = _ind_orderings(par, contractions; linear_ordering_alg)
+    for (p_edge, ordered_inds) in p_edge_to_ordered_inds
+      @info "edge", p_edge
+      @info "ordered_inds", ordered_inds
+    end
     # Build the orderings used for the ansatz tree.
     # For each tuple in `v_to_ordered_p_edges`, the first item is the
     # reference ordering of uncontracted edges for the contraction `v`,
@@ -109,6 +113,8 @@ function partitioned_contract(
         contract_edges = intersect(p_edges, p_edges_2)
       end
       v_to_ordered_p_edges[v] = (ref_p_edges, p_edges, contract_edges)
+      @info "ref_p_edges is", ref_p_edges
+      @info "p_edges is", p_edges
     end
     # start approximate contraction
     v_to_tn = Dict{Tuple,ITensorNetwork}()
@@ -169,6 +175,7 @@ end
 # Note: currently this function assumes that the input tn represented by 'par' is closed
 # TODO: test needed:
 function _ind_orderings(par::DataGraph, contractions::Vector; linear_ordering_alg)
+  @info "number of contractions", length(contractions)
   p_edge_to_ordered_inds = Dict{Any,Vector}()
   for v in contractions
     contract_edges = intersect(_neighbor_edges(par, v[1]), _neighbor_edges(par, v[2]))

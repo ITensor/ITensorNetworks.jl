@@ -56,6 +56,10 @@ function _constrained_minswap_inds_ordering(
   else
     inputs = _low_swap_merge(left_1, right_1, left_2, right_2)
   end
+  # ####
+  # mincuts = map(o -> _mps_mincut_partition_cost(tn, o), inputs)
+  # inputs = [inputs[i] for i in 1:length(inputs) if mincuts[i] == mincuts[argmin(mincuts)]]
+  # ####
   constraint_tree_copies = [copy(constraint_tree) for _ in 1:length(inputs)]
   outputs = []
   nswaps_list = []
