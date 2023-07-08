@@ -51,7 +51,7 @@ function partitioned_contract(
     leaves = leaf_vertices(contraction_tree)
     traversal = post_order_dfs_vertices(contraction_tree, _root(contraction_tree))
     contractions = setdiff(traversal, leaves)
-    p_edge_to_ordered_inds = _ind_orderings(par, contractions; linear_ordering_alg)
+    p_edge_to_ordered_inds = _ind_orderings(par, contraction_tree; linear_ordering_alg)
     for (p_edge, ordered_inds) in p_edge_to_ordered_inds
       @info "edge", p_edge
       @info "ordered_inds", ordered_inds
@@ -91,8 +91,14 @@ function partitioned_contract(
         c2_inds_ordering = map(
           e -> Set(p_edge_to_ordered_inds[e]), v_to_ordered_p_edges[c2][2]
         )
+        # TODO: consider removing `c1 in leaves` and `c2 in leaves` below.
         ref_inds_ordering, inds_ordering = _constrained_minswap_inds_ordering(
-          constraint_tree, c1_inds_ordering, c2_inds_ordering, tn
+          constraint_tree,
+          c1_inds_ordering,
+          c2_inds_ordering,
+          tn,
+          c1 in leaves,
+          c2 in leaves,
         )
       end
       ref_p_edges = p_edges[_findperm(v_inds, ref_inds_ordering)]
@@ -174,19 +180,39 @@ end
 
 # Note: currently this function assumes that the input tn represented by 'par' is closed
 # TODO: test needed:
-function _ind_orderings(par::DataGraph, contractions::Vector; linear_ordering_alg)
+function _ind_orderings(par::DataGraph, contraction_tree::NamedDiGraph; linear_ordering_alg)
+  leaves = leaf_vertices(contraction_tree)
+  traversal = post_order_dfs_vertices(contraction_tree, _root(contraction_tree))
+  contractions = setdiff(traversal, leaves)
   @info "number of contractions", length(contractions)
   p_edge_to_ordered_inds = Dict{Any,Vector}()
+  # mapping each vector of par vertices to a given tensor network.
+  # This dict is used so that the construnctor `ITensorNetwork`
+  # does not need to be called too many times.
+  p_vs_to_tn = Dict{Any,ITensorNetwork}()
+  # This dict is used so that `noncommoninds` does not need to be
+  # called too many times.
+  p_vs_to_noncommon_inds = Dict{Any,Vector}()
+  for v in leaves
+    @assert length(v[1]) == 1
+    p_vs_to_tn[v[1]] = par[v[1][1]]
+    p_vs_to_noncommon_inds[v[1]] = noncommoninds(Vector{ITensor}(par[v[1][1]])...)
+  end
   for v in contractions
     contract_edges = intersect(_neighbor_edges(par, v[1]), _neighbor_edges(par, v[2]))
-    tn1 = ITensorNetwork(mapreduce(l -> Vector{ITensor}(par[l]), vcat, v[1]))
-    tn2 = ITensorNetwork(mapreduce(l -> Vector{ITensor}(par[l]), vcat, v[2]))
-    tn = length(vertices(tn1)) >= length(vertices(tn2)) ? tn1 : tn2
-    tn_inds = noncommoninds(Vector{ITensor}(tn)...)
+    tn1, tn2 = p_vs_to_tn[v[1]], p_vs_to_tn[v[2]]
+    inds1, inds2 = p_vs_to_noncommon_inds[v[1]], p_vs_to_noncommon_inds[v[2]]
+    p_vs_to_tn[union(v[1], v[2])] = union(tn1, tn2)
+    p_vs_to_noncommon_inds[union(v[1], v[2])] = union(
+      setdiff(inds1, inds2), setdiff(inds2, inds1)
+    )
+    # The inds ordering for each edge is selected based on a
+    # larger partition of the tn.
+    tn, tn_inds = length(vertices(tn1)) >= length(vertices(tn2)) ? (tn1, inds1) : (tn2, inds2)
     for e in contract_edges
-      inds1 = noncommoninds(Vector{ITensor}(par[e.src])...)
-      inds2 = noncommoninds(Vector{ITensor}(par[e.dst])...)
-      source_inds = intersect(inds1, inds2)
+      source_inds = intersect(
+        p_vs_to_noncommon_inds[[e.src]], p_vs_to_noncommon_inds[[e.dst]]
+      )
       @assert issubset(source_inds, tn_inds)
       # Note: another more efficient implementation is below, where we first get
       # `sub_tn` of `tn` that is closely connected to `source_inds`, and then compute
