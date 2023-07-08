@@ -270,21 +270,23 @@ function _mps_partition_inds_order(
   alg="top_down",
   backend="Metis",
 )
-  @assert alg in ["top_down", "bottom_up"]
-  if outinds == nothing
-    outinds = noncommoninds(Vector{ITensor}(tn)...)
-  end
-  if length(outinds) == 1
-    return outinds
-  end
-  if alg == "bottom_up"
-    tn2, out_to_maxweight_ind = _maxweightoutinds_tn(tn, outinds)
-    return _binary_tree_partition_inds_order_maximally_unbalanced(
-      tn => tn2, out_to_maxweight_ind
-    )
-  else
-    nested_vector = _recursive_bisection(tn, outinds; backend=backend)
-    return filter(v -> v in outinds, collect(PreOrderDFS(nested_vector)))
+  @timeit_debug ITensors.timer "_mps_partition_inds_order" begin
+    @assert alg in ["top_down", "bottom_up"]
+    if outinds == nothing
+      outinds = noncommoninds(Vector{ITensor}(tn)...)
+    end
+    if length(outinds) == 1
+      return outinds
+    end
+    if alg == "bottom_up"
+      tn2, out_to_maxweight_ind = _maxweightoutinds_tn(tn, outinds)
+      return _binary_tree_partition_inds_order_maximally_unbalanced(
+        tn => tn2, out_to_maxweight_ind
+      )
+    else
+      nested_vector = _recursive_bisection(tn, outinds; backend=backend)
+      return filter(v -> v in outinds, collect(PreOrderDFS(nested_vector)))
+    end
   end
 end
 
