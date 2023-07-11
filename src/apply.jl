@@ -1,8 +1,5 @@
 function sqrt_and_inv_sqrt(
-  A::ITensor;
-  ishermitian=false,
-  cutoff=nothing,
-  regularization=nothing,
+  A::ITensor; ishermitian=false, cutoff=nothing, regularization=nothing
 )
   @assert ishermitian
   D, U = eigen(A; ishermitian, cutoff)
@@ -14,12 +11,7 @@ function sqrt_and_inv_sqrt(
   return sqrtA, inv_sqrtA
 end
 
-function symmetric_factorize(
-  A::ITensor,
-  inds...;
-  (observer!)=nothing,
-  svd_kwargs...,
-)
+function symmetric_factorize(A::ITensor, inds...; (observer!)=nothing, svd_kwargs...)
   set_function!(observer!, "singular_values" => (; singular_values) -> singular_values)
   U, S, V = svd(A, inds...; svd_kwargs...)
   u = commonind(U, S)
@@ -112,8 +104,10 @@ function ITensors.apply(
       envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
       envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
 
-      sqrt_and_inv_sqrt_envs_v1 = sqrt_and_inv_sqrt.(envs_v1; ishermitian=true, cutoff, regularization)
-      sqrt_and_inv_sqrt_envs_v2 = sqrt_and_inv_sqrt.(envs_v2; ishermitian=true, cutoff, regularization)
+      sqrt_and_inv_sqrt_envs_v1 =
+        sqrt_and_inv_sqrt.(envs_v1; ishermitian=true, cutoff, regularization)
+      sqrt_and_inv_sqrt_envs_v2 =
+        sqrt_and_inv_sqrt.(envs_v2; ishermitian=true, cutoff, regularization)
       sqrt_envs_v1 = first.(sqrt_and_inv_sqrt_envs_v1)
       inv_sqrt_envs_v1 = last.(sqrt_and_inv_sqrt_envs_v1)
       sqrt_envs_v2 = first.(sqrt_and_inv_sqrt_envs_v2)
@@ -123,12 +117,18 @@ function ITensors.apply(
       ψᵥ₁ᵥ₂ = contract(ψᵥ₁ᵥ₂_tn; sequence=contraction_sequence(ψᵥ₁ᵥ₂_tn; alg="optimal"))
       oψ = apply(o, ψᵥ₁ᵥ₂)
 
-      v1_inds = reduce(vcat, [uniqueinds(sqrt_env_v1, ψ[v⃗[1]]) for sqrt_env_v1 in sqrt_envs_v1])
-      v2_inds = reduce(vcat, [uniqueinds(sqrt_env_v2, ψ[v⃗[2]]) for sqrt_env_v2 in sqrt_envs_v2])
+      v1_inds = reduce(
+        vcat, [uniqueinds(sqrt_env_v1, ψ[v⃗[1]]) for sqrt_env_v1 in sqrt_envs_v1]
+      )
+      v2_inds = reduce(
+        vcat, [uniqueinds(sqrt_env_v2, ψ[v⃗[2]]) for sqrt_env_v2 in sqrt_envs_v2]
+      )
       v1_inds = [v1_inds; siteinds(ψ, v⃗[1])]
       v2_inds = [v2_inds; siteinds(ψ, v⃗[2])]
 
-      ψᵥ₁, ψᵥ₂ = symmetric_factorize(oψ, v1_inds; tags=edge_tag(e), observer!, apply_kwargs...)
+      ψᵥ₁, ψᵥ₂ = symmetric_factorize(
+        oψ, v1_inds; tags=edge_tag(e), observer!, apply_kwargs...
+      )
       @show obs.singular_values
 
       for inv_sqrt_env_v1 in inv_sqrt_envs_v1
