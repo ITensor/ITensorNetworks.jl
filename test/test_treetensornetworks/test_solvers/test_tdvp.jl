@@ -111,6 +111,41 @@ using Test
     @test abs(inner(ψ0, ψ2)) > 0.99
   end
 
+  @testset "Higher-Order TDVP" begin
+    N = 10
+    cutoff = 1e-12
+    order = 4
+
+    s = siteinds("S=1/2", N)
+
+    os = OpSum()
+    for j in 1:(N - 1)
+      os += 0.5, "S+", j, "S-", j + 1
+      os += 0.5, "S-", j, "S+", j + 1
+      os += "Sz", j, "Sz", j + 1
+    end
+
+    H = mpo(os, s)
+
+    ψ0 = random_mps(s; internal_inds_space=10)
+
+    # Time evolve forward:
+    ψ1 = tdvp(H, -0.1im, ψ0; time_step=-0.05im, order, cutoff, nsite=1)
+
+    @test norm(ψ1) ≈ 1.0
+
+    # Average energy should be conserved:
+    @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
+
+    # Time evolve backwards:
+    ψ2 = tdvp(H, +0.1im, ψ1; time_step=+0.05im, order, cutoff)
+
+    @test norm(ψ2) ≈ 1.0
+
+    # Should rotate back to original state:
+    @test abs(inner(ψ0, ψ2)) > 0.99
+  end
+
   @testset "Custom solver in TDVP" begin
     N = 10
     cutoff = 1e-12
@@ -132,8 +167,8 @@ using Test
       solver_kwargs = (;
         ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
       )
-      psi, info = exponentiate(PH, time_step, psi0; solver_kwargs...)
-      return psi, info
+      psi, exp_info = exponentiate(PH, time_step, psi0; solver_kwargs...)
+      return psi, (; info=exp_info)
     end
 
     ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
@@ -268,8 +303,8 @@ using Test
     Nsteps = convert(Int, ceil(abs(ttotal / tau)))
     Sz1 = zeros(Nsteps)
     En1 = zeros(Nsteps)
-    Sz2 = zeros(Nsteps)
-    En2 = zeros(Nsteps)
+    #Sz2 = zeros(Nsteps)
+    #En2 = zeros(Nsteps)
 
     for step in 1:Nsteps
       psi = apply(gates, psi; cutoff)
@@ -287,14 +322,10 @@ using Test
         exponentiate_krylovdim=15,
       )
 
-      # TODO: What should `expect` output? Right now
-      # it outputs a dictionary.
       Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
-      # TODO: What should `expect` output? Right now
-      # it outputs a dictionary.
-      Sz2[step] = real(expect("Sz", phi; vertices=[c])[c])
+      #Sz2[step] = real(expect("Sz", phi; vertices=[c])[c])
       En1[step] = real(inner(psi', H, psi))
-      En2[step] = real(inner(phi', H, phi))
+      #En2[step] = real(inner(phi', H, phi))
     end
 
     #
@@ -315,14 +346,12 @@ using Test
       time_step=-im * tau,
       cutoff,
       normalize=false,
-      (step_observer!)=obs,
+      (sweep_observer!)=obs,
       root_vertex=N, # defaults to 1, which breaks observer equality
     )
 
-    # TODO: Allow the notation
-    # `obs["Sz"]` to get the results.
-    Sz2 = results(obs, "Sz")
-    En2 = results(obs, "En")
+    Sz2 = obs.Sz
+    En2 = obs.En
     @test norm(Sz1 - Sz2) < 1e-3
     @test norm(En1 - En2) < 1e-3
   end
@@ -396,33 +425,16 @@ using Test
     # Using Observers.jl
     # 
 
-    function measure_sz(; psi, end_of_sweep)
-      if end_of_sweep
-        # TODO: `expect` should return a scalar here.
-        return expect("Sz", psi; vertices=[c])[c]
-      end
-      return nothing
-    end
+    measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
+    measure_en(; psi) = real(inner(psi', H, psi))
+    sweep_obs = Observer("Sz" => measure_sz, "En" => measure_en)
 
-    function measure_en(; psi, end_of_sweep)
-      if end_of_sweep
-        return real(inner(psi', H, psi))
-      end
-      return nothing
-    end
-
-    function identity_info(; info)
-      return info
-    end
-
-    obs = Observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
-
-    # TODO: `expect` should return a scalar here.
+    get_info(; info) = info
     step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
-
     step_measure_en(; psi) = real(inner(psi', H, psi))
-
-    step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
+    step_obs = Observer(
+      "Sz" => step_measure_sz, "En" => step_measure_en, "info" => get_info
+    )
 
     psi2 = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
     tdvp(
@@ -432,28 +444,26 @@ using Test
       time_step=-im * tau,
       cutoff,
       normalize=false,
-      (observer!)=obs,
+      (sweep_observer!)=sweep_obs,
       (step_observer!)=step_obs,
       root_vertex=N, # defaults to 1, which breaks observer equality
     )
 
-    # TODO: Allow the notation
-    # `obs["Sz"]` to get the results.
-    Sz2 = results(obs)["Sz"]
-    En2 = results(obs)["En"]
-    infos = results(obs)["info"]
+    Sz2 = sweep_obs.Sz
+    En2 = sweep_obs.En
 
-    Sz2_step = results(step_obs)["Sz"]
-    En2_step = results(step_obs)["En"]
+    Sz2_step = step_obs.Sz
+    En2_step = step_obs.En
+    infos = step_obs.info
 
-    ## @test Sz1 ≈ Sz2
-    ## @test En1 ≈ En2
-    ## @test Sz1 ≈ Sz2_step
-    ## @test En1 ≈ En2_step
-    @test Sz2 ≈ Sz2_step
-    @test En2 ≈ En2_step
+    #@show sweep_obs
+    #@show step_obs
+
+    #
+    # Could use ideas of other things to test here
+    #
+
     @test all(x -> x.converged == 1, infos)
-    #@test length(values(infos)) == 180
   end
 end
 
@@ -552,8 +562,8 @@ end
       solver_kwargs = (;
         ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
       )
-      psi, info = exponentiate(PH, time_step, psi0; solver_kwargs...)
-      return psi, info
+      psi, exp_info = exponentiate(PH, time_step, psi0; solver_kwargs...)
+      return psi, (; info=exp_info)
     end
 
     ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)

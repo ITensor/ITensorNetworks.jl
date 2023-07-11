@@ -4,7 +4,7 @@ function contract_solver(PH, psi; kwargs...)
     v *= PH.psi0[j]
   end
   Hpsi0 = contract(PH, v)
-  return Hpsi0, nothing
+  return Hpsi0, NamedTuple()
 end
 
 function contract(
