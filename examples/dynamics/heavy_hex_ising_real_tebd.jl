@@ -3,7 +3,6 @@ using ITensorNetworks
 using NamedGraphs
 using NamedGraphs: rem_edges!, add_edge!
 using Graphs
-using DataGraphs
 using NetworkLayout
 using Statistics
 
