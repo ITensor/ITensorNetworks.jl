@@ -14,6 +14,25 @@ function sqrt_and_inv_sqrt(
   return sqrtA, inv_sqrtA
 end
 
+function symmetric_factorize(
+  A::ITensor,
+  inds...;
+  (observer!)=nothing,
+  svd_kwargs...,
+)
+  set_function!(observer!, "singular_values" => (; singular_values) -> singular_values)
+  U, S, V = svd(A, inds...; svd_kwargs...)
+  u = commonind(U, S)
+  V = commonind(V, S)
+  sqrtS = sqrt_diag(S)
+  U *= sqrtS
+  U = replaceinds(U, v => u)
+  V *= sqrtS
+  S = replaceinds(S, v => u')
+  update!(observer!; singular_values=S)
+  return F1, F2
+end
+
 function ITensors.apply(
   o::ITensor,
   ψ::AbstractITensorNetwork;
@@ -23,6 +42,7 @@ function ITensors.apply(
   nfullupdatesweeps=10,
   print_fidelity_loss=true,
   envisposdef=false,
+  (observer!)=nothing,
   apply_kwargs...,
 )
   ψ = copy(ψ)
@@ -108,7 +128,8 @@ function ITensors.apply(
       v1_inds = [v1_inds; siteinds(ψ, v⃗[1])]
       v2_inds = [v2_inds; siteinds(ψ, v⃗[2])]
 
-      ψᵥ₁, ψᵥ₂ = factorize(oψ, v1_inds; tags=edge_tag(e), apply_kwargs...)
+      ψᵥ₁, ψᵥ₂ = symmetric_factorize(oψ, v1_inds; tags=edge_tag(e), observer!, apply_kwargs...)
+      @show obs.singular_values
 
       for inv_sqrt_env_v1 in inv_sqrt_envs_v1
         # TODO: `dag` here?
