@@ -11,7 +11,7 @@ function eigsolve_solver(; solver_which_eigenvalue=:SR, kwargs...)
     )
     vals, vecs, info = eigsolve(H, init, howmany, which; solver_kwargs...)
     psi = vecs[1]
-    return psi, info
+    return psi, (; solver_info=info, energies=vals)
   end
   return solver
 end

@@ -44,7 +44,7 @@ function linsolve(
     )
     b = dag(only(proj_mps(P)))
     x, info = KrylovKit.linsolve(P, b, x₀, a₀, a₁; solver_kwargs...)
-    return x, nothing
+    return x, NamedTuple()
   end
 
   error("`linsolve` for TTN not yet implemented.")
