@@ -3,7 +3,6 @@ using ITensorNetworks
 using NamedGraphs
 using NamedGraphs: rem_edges!, add_edge!
 using Graphs
-using Statistics
 
 using ITensorNetworks:
   initialize_bond_tensors,
@@ -186,5 +185,6 @@ println("θh is $θh. Maxdim is $χ.")
 mags = main(θh, no_trotter_steps; apply_kwargs...)
 
 println(
-  "After $no_trotter_steps steps. Average magnetisation is " * string(mean(values(mags)))
+  "After $no_trotter_steps steps. Average magnetisation is " *
+  string(sum(values(mags)) / length(values(mags))),
 )
