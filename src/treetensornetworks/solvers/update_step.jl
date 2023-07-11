@@ -1,5 +1,5 @@
 
-function update_sweep(nsite, graph::AbstractGraph; kwargs...)
+function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)
   return vcat(
     [
       half_sweep(
@@ -14,25 +14,43 @@ function update_sweep(nsite, graph::AbstractGraph; kwargs...)
   )
 end
 
+function step_printer(;
+  cutoff, maxdim, mindim, outputlevel::Int=0, psi, region, spec, sweep_step
+)
+  if outputlevel >= 2
+    @printf("Sweep %d, region=%s \n", sweep, region)
+    print("  Truncated using")
+    @printf(" cutoff=%.1E", cutoff)
+    @printf(" maxdim=%d", maxdim)
+    @printf(" mindim=%d", mindim)
+    println()
+    if spec != nothing
+      @printf(
+        "  Trunc. err=%.2E, bond dimension %d\n",
+        spec.truncerr,
+        linkdim(psi, edgetype(psi)(region...))
+      )
+    end
+    flush(stdout)
+  end
+end
+
 function update_step(
   solver,
   PH,
   psi::AbstractTTN;
-  cutoff::AbstractFloat=1E-16,
-  maxdim::Int=typemax(Int),
-  mindim::Int=1,
   normalize::Bool=false,
   nsite::Int=2,
-  outputlevel::Int=0,
-  sw::Int=1,
-  sweep_regions=update_sweep(nsite, psi),
+  step_printer=step_printer,
+  (step_observer!)=observer(),
+  sweep::Int=1,
+  sweep_regions=default_sweep_regions(nsite, psi),
   kwargs...,
 )
-  info = nothing
   PH = copy(PH)
   psi = copy(psi)
 
-  observer = get(kwargs, :observer!, nothing)
+  insert_function!(step_observer!, "step_printer" => step_printer)
 
   # Append empty namedtuple to each element if not already present
   # (Needed to handle user-provided sweep_regions)
@@ -44,60 +62,27 @@ function update_step(
     )
   end
 
-  maxtruncerr = 0.0
-  info = nothing
-  for (n, (region, step_kwargs)) in enumerate(sweep_regions)
-    psi, PH, spec, info = local_update(
+  for (sweep_step, (region, step_kwargs)) in enumerate(sweep_regions)
+    psi, PH = local_update(
       solver,
       PH,
       psi,
       region;
-      outputlevel,
-      cutoff,
-      maxdim,
-      mindim,
       normalize,
       step_kwargs,
+      step_observer!,
+      sweep,
+      sweep_regions,
+      sweep_step,
       kwargs...,
     )
-    maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
-
-    if outputlevel >= 2
-      #if get(data(sweep_step),:time_direction,0) == +1
-      #  @printf("Sweep %d, direction %s, position (%s,) \n", sw, direction, pos(step))
-      #end
-      print("  Truncated using")
-      @printf(" cutoff=%.1E", cutoff)
-      @printf(" maxdim=%.1E", maxdim)
-      print(" mindim=", mindim)
-      #print(" current_time=", round(current_time; digits=3))
-      println()
-      if spec != nothing
-        @printf(
-          "  Trunc. err=%.2E, bond dimension %d\n",
-          spec.truncerr,
-          linkdim(psi, edgetype(psi)(pos(step)...))
-        )
-      end
-      flush(stdout)
-    end
-    update!(
-      observer;
-      sweep_step=n,
-      total_sweep_steps=length(sweep_regions),
-      end_of_sweep=(n == length(sweep_regions)),
-      psi,
-      region,
-      sweep=sw,
-      spec,
-      outputlevel,
-      info,
-      step_kwargs...,
-    )
   end
+
+  select!(step_observer!, Observers.DataFrames.Not("step_printer")) # remove step_printer
   # Just to be sure:
   normalize && normalize!(psi)
-  return psi, PH, (; maxtruncerr)
+
+  return psi, PH
 end
 
 #
@@ -162,7 +147,22 @@ current_ortho(::Type{NamedEdge{V}}, st) where {V} = src(st)
 current_ortho(st) = current_ortho(typeof(st), st)
 
 function local_update(
-  solver, PH, psi, region; normalize, noise, step_kwargs=NamedTuple(), kwargs...
+  solver,
+  PH,
+  psi,
+  region;
+  normalize,
+  noise,
+  cutoff::AbstractFloat=1E-16,
+  maxdim::Int=typemax(Int),
+  mindim::Int=1,
+  outputlevel::Int=0,
+  step_kwargs=NamedTuple(),
+  step_observer!,
+  sweep,
+  sweep_regions,
+  sweep_step,
+  kwargs...,
 )
   psi = orthogonalize(psi, current_ortho(region))
   psi, phi = extract_local_tensor(psi, region)
@@ -172,6 +172,10 @@ function local_update(
   PH = position(PH, psi, region)
 
   phi, info = solver(PH, phi; normalize, region, step_kwargs..., kwargs...)
+  if !(phi isa ITensor && info isa NamedTuple)
+    println("Solver returned the following types: $(typeof(phi)), $(typeof(info))")
+    error("In alternating_update, solver must return an ITensor and a NamedTuple")
+  end
   normalize && (phi /= norm(phi))
 
   drho = nothing
@@ -183,5 +187,22 @@ function local_update(
   psi, spec = insert_local_tensor(
     psi, phi, region; eigen_perturbation=drho, ortho, normalize, kwargs...
   )
-  return psi, PH, spec, info
+
+  update!(
+    step_observer!;
+    cutoff,
+    maxdim,
+    mindim,
+    sweep_step,
+    total_sweep_steps=length(sweep_regions),
+    end_of_sweep=(sweep_step == length(sweep_regions)),
+    psi,
+    region,
+    sweep,
+    spec,
+    outputlevel,
+    info...,
+    step_kwargs...,
+  )
+  return psi, PH
 end

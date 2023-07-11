@@ -26,66 +26,64 @@ function process_sweeps(
   return maxdim, mindim, cutoff, noise, kwargs
 end
 
+function sweep_printer(; outputlevel, psi, sweep, sw_time)
+  if outputlevel >= 1
+    print("After sweep ", sweep, ":")
+    print(" maxlinkdim=", maxlinkdim(psi))
+    print(" cpu_time=", round(sw_time; digits=3))
+    println()
+    flush(stdout)
+  end
+end
+
 function alternating_update(
   solver,
   PH,
   psi0::AbstractTTN;
-  checkdone=nothing,
-  outputlevel=0,
-  nsweeps=1,
+  checkdone=(; kws...) -> false,
+  outputlevel::Integer=0,
+  nsweeps::Integer=1,
+  (sweep_observer!)=observer(),
+  sweep_printer=sweep_printer,
   write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
   kwargs...,
 )
   maxdim, mindim, cutoff, noise, kwargs = process_sweeps(nsweeps; kwargs...)
 
-  step_observer = get(kwargs, :step_observer!, nothing)
-
   psi = copy(psi0)
 
-  info = nothing
-  for sw in 1:nsweeps
-    if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
+  insert_function!(sweep_observer!, "sweep_printer" => sweep_printer)
+
+  for sweep in 1:nsweeps
+    if !isnothing(write_when_maxdim_exceeds) && maxdim[sweep] > write_when_maxdim_exceeds
       if outputlevel >= 2
         println(
-          "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim(sweeps, sw) = $(maxdim(sweeps, sw)), writing environment tensors to disk",
+          "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim[sweep] = $(maxdim[sweep]), writing environment tensors to disk",
         )
       end
       PH = disk(PH)
     end
 
     sw_time = @elapsed begin
-      psi, PH, info = update_step(
+      psi, PH = update_step(
         solver,
         PH,
         psi;
         outputlevel,
-        sweep=sw,
-        maxdim=maxdim[sw],
-        mindim=mindim[sw],
-        cutoff=cutoff[sw],
-        noise=noise[sw],
+        sweep,
+        maxdim=maxdim[sweep],
+        mindim=mindim[sweep],
+        cutoff=cutoff[sweep],
+        noise=noise[sweep],
         kwargs...,
       )
     end
 
-    update!(step_observer; psi, sweep=sw, outputlevel)
+    update!(sweep_observer!; psi, sweep, sw_time, outputlevel)
 
-    if outputlevel >= 1
-      print("After sweep ", sw, ":")
-      print(" maxlinkdim=", maxlinkdim(psi))
-      @printf(" maxerr=%.2E", info.maxtruncerr)
-      #print(" current_time=", round(current_time; digits=3))
-      print(" time=", round(sw_time; digits=3))
-      println()
-      flush(stdout)
-    end
-
-    isdone = false
-    if !isnothing(checkdone)
-      isdone = checkdone(; psi, sweep=sw, outputlevel, kwargs...)
-    end
-    isdone && break
+    checkdone(; psi, sweep, outputlevel, kwargs...) && break
   end
+  select!(sweep_observer!, Observers.DataFrames.Not("sweep_printer")) # remove sweep_printer
   return psi
 end
 

@@ -25,15 +25,16 @@ ode_kwargs = (; reltol=1e-8, abstol=1e-8)
 f⃗ = [t -> cos(ω * t) for ω in ω⃗]
 
 function tdvp_ode_solver(H⃗₀, ψ₀; time_step, kwargs...)
-  return ode_solver(
+  psi_t, info = ode_solver(
     -im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; solver_alg=ode_alg, ode_kwargs...
   )
+  return psi_t, (; info)
 end
 
 krylov_kwargs = (; tol=1e-8, eager=true)
 
 function krylov_solver(H⃗₀, ψ₀; time_step, ishermitian=false, issymmetric=false, kwargs...)
-  return krylov_solver(
+  psi_t, info = krylov_solver(
     -im * TimeDependentSum(f⃗, H⃗₀),
     time_step,
     ψ₀;
@@ -41,6 +42,7 @@ function krylov_solver(H⃗₀, ψ₀; time_step, ishermitian=false, issymmetric
     ishermitian,
     issymmetric,
   )
+  return psi_t, (; info)
 end
 
 @testset "MPS: Time dependent Hamiltonian" begin
