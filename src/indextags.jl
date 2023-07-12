@@ -1,5 +1,5 @@
 # Helper functions
-vertex_tag(v) = "$v"
+vertex_tag(v) = replace("$v", "," => "×", "(" => "", ")" => "")
 
 function vertex_tag(v::Tuple)
   t = "$(vertex_tag(first(v)))"

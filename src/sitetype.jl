@@ -12,7 +12,7 @@ end
 function siteinds(sitetypes::AbstractDictionary, g::AbstractGraph; kwargs...)
   is = IndsNetwork(g)
   for v in vertices(g)
-    is[v] = [siteind(sitetypes[v], v; kwargs...)]
+    is[v] = [siteind(sitetypes[v], vertex_tag(v); kwargs...)]
   end
   return is
 end
