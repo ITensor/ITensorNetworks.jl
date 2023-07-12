@@ -12,7 +12,7 @@ end
 edge_tag(e::Pair) = edge_tag(NamedEdge(e))
 
 function edge_tag(e)
-  return "$(vertex_tag(src(e)))↔$(vertex_tag(dst(e)))"
+  return "$(vertex_tag(src(e))),$(vertex_tag(dst(e)))"
 end
 
 function vertex_index(v, vertex_space)
