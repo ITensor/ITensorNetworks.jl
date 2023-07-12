@@ -4,6 +4,7 @@ import Base:
   # functions
   convert,
   copy,
+  eltype,
   getindex,
   hvncat,
   setindex!,

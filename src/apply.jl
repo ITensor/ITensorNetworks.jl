@@ -17,7 +17,7 @@ function symmetric_factorize(
   if !isnothing(observer!)
     insert_function!(observer!, "singular_values" => (; singular_values) -> singular_values)
   end
-  U, S, V = svd(A, inds...; u_tags=tags, v_tags=tags, svd_kwargs...)
+  U, S, V = svd(A, inds...; lefttags=tags, righttags=tags, svd_kwargs...)
   u = commonind(U, S)
   v = commonind(V, S)
   sqrtS = sqrt_diag(S)
@@ -63,14 +63,25 @@ function full_update_bp(o, ψ, v⃗; envs, nfullupdatesweeps, print_fidelity_los
 end
 
 function simple_update_bp(o, ψ, v⃗; envs, (observer!)=nothing, apply_kwargs...)
+  println("\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+  println("Inside `simple_update_bp`")
+  println()
+
   cutoff = 10 * eps(real(scalartype(ψ)))
   regularization = 10 * eps(real(scalartype(ψ)))
 
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
 
+  @show v⃗[1], envs_v1
+  @assert all(t -> order(t) == 2, envs_v1)
+
   sqrt_and_inv_sqrt_envs_v1 =
     sqrt_and_inv_sqrt.(envs_v1; ishermitian=true, cutoff, regularization)
+
+  @show v⃗[2], envs_v2
+  @assert all(t -> order(t) == 2, envs_v2)
+
   sqrt_and_inv_sqrt_envs_v2 =
     sqrt_and_inv_sqrt.(envs_v2; ishermitian=true, cutoff, regularization)
   sqrt_envs_v1 = first.(sqrt_and_inv_sqrt_envs_v1)
@@ -143,7 +154,6 @@ function ITensors.apply(
         o, ψ, v⃗; envs, nfullupdatesweeps, print_fidelity_loss, envisposdef
       )
     else
-      println("The environments are products, use SU-BP.")
       ψᵥ₁, ψᵥ₂ = simple_update_bp(o, ψ, v⃗; envs, observer!, apply_kwargs...)
     end
     if normalize
