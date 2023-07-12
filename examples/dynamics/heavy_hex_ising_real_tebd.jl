@@ -15,13 +15,6 @@ using ITensorNetworks:
   symmetric_to_vidal_gauge,
   norm_network
 
-#Remove edges from a graph involving the vertex v (either at src or dst)
-function rem_edges_involving_vertex(g::NamedGraph, v)
-  es = edges(g)
-  es_involving_v = es[findall(e -> src(e) == v || dst(e) == v, es)]
-  return rem_edges!(g, es_involving_v)
-end
-
 #Create the heavy_hex grid of the same structure and labelling as  https://www.nature.com/articles/s41586-023-06096-3. With up to no_qubits <= 127 qubits.
 function create_heavy_hex_grid(no_qubits::Int64)
   g = named_grid((no_qubits, 1))
@@ -81,7 +74,8 @@ function create_heavy_hex_grid(no_qubits::Int64)
 
   for (i, qp) in enumerate(qubit_pairs)
     rq = rung_qubits[i]
-    rem_edges_involving_vertex(g, (rq, 1))
+    rem_vertex!(g, rq)
+    add_vertex!(g, rq)
     if qubit_pairs[i][1] <= (no_qubits - 1) && rq <= (no_qubits - 1)
       add_edge!(g, qubit_pairs[i][1] => rq)
     end
