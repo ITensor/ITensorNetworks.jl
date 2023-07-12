@@ -11,18 +11,98 @@ function sqrt_and_inv_sqrt(
   return sqrtA, inv_sqrtA
 end
 
-function symmetric_factorize(A::ITensor, inds...; (observer!)=nothing, svd_kwargs...)
-  set_function!(observer!, "singular_values" => (; singular_values) -> singular_values)
-  U, S, V = svd(A, inds...; svd_kwargs...)
+function symmetric_factorize(
+  A::ITensor, inds...; (observer!)=nothing, tags="", svd_kwargs...
+)
+  if !isnothing(observer!)
+    insert_function!(observer!, "singular_values" => (; singular_values) -> singular_values)
+  end
+  U, S, V = svd(A, inds...; u_tags=tags, v_tags=tags, svd_kwargs...)
   u = commonind(U, S)
-  V = commonind(V, S)
+  v = commonind(V, S)
   sqrtS = sqrt_diag(S)
-  U *= sqrtS
-  U = replaceinds(U, v => u)
-  V *= sqrtS
+  Fu = U * sqrtS
+  Fu = replaceinds(Fu, v => u)
+  Fv = V * sqrtS
   S = replaceinds(S, v => u')
   update!(observer!; singular_values=S)
-  return F1, F2
+  return Fu, Fv
+end
+
+function full_update_bp(o, ψ, v⃗; envs, nfullupdatesweeps, print_fidelity_loss, envisposdef)
+  outer_dim_v1, outer_dim_v2 = dim(uniqueinds(ψ[v⃗[1]], o, ψ[v⃗[2]])),
+  dim(uniqueinds(ψ[v⃗[2]], o, ψ[v⃗[1]]))
+  dim_shared = dim(commoninds(ψ[v⃗[1]], ψ[v⃗[2]]))
+  d1, d2 = dim(commoninds(ψ[v⃗[1]], o)), dim(commoninds(ψ[v⃗[2]], o))
+  if outer_dim_v1 * outer_dim_v2 <= dim_shared * dim_shared * d1 * d2
+    Qᵥ₁, Rᵥ₁ = ITensor(true), copy(ψ[v⃗[1]])
+    Qᵥ₂, Rᵥ₂ = ITensor(true), copy(ψ[v⃗[2]])
+  else
+    Qᵥ₁, Rᵥ₁ = factorize(
+      ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), uniqueinds(ψ, v⃗[1]))
+    )
+    Qᵥ₂, Rᵥ₂ = factorize(
+      ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), uniqueinds(ψ, v⃗[2]))
+    )
+  end
+  extended_envs = vcat(envs, Qᵥ₁, prime(dag(Qᵥ₁)), Qᵥ₂, prime(dag(Qᵥ₂)))
+  Rᵥ₁, Rᵥ₂ = optimise_p_q(
+    Rᵥ₁,
+    Rᵥ₂,
+    extended_envs,
+    o;
+    nfullupdatesweeps,
+    print_fidelity_loss,
+    envisposdef,
+    apply_kwargs...,
+  )
+
+  ψᵥ₁ = Qᵥ₁ * Rᵥ₁
+  ψᵥ₂ = Qᵥ₂ * Rᵥ₂
+  return ψᵥ₁, ψᵥ₂
+end
+
+function simple_update_bp(o, ψ, v⃗; envs, (observer!)=nothing, apply_kwargs...)
+  cutoff = 10 * eps(real(scalartype(ψ)))
+  regularization = 10 * eps(real(scalartype(ψ)))
+
+  envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
+  envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
+
+  sqrt_and_inv_sqrt_envs_v1 =
+    sqrt_and_inv_sqrt.(envs_v1; ishermitian=true, cutoff, regularization)
+  sqrt_and_inv_sqrt_envs_v2 =
+    sqrt_and_inv_sqrt.(envs_v2; ishermitian=true, cutoff, regularization)
+  sqrt_envs_v1 = first.(sqrt_and_inv_sqrt_envs_v1)
+  inv_sqrt_envs_v1 = last.(sqrt_and_inv_sqrt_envs_v1)
+  sqrt_envs_v2 = first.(sqrt_and_inv_sqrt_envs_v2)
+  inv_sqrt_envs_v2 = last.(sqrt_and_inv_sqrt_envs_v2)
+
+  ψᵥ₁ᵥ₂_tn = [ψ[v⃗[1]]; ψ[v⃗[2]]; sqrt_envs_v1; sqrt_envs_v2]
+  ψᵥ₁ᵥ₂ = contract(ψᵥ₁ᵥ₂_tn; sequence=contraction_sequence(ψᵥ₁ᵥ₂_tn; alg="optimal"))
+  oψ = apply(o, ψᵥ₁ᵥ₂)
+
+  v1_inds = reduce(
+    vcat, [uniqueinds(sqrt_env_v1, ψ[v⃗[1]]) for sqrt_env_v1 in sqrt_envs_v1]; init=Index[]
+  )
+  v2_inds = reduce(
+    vcat, [uniqueinds(sqrt_env_v2, ψ[v⃗[2]]) for sqrt_env_v2 in sqrt_envs_v2]; init=Index[]
+  )
+  v1_inds = [v1_inds; siteinds(ψ, v⃗[1])]
+  v2_inds = [v2_inds; siteinds(ψ, v⃗[2])]
+
+  e = v⃗[1] => v⃗[2]
+  ψᵥ₁, ψᵥ₂ = symmetric_factorize(oψ, v1_inds; tags=edge_tag(e), observer!, apply_kwargs...)
+
+  for inv_sqrt_env_v1 in inv_sqrt_envs_v1
+    # TODO: `dag` here?
+    ψᵥ₁ *= inv_sqrt_env_v1
+  end
+  for inv_sqrt_env_v2 in inv_sqrt_envs_v2
+    # TODO: `dag` here?
+    ψᵥ₂ *= inv_sqrt_env_v2
+  end
+  return ψᵥ₁, ψᵥ₂
 end
 
 function ITensors.apply(
@@ -50,8 +130,7 @@ function ITensors.apply(
     setindex_preserve_graph!(ψ, oψᵥ, v⃗[1])
   elseif length(v⃗) == 2
     envs = Vector{ITensor}(envs)
-    is_product_env = !isempty(envs) && iszero(ne(ITensorNetwork(envs)))
-
+    is_product_env = iszero(ne(ITensorNetwork(envs)))
     e = v⃗[1] => v⃗[2]
     if !has_edge(ψ, e)
       error("Vertices where the gates are being applied must be neighbors for now.")
@@ -59,96 +138,20 @@ function ITensors.apply(
     if ortho
       ψ = orthogonalize(ψ, v⃗[1])
     end
-
     if !is_product_env
-      outer_dim_v1, outer_dim_v2 = dim(uniqueinds(ψ[v⃗[1]], o, ψ[v⃗[2]])),
-      dim(uniqueinds(ψ[v⃗[2]], o, ψ[v⃗[1]]))
-      dim_shared = dim(commoninds(ψ[v⃗[1]], ψ[v⃗[2]]))
-      d1, d2 = dim(commoninds(ψ[v⃗[1]], o)), dim(commoninds(ψ[v⃗[2]], o))
-      if outer_dim_v1 * outer_dim_v2 <= dim_shared * dim_shared * d1 * d2
-        Qᵥ₁, Rᵥ₁ = ITensor(true), copy(ψ[v⃗[1]])
-        Qᵥ₂, Rᵥ₂ = ITensor(true), copy(ψ[v⃗[2]])
-      else
-        Qᵥ₁, Rᵥ₁ = factorize(
-          ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), uniqueinds(ψ, v⃗[1]))
-        )
-        Qᵥ₂, Rᵥ₂ = factorize(
-          ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), uniqueinds(ψ, v⃗[2]))
-        )
-      end
-      if !isempty(envs)
-        extended_envs = vcat(envs, Qᵥ₁, prime(dag(Qᵥ₁)), Qᵥ₂, prime(dag(Qᵥ₂)))
-        Rᵥ₁, Rᵥ₂ = optimise_p_q(
-          Rᵥ₁,
-          Rᵥ₂,
-          extended_envs,
-          o;
-          nfullupdatesweeps,
-          print_fidelity_loss,
-          envisposdef,
-          apply_kwargs...,
-        )
-      else
-        Rᵥ₁, Rᵥ₂ = factorize(
-          apply(o, Rᵥ₁ * Rᵥ₂), inds(Rᵥ₁); tags=ITensorNetworks.edge_tag(e), apply_kwargs...
-        )
-      end
-
-      ψᵥ₁ = Qᵥ₁ * Rᵥ₁
-      ψᵥ₂ = Qᵥ₂ * Rᵥ₂
+      ψᵥ₁, ψᵥ₂ = simple_update_bp(
+        o, ψ, v⃗; envs, nfullupdatesweeps, print_fidelity_loss, envisposdef
+      )
     else
       println("The environments are products, use SU-BP.")
-      cutoff = 10 * eps(real(scalartype(ψ)))
-      regularization = 10 * eps(real(scalartype(ψ)))
-
-      envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
-      envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
-
-      sqrt_and_inv_sqrt_envs_v1 =
-        sqrt_and_inv_sqrt.(envs_v1; ishermitian=true, cutoff, regularization)
-      sqrt_and_inv_sqrt_envs_v2 =
-        sqrt_and_inv_sqrt.(envs_v2; ishermitian=true, cutoff, regularization)
-      sqrt_envs_v1 = first.(sqrt_and_inv_sqrt_envs_v1)
-      inv_sqrt_envs_v1 = last.(sqrt_and_inv_sqrt_envs_v1)
-      sqrt_envs_v2 = first.(sqrt_and_inv_sqrt_envs_v2)
-      inv_sqrt_envs_v2 = last.(sqrt_and_inv_sqrt_envs_v2)
-
-      ψᵥ₁ᵥ₂_tn = [ψ[v⃗[1]]; ψ[v⃗[2]]; sqrt_envs_v1; sqrt_envs_v2]
-      ψᵥ₁ᵥ₂ = contract(ψᵥ₁ᵥ₂_tn; sequence=contraction_sequence(ψᵥ₁ᵥ₂_tn; alg="optimal"))
-      oψ = apply(o, ψᵥ₁ᵥ₂)
-
-      v1_inds = reduce(
-        vcat, [uniqueinds(sqrt_env_v1, ψ[v⃗[1]]) for sqrt_env_v1 in sqrt_envs_v1]
-      )
-      v2_inds = reduce(
-        vcat, [uniqueinds(sqrt_env_v2, ψ[v⃗[2]]) for sqrt_env_v2 in sqrt_envs_v2]
-      )
-      v1_inds = [v1_inds; siteinds(ψ, v⃗[1])]
-      v2_inds = [v2_inds; siteinds(ψ, v⃗[2])]
-
-      ψᵥ₁, ψᵥ₂ = symmetric_factorize(
-        oψ, v1_inds; tags=edge_tag(e), observer!, apply_kwargs...
-      )
-      @show obs.singular_values
-
-      for inv_sqrt_env_v1 in inv_sqrt_envs_v1
-        # TODO: `dag` here?
-        ψᵥ₁ *= inv_sqrt_env_v1
-      end
-      for inv_sqrt_env_v2 in inv_sqrt_envs_v2
-        # TODO: `dag` here?
-        ψᵥ₂ *= inv_sqrt_env_v2
-      end
+      ψᵥ₁, ψᵥ₂ = simple_update_bp(o, ψ, v⃗; envs, observer!, apply_kwargs...)
     end
-
     if normalize
       ψᵥ₁ ./= norm(ψᵥ₁)
       ψᵥ₂ ./= norm(ψᵥ₂)
     end
-
     setindex_preserve_graph!(ψ, ψᵥ₁, v⃗[1])
     setindex_preserve_graph!(ψ, ψᵥ₂, v⃗[2])
-
   elseif length(v⃗) < 1
     error("Gate being applied does not share indices with tensor network.")
   elseif length(v⃗) > 2
