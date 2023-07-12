@@ -1,10 +1,10 @@
 # Helper functions
-vertex_tag(v::Int) = "$v"
+vertex_tag(v) = "$v"
 
 function vertex_tag(v::Tuple)
-  t = "$(first(v))"
+  t = "$(vertex_tag(first(v)))"
   for vn in Base.tail(v)
-    t *= "×$vn"
+    t *= "×$(vertex_tag(vn))"
   end
   return t
 end
