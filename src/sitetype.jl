@@ -3,7 +3,7 @@ function siteind(sitetype::String, v::Tuple; kwargs...)
 end
 
 # naming collision of ITensors.addtags and addtags keyword in siteind system
-function siteind(d::Integer, v::Tuple; addtags="", kwargs...)
+function siteind(d::Integer, v; addtags="", kwargs...)
   return ITensors.addtags(
     Index(d; tags="Site, $addtags", kwargs...), ITensorNetworks.vertex_tag(v)
   )

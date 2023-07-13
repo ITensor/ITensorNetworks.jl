@@ -1,14 +1,6 @@
 # Helper functions
 vertex_tag(v) = replace("$v", "," => "×", "(" => "", ")" => "")
 
-function vertex_tag(v::Tuple)
-  t = "$(vertex_tag(first(v)))"
-  for vn in Base.tail(v)
-    t *= "×$(vertex_tag(vn))"
-  end
-  return t
-end
-
 edge_tag(e::Pair) = edge_tag(NamedEdge(e))
 
 function edge_tag(e)
