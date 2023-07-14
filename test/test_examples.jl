@@ -16,6 +16,8 @@ using Test
     joinpath("belief_propagation", "bpexample.jl"),
     joinpath("belief_propagation", "sqrt_bp.jl"),
     joinpath("peps", "ising_tebd.jl"),
+    joinpath("dynamics", "2d_ising_imag_tebd.jl"),
+    joinpath("dynamics", "heavy_hex_ising_real_tebd.jl"),
     joinpath("treetensornetworks", "comb_tree.jl"),
     joinpath("treetensornetworks", "spanning_tree.jl"),
     joinpath("treetensornetworks", "ttn_basics.jl"),
