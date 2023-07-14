@@ -398,7 +398,6 @@ function TTN(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
   return NDTensors.convert_scalartype(eltype, TTN(os, sites; kwargs...))
 end
 
-
 # 
 # Tree adaptation of functionalities in ITensors.jl/src/physics/autompo/matelem.jl
 # 
@@ -424,7 +423,6 @@ function Base.isless(a1::ArrElem{T,N}, a2::ArrElem{T,N})::Bool where {T,N}
   end
   return a1.val < a2.val
 end
-
 
 # 
 # Sparse finite state machine construction

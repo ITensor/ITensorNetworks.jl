@@ -55,31 +55,31 @@ using Test
     end
 
     @testset "Finite state machine" for root_vertex in leaf_vertices(is)
-    # get TTN Hamiltonian directly
-    Hfsm = ITensorNetworks.fsmTTN(H, is, root_vertex)
-    # get corresponding MPO Hamiltonian
-    Hline = MPO(relabel_sites(H, vmap), sites)
-    # compare resulting dense Hamiltonians
-    @disable_warn_order begin
-      Tttno = prod(Hline)
-      Tmpo = contract(Hfsm)
-    end
-    @test Tttno ≈ Tmpo rtol = 1e-6
+      # get TTN Hamiltonian directly
+      Hfsm = ITensorNetworks.fsmTTN(H, is, root_vertex)
+      # get corresponding MPO Hamiltonian
+      Hline = MPO(relabel_sites(H, vmap), sites)
+      # compare resulting dense Hamiltonians
+      @disable_warn_order begin
+        Tttno = prod(Hline)
+        Tmpo = contract(Hfsm)
+      end
+      @test Tttno ≈ Tmpo rtol = 1e-6
 
-    # same thing for longer range interactions
-    Hfsm_lr = ITensorNetworks.fsmTTN(Hlr, is, root_vertex)
-    Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
-    @disable_warn_order begin
-      Tttno_lr = prod(Hline_lr)
-      Tmpo_lr = contract(Hfsm_lr)
-    end
-    @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
+      # same thing for longer range interactions
+      Hfsm_lr = ITensorNetworks.fsmTTN(Hlr, is, root_vertex)
+      Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
+      @disable_warn_order begin
+        Tttno_lr = prod(Hline_lr)
+        Tmpo_lr = contract(Hfsm_lr)
+      end
+      @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
 
-    # check optional numerical truncation for finite state machine construction
-    Hfsm_trunc = ITensorNetworks.fsmTTN(H, is, root_vertex; trunc=true, cutoff=1e-10)
-    @test collect(edge_data(linkdims(Hfsm_trunc))) == [4, 3, 4, 3, 3]
+      # check optional numerical truncation for finite state machine construction
+      Hfsm_trunc = ITensorNetworks.fsmTTN(H, is, root_vertex; trunc=true, cutoff=1e-10)
+      @test collect(edge_data(linkdims(Hfsm_trunc))) == [4, 3, 4, 3, 3]
+    end
   end
-end
 
   @testset "Multiple onsite terms (regression test for issue #62)" begin
     grid_dims = (2, 1)
