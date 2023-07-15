@@ -208,7 +208,8 @@ function _ind_orderings(par::DataGraph, contraction_tree::NamedDiGraph; linear_o
     )
     # The inds ordering for each edge is selected based on a
     # larger partition of the tn.
-    tn, tn_inds = length(vertices(tn1)) >= length(vertices(tn2)) ? (tn1, inds1) : (tn2, inds2)
+    tn, tn_inds =
+      length(vertices(tn1)) >= length(vertices(tn2)) ? (tn1, inds1) : (tn2, inds2)
     for e in contract_edges
       source_inds = intersect(
         p_vs_to_noncommon_inds[[e.src]], p_vs_to_noncommon_inds[[e.dst]]

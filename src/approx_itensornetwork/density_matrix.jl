@@ -270,30 +270,15 @@ function _rem_vertex!(
   contraction_sequence_kwargs,
 )
   caches = alg_graph.caches
-  outinds_root_to_sim = _densitymatrix_outinds_to_sim(alg_graph.partition, root)
-  inds_to_sim = merge(alg_graph.innerinds_to_sim, outinds_root_to_sim)
   dm_dfs_tree = dfs_tree(alg_graph.out_tree, root)
-  @assert length(child_vertices(dm_dfs_tree, root)) == 1
-  for v in post_order_dfs_vertices(dm_dfs_tree, root)
-    children = sort(child_vertices(dm_dfs_tree, v))
-    @assert length(children) <= 2
-    network = Vector{ITensor}(alg_graph.partition[v])
-    _update!(
-      caches,
-      NamedEdge(parent_vertex(dm_dfs_tree, v), v),
-      children,
-      Vector{ITensor}(network),
-      inds_to_sim;
-      contraction_sequence_alg,
-      contraction_sequence_kwargs,
-    )
-  end
-  U = _get_low_rank_projector(
-    caches.e_to_dm[NamedEdge(nothing, root)],
-    collect(keys(outinds_root_to_sim)),
-    collect(values(outinds_root_to_sim));
+  U = _update_cache_w_low_rank_projector!(
+    Algorithm("qr_svd"),
+    alg_graph,
+    root;
     cutoff,
     maxdim,
+    contraction_sequence_alg,
+    contraction_sequence_kwargs,
   )
   # update partition and out_tree
   root_tensor = _optcontract(
@@ -309,12 +294,16 @@ function _rem_vertex!(
   rem_vertex!(alg_graph.out_tree, root)
   # update es_to_pdm
   truncate_dfs_tree = dfs_tree(alg_graph.out_tree, alg_graph.root)
+  # Remove all partial density matrices that contain `root`,
+  # since `root` has been removed from the graph.
   for es in filter(es -> dst(first(es)) == root, keys(caches.es_to_pdm))
     delete!(caches.es_to_pdm, es)
   end
   for es in filter(es -> dst(first(es)) == new_root, keys(caches.es_to_pdm))
     parent_edge = NamedEdge(parent_vertex(truncate_dfs_tree, new_root), new_root)
     edge_to_remove = NamedEdge(root, new_root)
+    # The pdm represented by `new_es` will be used to
+    # update the sibling vertex of `root`.
     if intersect(es, Set([parent_edge])) == Set()
       new_es = setdiff(es, [edge_to_remove])
       if new_es == Set()
@@ -336,6 +325,91 @@ function _rem_vertex!(
     delete!(caches.e_to_dm, edge)
   end
   return U
+end
+
+function _update_cache_w_low_rank_projector!(
+  ::Algorithm"direct_eigen",
+  alg_graph::_DensityMartrixAlgGraph,
+  root;
+  cutoff,
+  maxdim,
+  contraction_sequence_alg,
+  contraction_sequence_kwargs,
+)
+  dm_dfs_tree = dfs_tree(alg_graph.out_tree, root)
+  outinds_root_to_sim = _densitymatrix_outinds_to_sim(alg_graph.partition, root)
+  # For keys that appear in both dicts, the value in
+  # `outinds_root_to_sim` is used.
+  inds_to_sim = merge(alg_graph.innerinds_to_sim, outinds_root_to_sim)
+  @assert length(child_vertices(dm_dfs_tree, root)) == 1
+  for v in post_order_dfs_vertices(dm_dfs_tree, root)
+    children = sort(child_vertices(dm_dfs_tree, v))
+    @assert length(children) <= 2
+    network = Vector{ITensor}(alg_graph.partition[v])
+    _update!(
+      alg_graph.caches,
+      NamedEdge(parent_vertex(dm_dfs_tree, v), v),
+      children,
+      Vector{ITensor}(network),
+      inds_to_sim;
+      contraction_sequence_alg,
+      contraction_sequence_kwargs,
+    )
+  end
+  return U = _get_low_rank_projector(
+    alg_graph.caches.e_to_dm[NamedEdge(nothing, root)],
+    collect(keys(outinds_root_to_sim)),
+    collect(values(outinds_root_to_sim));
+    cutoff,
+    maxdim,
+  )
+end
+
+function _update_cache_w_low_rank_projector!(
+  ::Algorithm"qr_svd",
+  alg_graph::_DensityMartrixAlgGraph,
+  root;
+  cutoff,
+  maxdim,
+  contraction_sequence_alg,
+  contraction_sequence_kwargs,
+)
+  dm_dfs_tree = dfs_tree(alg_graph.out_tree, root)
+  outinds_root_to_sim = _densitymatrix_outinds_to_sim(alg_graph.partition, root)
+  # For keys that appear in both dicts, the value in
+  # `outinds_root_to_sim` is used.
+  inds_to_sim = merge(alg_graph.innerinds_to_sim, outinds_root_to_sim)
+  @assert length(child_vertices(dm_dfs_tree, root)) == 1
+  # Note: here we are not updating the density matrix of `root`
+  traversal = post_order_dfs_vertices(dm_dfs_tree, root)[1:(end - 1)]
+  for v in traversal
+    children = sort(child_vertices(dm_dfs_tree, v))
+    @assert length(children) <= 2
+    network = Vector{ITensor}(alg_graph.partition[v])
+    _update!(
+      alg_graph.caches,
+      NamedEdge(parent_vertex(dm_dfs_tree, v), v),
+      children,
+      Vector{ITensor}(network),
+      inds_to_sim;
+      contraction_sequence_alg,
+      contraction_sequence_kwargs,
+    )
+  end
+  root_t = _optcontract(
+    Vector{ITensor}(alg_graph.partition[root]);
+    contraction_sequence_alg,
+    contraction_sequence_kwargs,
+  )
+  Q, R = factorize(
+    root_t, collect(keys(outinds_root_to_sim))...; which_decomp="qr", ortho="left"
+  )
+  dm = alg_graph.caches.e_to_dm[NamedEdge(
+    parent_vertex(dm_dfs_tree, traversal[end]), traversal[end]
+  )]
+  R = _optcontract([R, dm]; contraction_sequence_alg, contraction_sequence_kwargs)
+  U2, _, _ = svd(R, commoninds(Q, R)...; maxdim=maxdim, cutoff=cutoff)
+  return _optcontract([Q, U2]; contraction_sequence_alg, contraction_sequence_kwargs)
 end
 
 """
