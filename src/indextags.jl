@@ -1,18 +1,10 @@
 # Helper functions
-vertex_tag(v::Int) = "$v"
-
-function vertex_tag(v::Tuple)
-  t = "$(first(v))"
-  for vn in Base.tail(v)
-    t *= "×$vn"
-  end
-  return t
-end
+vertex_tag(v) = replace("$v", "," => "×", "(" => "", ")" => "")
 
 edge_tag(e::Pair) = edge_tag(NamedEdge(e))
 
 function edge_tag(e)
-  return "$(vertex_tag(src(e)))↔$(vertex_tag(dst(e)))"
+  return "$(vertex_tag(src(e))),$(vertex_tag(dst(e)))"
 end
 
 function vertex_index(v, vertex_space)

@@ -20,6 +20,7 @@ using IterTools
 using KrylovKit: KrylovKit
 using NamedGraphs
 using Observers
+using Observers.DataFrames: select!
 using Printf
 using Requires
 using SimpleTraits
