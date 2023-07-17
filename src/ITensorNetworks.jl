@@ -18,6 +18,7 @@ using ITensors.ITensorVisualizationCore
 using ITensors.LazyApply
 using IterTools
 using KrylovKit: KrylovKit
+using LinearAlgebra
 using NamedGraphs
 using Observers
 using Observers.DataFrames: select!
@@ -36,6 +37,7 @@ using ITensors:
   @Algorithm_str,
   @debug_check,
   @timeit_debug,
+  δ,
   AbstractMPS,
   Algorithm,
   OneITensor,

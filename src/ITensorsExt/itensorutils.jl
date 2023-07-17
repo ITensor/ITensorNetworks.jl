@@ -1,4 +1,24 @@
-using ITensors.NDTensors: Tensor, diaglength, getdiagindex, setdiagindex!, tensor
+using ITensors.NDTensors:
+  Tensor,
+  diaglength,
+  getdiagindex,
+  setdiagindex!,
+  tensor,
+  DiagBlockSparseTensor,
+  DenseTensor,
+  BlockOffsets
+
+function NDTensors.blockoffsets(dense::DenseTensor)
+  return BlockOffsets{ndims(dense)}([Block(ntuple(Returns(1), ndims(dense)))], [0])
+end
+function NDTensors.nzblocks(dense::DenseTensor)
+  return nzblocks(blockoffsets(dense))
+end
+NDTensors.blockdim(ind::Int, ::Block{1}) = ind
+NDTensors.blockdim(i::Index{Int}, b::Integer) = blockdim(i, Block(b))
+NDTensors.blockdim(i::Index{Int}, b::Block) = blockdim(space(i), b)
+
+LinearAlgebra.isdiag(it::ITensor) = isdiag(tensor(it))
 
 function map_diag!(f::Function, it_destination::ITensor, it_source::ITensor)
   return itensor(map_diag!(f, tensor(it_destination), tensor(it_source)))
@@ -19,6 +39,21 @@ inv_diag(it::ITensor) = map_diag(inv, it)
 invsqrt_diag(it::ITensor) = map_diag(inv ∘ sqrt, it)
 pinv_diag(it::ITensor) = map_diag(pinv, it)
 pinvsqrt_diag(it::ITensor) = map_diag(pinv ∘ sqrt, it)
+
+# Analagous to `denseblocks`.
+# Extract the diagonal entries into a diagonal tensor.
+function diagblocks(D::Tensor)
+  nzblocksD = nzblocks(D)
+  T = DiagBlockSparseTensor(eltype(D), nzblocksD, inds(D))
+  for b in nzblocksD
+    for n in 1:diaglength(D)
+      setdiagindex!(T, getdiagindex(D, n), n)
+    end
+  end
+  return T
+end
+
+diagblocks(it::ITensor) = itensor(diagblocks(tensor(it)))
 
 """Given a vector of ITensors, separate them into groups of commuting itensors (i.e. itensors in the same group do not share any common indices)"""
 function group_commuting_itensors(its::Vector{ITensor})

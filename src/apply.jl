@@ -1,6 +1,12 @@
 function sqrt_and_inv_sqrt(
   A::ITensor; ishermitian=false, cutoff=nothing, regularization=nothing
 )
+  if isdiag(A)
+    A = map_diag(x -> x + regularization, A)
+    sqrtA = sqrt_diag(A)
+    inv_sqrtA = inv_diag(sqrtA)
+    return sqrtA, inv_sqrtA
+  end
   @assert ishermitian
   D, U = eigen(A; ishermitian, cutoff)
   D = map_diag(x -> x + regularization, D)
@@ -20,13 +26,24 @@ function symmetric_factorize(
     insert_function!(observer!, "singular_values" => (; singular_values) -> singular_values)
   end
   U, S, V = svd(A, inds...; lefttags=tags, righttags=tags, svd_kwargs...)
-  u = commonind(U, S)
-  v = commonind(V, S)
+  u = commonind(S, U)
+  v = commonind(S, V)
   sqrtS = sqrt_diag(S)
   Fu = U * sqrtS
-  Fu = replaceinds(Fu, v => u)
   Fv = V * sqrtS
-  S = replaceinds(S, v => u')
+  if hasqns(A)
+    # Hack to make a generalized (non-diagonal) `δ` tensor.
+    # TODO: Make this easier, `ITensors.δ` doesn't work here.
+    δᵤᵥ = copy(S)
+    ITensors.data(δᵤᵥ) .= true
+    Fu *= dag(δᵤᵥ)
+    S = denseblocks(S)
+    S *= prime(dag(δᵤᵥ), u)
+    S = diagblocks(S)
+  else
+    Fu = replaceinds(Fu, v => u)
+    S = replaceinds(S, v => u')
+  end
   update!(observer!; singular_values=S)
   return Fu, Fv
 end

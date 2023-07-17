@@ -43,7 +43,7 @@ function main(; n, niters, network="ising", β=nothing, h=nothing, χ=nothing)
   )
   denominator_network = approx_network_region(ψψ, mts, [(v, 1)])
   sz_bp =
-    2 * contract(
+    contract(
       numerator_network; sequence=contraction_sequence(numerator_network; alg="optimal")
     )[] / contract(
       denominator_network; sequence=contraction_sequence(denominator_network; alg="optimal")
@@ -63,14 +63,16 @@ function main(; n, niters, network="ising", β=nothing, h=nothing, χ=nothing)
     ψψ, mts_sqrt, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )
   denominator_network = approx_network_region(ψψ, mts_sqrt, [(v, 1)])
-  sz_bp =
-    2 * contract(
+  sz_sqrt_bp =
+    contract(
       numerator_network; sequence=contraction_sequence(numerator_network; alg="optimal")
     )[] / contract(
       denominator_network; sequence=contraction_sequence(denominator_network; alg="optimal")
     )[]
 
-  println("Sqrt Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp))
+  println(
+    "Sqrt Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_sqrt_bp)
+  )
 
-  return (; mts, mts_sqrt)
+  return (; sz_bp, sz_sqrt_bp)
 end
