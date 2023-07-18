@@ -18,6 +18,7 @@ using ITensors.ITensorVisualizationCore
 using ITensors.LazyApply
 using IterTools
 using KrylovKit: KrylovKit
+using LinearAlgebra
 using NamedGraphs
 using Observers
 using Observers.DataFrames: select!
@@ -36,6 +37,7 @@ using ITensors:
   @Algorithm_str,
   @debug_check,
   @timeit_debug,
+  δ,
   AbstractMPS,
   Algorithm,
   OneITensor,
@@ -94,7 +96,8 @@ include("utility.jl")
 include("specialitensornetworks.jl")
 include("renameitensornetwork.jl")
 include("boundarymps.jl")
-include("beliefpropagation.jl")
+include(joinpath("beliefpropagation", "beliefpropagation.jl"))
+include(joinpath("beliefpropagation", "sqrt_beliefpropagation.jl"))
 include("contraction_tree_to_graph.jl")
 include("gauging.jl")
 include("utils.jl")

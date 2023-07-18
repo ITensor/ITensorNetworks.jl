@@ -22,6 +22,13 @@ end
 # Copy
 copy(tn::AbstractITensorNetwork) = not_implemented()
 
+# Iteration
+iterate(tn::AbstractITensorNetwork, args...) = iterate(vertex_data(tn), args...)
+
+# TODO: This contrasts with the `DataGraphs.AbstractDataGraph` definition,
+# where it is defined as the `vertextype`. Does that cause problems or should it be changed?
+eltype(tn::AbstractITensorNetwork) = eltype(vertex_data(tn))
+
 # Overload if needed
 is_directed(::Type{<:AbstractITensorNetwork}) = false
 
