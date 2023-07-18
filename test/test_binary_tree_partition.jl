@@ -61,7 +61,7 @@ end
   end
   tensors = vec(tn)[1:20]
   tn = ITensorNetwork(tensors)
-  @info _mps_partition_inds_order(tn, noncommoninds(tensors...); alg="top_down")
+  # @info _mps_partition_inds_order(tn, noncommoninds(tensors...); alg="top_down")
   # TODO: this case is not supported for now, since two indices are adjacent to
   # one tensor.
 end

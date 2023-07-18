@@ -268,11 +268,12 @@ function _rem_vertex!(
   maxdim,
   contraction_sequence_alg,
   contraction_sequence_kwargs,
+  density_matrix_alg="qr_svd",
 )
   caches = alg_graph.caches
   dm_dfs_tree = dfs_tree(alg_graph.out_tree, root)
   U = _update_cache_w_low_rank_projector!(
-    Algorithm("qr_svd"),
+    Algorithm(density_matrix_alg),
     alg_graph,
     root;
     cutoff,
@@ -404,11 +405,17 @@ function _update_cache_w_low_rank_projector!(
   Q, R = factorize(
     root_t, collect(keys(outinds_root_to_sim))...; which_decomp="qr", ortho="left"
   )
+  qr_commonind = commoninds(Q, R)[1]
+  R_sim = replaceinds(R, inds_to_sim)
+  R_sim = replaceinds(R_sim, qr_commonind => sim(qr_commonind))
   dm = alg_graph.caches.e_to_dm[NamedEdge(
     parent_vertex(dm_dfs_tree, traversal[end]), traversal[end]
   )]
-  R = _optcontract([R, dm]; contraction_sequence_alg, contraction_sequence_kwargs)
-  U2, _, _ = svd(R, commoninds(Q, R)...; maxdim=maxdim, cutoff=cutoff)
+  R = _optcontract([R, dm, R_sim]; contraction_sequence_alg, contraction_sequence_kwargs)
+  U2 = _get_low_rank_projector(
+    R, [qr_commonind], setdiff(inds(R), [qr_commonind]); cutoff, maxdim
+  )
+  # U2, _, _ = svd(R, commoninds(Q, R)...; maxdim=maxdim, cutoff=cutoff)
   return _optcontract([Q, U2]; contraction_sequence_alg, contraction_sequence_kwargs)
 end
 
@@ -424,7 +431,9 @@ function _approx_itensornetwork_density_matrix!(
   maxdim=10000,
   contraction_sequence_alg,
   contraction_sequence_kwargs,
+  density_matrix_alg="direct_eigen",
 )
+  @assert density_matrix_alg in ["direct_eigen", "qr_svd"]
   # Change type of each partition[v] since they will be updated
   # with potential data type chage.
   partition = DataGraph()
@@ -437,7 +446,13 @@ function _approx_itensornetwork_density_matrix!(
   output_tn = ITensorNetwork()
   for v in post_order_dfs_vertices(out_tree, root)[1:(end - 1)]
     U = _rem_vertex!(
-      alg_graph, v; cutoff, maxdim, contraction_sequence_alg, contraction_sequence_kwargs
+      alg_graph,
+      v;
+      cutoff,
+      maxdim,
+      contraction_sequence_alg,
+      contraction_sequence_kwargs,
+      density_matrix_alg,
     )
     add_vertex!(output_tn, v)
     output_tn[v] = U
