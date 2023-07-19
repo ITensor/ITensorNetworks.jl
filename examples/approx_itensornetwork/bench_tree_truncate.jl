@@ -6,23 +6,7 @@ using ITensorNetworks: ising_network, contract, _nested_vector_to_digraph
 using OMEinsumContractionOrders
 using AbstractTrees
 
-function bipartite_sequence(vec::Vector)
-  if length(vec) == 1
-    return vec[1]
-  end
-  if length(vec) == 2
-    return vec
-  end
-  middle = floor(Int64, length(vec) / 2)
-  return [bipartite_sequence(vec[1:middle]), bipartite_sequence(vec[(middle + 1):end])]
-end
-
-function linear_sequence(vec::Vector)
-  if length(vec) <= 2
-    return vec
-  end
-  return [linear_sequence(vec[1:(end - 1)]), vec[end]]
-end
+include("utils.jl")
 
 function balanced_binary_tree_tn(num_leaves; link_space, physical_spaces)
   sequence = bipartite_sequence(collect(1:num_leaves))
@@ -52,20 +36,6 @@ function unbalanced_binary_tree_tn(num_leaves; link_space, physical_spaces)
   end
   distribution = Uniform{Float64}(-1.0, 1.0)
   return randomITensorNetwork(distribution, inds_net), inds_leaves
-end
-
-function bench(tn, btree; alg, maxdim)
-  @timeit ITensors.timer "approx_itensornetwork" begin
-    return approx_itensornetwork(
-      tn,
-      btree;
-      alg,
-      cutoff=1e-15,
-      maxdim=maxdim,
-      contraction_sequence_alg="sa_bipartite",
-      contraction_sequence_kwargs=(;),
-    )
-  end
 end
 
 Random.seed!(1234)
