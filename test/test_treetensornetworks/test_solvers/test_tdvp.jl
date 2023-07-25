@@ -633,7 +633,7 @@ end
       F = abs(scalar(dag(psix) * contract(psi)))
     end
 
-    @test norm(Sz_tdvp - Sz_exact) < 1e-5 # broken when rebasing local draft on remote main, fix this
+    @test norm(Sz_tdvp - Sz_exact) < 1e-5
   end
 
   # TODO: apply gates in ITensorNetworks

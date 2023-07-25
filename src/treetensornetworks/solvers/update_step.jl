@@ -185,7 +185,16 @@ function local_update(
   #end
 
   psi, spec = insert_local_tensor(
-    psi, phi, region; eigen_perturbation=drho, ortho, normalize, kwargs...
+    psi,
+    phi,
+    region;
+    eigen_perturbation=drho,
+    ortho,
+    normalize,
+    cutoff,
+    maxdim,
+    mindim,
+    kwargs...,
   )
 
   update!(
