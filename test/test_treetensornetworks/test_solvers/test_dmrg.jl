@@ -112,7 +112,6 @@ end
   cutoff = 1e-12
 
   tooth_lengths = fill(2, 3)
-  root_vertex = (3, 2)
   c = named_comb_tree(tooth_lengths)
   s = siteinds("S=1/2", c)
 
@@ -138,6 +137,21 @@ end
   e2, psi2 = dmrg(Hline, psiline, sweeps; normalize=false, outputlevel=0)
 
   @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
+end
+
+@testset "Regression test: tree truncation" begin
+  maxdim = 4
+  nsite = 2
+  nsweeps = 10
+
+  c = named_comb_tree((3, 2))
+  s = siteinds("S=1/2", c)
+  os = ITensorNetworks.heisenberg(c)
+  H = TTN(os, s)
+  psi = random_ttn(s; link_space=5)
+  psi = dmrg(H, psi; nsweeps, maxdim, nsite)
+
+  @test all(edge_data(linkdims(psi)) .<= maxdim)
 end
 
 nothing
