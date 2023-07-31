@@ -58,6 +58,25 @@ using Test
     @test inner_res isa Float64
   end
 
+  @testset "Constructors from ITensors" begin
+    i, j, k, l = Index.(fill(2, 4))
+    A = ITensor(i, j)
+    B = ITensor(j, k)
+    C = ITensor(k, l)
+
+    tn = ITensorNetwork([A, B, C])
+    @test issetequal(vertices(tn), [1, 2, 3])
+    @test issetequal(edges(tn), NamedEdge.([1 => 2, 2 => 3]))
+
+    tn = ITensorNetwork(["A", "B", "C"], [A, B, C])
+    @test issetequal(vertices(tn), ["A", "B", "C"])
+    @test issetequal(edges(tn), NamedEdge.(["A" => "B", "B" => "C"]))
+
+    tn = ITensorNetwork(["A" => A, "B" => B, "C" => C])
+    @test issetequal(vertices(tn), ["A", "B", "C"])
+    @test issetequal(edges(tn), NamedEdge.(["A" => "B", "B" => "C"]))
+  end
+
   @testset "Contract edge (regression test for issue #5)" begin
     dims = (2, 2)
     g = named_grid(dims)
