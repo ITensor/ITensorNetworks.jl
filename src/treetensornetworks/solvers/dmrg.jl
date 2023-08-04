@@ -19,11 +19,11 @@ end
 """
 Overload of `ITensors.dmrg`.
 """
-function dmrg(H, init::AbstractTTN; kwargs...)
-  return alternating_update(eigsolve_solver(; kwargs...), H, init; kwargs...)
-end
+dmrg(A, x₀::AbstractITensorNetwork; kwargs...) = eigsolve(A, x₀; kwargs...)
 
 """
 Overload of `KrylovKit.eigsolve`.
 """
-eigsolve(H, init::AbstractTTN; kwargs...) = dmrg(H, init; kwargs...)
+function eigsolve(A, x₀::AbstractITensorNetwork; kwargs...)
+  return alternating_update(eigsolve_solver(; kwargs...), A, x₀; kwargs...)
+end

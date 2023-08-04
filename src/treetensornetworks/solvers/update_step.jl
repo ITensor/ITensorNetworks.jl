@@ -37,8 +37,7 @@ end
 
 function update_step(
   solver,
-  PH,
-  psi::AbstractTTN;
+  problem_cache;
   normalize::Bool=false,
   nsite::Int=2,
   step_printer=step_printer,
@@ -47,9 +46,6 @@ function update_step(
   sweep_regions=default_sweep_regions(nsite, psi),
   kwargs...,
 )
-  PH = copy(PH)
-  psi = copy(psi)
-
   insert_function!(step_observer!, "step_printer" => step_printer)
 
   # Append empty namedtuple to each element if not already present
@@ -63,10 +59,9 @@ function update_step(
   end
 
   for (sweep_step, (region, step_kwargs)) in enumerate(sweep_regions)
-    psi, PH = local_update(
+    problem_cache = local_update(
       solver,
-      PH,
-      psi,
+      problem_cache,
       region;
       normalize,
       step_kwargs,
