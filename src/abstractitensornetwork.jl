@@ -870,6 +870,37 @@ function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
   return inds
 end
 
+"""Add two itensornetworks together by growing the bond dimension. The network structures need to be identical (same edges, vertex names) and the local
+tensors must have the same site indices but can have different link indices"""
+function add_itensornetworks(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
+  @assert issetequal(vertices(tn1), vertices(tn2))
+
+  tn12 = copy(tn1)
+  edges_tn12 = unique(vcat(edges(tn1), edges(tn2)))
+  for v in vertices(tn1)
+    tn12[v], _ = ITensors.directsum(
+      tn1[v] => Tuple(uniqueinds(tn1[v], tn2[v])),
+      tn2[v] => Tuple(uniqueinds(tn2[v], tn1[v]));
+      tags=tags.(Tuple(uniqueinds(tn1[v], tn2[v]))),
+    )
+  end
+
+  for e in edges_tn12
+    src_inds, dst_inds = inds(tn12[src(e)]), inds(tn12[dst(e)])
+    ctags = intersect(tags.(src_inds), tags.(dst_inds))
+    src_inds = filter(x -> tags(x) ∈ ctags, src_inds)
+    dst_inds = filter(x -> tags(x) ∈ ctags, dst_inds)
+
+    @assert length(src_inds) === length(dst_inds)
+
+    for (i, ind) in enumerate(src_inds)
+      tn12[dst(e)] = replaceind(tn12[dst(e)], dst_inds[i], ind)
+    end
+  end
+
+  return tn12
+end
+
 ## # TODO: should this make sure that internal indices
 ## # don't clash?
 ## function hvncat(
