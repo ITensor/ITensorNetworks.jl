@@ -1,7 +1,7 @@
 using ITensors
 using ITensorNetworks
 using NamedGraphs
-using NamedGraphs: rem_edges!, add_edge!
+using NamedGraphs: rem_edges!, add_edge!, decorate_graph_edges, hexagonal_lattice_graph
 using Graphs
 
 using ITensorNetworks:
@@ -15,75 +15,13 @@ using ITensorNetworks:
   symmetric_to_vidal_gauge,
   norm_network
 
-#Create the heavy_hex grid of the same structure and labelling as  https://www.nature.com/articles/s41586-023-06096-3. With up to no_qubits <= 127 qubits.
-function create_heavy_hex_grid(no_qubits::Int64)
-  g = named_grid((no_qubits, 1))
-  g = rename_vertices(v -> v[1] - 1, g)
-  rung_qubits = [
-    14,
-    15,
-    16,
-    17,
-    33,
-    34,
-    35,
-    36,
-    52,
-    53,
-    54,
-    55,
-    71,
-    72,
-    73,
-    74,
-    90,
-    91,
-    92,
-    93,
-    109,
-    110,
-    111,
-    112,
-  ]
-  qubit_pairs = [
-    (0, 18),
-    (4, 22),
-    (8, 26),
-    (12, 30),
-    (20, 39),
-    (24, 43),
-    (28, 47),
-    (32, 51),
-    (37, 56),
-    (41, 60),
-    (45, 64),
-    (49, 68),
-    (58, 77),
-    (62, 81),
-    (66, 85),
-    (70, 89),
-    (75, 94),
-    (79, 98),
-    (83, 102),
-    (87, 106),
-    (96, 114),
-    (100, 118),
-    (104, 122),
-    (108, 126),
-  ]
-
-  for (i, qp) in enumerate(qubit_pairs)
-    rq = rung_qubits[i]
-    rem_vertex!(g, rq)
-    add_vertex!(g, rq)
-    if qubit_pairs[i][1] <= (no_qubits - 1) && rq <= (no_qubits - 1)
-      add_edge!(g, qubit_pairs[i][1] => rq)
-    end
-    if qubit_pairs[i][2] <= (no_qubits - 1) && rq <= (no_qubits - 1)
-      add_edge!(g, rq => qubit_pairs[i][2])
-    end
-  end
-
+#Create the heavy_hex grid of the same structure as  https://www.nature.com/articles/s41586-023-06096-3.
+function create_eagle_processor()
+  g = hexagonal_lattice_graph(3,6)
+  g = decorate_graph_edges(g)
+  add_vertices!(g, [(1, 8), (7, 1)])
+  add_edge!(g, (1,7) => (1,8))
+  add_edge!(g, (7,2) => (7,1))
   return g
 end
 
@@ -110,8 +48,7 @@ end
 function main(θh::Float64, no_trotter_steps::Int64; apply_kwargs...)
 
   #Build the graph
-  no_qubits = 127
-  g = create_heavy_hex_grid(no_qubits)
+  g = create_eagle_processor()
 
   #Do this if measuring a Z based expectation value (i.e. ignore ZZ_gates in final layer as they are irrelevant)
   shortened_final_layer = true
