@@ -17,11 +17,11 @@ using ITensorNetworks:
 
 #Create the heavy_hex grid of the same structure as  https://www.nature.com/articles/s41586-023-06096-3.
 function create_eagle_processor()
-  g = hexagonal_lattice_graph(3,6)
+  g = hexagonal_lattice_graph(3, 6)
   g = decorate_graph_edges(g)
   add_vertices!(g, [(1, 8), (7, 1)])
-  add_edge!(g, (1,7) => (1,8))
-  add_edge!(g, (7,2) => (7,1))
+  add_edge!(g, (1, 7) => (1, 8))
+  add_edge!(g, (7, 2) => (7, 1))
   return g
 end
 
