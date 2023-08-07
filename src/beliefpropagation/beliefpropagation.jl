@@ -99,7 +99,7 @@ function belief_propagation_iteration(
       ITensors.contract(ITensor(new_mts[src(e) => dst(e)]))
       LHS /= sum(diag(LHS))
       RHS /= sum(diag(RHS))
-      c += 0.5 * norm(dense(LHS) - dense(RHS))
+      c += 0.5 * norm(denseblocks(LHS) - denseblocks(RHS))
     end
   end
   return new_mts, c / (length(es))

@@ -15,10 +15,15 @@ using ITensorNetworks:
   symmetric_to_vidal_gauge,
   norm_network
 
-#Create the heavy_hex grid of the same structure as  https://www.nature.com/articles/s41586-023-06096-3.
-function create_eagle_processor()
-  g = hexagonal_lattice_graph(3, 6)
+function heavy_hex_lattice(n::Int64, m::Int64)
+  g = hexagonal_lattice_graph(n, m)
   g = decorate_graph_edges(g)
+  return g
+end
+
+#Create the graph of the same structure as  https://www.nature.com/articles/s41586-023-06096-3.
+function eagle_processor_graph()
+  g = heavy_hex_lattice(3, 6)
   add_vertices!(g, [(1, 8), (7, 1)])
   add_edge!(g, (1, 7) => (1, 8))
   add_edge!(g, (7, 2) => (7, 1))
@@ -48,7 +53,7 @@ end
 function main(θh::Float64, no_trotter_steps::Int64; apply_kwargs...)
 
   #Build the graph
-  g = create_eagle_processor()
+  g = eagle_processor_graph()
 
   #Do this if measuring a Z based expectation value (i.e. ignore ZZ_gates in final layer as they are irrelevant)
   shortened_final_layer = true
