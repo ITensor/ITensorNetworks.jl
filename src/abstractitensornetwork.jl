@@ -870,21 +870,28 @@ function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
   return inds
 end
 
-"""Add two itensornetworks together by growing the bond dimension. The network structures need to be identical (same edges, vertex names) and the local
-tensors must have the same site indices but can have different link indices"""
+"""Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex """
 function add_itensornetworks(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   @assert issetequal(vertices(tn1), vertices(tn2))
+  @assert issetequal(edges(tn1), edges(tn2))
 
   tn12 = copy(tn1)
-  edges_tn12 = unique(vcat(edges(tn1), edges(tn2)))
+  edges_tn12 = edges(tn1)
+  #Create vertices of tn12 as direct sum of tn1[v] and tn2[v]. Make index tags those of tn1[v]
   for v in vertices(tn1)
+    tn1v_linkinds = uniqueinds(tn1[v], tn2[v])
+    tn2v_linkinds = uniqueinds(tn2[v], tn1[v])
+
+    @assert siteinds(tn1, v) == siteinds(tn2, v)
+    @assert length(tn1v_linkinds) == length(tn2v_linkinds)
     tn12[v], _ = ITensors.directsum(
-      tn1[v] => Tuple(uniqueinds(tn1[v], tn2[v])),
-      tn2[v] => Tuple(uniqueinds(tn2[v], tn1[v]));
-      tags=tags.(Tuple(uniqueinds(tn1[v], tn2[v]))),
+      tn1[v] => Tuple(tn1v_linkinds),
+      tn2[v] => Tuple(tn2v_linkinds);
+      tags=tags.(Tuple(tn1v_linkinds)),
     )
   end
 
+  #Rematch the indices
   for e in edges_tn12
     src_inds, dst_inds = inds(tn12[src(e)]), inds(tn12[dst(e)])
     ctags = intersect(tags.(src_inds), tags.(dst_inds))

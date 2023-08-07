@@ -61,14 +61,14 @@ using Random
   ψψ_1 = inner_network(ψ1, ψ1)
   ψOψ_1 = inner_network(ψ1, Oψ1)
 
-  e12_alt =
+  expec_method1 =
     (
       ITensors.contract(ψOψ_1)[] +
       ITensors.contract(ψOψ_2)[] +
       2 * ITensors.contract(ψ1Oψ2)[]
     ) /
     (ITensors.contract(ψψ_1)[] + ITensors.contract(ψψ_2)[] + 2 * ITensors.contract(ψ1ψ2)[])
-  e12 = ITensors.contract(ψOψ_12)[] / ITensors.contract(ψψ_12)[]
+  expec_method2 = ITensors.contract(ψOψ_12)[] / ITensors.contract(ψψ_12)[]
 
-  @test e12 ≈ e12_alt
+  @test expec_method1 ≈ expec_method2
 end
