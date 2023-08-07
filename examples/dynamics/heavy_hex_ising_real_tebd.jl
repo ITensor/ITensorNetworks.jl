@@ -32,7 +32,6 @@ function ibm_processor_graph(n::Int64, m::Int64)
   return g
 end
 
-#Create the graph of the same structure as  https://www.nature.com/articles/s41586-023-06096-3.
 eagle_processor_graph() = ibm_processor_graph(3, 6)
 hummingbird_processor_graph() = ibm_processor_graph(2, 4)
 osprey_processor_graph() = ibm_processor_graph(6, 12)
