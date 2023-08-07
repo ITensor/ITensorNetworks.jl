@@ -15,20 +15,27 @@ using ITensorNetworks:
   symmetric_to_vidal_gauge,
   norm_network
 
-function heavy_hex_lattice(n::Int64, m::Int64)
+function heavy_hex_lattice_graph(n::Int64, m::Int64)
   g = hexagonal_lattice_graph(n, m)
   g = decorate_graph_edges(g)
   return g
 end
 
-#Create the graph of the same structure as  https://www.nature.com/articles/s41586-023-06096-3.
-function eagle_processor_graph()
-  g = heavy_hex_lattice(3, 6)
-  add_vertices!(g, [(1, 8), (7, 1)])
-  add_edge!(g, (1, 7) => (1, 8))
-  add_edge!(g, (7, 2) => (7, 1))
+function ibm_processor_graph(n::Int64, m::Int64)
+  g = heavy_hex_lattice_graph(n, m)
+  dims = maximum(vertices(hexagonal_lattice_graph(n, m)))
+  v1, v2 = (1, dims[2]), (dims[1], 1)
+  add_vertices!(g, [v1, v2])
+  add_edge!(g, v1 => (v1[1], v1[2] - 1))
+  add_edge!(g, v2 => (v2[1], v2[2] + 1))
+
   return g
 end
+
+#Create the graph of the same structure as  https://www.nature.com/articles/s41586-023-06096-3.
+eagle_processor_graph() = ibm_processor_graph(3, 6)
+hummingbird_processor_graph() = ibm_processor_graph(2, 4)
+osprey_processor_graph() = ibm_processor_graph(6, 12)
 
 """Take the expectation value of o on an ITN using belief propagation"""
 function expect_state_SBP(
@@ -107,6 +114,8 @@ function main(θh::Float64, no_trotter_steps::Int64; apply_kwargs...)
 
   return mag_dict
 end
+
+ibm_processor_graph(3, 6)
 
 θh = pi / 4
 no_trotter_steps = 5
