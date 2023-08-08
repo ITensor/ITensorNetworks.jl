@@ -46,6 +46,7 @@ using ITensors:
   dim,
   orthocenter,
   ProjMPS,
+  add,
   set_nsite!
 using KrylovKit: exponentiate, eigsolve, linsolve
 using NamedGraphs:

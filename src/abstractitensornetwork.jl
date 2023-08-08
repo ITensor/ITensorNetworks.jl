@@ -871,9 +871,15 @@ function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
 end
 
 """Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex """
-function add_itensornetworks(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
+function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   @assert issetequal(vertices(tn1), vertices(tn2))
-  @assert issetequal(edges(tn1), edges(tn2))
+
+  if !issetequal(edges(tn1), edges(tn2))
+    new_edges = union(edges(tn1), edges(tn2))
+    tn1 = insert_missing_internal_inds(tn1, new_edges)
+    tn2 = insert_missing_internal_inds(tn2, new_edges)
+    return add(tn1, tn2)
+  end
 
   tn12 = copy(tn1)
   edges_tn12 = edges(tn1)
@@ -884,14 +890,21 @@ function add_itensornetworks(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
 
     @assert siteinds(tn1, v) == siteinds(tn2, v)
     @assert length(tn1v_linkinds) == length(tn2v_linkinds)
+
+    #Reorder tn2v linkinds based on matching tags with tn1v linkinds
+    tn2v_linkinds_reordered = [
+      tn2v_linkinds[findfirst(x -> tags(x) == t, tn2v_linkinds)] for
+      t in tags.(tn1v_linkinds)
+    ]
+
     tn12[v], _ = ITensors.directsum(
       tn1[v] => Tuple(tn1v_linkinds),
-      tn2[v] => Tuple(tn2v_linkinds);
+      tn2[v] => Tuple(tn2v_linkinds_reordered);
       tags=tags.(Tuple(tn1v_linkinds)),
     )
   end
 
-  #Rematch the indices
+  #Rematch the indices (these got unmatched by the above function) of tensors sharing an edge based on common tags
   for e in edges_tn12
     src_inds, dst_inds = inds(tn12[src(e)]), inds(tn12[dst(e)])
     ctags = intersect(tags.(src_inds), tags.(dst_inds))
@@ -907,6 +920,8 @@ function add_itensornetworks(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
 
   return tn12
 end
+
+Base.:+(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)
 
 ## # TODO: should this make sure that internal indices
 ## # don't clash?

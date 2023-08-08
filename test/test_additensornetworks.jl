@@ -1,11 +1,11 @@
 using ITensorNetworks
-using ITensorNetworks: add_itensornetworks, inner_network
+using ITensorNetworks: inner_network
 using Test
 using Compat
 using ITensors
 using Metis
 using NamedGraphs
-using NamedGraphs: hexagonal_lattice_graph
+using NamedGraphs: hexagonal_lattice_graph, rem_edge!
 using Random
 using LinearAlgebra
 using SplitApplyCombine
@@ -19,7 +19,7 @@ using Random
   ψ1 = ITensorNetwork(s, v -> "↑")
   ψ2 = ITensorNetwork(s, v -> "↓")
 
-  ψ_GHZ = add_itensornetworks(ψ1, ψ2)
+  ψ_GHZ = ψ1 + ψ2
 
   v = (2, 2)
   Oψ_GHZ = copy(ψ_GHZ)
@@ -32,22 +32,25 @@ using Random
 
   χ = 3
   g = hexagonal_lattice_graph(1, 2)
-  s = siteinds("S=1/2", g)
+
+  s1 = siteinds("S=1/2", g)
+  s2 = copy(s1)
+  rem_edge!(s2, NamedEdge((1, 1) => (1, 2)))
 
   v = rand(vertices(g))
-  ψ1 = randomITensorNetwork(s; link_space=χ)
-  ψ2 = randomITensorNetwork(s; link_space=χ)
+  ψ1 = randomITensorNetwork(s1; link_space=χ)
+  ψ2 = randomITensorNetwork(s2; link_space=χ)
 
-  ψ12 = add_itensornetworks(ψ1, ψ2)
+  ψ12 = ψ1 + ψ2
 
   Oψ12 = copy(ψ12)
-  Oψ12[v] = apply(op("Sz", s[v]), Oψ12[v])
+  Oψ12[v] = apply(op("Sz", s1[v]), Oψ12[v])
 
   Oψ1 = copy(ψ1)
-  Oψ1[v] = apply(op("Sz", s[v]), Oψ1[v])
+  Oψ1[v] = apply(op("Sz", s1[v]), Oψ1[v])
 
   Oψ2 = copy(ψ2)
-  Oψ2[v] = apply(op("Sz", s[v]), Oψ2[v])
+  Oψ2[v] = apply(op("Sz", s2[v]), Oψ2[v])
 
   ψψ_12 = inner_network(ψ12, ψ12)
   ψOψ_12 = inner_network(ψ12, Oψ12)
