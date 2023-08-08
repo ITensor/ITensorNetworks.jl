@@ -99,7 +99,7 @@ function belief_propagation_iteration(
       ITensors.contract(ITensor(new_mts[src(e) => dst(e)]))
       LHS /= sum(diag(LHS))
       RHS /= sum(diag(RHS))
-      c += 0.5 * norm(LHS - RHS)
+      c += 0.5 * norm(denseblocks(LHS) - denseblocks(RHS))
     end
   end
   return new_mts, c / (length(es))
@@ -152,9 +152,9 @@ function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir=
   end
 
   env_tns = ITensorNetwork[mts[e] for e in boundary_edges(mts, subgraphs; dir=:in)]
-  central_tn = ITensorNetwork([
-    tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)
-  ])
+  central_tn = ITensorNetwork(
+    ITensor[tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)]
+  )
   return ITensorNetwork(vcat(env_tns, ITensorNetwork[central_tn]))
 end
 
