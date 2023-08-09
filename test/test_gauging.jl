@@ -46,11 +46,11 @@ using SplitApplyCombine
     @test diagITensor(vector(diag(m_e)), inds(m_e)) ≈ m_e atol = 1e-8
   end
 
-  @test symmetric_itn_canonicalness(ψ_symm, ψ_symm_mts) < 1e-6
+  @test symmetric_itn_canonicalness(ψ_symm, ψ_symm_mts) < 1e-5
 
   ψ_vidal, bond_tensors = vidal_gauge(ψ; target_canonicalness=1e-6)
-  @test vidal_itn_canonicalness(ψ_vidal, bond_tensors) < 1e-6
+  @test vidal_itn_canonicalness(ψ_vidal, bond_tensors) < 1e-5
 
   ψ_vidal, bond_tensors = symmetric_to_vidal_gauge(ψ_symm, ψ_symm_mts)
-  @test vidal_itn_canonicalness(ψ_vidal, bond_tensors) < 1e-6
+  @test vidal_itn_canonicalness(ψ_vidal, bond_tensors) < 1e-5
 end

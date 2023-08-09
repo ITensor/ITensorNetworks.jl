@@ -1,7 +1,7 @@
 using ITensors
 using ITensorNetworks
 using NamedGraphs
-using NamedGraphs: rem_edges!, add_edge!
+using NamedGraphs: rem_edges!, add_edge!, decorate_graph_edges, hexagonal_lattice_graph
 using Graphs
 
 using ITensorNetworks:
@@ -15,77 +15,26 @@ using ITensorNetworks:
   symmetric_to_vidal_gauge,
   norm_network
 
-#Create the heavy_hex grid of the same structure and labelling as  https://www.nature.com/articles/s41586-023-06096-3. With up to no_qubits <= 127 qubits.
-function create_heavy_hex_grid(no_qubits::Int64)
-  g = named_grid((no_qubits, 1))
-  g = rename_vertices(v -> v[1] - 1, g)
-  rung_qubits = [
-    14,
-    15,
-    16,
-    17,
-    33,
-    34,
-    35,
-    36,
-    52,
-    53,
-    54,
-    55,
-    71,
-    72,
-    73,
-    74,
-    90,
-    91,
-    92,
-    93,
-    109,
-    110,
-    111,
-    112,
-  ]
-  qubit_pairs = [
-    (0, 18),
-    (4, 22),
-    (8, 26),
-    (12, 30),
-    (20, 39),
-    (24, 43),
-    (28, 47),
-    (32, 51),
-    (37, 56),
-    (41, 60),
-    (45, 64),
-    (49, 68),
-    (58, 77),
-    (62, 81),
-    (66, 85),
-    (70, 89),
-    (75, 94),
-    (79, 98),
-    (83, 102),
-    (87, 106),
-    (96, 114),
-    (100, 118),
-    (104, 122),
-    (108, 126),
-  ]
+function heavy_hex_lattice_graph(n::Int64, m::Int64)
+  g = hexagonal_lattice_graph(n, m)
+  g = decorate_graph_edges(g)
+  return g
+end
 
-  for (i, qp) in enumerate(qubit_pairs)
-    rq = rung_qubits[i]
-    rem_vertex!(g, rq)
-    add_vertex!(g, rq)
-    if qubit_pairs[i][1] <= (no_qubits - 1) && rq <= (no_qubits - 1)
-      add_edge!(g, qubit_pairs[i][1] => rq)
-    end
-    if qubit_pairs[i][2] <= (no_qubits - 1) && rq <= (no_qubits - 1)
-      add_edge!(g, rq => qubit_pairs[i][2])
-    end
-  end
+function ibm_processor_graph(n::Int64, m::Int64)
+  g = heavy_hex_lattice_graph(n, m)
+  dims = maximum(vertices(hexagonal_lattice_graph(n, m)))
+  v1, v2 = (1, dims[2]), (dims[1], 1)
+  add_vertices!(g, [v1, v2])
+  add_edge!(g, v1 => v1 .- (0, 1))
+  add_edge!(g, v2 => v2 .+ (0, 1))
 
   return g
 end
+
+eagle_processor_graph() = ibm_processor_graph(3, 6)
+hummingbird_processor_graph() = ibm_processor_graph(2, 4)
+osprey_processor_graph() = ibm_processor_graph(6, 12)
 
 """Take the expectation value of o on an ITN using belief propagation"""
 function expect_state_SBP(
@@ -110,8 +59,7 @@ end
 function main(θh::Float64, no_trotter_steps::Int64; apply_kwargs...)
 
   #Build the graph
-  no_qubits = 127
-  g = create_heavy_hex_grid(no_qubits)
+  g = eagle_processor_graph()
 
   #Do this if measuring a Z based expectation value (i.e. ignore ZZ_gates in final layer as they are irrelevant)
   shortened_final_layer = true
@@ -165,6 +113,8 @@ function main(θh::Float64, no_trotter_steps::Int64; apply_kwargs...)
 
   return mag_dict
 end
+
+ibm_processor_graph(3, 6)
 
 θh = pi / 4
 no_trotter_steps = 5
