@@ -12,7 +12,8 @@ import Base:
   isapprox,
   isassigned,
   iterate,
-  union
+  union,
+  +
 
 import NamedGraphs:
   vertextype,
