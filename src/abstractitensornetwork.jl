@@ -872,13 +872,7 @@ end
 
 """Check if an itensornetwork has multiple indices along at least one of its edges"""
 function has_multi_edge(tn::AbstractITensorNetwork)
-  for e in edges(tn)
-    if length(linkinds(tn, e)) > 1
-      return false
-    end
-  end
-
-  return true
+  any(e -> length(linkinds(tn, e)) > 1, edges(tn))
 end
 
 """Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex """
