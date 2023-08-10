@@ -908,8 +908,8 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
     e2_v = NamedEdge[NamedEdge(v => vn) for vn in neighbors(tn2, v)]
 
     @assert issetequal(e1_v, e2_v)
-    tn1v_linkinds = Index[first(linkinds(tn1, e)) for e in e1_v]
-    tn2v_linkinds = Index[first(linkinds(tn2, e)) for e in e1_v]
+    tn1v_linkinds = Index[only(linkinds(tn1, e)) for e in e1_v]
+    tn2v_linkinds = Index[only(linkinds(tn2, e)) for e in e1_v]
 
     @assert length(tn1v_linkinds) == length(tn2v_linkinds)
 
