@@ -591,19 +591,17 @@ function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
   return first.(v⃗)
 end
 
-function linkinds_combiners(tn::AbstractITensorNetwork; edges_to_combine=edges(tn))
+function linkinds_combiners(tn::AbstractITensorNetwork; edges=edges(tn))
   combiners = DataGraph(directed_graph(underlying_graph(tn)), ITensor, ITensor)
-  for e in edges(tn)
-    if e ∈ edges_to_combine
-      C = combiner(linkinds(tn, e); tags=edge_tag(e))
-      combiners[e] = C
-      combiners[reverse(e)] = dag(C)
-    end
+  for e in edges
+    C = combiner(linkinds(tn, e); tags=edge_tag(e))
+    combiners[e] = C
+    combiners[reverse(e)] = dag(C)
   end
   return combiners
 end
 
-function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combiners(tn))
+function combine_linkinds(tn::AbstractITensorNetwork, combiners)
   combined_tn = copy(tn)
   for e in edges(tn)
     if !isempty(linkinds(tn, e)) && haskey(edge_data(combiners), e)
@@ -612,6 +610,13 @@ function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combine
     end
   end
   return combined_tn
+end
+
+function combine_linkinds(
+  tn::AbstractITensorNetwork; edges::Vector{<:Union{Pair,AbstractEdge}}=edges(tn)
+)
+  combiners = linkinds_combiners(tn; edges)
+  return combine_linkinds(tn, combiners)
 end
 
 function split_index(
@@ -872,27 +877,15 @@ function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
   return inds
 end
 
-"""Check if an itensornetwork has multiple indices along at least one of its edges"""
-function has_multi_edge(tn::AbstractITensorNetwork)
-  return any(e -> length(linkinds(tn, e)) > 1, edges(tn))
-end
+"""Check if the edge of an itensornetwork has multiple indices"""
+is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
 
 """Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex """
 function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   @assert issetequal(vertices(tn1), vertices(tn2))
 
-  tn1 = combine_linkinds(
-    tn1,
-    linkinds_combiners(
-      tn1; edges_to_combine=filter(e -> length(linkinds(tn1, e)) > 1, edges(tn1))
-    ),
-  )
-  tn2 = combine_linkinds(
-    tn2,
-    linkinds_combiners(
-      tn2; edges_to_combine=filter(e -> length(linkinds(tn2, e)) > 1, edges(tn2))
-    ),
-  )
+  tn1 = combine_linkinds(tn1; edges=filter(e -> length(linkinds(tn1, e)) > 1, edges(tn1)))
+  tn2 = combine_linkinds(tn2; edges=filter(e -> length(linkinds(tn2, e)) > 1, edges(tn2)))
 
   edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
 
