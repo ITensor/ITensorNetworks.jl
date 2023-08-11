@@ -591,12 +591,14 @@ function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
   return first.(v⃗)
 end
 
-function linkinds_combiners(tn::AbstractITensorNetwork)
+function linkinds_combiners(tn::AbstractITensorNetwork; edges_to_combine=edges(tn))
   combiners = DataGraph(directed_graph(underlying_graph(tn)), ITensor, ITensor)
   for e in edges(tn)
-    C = combiner(linkinds(tn, e); tags=edge_tag(e))
-    combiners[e] = C
-    combiners[reverse(e)] = dag(C)
+    if e ∈ edges_to_combine
+      C = combiner(linkinds(tn, e); tags=edge_tag(e))
+      combiners[e] = C
+      combiners[reverse(e)] = dag(C)
+    end
   end
   return combiners
 end
@@ -604,7 +606,7 @@ end
 function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combiners(tn))
   combined_tn = copy(tn)
   for e in edges(tn)
-    if !isempty(linkinds(tn, e))
+    if !isempty(linkinds(tn, e)) && haskey(edge_data(combiners), e)
       combined_tn[src(e)] = combined_tn[src(e)] * combiners[e]
       combined_tn[dst(e)] = combined_tn[dst(e)] * combiners[reverse(e)]
     end
@@ -879,14 +881,18 @@ end
 function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   @assert issetequal(vertices(tn1), vertices(tn2))
 
-  #Check for any edges with multiple indices and combine to avoid
-  if has_multi_edge(tn1)
-    tn1 = combine_linkinds(tn1)
-  end
-
-  if has_multi_edge(tn2)
-    tn2 = combine_linkinds(tn2)
-  end
+  tn1 = combine_linkinds(
+    tn1,
+    linkinds_combiners(
+      tn1; edges_to_combine=filter(e -> length(linkinds(tn1, e)) > 1, edges(tn1))
+    ),
+  )
+  tn2 = combine_linkinds(
+    tn2,
+    linkinds_combiners(
+      tn2; edges_to_combine=filter(e -> length(linkinds(tn2, e)) > 1, edges(tn2))
+    ),
+  )
 
   edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
 
