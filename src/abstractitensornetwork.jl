@@ -879,13 +879,14 @@ end
 
 """Check if the edge of an itensornetwork has multiple indices"""
 is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
+is_multi_edge(tn::AbstractITensorNetwork) = Base.Fix1(is_multi_edge, tn)
 
 """Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex """
 function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   @assert issetequal(vertices(tn1), vertices(tn2))
 
-  tn1 = combine_linkinds(tn1; edges=filter(e -> is_multi_edge(tn1, e), edges(tn1)))
-  tn2 = combine_linkinds(tn2; edges=filter(e -> is_multi_edge(tn2, e), edges(tn2)))
+  tn1 = combine_linkinds(tn1; edges=filter(is_multi_edge(tn1), edges(tn1)))
+  tn2 = combine_linkinds(tn2; edges=filter(is_multi_edge(tn2), edges(tn2)))
 
   edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
 
