@@ -591,9 +591,9 @@ function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
   return first.(v⃗)
 end
 
-function linkinds_combiners(tn::AbstractITensorNetwork)
+function linkinds_combiners(tn::AbstractITensorNetwork; edges=edges(tn))
   combiners = DataGraph(directed_graph(underlying_graph(tn)), ITensor, ITensor)
-  for e in edges(tn)
+  for e in edges
     C = combiner(linkinds(tn, e); tags=edge_tag(e))
     combiners[e] = C
     combiners[reverse(e)] = dag(C)
@@ -601,15 +601,22 @@ function linkinds_combiners(tn::AbstractITensorNetwork)
   return combiners
 end
 
-function combine_linkinds(tn::AbstractITensorNetwork, combiners=linkinds_combiners(tn))
+function combine_linkinds(tn::AbstractITensorNetwork, combiners)
   combined_tn = copy(tn)
   for e in edges(tn)
-    if !isempty(linkinds(tn, e))
+    if !isempty(linkinds(tn, e)) && haskey(edge_data(combiners), e)
       combined_tn[src(e)] = combined_tn[src(e)] * combiners[e]
       combined_tn[dst(e)] = combined_tn[dst(e)] * combiners[reverse(e)]
     end
   end
   return combined_tn
+end
+
+function combine_linkinds(
+  tn::AbstractITensorNetwork; edges::Vector{<:Union{Pair,AbstractEdge}}=edges(tn)
+)
+  combiners = linkinds_combiners(tn; edges)
+  return combine_linkinds(tn, combiners)
 end
 
 function split_index(
@@ -869,6 +876,68 @@ function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
   end
   return inds
 end
+
+"""Check if the edge of an itensornetwork has multiple indices"""
+is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
+is_multi_edge(tn::AbstractITensorNetwork) = Base.Fix1(is_multi_edge, tn)
+
+"""Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex """
+function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
+  @assert issetequal(vertices(tn1), vertices(tn2))
+
+  tn1 = combine_linkinds(tn1; edges=filter(is_multi_edge(tn1), edges(tn1)))
+  tn2 = combine_linkinds(tn2; edges=filter(is_multi_edge(tn2), edges(tn2)))
+
+  edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
+
+  if !issetequal(edges_tn1, edges_tn2)
+    new_edges = union(edges_tn1, edges_tn2)
+    tn1 = insert_missing_internal_inds(tn1, new_edges)
+    tn2 = insert_missing_internal_inds(tn2, new_edges)
+  end
+
+  edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
+  @assert issetequal(edges_tn1, edges_tn2)
+
+  tn12 = copy(tn1)
+  new_edge_indices = Dict(
+    zip(
+      edges_tn1,
+      [
+        Index(
+          dim(only(linkinds(tn1, e))) + dim(only(linkinds(tn2, e))),
+          tags(only(linkinds(tn1, e))),
+        ) for e in edges_tn1
+      ],
+    ),
+  )
+
+  #Create vertices of tn12 as direct sum of tn1[v] and tn2[v]. Work out the matching indices by matching edges. Make index tags those of tn1[v]
+  for v in vertices(tn1)
+    @assert siteinds(tn1, v) == siteinds(tn2, v)
+
+    e1_v = filter(x -> src(x) == v || dst(x) == v, edges_tn1)
+    e2_v = filter(x -> src(x) == v || dst(x) == v, edges_tn2)
+
+    @assert issetequal(e1_v, e2_v)
+    tn1v_linkinds = Index[only(linkinds(tn1, e)) for e in e1_v]
+    tn2v_linkinds = Index[only(linkinds(tn2, e)) for e in e1_v]
+    tn12v_linkinds = Index[new_edge_indices[e] for e in e1_v]
+
+    @assert length(tn1v_linkinds) == length(tn2v_linkinds)
+
+    tn12[v] = ITensors.directsum(
+      tn12v_linkinds,
+      tn1[v] => Tuple(tn1v_linkinds),
+      tn2[v] => Tuple(tn2v_linkinds);
+      tags=tags.(Tuple(tn1v_linkinds)),
+    )
+  end
+
+  return tn12
+end
+
++(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)
 
 ## # TODO: should this make sure that internal indices
 ## # don't clash?

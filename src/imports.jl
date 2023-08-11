@@ -12,7 +12,8 @@ import Base:
   isapprox,
   isassigned,
   iterate,
-  union
+  union,
+  +
 
 import NamedGraphs:
   vertextype,
@@ -92,7 +93,9 @@ import ITensors:
   nsite,
   # promotion and conversion
   promote_itensor_eltype,
-  scalartype
+  scalartype,
+  #adding
+  add
 
 using ITensors.ContractionSequenceOptimization: deepmap
 
