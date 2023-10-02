@@ -81,17 +81,25 @@ function belief_propagation_iteration(
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
+  update_order::String="Parallel",
+  es=edges(mts),
 )
   new_mts = copy(mts)
+  if update_order != "Parallel" && update_order != "Sequential"
+    error(
+      "Specified update order is not currently implemented. Choose Parallel or Sequential."
+    )
+  end
+  incoming_mts = update_order == "Parallel" ? mts : new_mts
   c = 0
-  es = edges(mts)
   for e in es
     environment_tensornetworks = ITensorNetwork[
-      mts[e_in] for e_in in setdiff(boundary_edges(mts, [src(e)]; dir=:in), [reverse(e)])
+      incoming_mts[e_in] for
+      e_in in setdiff(boundary_edges(incoming_mts, [src(e)]; dir=:in), [reverse(e)])
     ]
 
     new_mts[src(e) => dst(e)] = update_message_tensor(
-      tn, mts[src(e)], environment_tensornetworks; contract_kwargs
+      tn, incoming_mts[src(e)], environment_tensornetworks; contract_kwargs
     )
 
     if compute_norm
@@ -111,10 +119,13 @@ function belief_propagation(
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   niters=20,
   target_precision::Union{Float64,Nothing}=nothing,
+  update_order::String="Parallel",
 )
   compute_norm = target_precision == nothing ? false : true
   for i in 1:niters
-    mts, c = belief_propagation_iteration(tn, mts; contract_kwargs, compute_norm)
+    mts, c = belief_propagation_iteration(
+      tn, mts; contract_kwargs, compute_norm, update_order
+    )
     if compute_norm && c <= target_precision
       println(
         "Belief Propagation finished. Reached a canonicalness of " *

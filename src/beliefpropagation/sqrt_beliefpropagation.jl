@@ -26,11 +26,19 @@ end
 function sqrt_belief_propagation_iteration(
   tn::ITensorNetwork,
   sqrt_mts::DataGraph;
+  update_order::String="Parallel",
+  es=edges(sqrt_mts),
+
   # compute_norm=false,
 )
   new_sqrt_mts = copy(sqrt_mts)
+  if update_order != "Parallel" && update_order != "Sequential"
+    error(
+      "Specified update order is not currently implemented. Choose Parallel or Sequential."
+    )
+  end
+  incoming_mts = update_order == "Parallel" ? mts : new_mts
   c = 0.0
-  es = edges(sqrt_mts)
   for e in es
     environment_tensornetworks = ITensorNetwork[
       sqrt_mts[e_in] for

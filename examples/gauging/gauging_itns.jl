@@ -45,7 +45,10 @@ end
 
 """Bring an ITN into the Vidal gauge, various methods possible. Result is timed"""
 function benchmark_state_gauging(
-  ψ::ITensorNetwork; mode="BeliefPropagation", no_iterations=50
+  ψ::ITensorNetwork;
+  mode="BeliefPropagation",
+  no_iterations=50,
+  BP_update_order::String="Parallel",
 )
   s = siteinds(ψ)
 
@@ -67,8 +70,9 @@ function benchmark_state_gauging(
 
     if mode == "BeliefPropagation"
       times_iters[i] = @elapsed mts, _ = belief_propagation_iteration(
-        ψψ, mts; contract_kwargs=(; alg="exact")
+        ψψ, mts; contract_kwargs=(; alg="exact"), update_order=BP_update_order
       )
+
       times_gauging[i] = @elapsed ψ, bond_tensors = vidal_gauge(ψinit, mts)
     elseif mode == "Eager"
       times_iters[i] = @elapsed ψ, bond_tensors, mts = eager_gauging(ψ, bond_tensors, mts)
@@ -95,22 +99,38 @@ s = siteinds("S=1/2", g)
 no_iterations = 30
 
 BPG_simulation_times, BPG_Cs = benchmark_state_gauging(ψ; no_iterations)
+BPG_sequential_simulation_times, BPG_sequential_Cs = benchmark_state_gauging(
+  ψ; no_iterations, BP_update_order="Sequential"
+)
 Eager_simulation_times, Eager_Cs = benchmark_state_gauging(ψ; mode="Eager", no_iterations)
 SU_simulation_times, SU_Cs = benchmark_state_gauging(ψ; mode="SU", no_iterations)
 
 epsilon = 1e-6
+
 println(
-  "Time for BPG to reach C < epsilon was " *
+  "Time for BPG (with parallel updates) to reach C < epsilon was " *
   string(BPG_simulation_times[findfirst(x -> x < 0, BPG_Cs .- epsilon)]) *
-  " seconds",
+  " seconds. No iters was " *
+  string(findfirst(x -> x < 0, BPG_Cs .- epsilon)),
 )
 println(
-  "Time for Eager to reach C < epsilon was " *
+  "Time for BPG (with sequential updates) to reach C < epsilon was " *
+  string(
+    BPG_sequential_simulation_times[findfirst(x -> x < 0, BPG_sequential_Cs .- epsilon)]
+  ) *
+  " seconds. No iters was " *
+  string(findfirst(x -> x < 0, BPG_sequential_Cs .- epsilon)),
+)
+
+println(
+  "Time for Eager Gauging to reach C < epsilon was " *
   string(Eager_simulation_times[findfirst(x -> x < 0, Eager_Cs .- epsilon)]) *
-  " seconds",
+  " seconds. No iters was " *
+  string(findfirst(x -> x < 0, Eager_Cs .- epsilon)),
 )
 println(
-  "Time for SU to reach C < epsilon was " *
+  "Time for SU Gauging to reach C < epsilon was " *
   string(SU_simulation_times[findfirst(x -> x < 0, SU_Cs .- epsilon)]) *
-  " seconds",
+  " seconds. No iters was " *
+  string(findfirst(x -> x < 0, SU_Cs .- epsilon)),
 )
