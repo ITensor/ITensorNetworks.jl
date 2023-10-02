@@ -40,7 +40,13 @@ ITensors.disable_warn_order()
 
   Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(Z)
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), target_precision=1e-8)
+  mts = belief_propagation(
+    ψψ,
+    mts;
+    contract_kwargs=(; alg="exact"),
+    target_precision=1e-8;
+    update_order="Sequential",
+  )
 
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
