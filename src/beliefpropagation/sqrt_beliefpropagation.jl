@@ -38,16 +38,16 @@ function sqrt_belief_propagation_iteration(
       "Specified update order is not currently implemented. Choose parallel or sequential."
     )
   end
-  incoming_mts = update_order == "parallel" ? mts : new_mts
+  incoming_sqrt_mts = update_order == "parallel" ? sqrt_mts : new_sqrt_mts
   c = 0.0
   for e in edges
     environment_tensornetworks = ITensorNetwork[
-      sqrt_mts[e_in] for
-      e_in in setdiff(boundary_edges(sqrt_mts, [src(e)]; dir=:in), [reverse(e)])
+      incoming_sqrt_mts[e_in] for
+      e_in in setdiff(boundary_edges(incoming_sqrt_mts, [src(e)]; dir=:in), [reverse(e)])
     ]
 
     new_sqrt_mts[src(e) => dst(e)] = update_sqrt_message_tensor(
-      tn, sqrt_mts[src(e)], environment_tensornetworks;
+      tn, incoming_sqrt_mts[src(e)], environment_tensornetworks;
     )
 
     # if compute_norm
