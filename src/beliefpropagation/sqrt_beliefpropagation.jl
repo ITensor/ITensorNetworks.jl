@@ -28,7 +28,7 @@ function sqrt_belief_propagation_iteration(
   tn::ITensorNetwork,
   sqrt_mts::DataGraph;
   update_order::String="parallel",
-  es=edges(sqrt_mts),
+  edges=Graphs.edges(sqrt_mts),
 
   # compute_norm=false,
 )
@@ -40,7 +40,7 @@ function sqrt_belief_propagation_iteration(
   end
   incoming_mts = update_order == "parallel" ? mts : new_mts
   c = 0.0
-  for e in es
+  for e in edges
     environment_tensornetworks = ITensorNetwork[
       sqrt_mts[e_in] for
       e_in in setdiff(boundary_edges(sqrt_mts, [src(e)]; dir=:in), [reverse(e)])
@@ -58,7 +58,7 @@ function sqrt_belief_propagation_iteration(
     #   c += 0.5 * norm(LHS - RHS)
     # end
   end
-  return new_sqrt_mts, c / (length(es))
+  return new_sqrt_mts, c / (length(edges))
 end
 
 function update_sqrt_message_tensor(
