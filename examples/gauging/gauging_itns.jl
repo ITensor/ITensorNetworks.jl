@@ -48,7 +48,7 @@ function benchmark_state_gauging(
   ψ::ITensorNetwork;
   mode="BeliefPropagation",
   no_iterations=50,
-  BP_update_order::String="Parallel",
+  BP_update_order::String="parallel",
 )
   s = siteinds(ψ)
 
@@ -100,7 +100,7 @@ no_iterations = 30
 
 BPG_simulation_times, BPG_Cs = benchmark_state_gauging(ψ; no_iterations)
 BPG_sequential_simulation_times, BPG_sequential_Cs = benchmark_state_gauging(
-  ψ; no_iterations, BP_update_order="Sequential"
+  ψ; no_iterations, BP_update_order="sequential"
 )
 Eager_simulation_times, Eager_Cs = benchmark_state_gauging(ψ; mode="Eager", no_iterations)
 SU_simulation_times, SU_Cs = benchmark_state_gauging(ψ; mode="SU", no_iterations)
@@ -129,7 +129,7 @@ println(
   string(findfirst(x -> x < 0, Eager_Cs .- epsilon)),
 )
 println(
-  "Time for SU Gauging to reach C < epsilon was " *
+  "Time for SU Gauging (with sequential updates) to reach C < epsilon was " *
   string(SU_simulation_times[findfirst(x -> x < 0, SU_Cs .- epsilon)]) *
   " seconds. No iters was " *
   string(findfirst(x -> x < 0, SU_Cs .- epsilon)),

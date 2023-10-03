@@ -81,16 +81,16 @@ function belief_propagation_iteration(
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
-  update_order::String="Parallel",
+  update_order::String="parallel",
   es=edges(mts),
 )
   new_mts = copy(mts)
-  if update_order != "Parallel" && update_order != "Sequential"
+  if update_order != "parallel" && update_order != "sequential"
     error(
-      "Specified update order is not currently implemented. Choose Parallel or Sequential."
+      "Specified update order is not currently implemented. Choose parallel or sequential."
     )
   end
-  incoming_mts = update_order == "Parallel" ? mts : new_mts
+  incoming_mts = update_order == "parallel" ? mts : new_mts
   c = 0
   for e in es
     environment_tensornetworks = ITensorNetwork[
@@ -119,7 +119,7 @@ function belief_propagation(
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   niters=20,
   target_precision::Union{Float64,Nothing}=nothing,
-  update_order::String="Parallel",
+  update_order::String="parallel",
 )
   compute_norm = target_precision == nothing ? false : true
   for i in 1:niters

@@ -44,8 +44,8 @@ ITensors.disable_warn_order()
     ψψ,
     mts;
     contract_kwargs=(; alg="exact"),
-    target_precision=1e-8;
-    update_order="Sequential",
+    target_precision=1e-8,
+    update_order="sequential",
   )
 
   numerator_network = approx_network_region(

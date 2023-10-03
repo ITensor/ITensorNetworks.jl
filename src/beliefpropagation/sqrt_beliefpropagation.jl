@@ -5,12 +5,13 @@ function sqrt_belief_propagation(
   tn::ITensorNetwork,
   mts::DataGraph;
   niters=20,
+  update_order::String="parallel",
   # target_precision::Union{Float64,Nothing}=nothing,
 )
   # compute_norm = target_precision == nothing ? false : true
   sqrt_mts = sqrt_message_tensors(tn, mts)
   for i in 1:niters
-    sqrt_mts, c = sqrt_belief_propagation_iteration(tn, sqrt_mts) #; compute_norm)
+    sqrt_mts, c = sqrt_belief_propagation_iteration(tn, sqrt_mts; update_order) #; compute_norm)
     # if compute_norm && c <= target_precision
     #   println(
     #     "Belief Propagation finished. Reached a canonicalness of " *
@@ -26,18 +27,18 @@ end
 function sqrt_belief_propagation_iteration(
   tn::ITensorNetwork,
   sqrt_mts::DataGraph;
-  update_order::String="Parallel",
+  update_order::String="parallel",
   es=edges(sqrt_mts),
 
   # compute_norm=false,
 )
   new_sqrt_mts = copy(sqrt_mts)
-  if update_order != "Parallel" && update_order != "Sequential"
+  if update_order != "parallel" && update_order != "sequential"
     error(
-      "Specified update order is not currently implemented. Choose Parallel or Sequential."
+      "Specified update order is not currently implemented. Choose parallel or sequential."
     )
   end
-  incoming_mts = update_order == "Parallel" ? mts : new_mts
+  incoming_mts = update_order == "parallel" ? mts : new_mts
   c = 0.0
   for e in es
     environment_tensornetworks = ITensorNetwork[
