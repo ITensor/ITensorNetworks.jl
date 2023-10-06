@@ -81,18 +81,18 @@ function belief_propagation_iteration(
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
-  update_order::String="parallel",
-  es=edges(mts),
+  update_sequence::String="parallel",
+  edges=Graphs.edges(mts),
 )
   new_mts = copy(mts)
-  if update_order != "parallel" && update_order != "sequential"
+  if update_sequence != "parallel" && update_sequence != "sequential"
     error(
       "Specified update order is not currently implemented. Choose parallel or sequential."
     )
   end
-  incoming_mts = update_order == "parallel" ? mts : new_mts
+  incoming_mts = update_sequence == "parallel" ? mts : new_mts
   c = 0
-  for e in es
+  for e in edges
     environment_tensornetworks = ITensorNetwork[
       incoming_mts[e_in] for
       e_in in setdiff(boundary_edges(incoming_mts, [src(e)]; dir=:in), [reverse(e)])
@@ -110,7 +110,7 @@ function belief_propagation_iteration(
       c += 0.5 * norm(denseblocks(LHS) - denseblocks(RHS))
     end
   end
-  return new_mts, c / (length(es))
+  return new_mts, c / (length(edges))
 end
 
 function belief_propagation(
@@ -119,12 +119,12 @@ function belief_propagation(
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   niters=20,
   target_precision::Union{Float64,Nothing}=nothing,
-  update_order::String="parallel",
+  update_sequence::String="parallel",
 )
   compute_norm = target_precision == nothing ? false : true
   for i in 1:niters
     mts, c = belief_propagation_iteration(
-      tn, mts; contract_kwargs, compute_norm, update_order
+      tn, mts; contract_kwargs, compute_norm, update_sequence
     )
     if compute_norm && c <= target_precision
       println(
