@@ -1,4 +1,3 @@
-
 function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)
   return vcat(
     [
@@ -15,7 +14,7 @@ function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)
 end
 
 function step_printer(;
-  cutoff, maxdim, mindim, outputlevel::Int=0, psi, region, spec, sweep_step
+  cutoff, maxdim, mindim, outputlevel::Int=0, x, region, spec, sweep_step
 )
   if outputlevel >= 2
     @printf("Sweep %d, region=%s \n", sweep, region)
@@ -28,7 +27,7 @@ function step_printer(;
       @printf(
         "  Trunc. err=%.2E, bond dimension %d\n",
         spec.truncerr,
-        linkdim(psi, edgetype(psi)(region...))
+        linkdim(x, edgetype(x)(region...))
       )
     end
     flush(stdout)
@@ -37,13 +36,14 @@ end
 
 function update_step(
   solver,
-  problem_cache;
+  problem_cache,
+  x;
   normalize::Bool=false,
   nsite::Int=2,
   step_printer=step_printer,
   (step_observer!)=observer(),
   sweep::Int=1,
-  sweep_regions=default_sweep_regions(nsite, psi),
+  sweep_regions=default_sweep_regions(nsite, x),
   kwargs...,
 )
   insert_function!(step_observer!, "step_printer" => step_printer)
@@ -52,7 +52,7 @@ function update_step(
   # (Needed to handle user-provided sweep_regions)
   sweep_regions = append_missing_namedtuple.(to_tuple.(sweep_regions))
 
-  if nv(psi) == 1
+  if nv(x) == 1
     error(
       "`alternating_update` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
@@ -62,6 +62,7 @@ function update_step(
     problem_cache = local_update(
       solver,
       problem_cache,
+      x,
       region;
       normalize,
       step_kwargs,
@@ -75,9 +76,9 @@ function update_step(
 
   select!(step_observer!, Observers.DataFrames.Not("step_printer")) # remove step_printer
   # Just to be sure:
-  normalize && normalize!(psi)
+  normalize && normalize!(x)
 
-  return psi, PH
+  return x, PH
 end
 
 #
@@ -91,20 +92,20 @@ end
 # apart and puts it back into the network.
 #
 
-function extract_local_tensor(psi::AbstractTTN, pos::Vector)
-  return psi, prod(psi[v] for v in pos)
+function extract_local_tensor(x::AbstractTTN, pos::Vector)
+  return x, prod(x[v] for v in pos)
 end
 
-function extract_local_tensor(psi::AbstractTTN, e::NamedEdge)
-  left_inds = uniqueinds(psi, e)
-  U, S, V = svd(psi[src(e)], left_inds; lefttags=tags(psi, e), righttags=tags(psi, e))
-  psi[src(e)] = U
-  return psi, S * V
+function extract_local_tensor(x::AbstractTTN, e::NamedEdge)
+  left_inds = uniqueinds(x, e)
+  U, S, V = svd(x[src(e)], left_inds; lefttags=tags(x, e), righttags=tags(x, e))
+  x[src(e)] = U
+  return x, S * V
 end
 
 # sort of multi-site replacebond!; TODO: use dense TTN constructor instead
 function insert_local_tensor(
-  psi::AbstractTTN,
+  x::AbstractTTN,
   phi::ITensor,
   pos::Vector;
   which_decomp=nothing,
@@ -114,26 +115,26 @@ function insert_local_tensor(
 )
   spec = nothing
   for (v, vnext) in IterTools.partition(pos, 2, 1)
-    e = edgetype(psi)(v, vnext)
-    indsTe = inds(psi[v])
+    e = edgetype(x)(v, vnext)
+    indsTe = inds(x[v])
     L, phi, spec = factorize(
-      phi, indsTe; which_decomp, tags=tags(psi, e), eigen_perturbation, kwargs...
+      phi, indsTe; which_decomp, tags=tags(x, e), eigen_perturbation, kwargs...
     )
-    psi[v] = L
+    x[v] = L
     eigen_perturbation = nothing # TODO: fix this
   end
-  psi[last(pos)] = phi
-  psi = set_ortho_center(psi, [last(pos)])
-  @assert isortho(psi) && only(ortho_center(psi)) == last(pos)
-  normalize && (psi[last(pos)] ./= norm(psi[last(pos)]))
+  x[last(pos)] = phi
+  x = set_ortho_center(x, [last(pos)])
+  @assert isortho(x) && only(ortho_center(x)) == last(pos)
+  normalize && (x[last(pos)] ./= norm(x[last(pos)]))
   # TODO: return maxtruncerr, will not be correct in cases where insertion executes multiple factorizations
-  return psi, spec
+  return x, spec
 end
 
-function insert_local_tensor(psi::AbstractTTN, phi::ITensor, e::NamedEdge; kwargs...)
-  psi[dst(e)] *= phi
-  psi = set_ortho_center(psi, [dst(e)])
-  return psi, nothing
+function insert_local_tensor(x::AbstractTTN, phi::ITensor, e::NamedEdge; kwargs...)
+  x[dst(e)] *= phi
+  x = set_ortho_center(x, [dst(e)])
+  return x, nothing
 end
 
 #TODO: clean this up:
@@ -144,7 +145,7 @@ current_ortho(st) = current_ortho(typeof(st), st)
 function local_update(
   solver,
   PH,
-  psi,
+  x,
   region;
   normalize,
   noise,
@@ -159,12 +160,12 @@ function local_update(
   sweep_step,
   kwargs...,
 )
-  psi = orthogonalize(psi, current_ortho(region))
-  psi, phi = extract_local_tensor(psi, region)
+  x = orthogonalize(x, current_ortho(region))
+  x, phi = extract_local_tensor(x, region)
 
   nsites = (region isa AbstractEdge) ? 0 : length(region)
   PH = set_nsite(PH, nsites)
-  PH = position(PH, psi, region)
+  PH = position(PH, x, region)
 
   phi, info = solver(PH, phi; normalize, region, step_kwargs..., kwargs...)
   if !(phi isa ITensor && info isa NamedTuple)
@@ -179,8 +180,8 @@ function local_update(
   #  drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
   #end
 
-  psi, spec = insert_local_tensor(
-    psi, phi, region; eigen_perturbation=drho, ortho, normalize, kwargs...
+  x, spec = insert_local_tensor(
+    x, phi, region; eigen_perturbation=drho, ortho, normalize, kwargs...
   )
 
   update!(
@@ -191,7 +192,7 @@ function local_update(
     sweep_step,
     total_sweep_steps=length(sweep_regions),
     end_of_sweep=(sweep_step == length(sweep_regions)),
-    psi,
+    x,
     region,
     sweep,
     spec,
@@ -199,5 +200,5 @@ function local_update(
     info...,
     step_kwargs...,
   )
-  return psi, PH
+  return x, PH
 end

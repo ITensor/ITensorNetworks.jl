@@ -38,7 +38,8 @@ end
 
 function alternating_update(
   solver,
-  problem_cache;
+  problem_cache,
+  x;
   checkdone=(; kws...) -> false,
   outputlevel::Integer=0,
   nsweeps::Integer=1,
@@ -63,7 +64,8 @@ function alternating_update(
     sw_time = @elapsed begin
       problem_cache = update_step(
         solver,
-        problem_cache;
+        problem_cache,
+        x;
         outputlevel,
         sweep,
         maxdim=maxdim[sweep],
@@ -86,13 +88,26 @@ default_inds_map(x; kwargs...) = mapprime(x, 0 => 1; kwargs...)
 default_inv_inds_map(x; kwargs...) = mapprime(x, 1 => 0; kwargs...)
 default_contract_alg(x) = "bp"
 
-struct BPCache{TN,Cache,V,In,Out,Map}
-  tn::TN
-  cache::Cache
-  vs::V
-  in_vs::In
-  out_vs::Out
-  inds_map::Map
+abstract type AbstractITensorNetworkCache end
+const AbstractITNCache = AbstractITensorNetworkCache
+
+# TODO: Define `ITensorNetworkMap` that is an `ITensorNetwork` with an `inds_map`.
+struct BPCache{TN,Cache,V,In,Out,Map} <: AbstractITNCache
+  tn::TN # ITensorNetwork (unpartitioned? of quadratic form)
+  cache::Cache # DataGraph of message tensors
+  vs::Vector{V} # Vertices of original tensor network state
+  update_region::Vector{V} # Region to update
+  in_vs::In # Bra vertices of tensor network state
+  out_vs::Out # Ket vertices of tensor network state
+  inds_map::Map # Map indices from ket to bra
+end
+
+function set_nsite(cache::BPCache, nsite)
+  error("Not implemented")
+end
+
+function position(cache::BPCache, nsite)
+  error("Not implemented")
 end
 
 function cache(contract_alg::Algorithm"bp", tn::AbstractITensorNetwork, vs::Vector, in_vs::Function, out_vs::Function, inds_map::Function)
@@ -104,9 +119,13 @@ function cache(tn::AbstractITensorNetwork, vs::Vector, in_vs::Function, out_vs::
 end
 
 # ⟨x|A|x⟩ / ⟨x|x⟩
-struct RayleighQuotientCache{Num,Den}
-  numerator::Num
-  denominator::Den
+struct RayleighQuotientCache{Num<:AbstractITNCache,Den<:AbstractITNCache} <: AbstractITNCache
+  num::Num
+  den::Den
+end
+
+function set_nsite(cache::RayleighQuotientCache, nsite)
+  return RayleighQuotientCache(set_nsite(cache.num, nsite), set_nsite(cache.den, nsite))
 end
 
 # Rayleigh quotient numerator network, ⟨x|A|x⟩
@@ -116,11 +135,29 @@ function quadratic_form_network(
   A::AbstractITensorNetwork,
   x::AbstractITensorNetwork;
   inds_map=default_inds_map,
-  inv_inds_map=default_inv_inds_map,
-  contract_alg=default_contract_alg(x),
 )
   xAx = ⊗(x, A, inds_map(dag(x)))
   return xAx
+end
+
+function quadratic_form_network(x::AbstractITensorNetwork; inds_map=default_inds_map)
+  xx = quadratic_form_network(id_network(x; inds_map), x; inds_map)
+  return xx
+end
+
+function id_network(inds::AbstractIndsNetwork; inds_map=default_inds_map)
+  id_net = ITensorNetwork(vertices(inds))
+  for v in vertices(inds)
+    setindex_preserve_graph!(id_net, ITensor(true), v)
+    for i in inds[v]
+      setindex_preserve_graph!(id_net, id_net[v] * δ(dag(i), i'), v)
+    end
+  end
+  return id_net
+end
+
+function id_network(x::AbstractITensorNetwork; inds_map=default_inds_map)
+  return id_network(siteinds(x))
 end
 
 # Rayleigh quotient numerator cache, ⟨x|A|x⟩
@@ -133,7 +170,7 @@ function quadratic_form_cache(
   contract_alg=default_contract_alg(x),
 )
   vs = vertices(x)
-  xAx = quadratic_form_network(x, A; inds_map)
+  xAx = quadratic_form_network(A, x; inds_map)
   xAx_in_vs(v) = (v, 1)
   xAx_out_vs(v) = (v, 3)
   xAx_inds_map = inds_map ∘ dag
@@ -141,27 +178,15 @@ function quadratic_form_cache(
   return xAx_cache
 end
 
-function norm2_network(x::AbstractITensorNetwork)
-  xx = x ⊗ inds_map(x; sites=[])
-  return xx
-end
-
 # Rayleigh quotient denominator cache, ⟨x|x⟩
 # https://en.wikipedia.org/wiki/Norm_(mathematics)
 # https://en.wikipedia.org/wiki/Inner_product_space
-function norm2_cache(
+function quadratic_form_cache(
   x::AbstractITensorNetwork;
   inds_map=default_inds_map,
-  inv_inds_map=default_inv_inds_map,
-  contract_alg=default_contract_alg(x),
+  kwargs...,
 )
-  vs = vertices(x)
-  xx = x ⊗ inds_map(x; sites=[])
-  xx_in_vs(v) = (v, 1)
-  xx_out_vs(v) = (v, 2)
-  xx_inds_map(x) = inds_map(dag(x); sites=[])
-  xx_cache = cache(xx, vs, xx_in_vs, xx_out_vs, xx_inds_map; contract_alg)
-  return xx_cache
+  return quadratic_form_cache(id_network(x; inds_map), x; inds_map, kwargs...)
 end
 
 # Cache for a tensor network representation of a
@@ -171,18 +196,16 @@ end
 function rayleigh_quotient_cache(
   A::AbstractITensorNetwork,
   x::AbstractITensorNetwork;
-  inds_map=default_inds_map,
-  inv_inds_map=default_inv_inds_map,
-  contract_alg=default_contract_alg(x),
+  kwargs...,
 )
-  xAx_cache = quadratic_form_cache(A, x; inds_map, inv_inds_map, contract_alg)
-  xx_cache = norm2_cache(x; inds_map, inv_inds_map, contract_alg)
+  xAx_cache = quadratic_form_cache(A, x; kwargs...)
+  xx_cache = quadratic_form_cache(x; kwargs...)
   return RayleighQuotientCache(xAx_cache, xx_cache)
 end
 
 function alternating_update(solver, A::AbstractITensorNetwork, x₀::AbstractITensorNetwork; kwargs...)
   xAx_xx_cache = rayleigh_quotient_cache(A, x₀)
-  return alternating_update(solver, xAx_xx_cache; kwargs...)
+  return alternating_update(solver, xAx_xx_cache, x₀; kwargs...)
 end
 
 ## function alternating_update(solver, A::AbstractVector{<:AbstractITensorNetwork}, x₀::AbstractITensorNetwork; kwargs...)

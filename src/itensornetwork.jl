@@ -53,6 +53,10 @@ copy(tn::ITensorNetwork) = ITensorNetwork(copy(data_graph(tn)))
 # Construction from collections of ITensors
 #
 
+function ITensorNetwork(vertices::Vector)
+  return ITensorNetwork{eltype(vertices)}(NamedGraph(vertices))
+end
+
 function ITensorNetwork(ts::ITensorCollection)
   return ITensorNetwork{keytype(ts)}(ts)
 end
