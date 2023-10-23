@@ -17,11 +17,12 @@ function vidal_gauge(
   bond_tensors::DataGraph;
   eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
   regularization=10 * eps(real(scalartype(ψ))),
+  edges = NamedGraphs.edges(ψ),
   svd_kwargs...,
 )
   ψ_vidal = copy(ψ)
 
-  for e in edges(ψ_vidal)
+  for e in edges
     vsrc, vdst = src(e), dst(e)
     ψvsrc, ψvdst = ψ_vidal[vsrc], ψ_vidal[vdst]
 
@@ -173,7 +174,7 @@ function symmetric_to_vidal_gauge(
 end
 
 """Function to measure the 'isometries' of a state in the Vidal Gauge"""
-function vidal_itn_isometries(ψ::ITensorNetwork, bond_tensors::DataGraph; edges = vcat(edges(ψ), reverse.(edges(ψ))))
+function vidal_itn_isometries(ψ::ITensorNetwork, bond_tensors::DataGraph; edges = vcat(NamedGraphs.edges(ψ), reverse.(NamedGraphs.edges(ψ))))
   isometries = DataGraph{vertextype(ψ),ITensor,ITensor}(directed_graph(underlying_graph(ψ)))
 
   for e in edges
