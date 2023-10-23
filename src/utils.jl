@@ -25,3 +25,15 @@ function line_to_tree(line::Vector)
   end
   return [line_to_tree(line[1:(end - 1)]), line[end]]
 end
+
+#Find an optimal ordering of the edges in an undirected graph
+function edge_update_order(g::AbstractNamedGraph)
+  es = []
+  for v in vertices(g)
+      new_es = reverse(reverse.(edges(bfs_tree(g, v))))
+      push!(es, setdiff(new_es, es)...)
+  end
+
+  @assert Set(es) == Set(vcat(edges(g), reverse.(edges(g))))
+  return es
+end

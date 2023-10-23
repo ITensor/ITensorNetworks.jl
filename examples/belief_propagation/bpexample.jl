@@ -4,6 +4,7 @@ using Metis
 using ITensorNetworks
 using Random
 using SplitApplyCombine
+using NamedGraphs
 
 using ITensorNetworks:
   belief_propagation,
@@ -35,6 +36,7 @@ function main()
   )
 
   mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
+
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )

@@ -81,8 +81,8 @@ function belief_propagation_iteration(
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
-  update_sequence::String="parallel",
-  edges=Graphs.edges(mts),
+  update_sequence::String="sequential",
+  edges = edge_update_order(undirected_graph(underlying_graph(mts))),
 )
   new_mts = copy(mts)
   if update_sequence != "parallel" && update_sequence != "sequential"
@@ -97,7 +97,6 @@ function belief_propagation_iteration(
       incoming_mts[e_in] for
       e_in in setdiff(boundary_edges(incoming_mts, [src(e)]; dir=:in), [reverse(e)])
     ]
-
     new_mts[src(e) => dst(e)] = update_message_tensor(
       tn, incoming_mts[src(e)], environment_tensornetworks; contract_kwargs
     )
@@ -120,17 +119,16 @@ function belief_propagation(
   niters=20,
   target_precision::Union{Float64,Nothing}=nothing,
   update_sequence::String="parallel",
+  edges = edge_update_order(undirected_graph(underlying_graph(mts)))
 )
   compute_norm = target_precision == nothing ? false : true
   for i in 1:niters
     mts, c = belief_propagation_iteration(
-      tn, mts; contract_kwargs, compute_norm, update_sequence
+      tn, mts; contract_kwargs, compute_norm, update_sequence, edges
     )
     if compute_norm && c <= target_precision
       println(
-        "Belief Propagation finished. Reached a canonicalness of " *
-        string(c) *
-        " after $i iterations. ",
+        "BP converged to desired precision after $i iterations.",
       )
       break
     end
