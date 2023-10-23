@@ -4,7 +4,6 @@ using Metis
 using ITensorNetworks
 using Random
 using SplitApplyCombine
-using ProfileView
 
 using ITensorNetworks:
   message_tensors,
@@ -70,7 +69,7 @@ function benchmark_state_gauging(
 
     if mode == "BeliefPropagation"
       times_iters[i] = @elapsed mts, _ = belief_propagation_iteration(
-        ψψ, mts; contract_kwargs=(; alg="exact"), update_order=BP_update_order
+        ψψ, mts; contract_kwargs=(; alg="exact"), update_sequence=BP_update_order
       )
 
       times_gauging[i] = @elapsed ψ, bond_tensors = vidal_gauge(ψinit, mts)
