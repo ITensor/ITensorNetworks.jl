@@ -54,6 +54,8 @@ function update_message_tensor(
   if contract_kwargs.alg != "exact"
     contract_output = contract(tn; contract_kwargs...)
   else
+    # TODO: Just use `contract_kwargs...` here, using an "exact"
+    # backend.
     contract_output = contract(tn; sequence=contraction_sequence(tn; alg="optimal"))
   end
 

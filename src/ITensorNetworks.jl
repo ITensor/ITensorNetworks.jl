@@ -1,6 +1,7 @@
 module ITensorNetworks
 
 using AbstractTrees
+using Accessors
 using Combinatorics
 using Compat
 using DataGraphs
@@ -122,6 +123,11 @@ include(joinpath("treetensornetworks", "solvers", "dmrg_x.jl"))
 include(joinpath("treetensornetworks", "solvers", "contract.jl"))
 include(joinpath("treetensornetworks", "solvers", "linsolve.jl"))
 include(joinpath("treetensornetworks", "solvers", "tree_sweeping.jl"))
+include(joinpath("itensornetworkcache", "abstractitensornetworkcache.jl"))
+include(joinpath("itensornetworkcache", "rayleighquotientcache.jl"))
+include(joinpath("itensornetworkcache", "quadraticform.jl"))
+include(joinpath("itensornetworkcache", "bpcache.jl"))
+include(joinpath("itensornetworkcache", "alternating_update", "alternating_update.jl"))
 
 include("exports.jl")
 
