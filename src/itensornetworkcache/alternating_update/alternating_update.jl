@@ -19,6 +19,7 @@ function alternating_update_sweep(problem_cache, region_updates)
 end
 
 function update_region(problem_cache, updates)
+  @show updates
   error("Not implemented")
   return problem_cache
 end
