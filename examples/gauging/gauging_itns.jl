@@ -22,6 +22,7 @@ using ITensorNetworks:
 using NamedGraphs
 using NamedGraphs: add_edges!, rem_vertex!, hexagonal_lattice_graph
 using Graphs
+using MKL
 
 """Eager Gauging"""
 function eager_gauging(ψ::ITensorNetwork, bond_tensors::DataGraph, mts::DataGraph)
@@ -85,7 +86,7 @@ function benchmark_state_gauging(
 
     C[i] = vidal_itn_canonicalness(ψ, bond_tensors)
   end
-
+  @show times_iters, time
   simulation_times = cumsum(times_iters) + times_gauging
 
   return simulation_times, C

@@ -22,12 +22,13 @@ function message_tensors_skeleton(subgraphs::DataGraph)
 end
 
 function message_tensors(
-  subgraphs::DataGraph; itensor_constructor=inds_e -> dense(delta(inds_e))
+  subgraphs::DataGraph; itensor_constructor=x -> ITensor[dense(delta(i)) for i in x]
 )
   mts = message_tensors_skeleton(subgraphs)
   for e in edges(subgraphs)
-    inds_e = commoninds(subgraphs[src(e)], subgraphs[dst(e)])
-    mts[e] = ITensorNetwork(map(itensor_constructor, inds_e))
+    inds_e = [i for i in commoninds(subgraphs[src(e)], subgraphs[dst(e)])]
+    itensors = itensor_constructor(inds_e)
+    mts[e] = ITensorNetwork(itensors)
     mts[reverse(e)] = dag(mts[e])
   end
   return mts
@@ -118,7 +119,7 @@ function belief_propagation(
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   niters=20,
   target_precision::Union{Float64,Nothing}=nothing,
-  update_sequence::String="parallel",
+  update_sequence::String="sequential",
   edges = edge_update_order(undirected_graph(underlying_graph(mts)))
 )
   compute_norm = target_precision == nothing ? false : true
@@ -143,10 +144,11 @@ function belief_propagation(
   npartitions=nothing,
   subgraph_vertices=nothing,
   niters=20,
+  update_sequence::String="sequential",
   target_precision::Union{Float64,Nothing}=nothing,
 )
   mts = message_tensors(tn; nvertices_per_partition, npartitions, subgraph_vertices)
-  return belief_propagation(tn, mts; contract_kwargs, niters, target_precision)
+  return belief_propagation(tn, mts; contract_kwargs, niters, target_precision, update_sequence)
 end
 
 """

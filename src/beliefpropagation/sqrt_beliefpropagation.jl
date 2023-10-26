@@ -5,7 +5,7 @@ function sqrt_belief_propagation(
   tn::ITensorNetwork,
   mts::DataGraph;
   niters=20,
-  update_sequence::String="parallel",
+  update_sequence::String="sequential",
   # target_precision::Union{Float64,Nothing}=nothing,
 )
   # compute_norm = target_precision == nothing ? false : true
@@ -27,8 +27,8 @@ end
 function sqrt_belief_propagation_iteration(
   tn::ITensorNetwork,
   sqrt_mts::DataGraph;
-  update_sequence::String="parallel",
-  edges=Graphs.edges(sqrt_mts),
+  update_sequence::String="sequential",
+  edges=edge_update_order(undirected_graph(underlying_graph(mts))),
 
   # compute_norm=false,
 )
