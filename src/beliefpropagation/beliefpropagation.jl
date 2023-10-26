@@ -75,31 +75,24 @@ function update_message_tensor(
 end
 
 """
-Do an update of all message tensors for a given ITensornetwork and its partition into sub graphs
+Do a sequential update of message tensors on `edges` for a given ITensornetwork and its partition into sub graphs
 """
 function belief_propagation_iteration(
   tn::ITensorNetwork,
-  mts::DataGraph;
+  mts::DataGraph,
+  edges::Vector{E};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
-  update_sequence::String="sequential",
-  edges = edge_update_order(undirected_graph(underlying_graph(mts))),
-)
+) where {E<:NamedEdge}
   new_mts = copy(mts)
-  if update_sequence != "parallel" && update_sequence != "sequential"
-    error(
-      "Specified update order is not currently implemented. Choose parallel or sequential."
-    )
-  end
-  incoming_mts = update_sequence == "parallel" ? mts : new_mts
   c = 0
   for e in edges
     environment_tensornetworks = ITensorNetwork[
-      incoming_mts[e_in] for
-      e_in in setdiff(boundary_edges(incoming_mts, [src(e)]; dir=:in), [reverse(e)])
+      new_mts[e_in] for
+      e_in in setdiff(boundary_edges(new_mts, [src(e)]; dir=:in), [reverse(e)])
     ]
     new_mts[src(e) => dst(e)] = update_message_tensor(
-      tn, incoming_mts[src(e)], environment_tensornetworks; contract_kwargs
+      tn, new_mts[src(e)], environment_tensornetworks; contract_kwargs
     )
 
     if compute_norm
@@ -113,24 +106,96 @@ function belief_propagation_iteration(
   return new_mts, c / (length(edges))
 end
 
+"""
+Do parallel updates between groups of edges of all message tensors for a given ITensornetwork and its partition into sub graphs
+"""
+function belief_propagation_iteration(
+  tn::ITensorNetwork,
+  mts::DataGraph,
+  edge_groups::Vector{Vector{E}};
+  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  compute_norm=false,
+) where {E<:NamedEdge}
+  new_mts = copy(mts)
+  c = 0
+  for edges in edge_groups
+    updated_mts, ct = belief_propagation_iteration(
+      tn, mts, edges; contract_kwargs, compute_norm
+    )
+    for e in edges
+      new_mts[e] = updated_mts[e]
+    end
+    c += ct
+  end
+  return new_mts, c / (length(edge_groups))
+end
+
+function belief_propagation_iteration(
+  tn::ITensorNetwork,
+  mts::DataGraph;
+  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  compute_norm=false,
+  edges::Union{Vector{Vector{E}},Vector{E}}=edge_update_order(
+    undirected_graph(underlying_graph(mts))
+  ),
+) where {E<:NamedEdge}
+  return belief_propagation_iteration(tn, mts, edges; contract_kwargs, compute_norm)
+end
+
+# """
+# Do an update of all message tensors for a given ITensornetwork and its partition into sub graphs
+# """
+# function belief_propagation_iteration(
+#   tn::ITensorNetwork,
+#   mts::DataGraph;
+#   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+#   compute_norm=false,
+#   update_sequence::String="sequential",
+#   edges::Vector{Vector{}} = edge_update_order(undirected_graph(underlying_graph(mts))),
+# )
+#   new_mts = copy(mts)
+#   if update_sequence != "parallel" && update_sequence != "sequential"
+#     error( 
+#       "Specified update order is not currently implemented. Choose parallel or sequential."
+#     )
+#   end
+#   incoming_mts = update_sequence == "parallel" ? mts : new_mts
+#   c = 0
+#   for e in edges
+#     environment_tensornetworks = ITensorNetwork[
+#       incoming_mts[e_in] for
+#       e_in in setdiff(boundary_edges(incoming_mts, [src(e)]; dir=:in), [reverse(e)])
+#     ]
+#     new_mts[src(e) => dst(e)] = update_message_tensor(
+#       tn, incoming_mts[src(e)], environment_tensornetworks; contract_kwargs
+#     )
+
+#     if compute_norm
+#       LHS, RHS = ITensors.contract(ITensor(mts[src(e) => dst(e)])),
+#       ITensors.contract(ITensor(new_mts[src(e) => dst(e)]))
+#       LHS /= sum(diag(LHS))
+#       RHS /= sum(diag(RHS))
+#       c += 0.5 * norm(denseblocks(LHS) - denseblocks(RHS))
+#     end
+#   end
+#   return new_mts, c / (length(edges))
+# end
+
 function belief_propagation(
   tn::ITensorNetwork,
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   niters=20,
   target_precision::Union{Float64,Nothing}=nothing,
-  update_sequence::String="sequential",
-  edges = edge_update_order(undirected_graph(underlying_graph(mts)))
-)
+  edges::Union{Vector{Vector{E}},Vector{E}}=edge_update_order(
+    undirected_graph(underlying_graph(mts))
+  ),
+) where {E<:NamedEdge}
   compute_norm = target_precision == nothing ? false : true
   for i in 1:niters
-    mts, c = belief_propagation_iteration(
-      tn, mts; contract_kwargs, compute_norm, update_sequence, edges
-    )
+    mts, c = belief_propagation_iteration(tn, mts, edges; contract_kwargs, compute_norm)
     if compute_norm && c <= target_precision
-      println(
-        "BP converged to desired precision after $i iterations.",
-      )
+      println("BP converged to desired precision after $i iterations.")
       break
     end
   end
@@ -144,11 +209,10 @@ function belief_propagation(
   npartitions=nothing,
   subgraph_vertices=nothing,
   niters=20,
-  update_sequence::String="sequential",
   target_precision::Union{Float64,Nothing}=nothing,
 )
   mts = message_tensors(tn; nvertices_per_partition, npartitions, subgraph_vertices)
-  return belief_propagation(tn, mts; contract_kwargs, niters, target_precision, update_sequence)
+  return belief_propagation(tn, mts; contract_kwargs, niters, target_precision)
 end
 
 """

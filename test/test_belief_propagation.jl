@@ -40,13 +40,7 @@ ITensors.disable_warn_order()
 
   Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(Z)
-  mts = belief_propagation(
-    ψψ,
-    mts;
-    contract_kwargs=(; alg="exact"),
-    niters = 1,
-    update_sequence="sequential",
-  )
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=1)
 
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
@@ -57,7 +51,7 @@ ITensors.disable_warn_order()
   @test abs.(bp_sz - exact_sz) <= 1e-14
 
   #Now test on a tree, should also be exact
-  g = named_comb_tree((6,6))
+  g = named_comb_tree((6, 6))
   s = siteinds("S=1/2", g)
   χ = 2
   Random.seed!(1564)
@@ -73,13 +67,7 @@ ITensors.disable_warn_order()
 
   Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(Z)
-  mts = belief_propagation(
-    ψψ,
-    mts;
-    contract_kwargs=(; alg="exact"),
-    niters = 1,
-    update_sequence="sequential",
-  )
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=1)
 
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
@@ -112,7 +100,8 @@ ITensors.disable_warn_order()
   )
 
   denominator_network = approx_network_region(ψψ, mts, vs)
-  bp_szsz = ITensors.contract(numerator_network)[] / ITensors.contract(denominator_network)[]
+  bp_szsz =
+    ITensors.contract(numerator_network)[] / ITensors.contract(denominator_network)[]
 
   @test abs.(bp_szsz - actual_szsz) <= 0.05
 
@@ -176,8 +165,7 @@ ITensors.disable_warn_order()
     contract_kwargs=(;
       alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16, maxdim
     ),
-    niters = 1,
-    update_sequence="sequential",
+    niters=1,
   )
 
   numerator_network = approx_network_region(ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v]))

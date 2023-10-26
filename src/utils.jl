@@ -40,7 +40,9 @@ function edge_update_order(g)
 end
 
 #Find an optimal ordering of the edges in a tree
-function tree_edge_update_order(g::AbstractNamedGraph; root_vertex = first(keys(sort(eccentricities(g); rev=true))))
+function tree_edge_update_order(
+  g::AbstractNamedGraph; root_vertex=first(keys(sort(eccentricities(g); rev=true)))
+)
   @assert is_tree(g)
   es = post_order_dfs_edges(g, root_vertex)
   return vcat(es, reverse(reverse.(es)))

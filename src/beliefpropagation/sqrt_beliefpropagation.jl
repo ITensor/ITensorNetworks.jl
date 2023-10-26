@@ -1,53 +1,19 @@
 # using ITensors: scalartype
 # using ITensorNetworks: find_subgraph, map_diag, sqrt_diag, boundary_edges
 
-function sqrt_belief_propagation(
-  tn::ITensorNetwork,
-  mts::DataGraph;
-  niters=20,
-  update_sequence::String="sequential",
-  # target_precision::Union{Float64,Nothing}=nothing,
-)
-  # compute_norm = target_precision == nothing ? false : true
-  sqrt_mts = sqrt_message_tensors(tn, mts)
-  for i in 1:niters
-    sqrt_mts, c = sqrt_belief_propagation_iteration(tn, sqrt_mts; update_sequence) #; compute_norm)
-    # if compute_norm && c <= target_precision
-    #   println(
-    #     "Belief Propagation finished. Reached a canonicalness of " *
-    #     string(c) *
-    #     " after $i iterations. ",
-    #   )
-    #   break
-    # end
-  end
-  return sqr_message_tensors(sqrt_mts)
-end
-
 function sqrt_belief_propagation_iteration(
-  tn::ITensorNetwork,
-  sqrt_mts::DataGraph;
-  update_sequence::String="sequential",
-  edges=edge_update_order(undirected_graph(underlying_graph(mts))),
-
-  # compute_norm=false,
-)
+  tn::ITensorNetwork, sqrt_mts::DataGraph, edges::Vector{E}
+) where {E<:NamedEdge}
   new_sqrt_mts = copy(sqrt_mts)
-  if update_sequence != "parallel" && update_sequence != "sequential"
-    error(
-      "Specified update order is not currently implemented. Choose parallel or sequential."
-    )
-  end
-  incoming_sqrt_mts = update_sequence == "parallel" ? sqrt_mts : new_sqrt_mts
   c = 0.0
   for e in edges
     environment_tensornetworks = ITensorNetwork[
-      incoming_sqrt_mts[e_in] for
-      e_in in setdiff(boundary_edges(incoming_sqrt_mts, [src(e)]; dir=:in), [reverse(e)])
+      new_sqrt_mts[e_in] for
+      e_in in setdiff(boundary_edges(new_sqrt_mts, [src(e)]; dir=:in), [reverse(e)])
     ]
 
     new_sqrt_mts[src(e) => dst(e)] = update_sqrt_message_tensor(
-      tn, incoming_sqrt_mts[src(e)], environment_tensornetworks;
+      tn, new_sqrt_mts[src(e)], environment_tensornetworks;
     )
 
     # if compute_norm
@@ -59,6 +25,56 @@ function sqrt_belief_propagation_iteration(
     # end
   end
   return new_sqrt_mts, c / (length(edges))
+end
+
+function sqrt_belief_propagation_iteration(
+  tn::ITensorNetwork, sqrt_mts::DataGraph, edges::Vector{Vector{E}}
+) where {E<:NamedEdge}
+  new_sqrt_mts = copy(sqrt_mts)
+  c = 0.0
+  for e_group in edges
+    updated_sqrt_mts, ct = sqrt_belief_propagation_iteration(tn, sqr_mts, e_group)
+    for e in e_group
+      new_sqrt_mts[e] = updated_sqrt_mts[e]
+    end
+    c += ct
+  end
+  return new_sqrt_mts, c / (length(edges))
+end
+
+function sqrt_belief_propagation_iteration(
+  tn::ITensorNetwork,
+  sqrt_mts::DataGraph;
+  edges::Union{Vector{Vector{E}},Vector{E}}=edge_update_order(
+    undirected_graph(underlying_graph(mts))
+  ),
+) where {E<:NamedEdge}
+  return sqrt_belief_propagation_iteration(tn, sqrt_mts, edges)
+end
+
+function sqrt_belief_propagation(
+  tn::ITensorNetwork,
+  mts::DataGraph;
+  niters=20,
+  edges::Union{Vector{Vector{E}},Vector{E}}=edge_update_order(
+    undirected_graph(underlying_graph(mts))
+  ),
+  # target_precision::Union{Float64,Nothing}=nothing,
+) where {E<:NamedEdge}
+  # compute_norm = target_precision == nothing ? false : true
+  sqrt_mts = sqrt_message_tensors(tn, mts)
+  for i in 1:niters
+    sqrt_mts, c = sqrt_belief_propagation_iteration(tn, sqrt_mts, edges) #; compute_norm)
+    # if compute_norm && c <= target_precision
+    #   println(
+    #     "Belief Propagation finished. Reached a canonicalness of " *
+    #     string(c) *
+    #     " after $i iterations. ",
+    #   )
+    #   break
+    # end
+  end
+  return sqr_message_tensors(sqrt_mts)
 end
 
 function update_sqrt_message_tensor(

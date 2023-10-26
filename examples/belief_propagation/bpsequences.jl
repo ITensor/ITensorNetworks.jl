@@ -14,8 +14,7 @@ using ITensorNetworks:
   nested_graph_leaf_vertices
 
 function main()
-
-  g = named_comb_tree((6,6))
+  g = named_comb_tree((6, 6))
   s = siteinds("S=1/2", g)
   χ = 4
 
@@ -29,17 +28,33 @@ function main()
     ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ))))
   )
 
-  println("First testing out a comb tree. Random network with bond dim $χ")
+  println("\nFirst testing out a comb tree. Random network with bond dim $χ")
 
   #Now test out various sequences
   print("Parallel updates (sequence is irrelevant): ")
-  belief_propagation(ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision = 1e-10, niters = 100, update_sequence = "parallel")
+  belief_propagation(
+    ψψ,
+    mts_init;
+    contract_kwargs=(; alg="exact"),
+    target_precision=1e-10,
+    niters=100,
+    edges=[[e] for e in edges(mts_init)],
+  )
   print("Sequential updates (sequence is default edge list of the message tensors): ")
-  belief_propagation(ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision = 1e-10, niters = 100, update_sequence = "sequential",  edges = edges(mts_init))
+  belief_propagation(
+    ψψ,
+    mts_init;
+    contract_kwargs=(; alg="exact"),
+    target_precision=1e-10,
+    niters=100,
+    edges=[e for e in edges(mts_init)],
+  )
   print("Sequential updates (sequence is our custom sequence finder): ")
-  belief_propagation(ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision = 1e-10, niters = 100, update_sequence = "sequential")
+  belief_propagation(
+    ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision=1e-10, niters=100
+  )
 
-  g = named_grid((6,6))
+  g = named_grid((6, 6))
   s = siteinds("S=1/2", g)
   χ = 2
 
@@ -53,17 +68,33 @@ function main()
     ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ))))
   )
 
-  println("Now testing out a 6x6 grid. Random network with bond dim $χ")
+  println("\nNow testing out a 6x6 grid. Random network with bond dim $χ")
 
   #Now test out various sequences
   print("Parallel updates (sequence is irrelevant): ")
-  belief_propagation(ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision = 1e-10, niters = 100, update_sequence = "parallel")
+  belief_propagation(
+    ψψ,
+    mts_init;
+    contract_kwargs=(; alg="exact"),
+    target_precision=1e-10,
+    niters=100,
+    edges=[[e] for e in edges(mts_init)],
+  )
   print("Sequential updates (sequence is default edge list of the message tensors): ")
-  belief_propagation(ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision = 1e-10, niters = 100, update_sequence = "sequential",  edges = edges(mts_init))
+  belief_propagation(
+    ψψ,
+    mts_init;
+    contract_kwargs=(; alg="exact"),
+    target_precision=1e-10,
+    niters=100,
+    edges=[e for e in edges(mts_init)],
+  )
   print("Sequential updates (sequence is our custom sequence finder): ")
-  belief_propagation(ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision = 1e-10, niters = 100, update_sequence = "sequential")
+  belief_propagation(
+    ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision=1e-10, niters=100
+  )
 
-  g = NamedGraphs.hexagonal_lattice_graph(4,4)
+  g = NamedGraphs.hexagonal_lattice_graph(4, 4)
   s = siteinds("S=1/2", g)
   χ = 3
 
@@ -77,15 +108,31 @@ function main()
     ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ))))
   )
 
-  println("Now testing out a 4 x 4 hexagonal lattice. Random network with bond dim $χ")
+  println("\nNow testing out a 4 x 4 hexagonal lattice. Random network with bond dim $χ")
 
   #Now test out various sequences
   print("Parallel updates (sequence is irrelevant): ")
-  belief_propagation(ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision = 1e-10, niters = 100, update_sequence = "parallel")
+  belief_propagation(
+    ψψ,
+    mts_init;
+    contract_kwargs=(; alg="exact"),
+    target_precision=1e-10,
+    niters=100,
+    edges=[[e] for e in edges(mts_init)],
+  )
   print("Sequential updates (sequence is default edge list of the message tensors): ")
-  belief_propagation(ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision = 1e-10, niters = 100, update_sequence = "sequential",  edges = edges(mts_init))
+  belief_propagation(
+    ψψ,
+    mts_init;
+    contract_kwargs=(; alg="exact"),
+    target_precision=1e-10,
+    niters=100,
+    edges=[e for e in edges(mts_init)],
+  )
   print("Sequential updates (sequence is our custom sequence finder): ")
-  belief_propagation(ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision = 1e-10, niters = 100, update_sequence = "sequential")
+  return belief_propagation(
+    ψψ, mts_init; contract_kwargs=(; alg="exact"), target_precision=1e-10, niters=100
+  )
 end
 
 main()
