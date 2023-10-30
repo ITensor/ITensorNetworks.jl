@@ -34,6 +34,35 @@ function id_network(x::AbstractITensorNetwork; inds_map=default_inds_map)
   return id_network(siteinds(x))
 end
 
+
+# TODO: Think about what information needs to be stored in `QuadraticForm`,
+# what about the graph partitioning?
+# TODO: Combine `vs`, `in_vs`, and `out_vs` into a single Dictionary.
+struct QuadraticForm{TN,V,In,Out,Map}
+  tn::TN # ITensorNetwork (unpartitioned? of quadratic form)
+  cache::Cache # DataGraph of message tensors
+  vs::Vector{V} # Vertices of original tensor network state
+  in_vs::In # Bra vertices of tensor network state
+  out_vs::Out # Ket vertices of tensor network state
+  inds_map::Map # Map indices from ket to bra
+end
+
+# Rayleigh quotient numerator cache, ⟨x|A|x⟩
+# Also known as a [quadratic form](https://en.wikipedia.org/wiki/Quadratic_form).
+function QuadraticForm(
+  A::AbstractITensorNetwork,
+  x::AbstractITensorNetwork;
+  inds_map=default_inds_map,
+  inv_inds_map=default_inv_inds_map,
+)
+  vs = vertices(x)
+  xAx = quadratic_form_network(A, x; inds_map)
+  xAx_in_vs(v) = (v, 1)
+  xAx_out_vs(v) = (v, 3)
+  xAx_inds_map = inds_map ∘ dag
+  return QuadraticForm(xAx, xAx_in_vs, xAx_out_vs, xAx_inds_map)
+end
+
 # Rayleigh quotient numerator cache, ⟨x|A|x⟩
 # Also known as a [quadratic form](https://en.wikipedia.org/wiki/Quadratic_form).
 function quadratic_form_cache(
@@ -43,13 +72,17 @@ function quadratic_form_cache(
   inv_inds_map=default_inv_inds_map,
   contract_alg=default_contract_alg(x),
 )
-  vs = vertices(x)
-  xAx = quadratic_form_network(A, x; inds_map)
-  xAx_in_vs(v) = (v, 1)
-  xAx_out_vs(v) = (v, 3)
-  xAx_inds_map = inds_map ∘ dag
-  xAx_cache = cache(xAx, vs, xAx_in_vs, xAx_out_vs, xAx_inds_map; contract_alg)
-  return xAx_cache
+  return cache(QuadraticForm(A, x; inds_map, inv_inds_map); contract_alg)
+end
+
+# Rayleigh quotient numerator cache, ∑ᵢ⟨x|Aᵢ|x⟩
+# Also known as a [quadratic form](https://en.wikipedia.org/wiki/Quadratic_form).
+function quadratic_form_cache(
+  A::Sum,
+  x::AbstractITensorNetwork;
+  kwargs...
+)
+  return Sum([quadratic_form_cache(Aᵢ, x; kwargs...) for Aᵢ in terms(A)])
 end
 
 # Rayleigh quotient denominator cache, ⟨x|x⟩

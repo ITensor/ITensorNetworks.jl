@@ -1,5 +1,5 @@
 # ⟨x|A|x⟩ / ⟨x|x⟩
-struct RayleighQuotientCache{Num<:AbstractITNCache,Den<:AbstractITNCache} <: AbstractITNCache
+struct RayleighQuotientCache{Num,Den} <: AbstractITNCache
   num::Num
   den::Den
 end
@@ -24,7 +24,7 @@ end
 # TODO: Detect if there is an orthogonality center and if so
 # avoid making the denominator cache of the Rayleigh quotient.
 function rayleigh_quotient_cache(
-  A::AbstractITensorNetwork,
+  A,
   x::AbstractITensorNetwork;
   kwargs...,
 )

@@ -1,19 +1,15 @@
 # TODO: Define `ITensorNetworkMap` that is an `ITensorNetwork` with an `inds_map`.
-struct BPCache{TN,Cache,V,In,Out,Map} <: AbstractITNCache
-  tn::TN # ITensorNetwork (unpartitioned? of quadratic form)
+struct BPCache{Cache,QuadraticForm,UpdateRegion} <: AbstractITNCache
+  quadratic_form::QuadraticForm
   cache::Cache # DataGraph of message tensors
-  vs::Vector{V} # Vertices of original tensor network state
-  update_region::Vector{V} # Region to update
-  in_vs::In # Bra vertices of tensor network state
-  out_vs::Out # Ket vertices of tensor network state
-  inds_map::Map # Map indices from ket to bra
+  update_region::UpdateRegion # Region to update
 end
 
 set_cache(cache::BPCache, new_cache) = @set cache.cache = new_cache
 
 function cache(contract_alg::Algorithm"bp", tn::AbstractITensorNetwork, vs::Vector, in_vs::Function, out_vs::Function, inds_map::Function)
   update_region = eltype(vs)[]
-  return BPCache(tn, DataGraph(), vs, update_region, in_vs, out_vs, inds_map)
+  return BPCache(QuadraticForm(tn, vs, in_vs, out_vs, inds_map), DataGraph(), update_region)
 end
 
 # Apply the quadratic form to an input on the region
@@ -31,6 +27,7 @@ end
 
 function position(cache::BPCache, tn::AbstractITensorNetwork, region)
   # A partitioning of the vertices for the BP cache
+  # TODO: Move this into the `QuadraticForm`.
   vertex_partitions = map(v -> vertex_path(cache.tn, cache.in_vs(v), cache.out_vs(v)), Indices(cache.vs))
   tn_partitioned = partition(cache.tn, vertex_partitions)
 

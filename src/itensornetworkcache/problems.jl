@@ -5,7 +5,7 @@ struct EigenProblem{Operator} <: AbstractProblem
   operator::Operator
 end
 
-function cache(problem::EigenProblem{<:AbstractITensorNetwork}, state::AbstractITensorNetwork; contract_alg=default_contract_alg())
+function cache(problem::EigenProblem, state::AbstractITensorNetwork; contract_alg=default_contract_alg())
   return EigenProblem(rayleigh_quotient_cache(problem.operator, state; contract_alg))
 end
 
