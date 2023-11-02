@@ -48,7 +48,7 @@ function benchmark_state_gauging(
   ψ::ITensorNetwork;
   mode="BeliefPropagation",
   no_iterations=50,
-  BP_update_order::String="parallel",
+  BP_update_order::String="sequential",
 )
   s = siteinds(ψ)
 
@@ -69,9 +69,15 @@ function benchmark_state_gauging(
     println("On Iteration " * string(i))
 
     if mode == "BeliefPropagation"
-      times_iters[i] = @elapsed mts, _ = belief_propagation_iteration(
-        ψψ, mts; contract_kwargs=(; alg="exact"), update_sequence=BP_update_order
-      )
+      if BP_update_order != "parallel"
+        times_iters[i] = @elapsed mts, _ = belief_propagation_iteration(
+          ψψ, mts; contract_kwargs=(; alg="exact")
+        )
+      else
+        times_iters[i] = @elapsed mts, _ = belief_propagation_iteration(
+          ψψ, mts; contract_kwargs=(; alg="exact"), edges=[[e] for e in edges(mts)]
+        )
+      end
 
       times_gauging[i] = @elapsed ψ, bond_tensors = vidal_gauge(ψinit, mts)
     elseif mode == "Eager"
@@ -98,14 +104,16 @@ s = siteinds("S=1/2", g)
 ψ = randomITensorNetwork(s; link_space=χ)
 no_iterations = 30
 
-BPG_simulation_times, BPG_Cs = benchmark_state_gauging(ψ; no_iterations)
+BPG_simulation_times, BPG_Cs = benchmark_state_gauging(
+  ψ; no_iterations, BP_update_order="parallel"
+)
 BPG_sequential_simulation_times, BPG_sequential_Cs = benchmark_state_gauging(
-  ψ; no_iterations, BP_update_order="sequential"
+  ψ; no_iterations
 )
 Eager_simulation_times, Eager_Cs = benchmark_state_gauging(ψ; mode="Eager", no_iterations)
 SU_simulation_times, SU_Cs = benchmark_state_gauging(ψ; mode="SU", no_iterations)
 
-epsilon = 1e-6
+epsilon = 1e-10
 
 println(
   "Time for BPG (with parallel updates) to reach C < epsilon was " *

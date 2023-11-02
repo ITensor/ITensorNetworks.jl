@@ -45,7 +45,7 @@ end
 function sqrt_belief_propagation_iteration(
   tn::ITensorNetwork,
   sqrt_mts::DataGraph;
-  edges::Union{Vector{Vector{E}},Vector{E}}=edge_update_order(
+  edges::Union{Vector{Vector{E}},Vector{E}}=belief_propagation_edge_sequence(
     undirected_graph(underlying_graph(mts))
   ),
 ) where {E<:NamedEdge}
@@ -56,7 +56,7 @@ function sqrt_belief_propagation(
   tn::ITensorNetwork,
   mts::DataGraph;
   niters=20,
-  edges::Union{Vector{Vector{E}},Vector{E}}=edge_update_order(
+  edges::Union{Vector{Vector{E}},Vector{E}}=belief_propagation_edge_sequence(
     undirected_graph(underlying_graph(mts))
   ),
   # target_precision::Union{Float64,Nothing}=nothing,

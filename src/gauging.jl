@@ -96,6 +96,7 @@ function vidal_gauge(
   regularization=10 * eps(real(scalartype(ψ))),
   niters=30,
   target_canonicalness::Union{Nothing,Float64}=nothing,
+  verbose=false,
   svd_kwargs...,
 )
   ψψ = norm_network(ψ)
@@ -103,7 +104,12 @@ function vidal_gauge(
   mts = message_tensors(Z)
 
   mts = belief_propagation(
-    ψψ, mts; contract_kwargs=(; alg="exact"), niters, target_precision=target_canonicalness
+    ψψ,
+    mts;
+    contract_kwargs=(; alg="exact"),
+    niters,
+    target_precision=target_canonicalness,
+    verbose,
   )
   return vidal_gauge(
     ψ, mts; eigen_message_tensor_cutoff, regularization, niters, svd_kwargs...

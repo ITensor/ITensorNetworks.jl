@@ -26,24 +26,18 @@ function line_to_tree(line::Vector)
   return [line_to_tree(line[1:(end - 1)]), line[end]]
 end
 
-function edge_update_order(g)
-  forests = NamedGraphs.build_forest_cover(g)
+#Custom edge order for updating all BP message tensors on a general undirected graph. On a tree this will yield a sequence which only needs to be performed once.
+function BP_edge_update_order(g::NamedGraph; root_vertex=NamedGraphs.default_root_vertex)
+  @assert !is_directed(g)
+  forests = NamedGraphs.forest_cover(g)
   edges = NamedEdge[]
   for forest in forests
     trees = NamedGraph[forest[vs] for vs in connected_components(forest)]
     for tree in trees
-      push!(edges, tree_edge_update_order(tree)...)
+      tree_edges = post_order_dfs_edges(tree, root_vertex(tree))
+      push!(edges, vcat(tree_edges, reverse(reverse.(tree_edges)))...)
     end
   end
 
   return edges
-end
-
-#Find an optimal ordering of the edges in a tree
-function tree_edge_update_order(
-  g::AbstractNamedGraph; root_vertex=first(keys(sort(eccentricities(g); rev=true)))
-)
-  @assert is_tree(g)
-  es = post_order_dfs_edges(g, root_vertex)
-  return vcat(es, reverse(reverse.(es)))
 end
