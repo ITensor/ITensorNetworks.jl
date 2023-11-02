@@ -445,7 +445,7 @@ function svd(
 )
   tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
-  U, S, V = svd(tn[src(edge)], left_inds; lefttags=u_tags, right_tags=v_tags, kwargs...)
+  U, S, V = svd(tn[src(edge)], left_inds; lefttags=u_tags, righttags=v_tags, kwargs...)
 
   rem_vertex!(tn, src(edge))
   add_vertex!(tn, U_vertex)
@@ -562,7 +562,7 @@ function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs..
   tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
   ltags = tags(tn, edge)
-  U, S, V = svd(tn[src(edge)], left_inds; lefttags=ltags, ortho="left", kwargs...)
+  U, S, V = svd(tn[src(edge)], left_inds; lefttags=ltags, kwargs...)
   tn[src(edge)] = U
   tn[dst(edge)] *= (S * V)
   return tn

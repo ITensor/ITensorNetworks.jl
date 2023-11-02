@@ -103,9 +103,7 @@ function vidal_gauge(
   mts = belief_propagation(
     ψψ, mts; contract_kwargs=(; alg="exact"), niters, target_precision=target_canonicalness
   )
-  return vidal_gauge(
-    ψ, mts; eigen_message_tensor_cutoff, regularization, niters, svd_kwargs...
-  )
+  return vidal_gauge(ψ, mts; eigen_message_tensor_cutoff, regularization, svd_kwargs...)
 end
 
 """Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (message tensors)"""
