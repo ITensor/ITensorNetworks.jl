@@ -165,7 +165,7 @@ Optional keyword arguments:
 * `time_step::Number = t` - time step to use when evolving the state. Smaller time steps generally give more accurate results but can make the algorithm take more computational time to run.
 * `nsteps::Integer` - evolve by the requested total time `t` by performing `nsteps` of the TDVP algorithm. More steps can result in more accurate results but require more computational time to run. (Note that only one of the `time_step` or `nsteps` parameters can be provided, not both.)
 * `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
-* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
+* `observer` - object implementing the Observer interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
 function tdvp(H, t::Number, init::AbstractTTN; solver_backend="exponentiate", kwargs...)
