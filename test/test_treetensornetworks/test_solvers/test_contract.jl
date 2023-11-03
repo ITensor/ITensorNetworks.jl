@@ -40,8 +40,8 @@ using Test
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with less good initial guess MPS not equal to psi
-  psi_guess = truncate(psi; maxdim=2)
-  Hpsi = apply(H, psi; alg="fit", nsweeps=4, init_state=psi_guess)
+  psi_guess = truncate(psit; maxdim=2)
+  Hpsi = apply(H, psi; alg="fit", nsweeps=4, init=psi_guess)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with nsite=1

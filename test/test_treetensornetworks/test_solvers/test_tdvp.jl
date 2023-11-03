@@ -248,7 +248,7 @@ using Test
         solver_tol=1e-12,
         solver_maxiter=500,
         solver_krylovdim=25,
-        solver_solver_backend="exponentiate",
+        solver_backend="exponentiate",
       )
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
@@ -312,14 +312,7 @@ using Test
 
       nsite = (step <= 3 ? 2 : 1)
       phi = tdvp(
-        H,
-        -tau * im,
-        phi;
-        nsteps=1,
-        cutoff,
-        nsite,
-        normalize=true,
-        exponentiate_krylovdim=15,
+        H, -tau * im, phi; nsteps=1, cutoff, nsite, normalize=true, solver_krylovdim=15
       )
 
       Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
@@ -379,7 +372,7 @@ using Test
     for (step, t) in enumerate(trange)
       nsite = (step <= 10 ? 2 : 1)
       psi = tdvp(
-        H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, exponentiate_krylovdim=15
+        H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
       )
       #Different backend solvers, default solver_backend = "applyexp"
       psi2 = tdvp(
@@ -390,7 +383,7 @@ using Test
         nsite,
         reverse_step,
         normalize=true,
-        exponentiate_krylovdim=15,
+        solver_krylovdim=15,
         solver_backend="exponentiate",
       )
     end
@@ -684,14 +677,7 @@ end
 
       nsite = (step <= 3 ? 2 : 1)
       phi = tdvp(
-        H,
-        -tau * im,
-        phi;
-        nsteps=1,
-        cutoff,
-        nsite,
-        normalize=true,
-        exponentiate_krylovdim=15,
+        H, -tau * im, phi; nsteps=1, cutoff, nsite, normalize=true, solver_krylovdim=15
       )
 
       Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
@@ -742,7 +728,7 @@ end
     for (step, t) in enumerate(trange)
       nsite = (step <= 10 ? 2 : 1)
       psi = tdvp(
-        H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, exponentiate_krylovdim=15
+        H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
       )
     end
 
