@@ -112,17 +112,29 @@ function insert_local_tensor(
   psi::AbstractTTN,
   phi::ITensor,
   pos::Vector;
-  which_decomp=nothing,
   normalize=false,
+  # factorize kwargs
+  maxdim=nothing,
+  mindim=nothing,
+  cutoff=nothing,
+  which_decomp=nothing,
   eigen_perturbation=nothing,
-  kwargs...,
+  ortho=nothing,
 )
   spec = nothing
   for (v, vnext) in IterTools.partition(pos, 2, 1)
     e = edgetype(psi)(v, vnext)
     indsTe = inds(psi[v])
     L, phi, spec = factorize(
-      phi, indsTe; which_decomp, tags=tags(psi, e), eigen_perturbation, kwargs...
+      phi,
+      indsTe;
+      tags=tags(psi, e),
+      maxdim,
+      mindim,
+      cutoff,
+      which_decomp,
+      eigen_perturbation,
+      ortho,
     )
     psi[v] = L
     eigen_perturbation = nothing # TODO: fix this
@@ -162,7 +174,7 @@ function local_update(
   sweep,
   sweep_regions,
   sweep_step,
-  kwargs...,
+  solver_kwargs...,
 )
   psi = orthogonalize(psi, current_ortho(region))
   psi, phi = extract_local_tensor(psi, region)
@@ -170,8 +182,7 @@ function local_update(
   nsites = (region isa AbstractEdge) ? 0 : length(region)
   PH = set_nsite(PH, nsites)
   PH = position(PH, psi, region)
-
-  phi, info = solver(PH, phi; normalize, region, step_kwargs..., kwargs...)
+  phi, info = solver(PH, phi; normalize, region, step_kwargs..., solver_kwargs...)
   if !(phi isa ITensor && info isa NamedTuple)
     println("Solver returned the following types: $(typeof(phi)), $(typeof(info))")
     error("In alternating_update, solver must return an ITensor and a NamedTuple")
@@ -185,16 +196,7 @@ function local_update(
   #end
 
   psi, spec = insert_local_tensor(
-    psi,
-    phi,
-    region;
-    eigen_perturbation=drho,
-    ortho,
-    normalize,
-    cutoff,
-    maxdim,
-    mindim,
-    kwargs...,
+    psi, phi, region; eigen_perturbation=drho, ortho, normalize, maxdim, mindim, cutoff
   )
 
   update!(

@@ -23,7 +23,14 @@ Keyword arguments:
 Overload of `KrylovKit.linsolve`.
 """
 function linsolve(
-  A::AbstractTTN, b::AbstractTTN, x₀::AbstractTTN, a₀::Number=0, a₁::Number=1; kwargs...
+  A::AbstractTTN,
+  b::AbstractTTN,
+  x₀::AbstractTTN,
+  a₀::Number=0,
+  a₁::Number=1;
+  normalize,
+  region,
+  half_sweep,
 )
   function linsolve_solver(
     P,
@@ -33,17 +40,20 @@ function linsolve(
     solver_krylovdim=30,
     solver_maxiter=100,
     solver_verbosity=0,
-    kwargs...,
   )
-    solver_kwargs = (;
-      ishermitian=ishermitian,
+    b = dag(only(proj_mps(P)))
+    x, info = KrylovKit.linsolve(
+      P,
+      b,
+      x₀,
+      a₀,
+      a₁;
+      ishermitian,
       tol=solver_tol,
       krylovdim=solver_krylovdim,
       maxiter=solver_maxiter,
       verbosity=solver_verbosity,
     )
-    b = dag(only(proj_mps(P)))
-    x, info = KrylovKit.linsolve(P, b, x₀, a₀, a₁; solver_kwargs...)
     return x, NamedTuple()
   end
 

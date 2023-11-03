@@ -1,4 +1,4 @@
-function contract_solver(PH, psi; kwargs...)
+function contract_solver(PH, psi; normalize, region, half_sweep)
   v = ITensor(1.0)
   for j in sites(PH)
     v *= PH.psi0[j]
