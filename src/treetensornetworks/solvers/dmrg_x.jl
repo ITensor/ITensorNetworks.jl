@@ -1,4 +1,6 @@
-function dmrg_x_solver(PH, init; kwargs...)
+function dmrg_x_solver(
+  PH, init; normalize=nothing, region=nothing, half_sweep=nothing, reverse_step=nothing
+)
   H = contract(PH, ITensor(1.0))
   D, U = eigen(H; ishermitian=true)
   u = uniqueind(U, H)

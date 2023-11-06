@@ -111,9 +111,7 @@ function vidal_gauge(
     target_precision=target_canonicalness,
     verbose,
   )
-  return vidal_gauge(
-    ψ, mts; eigen_message_tensor_cutoff, regularization, niters, svd_kwargs...
-  )
+  return vidal_gauge(ψ, mts; eigen_message_tensor_cutoff, regularization, svd_kwargs...)
 end
 
 """Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (message tensors)"""

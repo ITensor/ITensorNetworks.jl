@@ -1,4 +1,4 @@
-function exponentiate_solver(; kwargs...)
+function exponentiate_solver()
   function solver(
     H,
     init;
@@ -10,10 +10,13 @@ function exponentiate_solver(; kwargs...)
     solver_outputlevel=0,
     solver_tol=1E-12,
     substep,
+    normalize,
     time_step,
-    kws...,
   )
-    solver_kwargs = (;
+    psi, exp_info = KrylovKit.exponentiate(
+      H,
+      time_step,
+      init;
       ishermitian,
       issymmetric,
       tol=solver_tol,
@@ -22,14 +25,12 @@ function exponentiate_solver(; kwargs...)
       verbosity=solver_outputlevel,
       eager=true,
     )
-
-    psi, exp_info = KrylovKit.exponentiate(H, time_step, init; solver_kwargs...)
     return psi, (; info=exp_info)
   end
   return solver
 end
 
-function applyexp_solver(; kwargs...)
+function applyexp_solver()
   function solver(
     H,
     init;
@@ -39,13 +40,13 @@ function applyexp_solver(; kwargs...)
     solver_tol=1E-8,
     substep,
     time_step,
-    kws...,
+    normalize,
   )
-    solver_kwargs = (; maxiter=solver_krylovdim, outputlevel=solver_outputlevel)
-
     #applyexp tol is absolute, compute from tol_per_unit_time:
     tol = abs(time_step) * tol_per_unit_time
-    psi, exp_info = applyexp(H, time_step, init; tol, solver_kwargs..., kws...)
+    psi, exp_info = applyexp(
+      H, time_step, init; tol, maxiter=solver_krylovdim, outputlevel=solver_outputlevel
+    )
     return psi, (; info=exp_info)
   end
   return solver
@@ -84,7 +85,12 @@ function sub_time_steps(order)
 end
 
 function tdvp_sweep(
-  order::Int, nsite::Int, time_step::Number, graph::AbstractGraph; kwargs...
+  order::Int,
+  nsite::Int,
+  time_step::Number,
+  graph::AbstractGraph;
+  root_vertex=default_root_vertex(graph),
+  reverse_step=true,
 )
   sweep = []
   for (substep, fac) in enumerate(sub_time_steps(order))
@@ -93,10 +99,11 @@ function tdvp_sweep(
       direction(substep),
       graph,
       make_region;
+      root_vertex,
       nsite,
       region_args=(; substep, time_step=sub_time_step),
       reverse_args=(; substep, time_step=-sub_time_step),
-      reverse_step=true,
+      reverse_step,
     )
     append!(sweep, half)
   end
@@ -113,10 +120,12 @@ function tdvp(
   nsteps=nothing,
   order::Integer=2,
   (sweep_observer!)=observer(),
+  root_vertex=default_root_vertex(init),
+  reverse_step=true,
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
-  sweep_regions = tdvp_sweep(order, nsite, time_step, init; kwargs...)
+  sweep_regions = tdvp_sweep(order, nsite, time_step, init; root_vertex, reverse_step)
 
   function sweep_time_printer(; outputlevel, sweep, kwargs...)
     if outputlevel >= 1
@@ -156,7 +165,7 @@ Optional keyword arguments:
 * `time_step::Number = t` - time step to use when evolving the state. Smaller time steps generally give more accurate results but can make the algorithm take more computational time to run.
 * `nsteps::Integer` - evolve by the requested total time `t` by performing `nsteps` of the TDVP algorithm. More steps can result in more accurate results but require more computational time to run. (Note that only one of the `time_step` or `nsteps` parameters can be provided, not both.)
 * `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
-* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
+* `observer` - object implementing the Observer interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
 function tdvp(H, t::Number, init::AbstractTTN; solver_backend="exponentiate", kwargs...)
@@ -169,5 +178,5 @@ function tdvp(H, t::Number, init::AbstractTTN; solver_backend="exponentiate", kw
       "solver_backend=$solver_backend not recognized (options are \"applyexp\" or \"exponentiate\")",
     )
   end
-  return tdvp(solver(; kwargs...), H, t, init; kwargs...)
+  return tdvp(solver(), H, t, init; kwargs...)
 end

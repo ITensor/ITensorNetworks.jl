@@ -1,15 +1,25 @@
-function eigsolve_solver(; solver_which_eigenvalue=:SR, kwargs...)
-  function solver(H, init; kws...)
+function eigsolve_solver(;
+  solver_which_eigenvalue=:SR,
+  ishermitian=true,
+  solver_tol=1e-14,
+  solver_krylovdim=3,
+  solver_maxiter=1,
+  solver_verbosity=0,
+)
+  function solver(H, init; normalize=nothing, region=nothing, half_sweep=nothing)
     howmany = 1
     which = solver_which_eigenvalue
-    solver_kwargs = (;
-      ishermitian=get(kwargs, :ishermitian, true),
-      tol=get(kwargs, :solver_tol, 1E-14),
-      krylovdim=get(kwargs, :solver_krylovdim, 3),
-      maxiter=get(kwargs, :solver_maxiter, 1),
-      verbosity=get(kwargs, :solver_verbosity, 0),
+    vals, vecs, info = eigsolve(
+      H,
+      init,
+      howmany,
+      which;
+      ishermitian,
+      tol=solver_tol,
+      krylovdim=solver_krylovdim,
+      maxiter=solver_maxiter,
+      verbosity=solver_verbosity,
     )
-    vals, vecs, info = eigsolve(H, init, howmany, which; solver_kwargs...)
     psi = vecs[1]
     return psi, (; solver_info=info, energies=vals)
   end
@@ -19,8 +29,30 @@ end
 """
 Overload of `ITensors.dmrg`.
 """
-function dmrg(H, init::AbstractTTN; kwargs...)
-  return alternating_update(eigsolve_solver(; kwargs...), H, init; kwargs...)
+function dmrg(
+  H,
+  init::AbstractTTN;
+  solver_which_eigenvalue=:SR,
+  ishermitian=true,
+  solver_tol=1e-14,
+  solver_krylovdim=3,
+  solver_maxiter=1,
+  solver_verbosity=0,
+  kwargs...,
+)
+  return alternating_update(
+    eigsolve_solver(;
+      solver_which_eigenvalue,
+      ishermitian,
+      solver_tol,
+      solver_krylovdim,
+      solver_maxiter,
+      solver_verbosity,
+    ),
+    H,
+    init;
+    kwargs...,
+  )
 end
 
 """
