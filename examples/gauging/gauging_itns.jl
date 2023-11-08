@@ -22,7 +22,6 @@ using ITensorNetworks:
 using NamedGraphs
 using NamedGraphs: add_edges!, rem_vertex!, hexagonal_lattice_graph
 using Graphs
-using MKL
 
 """Eager Gauging"""
 function eager_gauging(ψ::ITensorNetwork, bond_tensors::DataGraph, mts::DataGraph)
