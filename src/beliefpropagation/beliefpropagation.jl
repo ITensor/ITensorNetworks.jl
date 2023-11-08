@@ -214,7 +214,7 @@ function approx_network_region(
 end
 
 """
-Return a custom edge order for how how to update all BP message tensors on a general undirected graph. 
+Return a custom edge order for how to update all BP message tensors on a general undirected graph. 
 On a tree this will yield a sequence which only needs to be performed once. Based on forest covers and depth first searches amongst the forests.
 """
 function belief_propagation_edge_sequence(
