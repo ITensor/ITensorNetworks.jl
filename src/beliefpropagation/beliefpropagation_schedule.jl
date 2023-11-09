@@ -1,6 +1,6 @@
 default_edge_sequence_alg() = "forest_cover"
 
-default_bp_niters(g::NamedGraph) = is_tree(g) ? 1 : nothing
+@traitfn default_bp_niters(g::NamedGraph::(!IsDirected)) = is_tree(g) ? 1 : nothing
 function default_bp_niters(g::AbstractGraph)
   return default_bp_niters(undirected_graph(underlying_graph(g)))
 end
@@ -17,10 +17,11 @@ function edge_sequence(alg::Algorithm, g::AbstractGraph; kwargs...)
   return edge_sequence(alg, g, kwargs...)
 end
 
-function edge_sequence(
-  ::Algorithm"forest_cover", g::NamedGraph; root_vertex=NamedGraphs.default_root_vertex
+@traitfn function edge_sequence(
+  ::Algorithm"forest_cover",
+  g::NamedGraph::(!IsDirected);
+  root_vertex=NamedGraphs.default_root_vertex,
 )
-  @assert !is_directed(g)
   forests = NamedGraphs.forest_cover(g)
   edges = edgetype(g)[]
   for forest in forests
@@ -34,7 +35,6 @@ function edge_sequence(
   return edges
 end
 
-function edge_sequence(::Algorithm"parallel", g::NamedGraph)
-  @assert !is_directed(g)
+@traitfn function edge_sequence(::Algorithm"parallel", g::NamedGraph::(!IsDirected))
   return [[e] for e in vcat(edges(g), reverse.(edges(g)))]
 end
