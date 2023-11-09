@@ -74,7 +74,10 @@ function benchmark_state_gauging(
         )
       else
         times_iters[i] = @elapsed mts, _ = belief_propagation_iteration(
-          ψψ, mts; contract_kwargs=(; alg="exact"), edges=[[e] for e in edges(mts)]
+          ψψ,
+          mts;
+          contract_kwargs=(; alg="exact"),
+          edges=edge_sequence(mts; alg=ITensorNetworks.Parallel()),
         )
       end
 

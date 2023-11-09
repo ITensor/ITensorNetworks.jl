@@ -35,7 +35,7 @@ function main()
     ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ))))
   )
 
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=20)
 
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
@@ -54,7 +54,7 @@ function main()
   )
   Zpp = partition(ψψ; subgraph_vertices=nested_graph_leaf_vertices(Zp))
   mts = message_tensors(Zpp)
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=20)
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
   )

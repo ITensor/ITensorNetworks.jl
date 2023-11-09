@@ -40,7 +40,7 @@ ITensors.disable_warn_order()
 
   Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(Z)
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=1)
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
 
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
@@ -67,7 +67,7 @@ ITensors.disable_warn_order()
 
   Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(Z)
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=1)
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
 
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
@@ -94,7 +94,7 @@ ITensors.disable_warn_order()
   nsites = 2
   Z = partition(ψψ; nvertices_per_partition=nsites)
   mts = message_tensors(Z)
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=20)
   numerator_network = approx_network_region(
     ψψ, mts, vs; verts_tn=ITensorNetwork(ITensor[ψOψ[v] for v in vs])
   )
@@ -120,7 +120,7 @@ ITensors.disable_warn_order()
   )
   Zpp = partition(ψψ; subgraph_vertices=nested_graph_leaf_vertices(Zp))
   mts = message_tensors(Zpp)
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=20)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   rdm = ITensors.contract(
@@ -165,7 +165,6 @@ ITensors.disable_warn_order()
     contract_kwargs=(;
       alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16, maxdim
     ),
-    niters=1,
   )
 
   numerator_network = approx_network_region(ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v]))

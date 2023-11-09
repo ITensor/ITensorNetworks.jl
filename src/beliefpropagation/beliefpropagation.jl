@@ -22,7 +22,8 @@ function message_tensors_skeleton(subgraphs::DataGraph)
 end
 
 function message_tensors(
-  subgraphs::DataGraph; itensor_constructor=inds_e -> ITensor[dense(delta(i)) for i in inds_e]
+  subgraphs::DataGraph;
+  itensor_constructor=inds_e -> ITensor[dense(delta(i)) for i in inds_e],
 )
   mts = message_tensors_skeleton(subgraphs)
   for e in edges(subgraphs)
@@ -80,7 +81,7 @@ Do a sequential update of message tensors on `edges` for a given ITensornetwork 
 function belief_propagation_iteration(
   tn::ITensorNetwork,
   mts::DataGraph,
-  edges::Vector{<:NamedEdge};
+  edges::Vector{<:AbstractEdge};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
 )
@@ -107,15 +108,17 @@ function belief_propagation_iteration(
 end
 
 """
-Do parallel updates between groups of edges of all message tensors for a given ITensornetwork and its partition into sub graphs
+Do parallel updates between groups of edges of all message tensors for a given ITensornetwork and its partition into sub graphs.
+Currently we send the full message tensor data struct to belief_propagation_iteration for each subgraph. But really we only need the
+mts relevant to that subgraph.
 """
 function belief_propagation_iteration(
   tn::ITensorNetwork,
   mts::DataGraph,
-  edge_groups::Vector{Vector{E}};
+  edge_groups::Vector{<:Vector{<:AbstractEdge}};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
-) where {E<:NamedEdge}
+)
   new_mts = copy(mts)
   c = 0
   for edges in edge_groups
@@ -135,9 +138,7 @@ function belief_propagation_iteration(
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
-  edges::Union{Vector{Vector{<:NamedEdge}},Vector{<:NamedEdge}}=belief_propagation_edge_sequence(
-    undirected_graph(underlying_graph(mts))
-  ),
+  edges=edge_sequence(mts),
 )
   return belief_propagation_iteration(tn, mts, edges; contract_kwargs, compute_norm)
 end
@@ -146,14 +147,15 @@ function belief_propagation(
   tn::ITensorNetwork,
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  niters=20,
-  target_precision::Union{Float64,Nothing}=nothing,
-  edges::Union{Vector{Vector{E}},Vector{E}}=belief_propagation_edge_sequence(
-    undirected_graph(underlying_graph(mts))
-  ),
+  niters::Union{Int64,Nothing}=default_bp_niters(mts),
+  target_precision=nothing,
+  edges=edge_sequence(mts),
   verbose=false,
-) where {E<:NamedEdge}
+)
   compute_norm = !isnothing(target_precision)
+  if isnothing(niters)
+    error("You need to specify a number of iterations for BP!")
+  end
   for i in 1:niters
     mts, c = belief_propagation_iteration(tn, mts, edges; contract_kwargs, compute_norm)
     if compute_norm && c <= target_precision
@@ -172,8 +174,8 @@ function belief_propagation(
   nvertices_per_partition=nothing,
   npartitions=nothing,
   subgraph_vertices=nothing,
-  niters=20,
-  target_precision::Union{Float64,Nothing}=nothing,
+  niters=default_bp_niters(mts),
+  target_precision=nothing,
   verbose=false,
 )
   mts = message_tensors(tn; nvertices_per_partition, npartitions, subgraph_vertices)
@@ -211,25 +213,4 @@ function approx_network_region(
   environment_tn = get_environment(tn, mts, verts)
 
   return environment_tn ⊗ verts_tn
-end
-
-"""
-Return a custom edge order for how to update all BP message tensors on a general undirected graph. 
-On a tree this will yield a sequence which only needs to be performed once. Based on forest covers and depth first searches amongst the forests.
-"""
-function belief_propagation_edge_sequence(
-  g::NamedGraph; root_vertex=NamedGraphs.default_root_vertex
-)
-  @assert !is_directed(g)
-  forests = NamedGraphs.forest_cover(g)
-  edges = NamedEdge[]
-  for forest in forests
-    trees = NamedGraph[forest[vs] for vs in connected_components(forest)]
-    for tree in trees
-      tree_edges = post_order_dfs_edges(tree, root_vertex(tree))
-      push!(edges, vcat(tree_edges, reverse(reverse.(tree_edges)))...)
-    end
-  end
-
-  return edges
 end
