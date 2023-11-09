@@ -22,7 +22,7 @@ function message_tensors_skeleton(subgraphs::DataGraph)
 end
 
 function message_tensors(
-  subgraphs::DataGraph; itensor_constructor=x -> ITensor[dense(delta(i)) for i in x]
+  subgraphs::DataGraph; itensor_constructor=inds_e -> ITensor[dense(delta(i)) for i in inds_e]
 )
   mts = message_tensors_skeleton(subgraphs)
   for e in edges(subgraphs)
