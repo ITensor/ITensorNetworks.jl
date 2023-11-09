@@ -10,7 +10,7 @@ function edge_sequence(g::NamedGraph; alg=default_edge_sequence_alg())
 end
 
 function edge_sequence(g::AbstractGraph; alg=default_edge_sequence_alg())
-  return edge_sequence(alg, undirected_graph(underlying_graph(g)))
+  return edge_sequence(Algorithm(alg), undirected_graph(underlying_graph(g)))
 end
 
 function edge_sequence(alg::Algorithm, g::AbstractGraph; kwargs...)
