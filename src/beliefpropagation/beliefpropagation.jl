@@ -26,7 +26,7 @@ function message_tensors(
 )
   mts = message_tensors_skeleton(subgraphs)
   for e in edges(subgraphs)
-    inds_e = [i for i in commoninds(subgraphs[src(e)], subgraphs[dst(e)])]
+    inds_e = commoninds(subgraphs[src(e)], subgraphs[dst(e)])
     itensors = itensor_constructor(inds_e)
     mts[e] = ITensorNetwork(itensors)
     mts[reverse(e)] = dag(mts[e])
