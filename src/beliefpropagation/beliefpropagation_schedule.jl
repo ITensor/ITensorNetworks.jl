@@ -18,7 +18,7 @@ function edge_sequence(alg::Algorithm, g::AbstractGraph; kwargs...)
 end
 
 function edge_sequence(
-  ::Algorithm"ForestCover", g::NamedGraph; root_vertex=NamedGraphs.default_root_vertex
+  ::Algorithm"forest_cover", g::NamedGraph; root_vertex=NamedGraphs.default_root_vertex
 )
   @assert !is_directed(g)
   forests = NamedGraphs.forest_cover(g)
