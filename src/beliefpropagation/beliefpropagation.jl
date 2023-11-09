@@ -138,7 +138,7 @@ function belief_propagation_iteration(
   edges::Union{Vector{Vector{<:NamedEdge}},Vector{<:NamedEdge}}=belief_propagation_edge_sequence(
     undirected_graph(underlying_graph(mts))
   ),
-) where {E<:NamedEdge}
+)
   return belief_propagation_iteration(tn, mts, edges; contract_kwargs, compute_norm)
 end
 
