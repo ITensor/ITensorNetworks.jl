@@ -153,7 +153,7 @@ function belief_propagation(
   ),
   verbose=false,
 ) where {E<:NamedEdge}
-  compute_norm = target_precision == nothing ? false : true
+  compute_norm = !isnothing(target_precision)
   for i in 1:niters
     mts, c = belief_propagation_iteration(tn, mts, edges; contract_kwargs, compute_norm)
     if compute_norm && c <= target_precision
