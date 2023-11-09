@@ -1,12 +1,7 @@
-abstract type EdgeSequenceAlgorithm end
-
-struct ForestCover <: EdgeSequenceAlgorithm end
-struct Parallel <: EdgeSequenceAlgorithm end
-
-default_edge_sequence_alg() = ForestCover()
+default_edge_sequence_alg() = Algorithm("ForestCover")
 
 default_bp_niters(g::NamedGraph) = is_tree(g) ? 1 : nothing
-function default_bp_niters(g::Union{DataGraph,AbstractITensorNetwork})
+function default_bp_niters(g::AbstractGraph)
   return default_bp_niters(undirected_graph(underlying_graph(g)))
 end
 
@@ -14,12 +9,16 @@ function edge_sequence(g::NamedGraph; alg=default_edge_sequence_alg())
   return edge_sequence(alg, g)
 end
 
-function edge_sequence(mts::DataGraph; alg=default_edge_sequence_alg())
-  return edge_sequence(alg, undirected_graph(underlying_graph(mts)))
+function edge_sequence(g::AbstractGraph; alg=default_edge_sequence_alg())
+  return edge_sequence(alg, undirected_graph(underlying_graph(g)))
+end
+
+function edge_sequence(alg::Algorithm, g::AbstractGraph; kwargs...)
+  return edge_sequence(alg, g, kwargs...)
 end
 
 function edge_sequence(
-  ::ForestCover, g::NamedGraph; root_vertex=NamedGraphs.default_root_vertex
+  ::Algorithm"ForestCover", g::NamedGraph; root_vertex=NamedGraphs.default_root_vertex
 )
   @assert !is_directed(g)
   forests = NamedGraphs.forest_cover(g)
@@ -35,17 +34,7 @@ function edge_sequence(
   return edges
 end
 
-function edge_sequence(
-  ::ForestCover, mts::DataGraph; root_vertex=NamedGraphs.default_root_vertex
-)
-  return edge_sequence(ForestCover, undirected_graph(underlying_graph(mts)); root_vertex)
-end
-
-function edge_sequence(::Parallel, g::NamedGraph)
+function edge_sequence(::Algorithm"Parallel", g::NamedGraph)
   @assert !is_directed(g)
   return [[e] for e in vcat(edges(g), reverse.(edges(g)))]
-end
-
-function edge_sequence(::Parallel, mts::DataGraph)
-  return edge_sequence(Parallel, undirected_graph(underlying_graph(mts)))
 end

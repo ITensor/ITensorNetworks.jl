@@ -53,7 +53,7 @@ function main()
       contract_kwargs=(; alg="exact"),
       target_precision=1e-10,
       niters=100,
-      edges=edge_sequence(mts_init; alg=ITensorNetworks.Parallel()),
+      edges=edge_sequence(mts_init; alg=ITensors.Algorithm("Parallel")),
       verbose=true,
     )
     print("Sequential updates (sequence is default edge list of the message tensors): ")

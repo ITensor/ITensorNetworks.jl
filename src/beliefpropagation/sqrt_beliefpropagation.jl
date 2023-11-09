@@ -51,7 +51,7 @@ end
 function sqrt_belief_propagation(
   tn::ITensorNetwork,
   mts::DataGraph;
-  niters::Union{Int64,Nothing}=default_bp_niters(mts),
+  niters=default_bp_niters(mts),
   edges=edge_sequence(mts),
   # target_precision::Union{Float64,Nothing}=nothing,
 )

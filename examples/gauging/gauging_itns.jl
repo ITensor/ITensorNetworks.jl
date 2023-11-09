@@ -17,7 +17,8 @@ using ITensorNetworks:
   vidal_to_symmetric_gauge,
   initialize_bond_tensors,
   vidal_itn_isometries,
-  norm_network
+  norm_network,
+  edge_sequence
 
 using NamedGraphs
 using NamedGraphs: add_edges!, rem_vertex!, hexagonal_lattice_graph
@@ -77,7 +78,7 @@ function benchmark_state_gauging(
           ψψ,
           mts;
           contract_kwargs=(; alg="exact"),
-          edges=edge_sequence(mts; alg=ITensorNetworks.Parallel()),
+          edges=edge_sequence(mts; alg=ITensors.Algorithm("Parallel")),
         )
       end
 
