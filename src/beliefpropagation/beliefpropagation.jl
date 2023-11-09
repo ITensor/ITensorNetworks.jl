@@ -80,7 +80,7 @@ Do a sequential update of message tensors on `edges` for a given ITensornetwork 
 function belief_propagation_iteration(
   tn::ITensorNetwork,
   mts::DataGraph,
-  edges::Vector{E};
+  edges::Vector{<:NamedEdge};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
 )
