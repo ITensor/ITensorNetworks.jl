@@ -34,7 +34,7 @@ function edge_sequence(
   return edges
 end
 
-function edge_sequence(::Algorithm"Parallel", g::NamedGraph)
+function edge_sequence(::Algorithm"parallel", g::NamedGraph)
   @assert !is_directed(g)
   return [[e] for e in vcat(edges(g), reverse.(edges(g)))]
 end
