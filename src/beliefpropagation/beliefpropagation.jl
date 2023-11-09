@@ -135,7 +135,7 @@ function belief_propagation_iteration(
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
-  edges::Union{Vector{Vector{E}},Vector{E}}=belief_propagation_edge_sequence(
+  edges::Union{Vector{Vector{<:NamedEdge}},Vector{<:NamedEdge}}=belief_propagation_edge_sequence(
     undirected_graph(underlying_graph(mts))
   ),
 ) where {E<:NamedEdge}
