@@ -1,4 +1,4 @@
-default_edge_sequence_alg() = Algorithm("ForestCover")
+default_edge_sequence_alg() = "forest_cover"
 
 default_bp_niters(g::NamedGraph) = is_tree(g) ? 1 : nothing
 function default_bp_niters(g::AbstractGraph)
