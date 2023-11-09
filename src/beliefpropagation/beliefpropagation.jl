@@ -83,7 +83,7 @@ function belief_propagation_iteration(
   edges::Vector{E};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
-) where {E<:NamedEdge}
+)
   new_mts = copy(mts)
   c = 0
   for e in edges
