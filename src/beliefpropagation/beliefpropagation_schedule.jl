@@ -1,20 +1,23 @@
 default_edge_sequence_alg() = "forest_cover"
 
-@traitfn default_bp_niters(g::NamedGraph::(!IsDirected)) = is_tree(g) ? 1 : nothing
+@traitfn undirected_default_bp_niters(g::AbstractGraph::(!IsDirected)) =
+  is_tree(g) ? 1 : nothing
 function default_bp_niters(g::AbstractGraph)
-  return default_bp_niters(undirected_graph(underlying_graph(g)))
+  return undirected_default_bp_niters(undirected_graph(underlying_graph(g)))
 end
 
-function edge_sequence(g::NamedGraph; alg=default_edge_sequence_alg())
-  return edge_sequence(alg, g)
+@traitfn function edge_sequence(
+  g::NamedGraph::(!IsDirected); alg=default_edge_sequence_alg(), kwargs...
+)
+  return edge_sequence(Algorithm(alg), g; kwargs...)
 end
 
-function edge_sequence(g::AbstractGraph; alg=default_edge_sequence_alg())
-  return edge_sequence(Algorithm(alg), undirected_graph(underlying_graph(g)))
+function edge_sequence(g::AbstractGraph; alg=default_edge_sequence_alg(), kwargs...)
+  return edge_sequence(Algorithm(alg), undirected_graph(underlying_graph(g)); kwargs...)
 end
 
 function edge_sequence(alg::Algorithm, g::AbstractGraph; kwargs...)
-  return edge_sequence(alg, g, kwargs...)
+  return edge_sequence(alg, undirected_graph(underlying_graph(g)); kwargs...)
 end
 
 @traitfn function edge_sequence(

@@ -46,7 +46,7 @@ end
 """Bring an ITN into the Vidal gauge, various methods possible. Result is timed"""
 function benchmark_state_gauging(
   ψ::ITensorNetwork;
-  mode="BeliefPropagation",
+  mode="belief_propagation",
   no_iterations=50,
   BP_update_order::String="sequential",
 )
@@ -68,7 +68,7 @@ function benchmark_state_gauging(
   for i in 1:no_iterations
     println("On Iteration " * string(i))
 
-    if mode == "BeliefPropagation"
+    if mode == "belief_propagation"
       if BP_update_order != "parallel"
         times_iters[i] = @elapsed mts, _ = belief_propagation_iteration(
           ψψ, mts; contract_kwargs=(; alg="exact")
@@ -80,7 +80,7 @@ function benchmark_state_gauging(
       end
 
       times_gauging[i] = @elapsed ψ, bond_tensors = vidal_gauge(ψinit, mts)
-    elseif mode == "Eager"
+    elseif mode == "eager"
       times_iters[i] = @elapsed ψ, bond_tensors, mts = eager_gauging(ψ, bond_tensors, mts)
     else
       times_iters[i] = @elapsed begin
@@ -110,7 +110,7 @@ BPG_simulation_times, BPG_Cs = benchmark_state_gauging(
 BPG_sequential_simulation_times, BPG_sequential_Cs = benchmark_state_gauging(
   ψ; no_iterations
 )
-Eager_simulation_times, Eager_Cs = benchmark_state_gauging(ψ; mode="Eager", no_iterations)
+Eager_simulation_times, Eager_Cs = benchmark_state_gauging(ψ; mode="eager", no_iterations)
 SU_simulation_times, SU_Cs = benchmark_state_gauging(ψ; mode="SU", no_iterations)
 
 epsilon = 1e-10
