@@ -147,7 +147,7 @@ function belief_propagation(
   tn::ITensorNetwork,
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  niters::Union{Int64,Nothing}=default_bp_niters(mts),
+  niters=default_bp_niters(mts),
   target_precision=nothing,
   edges=edge_sequence(mts),
   verbose=false,
