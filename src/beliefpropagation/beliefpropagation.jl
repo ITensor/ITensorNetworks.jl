@@ -22,12 +22,14 @@ function message_tensors_skeleton(subgraphs::DataGraph)
 end
 
 function message_tensors(
-  subgraphs::DataGraph; itensor_constructor=inds_e -> dense(delta(inds_e))
+  subgraphs::DataGraph;
+  itensor_constructor=inds_e -> ITensor[dense(delta(i)) for i in inds_e],
 )
   mts = message_tensors_skeleton(subgraphs)
   for e in edges(subgraphs)
     inds_e = commoninds(subgraphs[src(e)], subgraphs[dst(e)])
-    mts[e] = ITensorNetwork(map(itensor_constructor, inds_e))
+    itensors = itensor_constructor(inds_e)
+    mts[e] = ITensorNetwork(itensors)
     mts[reverse(e)] = dag(mts[e])
   end
   return mts
@@ -74,24 +76,24 @@ function update_message_tensor(
 end
 
 """
-Do an update of all message tensors for a given ITensornetwork and its partition into sub graphs
+Do a sequential update of message tensors on `edges` for a given ITensornetwork and its partition into sub graphs
 """
 function belief_propagation_iteration(
   tn::ITensorNetwork,
-  mts::DataGraph;
+  mts::DataGraph,
+  edges::Vector{<:AbstractEdge};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
 )
   new_mts = copy(mts)
   c = 0
-  es = edges(mts)
-  for e in es
+  for e in edges
     environment_tensornetworks = ITensorNetwork[
-      mts[e_in] for e_in in setdiff(boundary_edges(mts, [src(e)]; dir=:in), [reverse(e)])
+      new_mts[e_in] for
+      e_in in setdiff(boundary_edges(new_mts, [src(e)]; dir=:in), [reverse(e)])
     ]
-
     new_mts[src(e) => dst(e)] = update_message_tensor(
-      tn, mts[src(e)], environment_tensornetworks; contract_kwargs
+      tn, new_mts[src(e)], environment_tensornetworks; contract_kwargs
     )
 
     if compute_norm
@@ -102,25 +104,64 @@ function belief_propagation_iteration(
       c += 0.5 * norm(denseblocks(LHS) - denseblocks(RHS))
     end
   end
-  return new_mts, c / (length(es))
+  return new_mts, c / (length(edges))
+end
+
+"""
+Do parallel updates between groups of edges of all message tensors for a given ITensornetwork and its partition into sub graphs.
+Currently we send the full message tensor data struct to belief_propagation_iteration for each subgraph. But really we only need the
+mts relevant to that subgraph.
+"""
+function belief_propagation_iteration(
+  tn::ITensorNetwork,
+  mts::DataGraph,
+  edge_groups::Vector{<:Vector{<:AbstractEdge}};
+  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  compute_norm=false,
+)
+  new_mts = copy(mts)
+  c = 0
+  for edges in edge_groups
+    updated_mts, ct = belief_propagation_iteration(
+      tn, mts, edges; contract_kwargs, compute_norm
+    )
+    for e in edges
+      new_mts[e] = updated_mts[e]
+    end
+    c += ct
+  end
+  return new_mts, c / (length(edge_groups))
+end
+
+function belief_propagation_iteration(
+  tn::ITensorNetwork,
+  mts::DataGraph;
+  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  compute_norm=false,
+  edges=edge_sequence(mts),
+)
+  return belief_propagation_iteration(tn, mts, edges; contract_kwargs, compute_norm)
 end
 
 function belief_propagation(
   tn::ITensorNetwork,
   mts::DataGraph;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  niters=20,
-  target_precision::Union{Float64,Nothing}=nothing,
+  niters=default_bp_niters(mts),
+  target_precision=nothing,
+  edges=edge_sequence(mts),
+  verbose=false,
 )
-  compute_norm = target_precision == nothing ? false : true
+  compute_norm = !isnothing(target_precision)
+  if isnothing(niters)
+    error("You need to specify a number of iterations for BP!")
+  end
   for i in 1:niters
-    mts, c = belief_propagation_iteration(tn, mts; contract_kwargs, compute_norm)
+    mts, c = belief_propagation_iteration(tn, mts, edges; contract_kwargs, compute_norm)
     if compute_norm && c <= target_precision
-      println(
-        "Belief Propagation finished. Reached a canonicalness of " *
-        string(c) *
-        " after $i iterations. ",
-      )
+      if verbose
+        println("BP converged to desired precision after $i iterations.")
+      end
       break
     end
   end
@@ -133,11 +174,12 @@ function belief_propagation(
   nvertices_per_partition=nothing,
   npartitions=nothing,
   subgraph_vertices=nothing,
-  niters=20,
-  target_precision::Union{Float64,Nothing}=nothing,
+  niters=default_bp_niters(mts),
+  target_precision=nothing,
+  verbose=false,
 )
   mts = message_tensors(tn; nvertices_per_partition, npartitions, subgraph_vertices)
-  return belief_propagation(tn, mts; contract_kwargs, niters, target_precision)
+  return belief_propagation(tn, mts; contract_kwargs, niters, target_precision, verbose)
 end
 
 """

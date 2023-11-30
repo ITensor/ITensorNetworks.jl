@@ -96,6 +96,8 @@ import ITensors:
   scalartype,
   #adding
   add
+#Algorithm
+Algorithm
 
 using ITensors.ContractionSequenceOptimization: deepmap
 

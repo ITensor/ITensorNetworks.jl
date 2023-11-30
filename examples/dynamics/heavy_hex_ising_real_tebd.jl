@@ -24,10 +24,10 @@ end
 function ibm_processor_graph(n::Int64, m::Int64)
   g = heavy_hex_lattice_graph(n, m)
   dims = maximum(vertices(hexagonal_lattice_graph(n, m)))
-  v1, v2 = (1, dims[2]), (dims[1], 1)
+  v1, v2 = (dims[1], 1), (1, dims[2])
   add_vertices!(g, [v1, v2])
-  add_edge!(g, v1 => v1 .- (0, 1))
-  add_edge!(g, v2 => v2 .+ (0, 1))
+  add_edge!(g, v1 => v1 .- (1, 0))
+  add_edge!(g, v2 => v2 .+ (1, 0))
 
   return g
 end

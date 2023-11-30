@@ -22,7 +22,7 @@ ITensors.disable_warn_order()
 
 @testset "belief_propagation" begin
 
-  #FIRST TEST SINGLE SITE ON AN MPS, SHOULD BE EXACT
+  #First test on an MPS, should be exact
   g_dims = (1, 6)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
@@ -40,18 +40,44 @@ ITensors.disable_warn_order()
 
   Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(Z)
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), target_precision=1e-8)
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
 
   numerator_network = approx_network_region(
     ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
   )
   denominator_network = approx_network_region(ψψ, mts, [(v, 1)])
-  bp_sz = contract(numerator_network)[] / contract(denominator_network)[]
+  bp_sz = ITensors.contract(numerator_network)[] / ITensors.contract(denominator_network)[]
 
   @test abs.(bp_sz - exact_sz) <= 1e-14
 
-  #NOW TEST TWO_SITE_EXPEC TAKING ON THE PARTITION FUNCTION OF THE RECTANGULAR ISING. SHOULD BE REASONABLE AND 
-  #INDEPENDENT OF INIT CONDITIONS, FOR SMALL BETA
+  #Now test on a tree, should also be exact
+  g = named_comb_tree((6, 6))
+  s = siteinds("S=1/2", g)
+  χ = 2
+  Random.seed!(1564)
+  ψ = randomITensorNetwork(s; link_space=χ)
+
+  ψψ = ψ ⊗ prime(dag(ψ); sites=[])
+
+  v = (1, 3)
+
+  Oψ = copy(ψ)
+  Oψ[v] = apply(op("Sz", s[v]), ψ[v])
+  exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
+
+  Z = partition(ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ)))))
+  mts = message_tensors(Z)
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
+
+  numerator_network = approx_network_region(
+    ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork(ITensor[apply(op("Sz", s[v]), ψ[v])])
+  )
+  denominator_network = approx_network_region(ψψ, mts, [(v, 1)])
+  bp_sz = ITensors.contract(numerator_network)[] / ITensors.contract(denominator_network)[]
+
+  @test abs.(bp_sz - exact_sz) <= 1e-14
+
+  #Now test two-site expec taking on the partition function of the Ising model. Not exact, but close
   g_dims = (3, 4)
   g = named_grid(g_dims)
   s = IndsNetwork(g; link_space=2)
@@ -68,17 +94,18 @@ ITensors.disable_warn_order()
   nsites = 2
   Z = partition(ψψ; nvertices_per_partition=nsites)
   mts = message_tensors(Z)
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=20)
   numerator_network = approx_network_region(
     ψψ, mts, vs; verts_tn=ITensorNetwork(ITensor[ψOψ[v] for v in vs])
   )
 
   denominator_network = approx_network_region(ψψ, mts, vs)
-  bp_szsz = contract(numerator_network)[] / contract(denominator_network)[]
+  bp_szsz =
+    ITensors.contract(numerator_network)[] / ITensors.contract(denominator_network)[]
 
   @test abs.(bp_szsz - actual_szsz) <= 0.05
 
-  #TEST FORMING OF A TWO SITE RDM. JUST CHECK THAT IS HAS THE CORRECT SIZE, TRACE AND IS PSD
+  #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
   g_dims = (4, 4)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
@@ -93,10 +120,10 @@ ITensors.disable_warn_order()
   )
   Zpp = partition(ψψ; subgraph_vertices=nested_graph_leaf_vertices(Zp))
   mts = message_tensors(Zpp)
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"))
+  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=20)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
-  rdm = contract(
+  rdm = ITensors.contract(
     approx_network_region(
       ψψ,
       mts,
@@ -112,7 +139,7 @@ ITensors.disable_warn_order()
   @test all(>=(0), real(eigs)) && all(==(0), imag(eigs))
   @test size(rdm) == (2^length(vs), 2^length(vs))
 
-  #TEST MORE ADVANCED BP WITH ITENSORNETWORK MESSAGE TENSORS. IN THIS CASE IT SHOULD BE LIKE BOUNDARY MPS
+  #Test more advanced block BP with MPS message tensors on a grid 
   g_dims = (5, 4)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
@@ -143,7 +170,7 @@ ITensors.disable_warn_order()
   numerator_network = approx_network_region(ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v]))
 
   denominator_network = approx_network_region(ψψ, mts, [v])
-  bp_sz = contract(numerator_network)[] / contract(denominator_network)[]
+  bp_sz = ITensors.contract(numerator_network)[] / ITensors.contract(denominator_network)[]
 
   exact_sz =
     contract_boundary_mps(ψOψ; cutoff=1e-16) / contract_boundary_mps(ψψ; cutoff=1e-16)

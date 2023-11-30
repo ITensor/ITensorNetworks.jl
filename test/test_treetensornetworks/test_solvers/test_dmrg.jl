@@ -28,7 +28,7 @@ using Observers
   # Compare to `ITensors.MPO` version of `dmrg`
   H_mpo = MPO([H[v] for v in 1:nv(H)])
   psi_mps = MPS([psi[v] for v in 1:nv(psi)])
-  e2, psi2 = dmrg(H_mpo, psi_mps; nsweeps, maxdim, normalize=false, outputlevel=0)
+  e2, psi2 = dmrg(H_mpo, psi_mps; nsweeps, maxdim, outputlevel=0)
 
   psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1)
   @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
@@ -134,7 +134,7 @@ end
   sline = only.(collect(vertex_data(s)))[linear_order]
   Hline = MPO(relabel_sites(os, vmap), sline)
   psiline = randomMPS(sline; linkdims=20)
-  e2, psi2 = dmrg(Hline, psiline, sweeps; normalize=false, outputlevel=0)
+  e2, psi2 = dmrg(Hline, psiline, sweeps; outputlevel=0)
 
   @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
 end

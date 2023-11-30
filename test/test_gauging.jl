@@ -21,7 +21,7 @@ using SplitApplyCombine
   dims = (n, n)
   g = named_grid(dims)
   s = siteinds("S=1/2", g)
-  χ = 3
+  χ = 6
 
   Random.seed!(5467)
   ψ = randomITensorNetwork(s; link_space=χ)

@@ -17,11 +17,12 @@ function vidal_gauge(
   bond_tensors::DataGraph;
   eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
   regularization=10 * eps(real(scalartype(ψ))),
+  edges=NamedGraphs.edges(ψ),
   svd_kwargs...,
 )
   ψ_vidal = copy(ψ)
 
-  for e in edges(ψ_vidal)
+  for e in edges
     vsrc, vdst = src(e), dst(e)
     ψvsrc, ψvdst = ψ_vidal[vsrc], ψ_vidal[vdst]
 
@@ -79,11 +80,12 @@ function vidal_gauge(
   mts::DataGraph;
   eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
   regularization=10 * eps(real(scalartype(ψ))),
+  edges=NamedGraphs.edges(ψ),
   svd_kwargs...,
 )
   bond_tensors = initialize_bond_tensors(ψ)
   return vidal_gauge(
-    ψ, mts, bond_tensors; eigen_message_tensor_cutoff, regularization, svd_kwargs...
+    ψ, mts, bond_tensors; eigen_message_tensor_cutoff, regularization, edges, svd_kwargs...
   )
 end
 
@@ -94,6 +96,7 @@ function vidal_gauge(
   regularization=10 * eps(real(scalartype(ψ))),
   niters=30,
   target_canonicalness::Union{Nothing,Float64}=nothing,
+  verbose=false,
   svd_kwargs...,
 )
   ψψ = norm_network(ψ)
@@ -101,7 +104,12 @@ function vidal_gauge(
   mts = message_tensors(Z)
 
   mts = belief_propagation(
-    ψψ, mts; contract_kwargs=(; alg="exact"), niters, target_precision=target_canonicalness
+    ψψ,
+    mts;
+    contract_kwargs=(; alg="exact"),
+    niters,
+    target_precision=target_canonicalness,
+    verbose,
   )
   return vidal_gauge(ψ, mts; eigen_message_tensor_cutoff, regularization, svd_kwargs...)
 end
@@ -171,10 +179,14 @@ function symmetric_to_vidal_gauge(
 end
 
 """Function to measure the 'isometries' of a state in the Vidal Gauge"""
-function vidal_itn_isometries(ψ::ITensorNetwork, bond_tensors::DataGraph)
+function vidal_itn_isometries(
+  ψ::ITensorNetwork,
+  bond_tensors::DataGraph;
+  edges=vcat(NamedGraphs.edges(ψ), reverse.(NamedGraphs.edges(ψ))),
+)
   isometries = DataGraph{vertextype(ψ),ITensor,ITensor}(directed_graph(underlying_graph(ψ)))
 
-  for e in vcat(edges(ψ), reverse.(edges(ψ)))
+  for e in edges
     vsrc, vdst = src(e), dst(e)
     ψv = copy(ψ[vsrc])
     for vn in setdiff(neighbors(ψ, vsrc), [vdst])

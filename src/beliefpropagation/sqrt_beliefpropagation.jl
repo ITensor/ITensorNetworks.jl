@@ -1,44 +1,19 @@
 # using ITensors: scalartype
 # using ITensorNetworks: find_subgraph, map_diag, sqrt_diag, boundary_edges
 
-function sqrt_belief_propagation(
-  tn::ITensorNetwork,
-  mts::DataGraph;
-  niters=20,
-  # target_precision::Union{Float64,Nothing}=nothing,
-)
-  # compute_norm = target_precision == nothing ? false : true
-  sqrt_mts = sqrt_message_tensors(tn, mts)
-  for i in 1:niters
-    sqrt_mts, c = sqrt_belief_propagation_iteration(tn, sqrt_mts) #; compute_norm)
-    # if compute_norm && c <= target_precision
-    #   println(
-    #     "Belief Propagation finished. Reached a canonicalness of " *
-    #     string(c) *
-    #     " after $i iterations. ",
-    #   )
-    #   break
-    # end
-  end
-  return sqr_message_tensors(sqrt_mts)
-end
-
 function sqrt_belief_propagation_iteration(
-  tn::ITensorNetwork,
-  sqrt_mts::DataGraph;
-  # compute_norm=false,
+  tn::ITensorNetwork, sqrt_mts::DataGraph, edges::Vector{<:AbstractEdge}
 )
   new_sqrt_mts = copy(sqrt_mts)
   c = 0.0
-  es = edges(sqrt_mts)
-  for e in es
+  for e in edges
     environment_tensornetworks = ITensorNetwork[
-      sqrt_mts[e_in] for
-      e_in in setdiff(boundary_edges(sqrt_mts, [src(e)]; dir=:in), [reverse(e)])
+      new_sqrt_mts[e_in] for
+      e_in in setdiff(boundary_edges(new_sqrt_mts, [src(e)]; dir=:in), [reverse(e)])
     ]
 
     new_sqrt_mts[src(e) => dst(e)] = update_sqrt_message_tensor(
-      tn, sqrt_mts[src(e)], environment_tensornetworks;
+      tn, new_sqrt_mts[src(e)], environment_tensornetworks;
     )
 
     # if compute_norm
@@ -49,7 +24,54 @@ function sqrt_belief_propagation_iteration(
     #   c += 0.5 * norm(LHS - RHS)
     # end
   end
-  return new_sqrt_mts, c / (length(es))
+  return new_sqrt_mts, c / (length(edges))
+end
+
+function sqrt_belief_propagation_iteration(
+  tn::ITensorNetwork, sqrt_mts::DataGraph, edges::Vector{<:Vector{<:AbstractEdge}}
+)
+  new_sqrt_mts = copy(sqrt_mts)
+  c = 0.0
+  for e_group in edges
+    updated_sqrt_mts, ct = sqrt_belief_propagation_iteration(tn, sqr_mts, e_group)
+    for e in e_group
+      new_sqrt_mts[e] = updated_sqrt_mts[e]
+    end
+    c += ct
+  end
+  return new_sqrt_mts, c / (length(edges))
+end
+
+function sqrt_belief_propagation_iteration(
+  tn::ITensorNetwork, sqrt_mts::DataGraph; edges=edge_sequence(mts)
+)
+  return sqrt_belief_propagation_iteration(tn, sqrt_mts, edges)
+end
+
+function sqrt_belief_propagation(
+  tn::ITensorNetwork,
+  mts::DataGraph;
+  niters=default_bp_niters(mts),
+  edges=edge_sequence(mts),
+  # target_precision::Union{Float64,Nothing}=nothing,
+)
+  # compute_norm = target_precision == nothing ? false : true
+  sqrt_mts = sqrt_message_tensors(tn, mts)
+  if isnothing(niters)
+    error("You need to specify a number of iterations for BP!")
+  end
+  for i in 1:niters
+    sqrt_mts, c = sqrt_belief_propagation_iteration(tn, sqrt_mts, edges) #; compute_norm)
+    # if compute_norm && c <= target_precision
+    #   println(
+    #     "Belief Propagation finished. Reached a canonicalness of " *
+    #     string(c) *
+    #     " after $i iterations. ",
+    #   )
+    #   break
+    # end
+  end
+  return sqr_message_tensors(sqrt_mts)
 end
 
 function update_sqrt_message_tensor(
