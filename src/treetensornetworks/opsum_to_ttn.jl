@@ -42,6 +42,18 @@ Hamiltonian, compressing shared interaction channels.
 function svdTTN(
   os::OpSum{C}, sites::IndsNetwork{VT,<:Index}, root_vertex::VT; kwargs...
 )::TTN where {C,VT}
+  # Function barrier to improve type stability
+  ValType = ITensors.determineValType(terms(os))
+  return svdTTN(ValType, os, sites, root_vertex; kwargs...)
+end
+
+function svdTTN(
+  ValType::Type{<:Number},
+  os::OpSum{C},
+  sites::IndsNetwork{VT,<:Index},
+  root_vertex::VT;
+  kwargs...,
+)::TTN where {C,VT}
   mindim::Int = get(kwargs, :mindim, 1)
   maxdim::Int = get(kwargs, :maxdim, 10000)
   cutoff::Float64 = get(kwargs, :cutoff, 1e-15)
@@ -224,11 +236,23 @@ end
 function qn_svdTTN(
   os::OpSum{C}, sites::IndsNetwork{VT,<:Index}, root_vertex::VT; kwargs...
 )::TTN where {C,VT}
+  # Function barrier to improve type stability
+  ValType = ITensors.determineValType(terms(os))
+  return qn_svdTTN(ValType, os, sites, root_vertex; kwargs...)
+end
+
+function qn_svdTTN(
+  ValType::Type{<:Number},
+  os::OpSum{C},
+  sites::IndsNetwork{VT,<:Index},
+  root_vertex::VT;
+  kwargs...,
+)::TTN where {C,VT}
   mindim::Int = get(kwargs, :mindim, 1)
   maxdim::Int = get(kwargs, :maxdim, 10000)
   cutoff::Float64 = get(kwargs, :cutoff, 1e-15)
 
-  ValType = ITensors.determineValType(ITensors.terms(os))
+  #ValType = ITensors.determineValType(ITensors.terms(os))  #now included as argument in function signature
 
   # traverse tree outwards from root vertex
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
