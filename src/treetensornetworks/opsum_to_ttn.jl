@@ -248,11 +248,23 @@ function qn_svdTTN(
   root_vertex::VT;
   kwargs...,
 )::TTN where {C,VT}
+  
   mindim::Int = get(kwargs, :mindim, 1)
   maxdim::Int = get(kwargs, :maxdim, 10000)
   cutoff::Float64 = get(kwargs, :cutoff, 1e-15)
-
   #ValType = ITensors.determineValType(ITensors.terms(os))  #now included as argument in function signature
+  
+  # check for qns on the site indices
+  #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
+  #FIXME: how are sites handled where some sites have QNs and some don't?
+  
+  thishasqns=false
+  for site in vertices(sites)
+    if hasqns(sites[site])
+      thishasqns=true
+      break
+    end
+  end
 
   # traverse tree outwards from root vertex
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
@@ -276,7 +288,9 @@ function qn_svdTTN(
         )
         op_cache[ITensors.which_op(st) => ITensors.site(st)] = op_tensor
       end
-      q -= flux(op_tensor)
+      if !isnothing(flux(op_tensor))
+        q -= flux(op_tensor)
+      end
     end
     return q
   end
@@ -511,7 +525,9 @@ function qn_svdTTN(
     for ((b, q_op), m) in blocks
       ###FIXME: make this work if there's no physical degree of freedom at site
       Op = computeSiteProd(sites, Prod(q_op))  ###FIXME: is this implemented?
-      (nnzblocks(Op) == 0) && continue  ###FIXME: this one may be breaking for no physical indices on site
+      if hasqns(Op) ###FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
+        (nnzblocks(Op) == 0) && continue  ###FIXME: this one may be breaking for no physical indices on site
+      end
       sq = flux(Op)
       if !isnothing(sq)
         if ITensors.using_auto_fermion()
@@ -532,7 +548,12 @@ function qn_svdTTN(
       end
       T = ITensors.BlockSparseTensor(ValType, [b], _linkinds)
       T[b] .= m
-      H[v] += (itensor(T) * Op)
+      if !thishasqns
+        iT=removeqns(itensor(T))
+      else
+        iT=itensor(T)
+      end
+      H[v] += (iT * Op)
     end
 
     linkdims = dim.(linkinds)
@@ -554,6 +575,9 @@ function qn_svdTTN(
       end
     end
     T = itensor(idT, _linkinds)
+    if !thishasqns
+      T=removeqns(T)
+    end
     H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
   end
 
@@ -679,7 +703,9 @@ function TTN(
   os = deepcopy(os)
   os = sorteachterm(os, sites, root_vertex)
   os = ITensors.sortmergeterms(os) # not exported
-
+  
+  T = qn_svdTTN(os, sites, root_vertex; kwargs...)
+  #=
   if hasqns(first(first(vertex_data(sites))))
     ###added feature
     T = qn_svdTTN(os, sites, root_vertex; kwargs...)
@@ -689,11 +715,12 @@ function TTN(
     end
     return T
   end
-  T = svdTTN(os, sites, root_vertex; kwargs...)
-  if splitblocks
-    error("splitblocks not yet implemented for AbstractTreeTensorNetwork.")
-    T = ITensors.splitblocks(linkinds, T) # TODO: make this work
-  end
+  =#
+  #T = svdTTN(os, sites, root_vertex; kwargs...)
+  #if splitblocks
+  #  error("splitblocks not yet implemented for AbstractTreeTensorNetwork.")
+  #  T = ITensors.splitblocks(linkinds, T) # TODO: make this work
+  #end
   return T
 end
 
