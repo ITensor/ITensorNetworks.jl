@@ -248,23 +248,16 @@ function qn_svdTTN(
   root_vertex::VT;
   kwargs...,
 )::TTN where {C,VT}
-  
   mindim::Int = get(kwargs, :mindim, 1)
   maxdim::Int = get(kwargs, :maxdim, 10000)
   cutoff::Float64 = get(kwargs, :cutoff, 1e-15)
   #ValType = ITensors.determineValType(ITensors.terms(os))  #now included as argument in function signature
-  
+
   # check for qns on the site indices
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
   #FIXME: how are sites handled where some sites have QNs and some don't?
-  
-  thishasqns=false
-  for site in vertices(sites)
-    if hasqns(sites[site])
-      thishasqns=true
-      break
-    end
-  end
+
+  thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
   # traverse tree outwards from root vertex
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
@@ -484,7 +477,7 @@ function qn_svdTTN(
         block_helper_inds[d] = qnblock(linkinds[d], T_qns[d])
       end
 
-      @assert all(block_helper_inds .!= -1) # check that all block 
+      @assert all(block_helper_inds .!= -1) # check that all block indices are set
       # make Block 
       theblock = Block(Tuple(block_helper_inds))
 
@@ -497,7 +490,7 @@ function qn_svdTTN(
 
       if isempty(normal_dims)
         M = get!(blocks, (theblock, terms(t)), zero_arr())
-        @assert reduce((*), size(M)) == 1
+        @assert length(M) == 1
         M[] += ct
       else
         M = get!(blocks, (theblock, terms(t)), zero_arr())
@@ -549,9 +542,9 @@ function qn_svdTTN(
       T = ITensors.BlockSparseTensor(ValType, [b], _linkinds)
       T[b] .= m
       if !thishasqns
-        iT=removeqns(itensor(T))
+        iT = removeqns(itensor(T))
       else
-        iT=itensor(T)
+        iT = itensor(T)
       end
       H[v] += (iT * Op)
     end
@@ -576,7 +569,7 @@ function qn_svdTTN(
     end
     T = itensor(idT, _linkinds)
     if !thishasqns
-      T=removeqns(T)
+      T = removeqns(T)
     end
     H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
   end
@@ -703,7 +696,7 @@ function TTN(
   os = deepcopy(os)
   os = sorteachterm(os, sites, root_vertex)
   os = ITensors.sortmergeterms(os) # not exported
-  
+
   T = qn_svdTTN(os, sites, root_vertex; kwargs...)
   #=
   if hasqns(first(first(vertex_data(sites))))
