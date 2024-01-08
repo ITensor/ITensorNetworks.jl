@@ -541,10 +541,9 @@ function qn_svdTTN(
       end
       T = ITensors.BlockSparseTensor(ValType, [b], _linkinds)
       T[b] .= m
+      iT = itensor(T)
       if !thishasqns
-        iT = removeqns(itensor(T))
-      else
-        iT = itensor(T)
+        iT = removeqns(iT)
       end
       H[v] += (iT * Op)
     end
