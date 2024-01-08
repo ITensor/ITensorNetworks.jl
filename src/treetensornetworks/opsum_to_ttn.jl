@@ -71,7 +71,6 @@ function svdTTN(
     edge_in = (isnothing(dim_in) ? [] : edges[dim_in])
     dims_out = findall(e -> src(e) == v, edges)
     edges_out = edges[dims_out]
-
     # sanity check, leaves only have single incoming or outgoing edge
     @assert !isempty(dims_out) || !isnothing(dim_in)
     (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf(sites, v)
@@ -186,9 +185,10 @@ function svdTTN(
           z = ct
           temp_inds = copy(T_inds)
           for (i, d) in enumerate(normal_dims)
+            #@show size(Vv[d]), T_inds[d],c[i]
             V_factor = Vv[d][T_inds[d], c[i]]
             z *= (d == dim_in ? conj(V_factor) : V_factor) # conjugate incoming isemetry factor
-            temp_inds[d] = 1 + c[i]
+            temp_inds[d] = 1 + c[i]     ##the offset by one comes from the 1,...,1 padding (starting/ending...)
           end
           T[temp_inds...] += z
         end
@@ -221,6 +221,349 @@ function svdTTN(
   return H
 end
 
+
+function qn_svdTTN(
+  os::OpSum{C}, sites::IndsNetwork{VT,<:Index}, root_vertex::VT; kwargs...
+)::TTN where {C,VT}
+  mindim::Int = get(kwargs, :mindim, 1)
+  maxdim::Int = get(kwargs, :maxdim, 10000)
+  cutoff::Float64 = get(kwargs, :cutoff, 1e-15)
+
+  ValType = ITensors.determineValType(ITensors.terms(os))
+
+  # traverse tree outwards from root vertex
+  vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
+  es = reverse(reverse.(post_order_dfs_edges(sites, root_vertex)))                          # store edges in fixed ordering relative to root
+  # some things to keep track of
+  ranks = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
+  Vs = Dict(e => Dict{QN,Matrix{ValType}}() for e in es)                                  # link isometries for SVD compression of TTN
+  #Vs = Dict(e => Matrix{ValType}(undef, 1, 1) for e in es)    ##no qn implementation                              # link isometries for SVD compression of TTN
+  #inmaps = Dict(e => Dict{Pair{Vector{Op},QN},Int}() for e in es)                                    # map from term in Hamiltonian to incoming channel index for every edge
+  #outmaps = Dict(e => Dict{Pair{Vector{Op},QN},Int}() for e in es)                                   # map from term in Hamiltonian to outgoing channel index for every edge
+  inmaps = Dict{Pair{NamedGraphs.NamedEdge{VT},QN},Dict{Vector{Op},Int}}()
+  outmaps = Dict{Pair{NamedGraphs.NamedEdge{VT},QN},Dict{Vector{Op},Int}}()
+  
+  ##ToDo implement op cache? Not used?
+  op_cache = Dict{Pair{String,VT},ITensor}()   ###FIXME needs to be Pair{String,Vertex}
+  #@show VT
+  #@show op_cache
+  ##copied calcQN from ITensors MPO implementation  
+  function calcQN(term::Vector{Op})
+    q = QN()
+    for st in term
+      op_tensor = get(op_cache, ITensors.which_op(st) => ITensors.site(st), nothing)
+      if op_tensor === nothing
+        op_tensor = op(sites[ITensors.site(st)], ITensors.which_op(st); ITensors.params(st)...)
+        op_cache[ITensors.which_op(st) => ITensors.site(st)] = op_tensor
+      end
+      q -= flux(op_tensor)
+    end
+    return q
+  end
+  Hflux = -calcQN(terms(first(terms(os))))
+  ###FIXME: add assert that Hflux is the zero-element for addition
+  ##CHECK: PERFORMANCE/FOOTPRINT? inbond_coeffs equivalent in MPO implementation is inside the loop
+  ##we may want to generate only for the adjacent edges inside loop over vertices instead?
+  inbond_coefs = Dict(e => Dict{QN,Vector{ITensors.MatElem{ValType}}}() for e in es)                         # bond coefficients for incoming edge channels
+  site_coef_done = Prod{Op}[]                                                               # list of terms for which the coefficient has been added to a site factor
+
+  # temporary symbolic representation of TTN Hamiltonian
+  tempTTN = Dict(v => QNArrElem{Scaled{C,Prod{Op}},ranks[v]}[] for v in vs)
+
+  # build compressed finite state machine representation
+  for v in vs
+    # for every vertex, find all edges that contain this vertex
+    edges = filter(e -> dst(e) == v || src(e) == v, es)
+    # use the corresponding ordering as index order for tensor elements at this site
+    dim_in = findfirst(e -> dst(e) == v, edges)
+    edge_in = (isnothing(dim_in) ? [] : edges[dim_in])
+    dims_out = findall(e -> src(e) == v, edges)
+    edges_out = edges[dims_out]
+
+
+    # sanity check, leaves only have single incoming or outgoing edge
+    @assert !isempty(dims_out) || !isnothing(dim_in)
+    (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf(sites, v)
+
+    for term in os
+      # loop over OpSum and pick out terms that act on current vertex
+      crosses_vertex(term, sites, v) || continue
+
+      # filter out factors that come in from the direction of the incoming edge
+      incoming = filter(
+        t -> edge_in ∈ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
+      )
+      # also store all non-incoming factors in standard order, used for channel merging
+      not_incoming = filter(
+        t -> edge_in ∉ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
+      )
+      # filter out factor that acts on current vertex
+      onsite = filter(t -> (ITensors.site(t) == v), ITensors.terms(term))
+      # for every outgoing edge, filter out factors that go out along that edge
+      outgoing = Dict(
+        e => filter(t -> e ∈ edge_path(sites, v, ITensors.site(t)), ITensors.terms(term))
+        for e in edges_out
+      )
+
+      ##compute QNs
+      incoming_qn=calcQN(incoming)
+      not_incoming_qn=calcQN(not_incoming)  ###does this work?
+      outgoing_qns=Dict(e => calcQN(outgoing[e]) for e in edges_out)
+
+      
+      ##sanity check that qn of not_incoming is equal to sum of outgoing_qns?
+      site_qn=calcQN(onsite)
+      #@show incoming_qn, not_incoming_qn, values(outgoing_qns), Hflux
+      #@show Hflux , not_incoming_qn + incoming_qn +Hflux
+      #@assert sum([values(outgoing_qns)...,Hflux])  == -site_qn - incoming_qn + Hflux
+      
+      #@show sum(values(outgoing_qns)),site_qn, incoming_qn
+      # translate into tensor entry #(within a QNBlock)
+      T_inds = MVector{ranks[v]}(fill(-1, ranks[v]))
+      T_qns = MVector{ranks[v]}(fill(QN(), ranks[v]))
+      
+      bond_row = -1
+      bond_col = -1
+      if !isempty(incoming)
+        coutmap=get!(outmaps,edge_in=>-not_incoming_qn,Dict{Vector{Op},Int}())
+        cinmap=get!(inmaps,edge_in=>incoming_qn,Dict{Vector{Op},Int}())
+        
+        bond_row = ITensors.posInLink!(cinmap, incoming)
+        bond_col = ITensors.posInLink!(coutmap, not_incoming) # get incoming channel
+        bond_coef = convert(ValType, ITensors.coefficient(term))
+        q_inbond_coefs = get!(inbond_coefs[edge_in],incoming_qn, ITensors.MatElem{ValType}[])
+        push!(q_inbond_coefs, ITensors.MatElem(bond_row, bond_col, bond_coef))
+        T_inds[dim_in] = bond_col
+        T_qns[dim_in] = incoming_qn
+      end
+      for dout in dims_out
+        #@show outgoing_qns[edges[dout]]
+        #@show keys(outmaps)
+        coutmap=get!(outmaps,edges[dout]=>-outgoing_qns[edges[dout]],Dict{Vector{Op},Int}())
+        T_inds[dout] = ITensors.posInLink!(coutmap, outgoing[edges[dout]]) # add outgoing channel
+        T_qns[dout] = -outgoing_qns[edges[dout]]  ###minus sign to account for outgoing arrow direction
+      end
+      # if term starts at this site, add its coefficient as a site factor
+      site_coef = one(C)
+      if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
+        ITensors.argument(term) ∉ site_coef_done
+        site_coef = ITensors.coefficient(term)
+        push!(site_coef_done, ITensors.argument(term))
+      end
+      # add onsite identity for interactions passing through vertex
+      if isempty(onsite)
+        if !ITensors.using_auto_fermion() && isfermionic(incoming, sites)
+          error("No verified fermion support for automatic TTN constructor!")
+        else
+          push!(onsite, Op("Id", v))
+        end
+      end
+      # save indices and value of symbolic tensor entry
+      el = QNArrElem(T_qns, T_inds, site_coef * Prod(onsite))
+      push!(tempTTN[v], el)
+    end
+    ITensors.remove_dups!(tempTTN[v])
+    # manual truncation: isometry on incoming edge
+    if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
+      for (q, mat) in inbond_coefs[edges[dim_in]]
+        M = ITensors.toMatrix(mat)
+        U, S, V = svd(M)
+        P = S .^ 2
+        truncate!(P; maxdim=maxdim, cutoff=cutoff, mindim=mindim)
+        tdim = length(P)
+        nc = size(M, 2) ###CHECK: verify whether this is still correct, diverges from opsum_to_mpo_qn
+        Vs[edges[dim_in]][q] = Matrix{ValType}(V[1:nc, 1:tdim]) ###CHECK: verify whether this is still correct, diverges from opsum_to_mpo_qn
+      end
+    end
+  end
+
+  # compress this tempTTN representation into dense form
+
+  #link_space = dictionary([
+  #  e => Index((isempty(outmaps[e]) ? 0 : size(Vs[e], 2)) + 2, edge_tag(e)) for e in es
+  #])
+  ###FIXME: that's an ugly constructor... ###QNIndex(undef) not defined
+  link_space = Dict{NamedGraphs.NamedEdge{VT},Index}()
+  linkdir = ITensors.using_auto_fermion() ? ITensors.In : ITensors.Out ###FIXME: ??
+  for e in es ###this one might also be tricky, in case there's no Vq defined on the edge
+    ###also tricky w.r.t. the link direction
+    ### ---> should we just infer whether the edge is incoming or outgoing and choose linkdir accordingly?
+    ### ===> this is basically decided by daggering in the MPO code (we should be able to stick to this pattern)
+    qi = Vector{Pair{QN,Int}}()
+    push!(qi, QN() => 1)
+    for (q, Vq) in Vs[e]
+      cols = size(Vq, 2)
+      if ITensors.using_auto_fermion() # <fermions>
+        push!(qi, (-q) => cols) ###the minus sign comes from the opposite linkdir ?
+      else
+        push!(qi, q => cols)
+      end
+    end
+    push!(qi, Hflux => 1)
+    link_space[e] = Index(qi...; tags=edge_tag(e), dir=linkdir) ##FIXME: maybe a single linkdir is not the right thing to do here
+  end
+
+  H = TTN(sites)
+  ##Copy from ITensors qn_svdMPO
+  # Find location where block of Index i
+  # matches QN q, but *not* 1 or dim(i)
+  # which are special ending/starting states
+  function qnblock(i::Index, q::QN)
+    for b in 2:(nblocks(i) - 1)
+      flux(i, Block(b)) == q && return b
+    end
+    return error("Could not find block of QNIndex with matching QN")
+  end
+  qnblockdim(i::Index, q::QN) = blockdim(i, qnblock(i, q))
+  
+  for v in vs
+    #@show v
+    # redo the whole thing like before
+    edges = filter(e -> dst(e) == v || src(e) == v, es)
+    dim_in = findfirst(e -> dst(e) == v, edges)
+    dims_out = findall(e -> src(e) == v, edges)
+    
+    #edge_in = (isnothing(dim_in) ? [] : edges[dim_in])
+    #edges_out = edges[dims_out]
+    # slice isometries at this vertex
+    Vv = [Vs[e] for e in edges]
+
+    linkinds = [link_space[e] for e in edges]
+    
+
+    #####
+    # until here things are pretty straightforward at first sight
+    #####
+    #begin_block = Dict{Tuple{QN,Vector{Op}},Array{ValType,ranks[v]}}()
+    #cont_block = Dict{Tuple{QN,Vector{Op}},Array{ValType,ranks[v]}}()
+    #end_block = Dict{Tuple{QN,Vector{Op}},Array{ValType,ranks[v]}}()
+    #onsite_block = Dict{Tuple{QN,Vector{Op}},Array{ValType,ranks[v]}}()
+    #general_block = Dict{Tuple{QN,Vector{Op}},Array{ValType,ranks[v]}}()
+    blocks = Dict{Tuple{Block{ranks[v]},Vector{Op}},Array{ValType,ranks[v]}}()
+    ##construct blocks
+    linkdims = dim.(linkinds)
+    for el in tempTTN[v]
+      t = el.val
+      (abs(coefficient(t)) > eps()) || continue
+      block_helper_inds=fill(-1,ranks[v])
+      T_inds=el.idxs
+      #@show T_inds
+      T_qns=el.qn_idxs
+      ct = convert(ValType, coefficient(t))
+      sublinkdims= [(T_inds[i] == -1 ? 1 : qnblockdim(linkinds[i], T_qns[i])) for i in 1:ranks[v]]
+      zero_arr() = zeros(ValType, sublinkdims...)
+      terminal_dims = findall(d -> T_inds[d] == -1, 1:ranks[v])   # directions in which term starts or ends
+      normal_dims = findall(d -> T_inds[d] ≠ -1, 1:ranks[v])      # normal dimensions, do truncation thingies
+      T_inds[terminal_dims] .= 1                                  # start in channel 1  ###??
+      block_helper_inds[terminal_dims].=1
+      for dout in filter(d -> d ∈ terminal_dims, dims_out)
+        T_inds[dout] = sublinkdims[dout]
+        @assert T_inds[dout]==1                         # end in channel linkdims[d] for each dimension d
+        block_helper_inds[dout]=nblocks(linkinds[dout])
+      end
+      #non-trivial helper inds
+      for d in normal_dims
+        #if d in dims_out
+        block_helper_inds[d]=qnblock(linkinds[d], T_qns[d])
+      end
+
+      @assert all(block_helper_inds .!= -1)
+      theblock=Block(Tuple(block_helper_inds))
+      
+      ### T_qns takes into account incoming/outgoing arrow direction, while Vs are stored for incoming arrow
+      ### flip sign of QN for outgoing arrows, to match incoming arrow definition of Vs
+      iT_qns=deepcopy(T_qns)
+      for d in dims_out
+        iT_qns[d]=-iT_qns[d]
+      end
+
+      if isempty(normal_dims)
+
+        M = get!(blocks, (theblock, terms(t)),zero_arr())
+        @assert product(size(M))==1 ###FIXME: figure out how to do this assert properly
+        M[] += ct
+      else
+        M = get!(blocks, (theblock, terms(t)),zero_arr())
+        dim_ranges = Tuple(size(Vv[d][iT_qns[d]],2) for d in normal_dims)
+        for c in CartesianIndices(dim_ranges)
+          z = ct
+          temp_inds = copy(T_inds)
+           for (i, d) in enumerate(normal_dims)            
+            V_factor = Vv[d][iT_qns[d]][T_inds[d], c[i]]
+            z *= (d == dim_in ? conj(V_factor) : V_factor) # conjugate incoming isometry factor
+            temp_inds[d] = c[i]
+          end
+          M[temp_inds...] += z 
+        end
+      end
+
+    end
+    
+    
+    H[v] = ITensor()
+
+    _linkinds=copy(linkinds)
+    if !isnothing(dim_in)
+      _linkinds[dim_in]=dag(_linkinds[dim_in])
+    end
+
+    for ((b,q_op),m) in blocks
+      #@show q_op
+      #op_prod = q_op[2]
+      ###FIXME: make this work if there's no physical degree of freedom at site
+      Op = computeSiteProd(sites, Prod(q_op))  ###FIXME: is this implemented?
+      (nnzblocks(Op) == 0) && continue  ###FIXME: this one may be breaking for no physical indices on site
+      sq = flux(Op)
+      if !isnothing(sq)
+        if ITensors.using_auto_fermion()
+          @assert false
+          ###assuming we want index ordering dim_in, phys..., dims_out...
+          ###but are assembling the tensor by tensor product (dim_in,dims_out...) x (phys...)
+          ###we need to undo the autofermion logic.
+          ###this requires the perm and the quantum numbers
+          ###perm is 1,3,2 (switching phys and dims_out dimensions)
+          ###quantum numbers need to be retrieved from block and linkinds
+          ###basically first(space(linkinds[i])[j]) for (i,j) in block
+          ###this logic requires dim_in to be 1 always, i don't think this is guaranteed
+          ###however, maybe it is required when using autofermion?
+          ###so we would have to figure out a perm to bring it into that format
+          
+          perm=(1,3,2)
+
+        end
+      end
+      T = ITensors.BlockSparseTensor(ValType, [b], _linkinds)  ###why the brackets around b? does the constructor dispatch on a vector of blocks?
+      T[b] .= m
+      H[v] += (itensor(T)*Op)
+      
+    end
+    
+    linkdims=dim.(linkinds)
+    # add starting and ending identity operators
+    idT = zeros(ValType, linkdims...)
+    if isnothing(dim_in)
+      idT[ones(Int, ranks[v])...] = 1.0 # only one real starting identity
+    end
+    # ending identities are a little more involved
+    if !isnothing(dim_in)
+      idT[linkdims...] = 1.0 # place identity if all channels end
+      # place identity from start of incoming channel to start of each single outgoing channel, and end all other channels
+      idT_end_inds = [linkdims...]
+      idT_end_inds[dim_in] = 1  #this should really be an int
+      for dout in dims_out
+        idT_end_inds[dout] = 1
+        idT[idT_end_inds...] = 1.0
+        idT_end_inds[dout] = linkdims[dout] # reset
+      end
+    end
+    T = itensor(idT, _linkinds)  ###definitely need to dagger link_in , or do that beforehand?
+    H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
+  end
+
+  return H
+end
+
+
 # 
 # Tree adaptations of functionalities in ITensors.jl/src/physics/autompo/opsum_to_mpo_generic.jl
 # 
@@ -251,6 +594,7 @@ function computeSiteProd(sites::IndsNetwork{V,<:Index}, ops::Prod{Op})::ITensor 
   return T
 end
 
+###CHECK/ToDo: Understand the fermion logic on trees...
 # changed `isless_site` to use tree vertex ordering relative to root
 function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) where {V}
   os = copy(os)
@@ -341,20 +685,13 @@ function TTN(
   os = ITensors.sortmergeterms(os) # not exported
 
   if hasqns(first(first(vertex_data(sites))))
-    if !is_path_graph(sites)
-      error(
-        "OpSum → TTN constructor for QN conserving tensor networks only works for path/linear graphs right now.",
-      )
+    ###added feature
+    T=qn_svdTTN(os,sites,root_vertex; kwargs...)
+    if splitblocks
+      error("splitblocks not yet implemented for AbstractTreeTensorNetwork.")
+      T = ITensors.splitblocks(linkinds, T) # TODO: make this work
     end
-    # Use `ITensors.MPO` for now until general TTN constructor
-    # works for QNs.
-    # TODO: Check it is a path graph and get a linear arrangement!
-    sites_linear_vertices = [only(sites[v]) for v in vertices(sites)]
-    vertices_to_linear_vertices = Dictionary(vertices(sites), eachindex(vertices(sites)))
-    os_linear_vertices = replace_vertices(os, vertices_to_linear_vertices)
-    mpo = MPO(os_linear_vertices, sites_linear_vertices)
-    tn = TTN(Dictionary(vertices(sites), [mpo[v] for v in 1:nv(sites)]))
-    return tn
+    return T
   end
   T = svdTTN(os, sites, root_vertex; kwargs...)
   if splitblocks
@@ -416,6 +753,35 @@ function Base.:(==)(a1::ArrElem{T,N}, a2::ArrElem{T,N})::Bool where {T,N}
 end
 
 function Base.isless(a1::ArrElem{T,N}, a2::ArrElem{T,N})::Bool where {T,N}
+  for n in 1:N
+    if a1.idxs[n] != a2.idxs[n]
+      return a1.idxs[n] < a2.idxs[n]
+    end
+  end
+  return a1.val < a2.val
+end
+
+#################################
+# QNArrElem (sparse array with QNs) #
+#################################
+
+struct QNArrElem{T,N}
+  qn_idxs::MVector{N,QN}
+  idxs::MVector{N,Int}
+  val::T
+end
+
+function Base.:(==)(a1::QNArrElem{T,N}, a2::QNArrElem{T,N})::Bool where {T,N}
+  return (a1.idxs == a2.idxs && a1.val == a2.val && a1.qn_idxs == a2.qn_idxs)
+end
+
+function Base.isless(a1::QNArrElem{T,N}, a2::QNArrElem{T,N})::Bool where {T,N}
+  ###two separate loops s.t. the MPS case reduces to the ITensors Implementation of QNMatElem
+  for n in 1:N
+    if a1.qn_idxs[n] != a2.qn_idxs[n]
+      return a1.qn_idxs[n] < a2.qn_idxs[n]
+    end
+  end
   for n in 1:N
     if a1.idxs[n] != a2.idxs[n]
       return a1.idxs[n] < a2.idxs[n]
