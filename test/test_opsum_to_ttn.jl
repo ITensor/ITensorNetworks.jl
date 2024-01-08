@@ -9,7 +9,6 @@ using Test
     # small comb tree
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
-    @show c
 
     is = siteinds("S=1/2", c)
 
