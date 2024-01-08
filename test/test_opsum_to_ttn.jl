@@ -120,7 +120,7 @@ using Test
     J1 = -1
     J2 = 2
     h = 0.5
-    H = heisenberg(c; J1=J1, J2=J2)
+    H = heisenberg(c; J1=J1, J2=J2,h=h)
 
     # add combination of longer range interactions
     Hlr = copy(H)
