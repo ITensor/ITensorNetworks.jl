@@ -39,9 +39,7 @@ end
 Construct a dense TreeTensorNetwork from a symbolic OpSum representation of a
 Hamiltonian, compressing shared interaction channels.
 """
-function svdTTN(
-  os::OpSum, sites::IndsNetwork, root_vertex::VT; kwargs...
-)::TTN where {VT}
+function svdTTN(os::OpSum, sites::IndsNetwork, root_vertex::VT; kwargs...)::TTN where {VT}
   # Function barrier to improve type stability
   coefficient_type = ITensors.determineValType(terms(os))
   return svdTTN(coefficient_type, os, sites, root_vertex; kwargs...)
@@ -52,11 +50,10 @@ function svdTTN(
   os::OpSum,
   sites::IndsNetwork,
   root_vertex::VT;
-  mindim::Int = 1,
-  maxdim::Int = typemax(Int),
-  cutoff::Float64 = eps(coefficient_type)*1e1
+  mindim::Int=1,
+  maxdim::Int=typemax(Int),
+  cutoff::Float64=eps(coefficient_type) * 1e1,
 )::TTN where {VT}
-  
   edgetype_sites = edgetype(sites)
   coefficient_type = ITensors.determineValType(ITensors.terms(os))
 
@@ -127,7 +124,7 @@ function svdTTN(
         ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
         # FIXME: maybe put a try block here for a more helpful error message?
-        site_coef = convert(coefficient_type,site_coef) #required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
+        site_coef = convert(coefficient_type, site_coef) #required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
         push!(site_coef_done, ITensors.argument(term))
       end
       # add onsite identity for interactions passing through vertex
@@ -247,9 +244,9 @@ function qn_svdTTN(
   os::OpSum,
   sites::IndsNetwork,
   root_vertex::VT;
-  mindim::Int = 1,
-  maxdim::Int = typemax(Int),
-  cutoff::Float64 = eps(coefficient_type)*1e1
+  mindim::Int=1,
+  maxdim::Int=typemax(Int),
+  cutoff::Float64=eps(coefficient_type) * 1e1,
 )::TTN where {VT}
   # check for qns on the site indices
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
@@ -270,7 +267,7 @@ function qn_svdTTN(
   outmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()                 # map from term in Hamiltonian to outgoing channel index for every edge
 
   op_cache = Dict{Pair{String,Any},ITensor}()
-  
+
   function calc_qn(term::Vector{Op})
     q = QN()
     for st in term
@@ -289,7 +286,9 @@ function qn_svdTTN(
   end
 
   Hflux = -calc_qn(terms(first(terms(os))))
-  inbond_coefs = Dict(e => Dict{QN,Vector{ITensors.MatElem{coefficient_type}}}() for e in es)                         # bond coefficients for incoming edge channels
+  inbond_coefs = Dict(
+    e => Dict{QN,Vector{ITensors.MatElem{coefficient_type}}}() for e in es
+  )                         # bond coefficients for incoming edge channels
   site_coef_done = Prod{Op}[]                                                               # list of terms for which the coefficient has been added to a site factor
   # temporary symbolic representation of TTN Hamiltonian
   tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
@@ -368,7 +367,7 @@ function qn_svdTTN(
         ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
         # FIXME: maybe put a try block here for a more helpful error message?
-        site_coef = convert(coefficient_type,site_coef) #required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
+        site_coef = convert(coefficient_type, site_coef) #required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
         push!(site_coef_done, ITensors.argument(term))
       end
       # add onsite identity for interactions passing through vertex
@@ -382,7 +381,7 @@ function qn_svdTTN(
       end
       # save indices and value of symbolic tensor entry
       el = QNArrElem(T_qns, T_inds, site_coef * Prod(onsite))
-      
+
       push!(tempTTN[v], el)
     end
     ITensors.remove_dups!(tempTTN[v])
@@ -698,7 +697,7 @@ function TTN(
   os = deepcopy(os)
   os = sorteachterm(os, sites, root_vertex)
   os = ITensors.sortmergeterms(os) # not exported
-  if method==:svd
+  if method == :svd
     T = qn_svdTTN(os, sites, root_vertex; kwargs...)
   else
     error("Currently only SVD is supported as TTN constructor backend.")
