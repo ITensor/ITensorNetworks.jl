@@ -52,7 +52,7 @@ function svdTTN(
   root_vertex::VT;
   mindim::Int=1,
   maxdim::Int=typemax(Int),
-  cutoff::Float64=eps(coefficient_type) * 1e1,
+  cutoff::eps(coefficient_type) * 10,
 )::TTN where {VT}
   edgetype_sites = edgetype(sites)
   coefficient_type = ITensors.determineValType(ITensors.terms(os))
@@ -246,7 +246,7 @@ function qn_svdTTN(
   root_vertex::VT;
   mindim::Int=1,
   maxdim::Int=typemax(Int),
-  cutoff::Float64=eps(coefficient_type) * 1e1,
+  cutoff::eps(coefficient_type) * 10,
 )::TTN where {VT}
   # check for qns on the site indices
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
