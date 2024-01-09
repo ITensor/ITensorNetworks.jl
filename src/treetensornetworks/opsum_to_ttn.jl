@@ -41,7 +41,7 @@ Hamiltonian, compressing shared interaction channels.
 """
 function ttn_svd(
   os::OpSum, sites::IndsNetwork, root_vertex; kwargs...
-)::TTN
+)
   # Function barrier to improve type stability
   coefficient_type = ITensors.determineValType(terms(os))
   return ttn_svd(coefficient_type, os, sites, root_vertex; kwargs...)
@@ -55,7 +55,7 @@ function ttn_svd(
   mindim::Int=1,
   maxdim::Int=typemax(Int),
   cutoff=eps(coefficient_type) * 10,
-)::TTN
+)
   # check for qns on the site indices
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
   #FIXME: how are sites handled where some sites have QNs and some don't?
@@ -278,7 +278,7 @@ function ttn_svd(
       block_helper_inds[terminal_dims] .= 1
       for dout in filter(d -> d ∈ terminal_dims, dims_out)
         T_inds[dout] = sublinkdims[dout]                          # end in channel linkdims[d] for each dimension d
-        @assert T_inds[dout] == 1
+        @assert isone(T_inds[dout])
         block_helper_inds[dout] = nblocks(linkinds[dout])
       end
 
@@ -287,7 +287,7 @@ function ttn_svd(
         block_helper_inds[d] = qnblock(linkinds[d], T_qns[d])
       end
 
-      @assert all(block_helper_inds .!= -1) # check that all block indices are set
+      @assert all(≠(-1), block_helper_inds)# check that all block indices are set
       # make Block 
       theblock = Block(Tuple(block_helper_inds))
 
@@ -300,7 +300,7 @@ function ttn_svd(
 
       if isempty(normal_dims)
         M = get!(blocks, (theblock, terms(t)), zero_arr())
-        @assert length(M) == 1
+        @assert isone(length(M))
         M[] += ct
       else
         M = get!(blocks, (theblock, terms(t)), zero_arr())
@@ -329,7 +329,7 @@ function ttn_svd(
       ###FIXME: make this work if there's no physical degree of freedom at site
       Op = computeSiteProd(sites, Prod(q_op))  ###FIXME: is this implemented?
       if hasqns(Op) ###FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
-        (nnzblocks(Op) == 0) && continue  ###FIXME: this one may be breaking for no physical indices on site
+        iszero(nnzblocks(Op)) && continue  ###FIXME: this one may be breaking for no physical indices on site
       end
       sq = flux(Op)
       if !isnothing(sq)
@@ -496,7 +496,7 @@ function TTN(
   sites::IndsNetwork;
   root_vertex=default_root_vertex(sites),
   splitblocks=false,
-  method=:svd,
+  algorithm="svd",
   kwargs...,
 )::TTN
   length(ITensors.terms(os)) == 0 && error("OpSum has no terms")
@@ -506,7 +506,7 @@ function TTN(
   os = deepcopy(os)
   os = sorteachterm(os, sites, root_vertex)
   os = ITensors.sortmergeterms(os) # not exported
-  if method == :svd
+  if algorithm == "svd"
     T = ttn_svd(os, sites, root_vertex; kwargs...)
   else
     error("Currently only SVD is supported as TTN constructor backend.")
@@ -619,7 +619,7 @@ end
 Base.zero(t::Sum) = zero(typeof(t))
 
 
-
+#=
 function computeSiteSum(
   sites::IndsNetwork{V,<:Index}, ops::Sum{Scaled{C,Prod{Op}}}
 )::ITensor where {V,C}
@@ -637,3 +637,4 @@ function computeSiteSum(
   end
   return T
 end
+=#
