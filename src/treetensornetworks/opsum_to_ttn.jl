@@ -52,11 +52,11 @@ function svdTTN(
   os::OpSum,
   sites::IndsNetwork,
   root_vertex::VT;
-  kwargs...,
+  mindim::Int = 1,
+  maxdim::Int = 10000,      ###FIXME: better to use
+  cutoff::Float64 = 1e-15,  ###FIXME: better to use eps(coefficient_type) * 1e1 or something similar
 )::TTN where {VT}
-  mindim::Int = get(kwargs, :mindim, 1)
-  maxdim::Int = get(kwargs, :maxdim, 10000)
-  cutoff::Float64 = get(kwargs, :cutoff, 1e-15)
+  
 
   coefficient_type = ITensors.determineValType(ITensors.terms(os))
 
@@ -247,11 +247,10 @@ function qn_svdTTN(
   os::OpSum,
   sites::IndsNetwork,
   root_vertex::VT;
-  kwargs...,
+  mindim::Int = 1,
+  maxdim::Int = 10000,
+  cutoff::Float64 = 1e-15,  ###FIXME: better to use eps(coefficient_type) * 1e1 or something similar
 )::TTN where {VT}
-  mindim::Int = get(kwargs, :mindim, 1)
-  maxdim::Int = get(kwargs, :maxdim, 10000)
-  cutoff::Float64 = get(kwargs, :cutoff, 1e-15)
   #coefficient_type = ITensors.determineValType(ITensors.terms(os))  #now included as argument in function signature
   # check for qns on the site indices
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
@@ -689,6 +688,7 @@ function TTN(
   sites::IndsNetwork{V,<:Index};
   root_vertex::V=default_root_vertex(sites),
   splitblocks=false,
+  method=:svd,
   kwargs...,
 )::TTN where {V}
   length(ITensors.terms(os)) == 0 && error("OpSum has no terms")
@@ -698,8 +698,11 @@ function TTN(
   os = deepcopy(os)
   os = sorteachterm(os, sites, root_vertex)
   os = ITensors.sortmergeterms(os) # not exported
-
-  T = qn_svdTTN(os, sites, root_vertex; kwargs...)
+  if method==:svd
+    T = qn_svdTTN(os, sites, root_vertex; kwargs...)
+  else
+    error("Currently only SVD is supported as TTN constructor backend.")
+  end
   #=
   if hasqns(first(first(vertex_data(sites))))
     ###added feature
