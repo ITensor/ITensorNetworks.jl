@@ -40,8 +40,8 @@ Construct a dense TreeTensorNetwork from a symbolic OpSum representation of a
 Hamiltonian, compressing shared interaction channels.
 """
 function svdTTN(
-  os::OpSum{C}, sites::IndsNetwork, root_vertex::VT; kwargs...
-)::TTN where {C,VT}
+  os::OpSum, sites::IndsNetwork, root_vertex::VT; kwargs...
+)::TTN where {VT}
   # Function barrier to improve type stability
   coefficient_type = ITensors.determineValType(terms(os))
   return svdTTN(coefficient_type, os, sites, root_vertex; kwargs...)
@@ -49,11 +49,11 @@ end
 
 function svdTTN(
   coefficient_type::Type{<:Number},
-  os::OpSum{C},
+  os::OpSum,
   sites::IndsNetwork,
   root_vertex::VT;
   kwargs...,
-)::TTN where {C,VT}
+)::TTN where {VT}
   mindim::Int = get(kwargs, :mindim, 1)
   maxdim::Int = get(kwargs, :maxdim, 10000)
   cutoff::Float64 = get(kwargs, :cutoff, 1e-15)
@@ -72,7 +72,7 @@ function svdTTN(
   site_coef_done = Prod{Op}[]                                                               # list of terms for which the coefficient has been added to a site factor
 
   # temporary symbolic representation of TTN Hamiltonian
-  tempTTN = Dict(v => ArrElem{Scaled{C,Prod{Op}},ranks[v]}[] for v in vs)
+  tempTTN = Dict(v => ArrElem{Scaled{coefficient_type,Prod{Op}},ranks[v]}[] for v in vs)
 
   # build compressed finite state machine representation
   for v in vs
@@ -126,6 +126,8 @@ function svdTTN(
       if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
         ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
+        # FIXME: maybe put a try block here for a more helpful error message?
+        site_coef = convert(coefficient_type,site_coef) #required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
         push!(site_coef_done, ITensors.argument(term))
       end
       # add onsite identity for interactions passing through vertex
@@ -197,7 +199,6 @@ function svdTTN(
           z = ct
           temp_inds = copy(T_inds)
           for (i, d) in enumerate(normal_dims)
-            #@show size(Vv[d]), T_inds[d],c[i]
             V_factor = Vv[d][T_inds[d], c[i]]
             z *= (d == dim_in ? conj(V_factor) : V_factor) # conjugate incoming isemetry factor
             temp_inds[d] = 1 + c[i]     ##the offset by one comes from the 1,...,1 padding (starting/ending...)
@@ -234,8 +235,8 @@ function svdTTN(
 end
 
 function qn_svdTTN(
-  os::OpSum{C}, sites::IndsNetwork, root_vertex::VT; kwargs...
-)::TTN where {C,VT}
+  os::OpSum, sites::IndsNetwork, root_vertex::VT; kwargs...
+)::TTN where {VT}
   # Function barrier to improve type stability
   coefficient_type = ITensors.determineValType(terms(os))
   return qn_svdTTN(coefficient_type, os, sites, root_vertex; kwargs...)
@@ -243,16 +244,15 @@ end
 
 function qn_svdTTN(
   coefficient_type::Type{<:Number},
-  os::OpSum{C},
+  os::OpSum,
   sites::IndsNetwork,
   root_vertex::VT;
   kwargs...,
-)::TTN where {C,VT}
+)::TTN where {VT}
   mindim::Int = get(kwargs, :mindim, 1)
   maxdim::Int = get(kwargs, :maxdim, 10000)
   cutoff::Float64 = get(kwargs, :cutoff, 1e-15)
   #coefficient_type = ITensors.determineValType(ITensors.terms(os))  #now included as argument in function signature
-
   # check for qns on the site indices
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
   #FIXME: how are sites handled where some sites have QNs and some don't?
@@ -293,7 +293,7 @@ function qn_svdTTN(
   inbond_coefs = Dict(e => Dict{QN,Vector{ITensors.MatElem{coefficient_type}}}() for e in es)                         # bond coefficients for incoming edge channels
   site_coef_done = Prod{Op}[]                                                               # list of terms for which the coefficient has been added to a site factor
   # temporary symbolic representation of TTN Hamiltonian
-  tempTTN = Dict(v => QNArrElem{Scaled{C,Prod{Op}},ranks[v]}[] for v in vs)
+  tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},ranks[v]}[] for v in vs)
 
   # build compressed finite state machine representation
   for v in vs
@@ -357,8 +357,6 @@ function qn_svdTTN(
         T_qns[dim_in] = incoming_qn
       end
       for dout in dims_out
-        #@show outgoing_qns[edges[dout]]
-        #@show keys(outmaps)
         coutmap = get!(
           outmaps, edges[dout] => -outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
         )
@@ -366,10 +364,12 @@ function qn_svdTTN(
         T_qns[dout] = -outgoing_qns[edges[dout]]  ###minus sign to account for outgoing arrow direction
       end
       # if term starts at this site, add its coefficient as a site factor
-      site_coef = one(C)
+      site_coef = one(coefficient_type)
       if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
         ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
+        # FIXME: maybe put a try block here for a more helpful error message?
+        site_coef = convert(coefficient_type,site_coef) #required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
         push!(site_coef_done, ITensors.argument(term))
       end
       # add onsite identity for interactions passing through vertex
@@ -383,6 +383,7 @@ function qn_svdTTN(
       end
       # save indices and value of symbolic tensor entry
       el = QNArrElem(T_qns, T_inds, site_coef * Prod(onsite))
+      
       push!(tempTTN[v], el)
     end
     ITensors.remove_dups!(tempTTN[v])
