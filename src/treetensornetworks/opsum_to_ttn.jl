@@ -40,7 +40,7 @@ Construct a dense TreeTensorNetwork from a symbolic OpSum representation of a
 Hamiltonian, compressing shared interaction channels.
 """
 function svdTTN(
-  os::OpSum{C}, sites::IndsNetwork{VT,<:Index}, root_vertex::VT; kwargs...
+  os::OpSum{C}, sites::IndsNetwork, root_vertex::VT; kwargs...
 )::TTN where {C,VT}
   # Function barrier to improve type stability
   coefficient_type = ITensors.determineValType(terms(os))
@@ -50,7 +50,7 @@ end
 function svdTTN(
   coefficient_type::Type{<:Number},
   os::OpSum{C},
-  sites::IndsNetwork{VT,<:Index},
+  sites::IndsNetwork,
   root_vertex::VT;
   kwargs...,
 )::TTN where {C,VT}
@@ -234,7 +234,7 @@ function svdTTN(
 end
 
 function qn_svdTTN(
-  os::OpSum{C}, sites::IndsNetwork{VT,<:Index}, root_vertex::VT; kwargs...
+  os::OpSum{C}, sites::IndsNetwork, root_vertex::VT; kwargs...
 )::TTN where {C,VT}
   # Function barrier to improve type stability
   coefficient_type = ITensors.determineValType(terms(os))
