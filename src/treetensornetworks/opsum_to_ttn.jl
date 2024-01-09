@@ -34,212 +34,20 @@ end
 # 
 
 """
-    svdTTN(os::OpSum{C}, sites::IndsNetwork{V<:Index}, root_vertex::V, kwargs...) where {C,V}
+    ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex, kwargs...)
 
 Construct a dense TreeTensorNetwork from a symbolic OpSum representation of a
 Hamiltonian, compressing shared interaction channels.
 """
-function svdTTN(os::OpSum, sites::IndsNetwork, root_vertex::VT; kwargs...)::TTN where {VT}
-  # Function barrier to improve type stability
-  coefficient_type = ITensors.determineValType(terms(os))
-  return svdTTN(coefficient_type, os, sites, root_vertex; kwargs...)
-end
-
-function svdTTN(
-  coefficient_type::Type{<:Number},
-  os::OpSum,
-  sites::IndsNetwork,
-  root_vertex::VT;
-  mindim::Int=1,
-  maxdim::Int=typemax(Int),
-  cutoff=eps(coefficient_type) * 10,
-)::TTN where {VT}
-  edgetype_sites = edgetype(sites)
-  coefficient_type = ITensors.determineValType(ITensors.terms(os))
-
-  # traverse tree outwards from root vertex
-  vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
-  es = reverse(reverse.(post_order_dfs_edges(sites, root_vertex)))                          # store edges in fixed ordering relative to root
-  # some things to keep track of
-  degrees = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
-  Vs = Dict(e => Matrix{coefficient_type}(undef, 1, 1) for e in es)                                  # link isometries for SVD compression of TTN
-  inmaps = Dict(e => Dict{Vector{Op},Int}() for e in es)                                    # map from term in Hamiltonian to incoming channel index for every edge
-  outmaps = Dict(e => Dict{Vector{Op},Int}() for e in es)                                   # map from term in Hamiltonian to outgoing channel index for every edge
-  inbond_coefs = Dict(e => ITensors.MatElem{coefficient_type}[] for e in es)                         # bond coefficients for incoming edge channels
-  site_coef_done = Prod{Op}[]                                                               # list of terms for which the coefficient has been added to a site factor
-
-  # temporary symbolic representation of TTN Hamiltonian
-  tempTTN = Dict(v => ArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
-
-  # build compressed finite state machine representation
-  for v in vs
-    # for every vertex, find all edges that contain this vertex
-    edges = filter(e -> dst(e) == v || src(e) == v, es)
-    # use the corresponding ordering as index order for tensor elements at this site
-    dim_in = findfirst(e -> dst(e) == v, edges)
-    edge_in = (isnothing(dim_in) ? [] : edges[dim_in])
-    dims_out = findall(e -> src(e) == v, edges)
-    edges_out = edges[dims_out]
-    # sanity check, leaves only have single incoming or outgoing edge
-    @assert !isempty(dims_out) || !isnothing(dim_in)
-    (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf(sites, v)
-
-    for term in os
-      # loop over OpSum and pick out terms that act on current vertex
-      crosses_vertex(term, sites, v) || continue
-
-      # filter out factors that come in from the direction of the incoming edge
-      incoming = filter(
-        t -> edge_in ∈ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
-      )
-      # also store all non-incoming factors in standard order, used for channel merging
-      not_incoming = filter(
-        t -> edge_in ∉ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
-      )
-      # filter out factor that acts on current vertex
-      onsite = filter(t -> (ITensors.site(t) == v), ITensors.terms(term))
-      # for every outgoing edge, filter out factors that go out along that edge
-      outgoing = Dict(
-        e => filter(t -> e ∈ edge_path(sites, v, ITensors.site(t)), ITensors.terms(term))
-        for e in edges_out
-      )
-
-      # translate into tensor entry
-      T_inds = MVector{degrees[v]}(fill(-1, degrees[v]))
-      bond_row = -1
-      bond_col = -1
-      if !isempty(incoming)
-        bond_row = ITensors.posInLink!(inmaps[edge_in], incoming)
-        bond_col = ITensors.posInLink!(outmaps[edge_in], not_incoming) # get incoming channel
-        bond_coef = convert(coefficient_type, ITensors.coefficient(term))
-        push!(inbond_coefs[edge_in], ITensors.MatElem(bond_row, bond_col, bond_coef))
-        T_inds[dim_in] = bond_col
-      end
-      for dout in dims_out
-        T_inds[dout] = ITensors.posInLink!(outmaps[edges[dout]], outgoing[edges[dout]]) # add outgoing channel
-      end
-      # if term starts at this site, add its coefficient as a site factor
-      site_coef = one(C)
-      if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
-        ITensors.argument(term) ∉ site_coef_done
-        site_coef = ITensors.coefficient(term)
-        # FIXME: maybe put a try block here for a more helpful error message?
-        site_coef = convert(coefficient_type, site_coef) #required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
-        push!(site_coef_done, ITensors.argument(term))
-      end
-      # add onsite identity for interactions passing through vertex
-      if isempty(onsite)
-        if !ITensors.using_auto_fermion() && isfermionic(incoming, sites)
-          error("No verified fermion support for automatic TTN constructor!")
-        else
-          push!(onsite, Op("Id", v))
-        end
-      end
-      # save indices and value of symbolic tensor entry
-      el = ArrElem(T_inds, site_coef * Prod(onsite))
-      push!(tempTTN[v], el)
-    end
-    ITensors.remove_dups!(tempTTN[v])
-    # manual truncation: isometry on incoming edge
-    if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
-      M = ITensors.toMatrix(inbond_coefs[edges[dim_in]])
-      U, S, V = svd(M)
-      P = S .^ 2
-      truncate!(P; maxdim, cutoff, mindim)
-      tdim = length(P)
-      nc = size(M, 2)
-      Vs[edges[dim_in]] = Matrix{coefficient_type}(V[1:nc, 1:tdim])
-    end
-  end
-
-  # compress this tempTTN representation into dense form
-
-  link_space = dictionary([
-    e => Index((isempty(outmaps[e]) ? 0 : size(Vs[e], 2)) + 2, edge_tag(e)) for e in es
-  ])
-
-  H = TTN(sites)
-
-  for v in vs
-
-    # redo the whole thing like before
-    edges = filter(e -> dst(e) == v || src(e) == v, es)
-    dim_in = findfirst(e -> dst(e) == v, edges)
-    dims_out = findall(e -> src(e) == v, edges)
-
-    # slice isometries at this vertex
-    Vv = [Vs[e] for e in edges]
-
-    linkinds = [link_space[e] for e in edges]
-    linkdims = dim.(linkinds)
-
-    H[v] = ITensor()
-
-    for el in tempTTN[v]
-      T_inds = el.idxs
-      t = el.val
-      (abs(coefficient(t)) > eps()) || continue
-      T = zeros(coefficient_type, linkdims...)
-      ct = convert(coefficient_type, coefficient(t))
-      terminal_dims = findall(d -> T_inds[d] == -1, 1:degrees[v])   # directions in which term starts or ends
-      normal_dims = findall(d -> T_inds[d] ≠ -1, 1:degrees[v])      # normal dimensions, do truncation thingies
-      T_inds[terminal_dims] .= 1                                  # start in channel 1
-      for dout in filter(d -> d ∈ terminal_dims, dims_out)
-        T_inds[dout] = linkdims[dout]                             # end in channel linkdims[d] for each dimension d
-      end
-      if isempty(normal_dims)
-        T[T_inds...] += ct                                        # on-site term
-      else
-        # handle channel compression isometries
-        dim_ranges = Tuple(size(Vv[d], 2) for d in normal_dims)
-        for c in CartesianIndices(dim_ranges)
-          z = ct
-          temp_inds = copy(T_inds)
-          for (i, d) in enumerate(normal_dims)
-            V_factor = Vv[d][T_inds[d], c[i]]
-            z *= (d == dim_in ? conj(V_factor) : V_factor) # conjugate incoming isemetry factor
-            temp_inds[d] = 1 + c[i]     ##the offset by one comes from the 1,...,1 padding (starting/ending...)
-          end
-          T[temp_inds...] += z
-        end
-      end
-      T = itensor(T, linkinds)
-      H[v] += T * computeSiteProd(sites, ITensors.argument(t))
-    end
-
-    # add starting and ending identity operators
-    idT = zeros(coefficient_type, linkdims...)
-    if isnothing(dim_in)
-      idT[ones(Int, degrees[v])...] = 1.0 # only one real starting identity
-    end
-    # ending identities are a little more involved
-    if !isnothing(dim_in)
-      idT[linkdims...] = 1.0 # place identity if all channels end
-      # place identity from start of incoming channel to start of each single outgoing channel, and end all other channels
-      idT_end_inds = [linkdims...]
-      idT_end_inds[dim_in] = 1.0
-      for dout in dims_out
-        idT_end_inds[dout] = 1.0
-        idT[idT_end_inds...] = 1.0
-        idT_end_inds[dout] = linkdims[dout] # reset
-      end
-    end
-    T = itensor(idT, linkinds)
-    H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([Op("Id", v)]))
-  end
-
-  return H
-end
-
-function qn_svdTTN(
+function ttn_svd(
   os::OpSum, sites::IndsNetwork, root_vertex; kwargs...
 )::TTN
   # Function barrier to improve type stability
   coefficient_type = ITensors.determineValType(terms(os))
-  return qn_svdTTN(coefficient_type, os, sites, root_vertex; kwargs...)
+  return ttn_svd(coefficient_type, os, sites, root_vertex; kwargs...)
 end
 
-function qn_svdTTN(
+function ttn_svd(
   coefficient_type::Type{<:Number},
   os::OpSum,
   sites::IndsNetwork,
@@ -685,12 +493,12 @@ Convert an OpSum object `os` to a TreeTensorNetwork, with indices given by `site
 """
 function TTN(
   os::OpSum,
-  sites::IndsNetwork{V,<:Index};
-  root_vertex::V=default_root_vertex(sites),
+  sites::IndsNetwork;
+  root_vertex=default_root_vertex(sites),
   splitblocks=false,
   method=:svd,
   kwargs...,
-)::TTN where {V}
+)::TTN
   length(ITensors.terms(os)) == 0 && error("OpSum has no terms")
   is_tree(sites) || error("Site index graph must be a tree.")
   is_leaf(sites, root_vertex) || error("Tree root must be a leaf vertex.")
@@ -699,26 +507,15 @@ function TTN(
   os = sorteachterm(os, sites, root_vertex)
   os = ITensors.sortmergeterms(os) # not exported
   if method == :svd
-    T = qn_svdTTN(os, sites, root_vertex; kwargs...)
+    T = ttn_svd(os, sites, root_vertex; kwargs...)
   else
     error("Currently only SVD is supported as TTN constructor backend.")
   end
-  #=
-  if hasqns(first(first(vertex_data(sites))))
-    ###added feature
-    T = qn_svdTTN(os, sites, root_vertex; kwargs...)
-    if splitblocks
-      error("splitblocks not yet implemented for AbstractTreeTensorNetwork.")
-      T = ITensors.splitblocks(linkinds, T) # TODO: make this work
-    end
-    return T
+
+  if splitblocks
+    error("splitblocks not yet implemented for AbstractTreeTensorNetwork.")
+    T = ITensors.splitblocks(linkinds, T) # TODO: make this work
   end
-  =#
-  #T = svdTTN(os, sites, root_vertex; kwargs...)
-  #if splitblocks
-  #  error("splitblocks not yet implemented for AbstractTreeTensorNetwork.")
-  #  T = ITensors.splitblocks(linkinds, T) # TODO: make this work
-  #end
   return T
 end
 
