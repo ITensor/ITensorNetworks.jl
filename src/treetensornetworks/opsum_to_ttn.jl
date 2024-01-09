@@ -252,6 +252,7 @@ function qn_svdTTN(
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
   #FIXME: how are sites handled where some sites have QNs and some don't?
   edgetype_sites = edgetype(sites)
+  vertextype_sites = vertextype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
   # traverse tree outwards from root vertex
@@ -266,7 +267,7 @@ function qn_svdTTN(
   inmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()                  # map from term in Hamiltonian to incoming channel index for every edge
   outmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()                 # map from term in Hamiltonian to outgoing channel index for every edge
 
-  op_cache = Dict{Pair{String,Any},ITensor}()
+  op_cache = Dict{Pair{String,vertextype_sites},ITensor}()
 
   function calc_qn(term::Vector{Op})
     q = QN()
