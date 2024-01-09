@@ -57,7 +57,7 @@ function svdTTN(
   cutoff::Float64 = 1e-15,  ###FIXME: better to use eps(coefficient_type) * 1e1 or something similar
 )::TTN where {VT}
   
-
+  edgetype_sites = edgetype(sites)
   coefficient_type = ITensors.determineValType(ITensors.terms(os))
 
   # traverse tree outwards from root vertex
@@ -251,11 +251,10 @@ function qn_svdTTN(
   maxdim::Int = 10000,
   cutoff::Float64 = 1e-15,  ###FIXME: better to use eps(coefficient_type) * 1e1 or something similar
 )::TTN where {VT}
-  #coefficient_type = ITensors.determineValType(ITensors.terms(os))  #now included as argument in function signature
   # check for qns on the site indices
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
   #FIXME: how are sites handled where some sites have QNs and some don't?
-
+  edgetype_sites = edgetype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
   # traverse tree outwards from root vertex
@@ -267,10 +266,11 @@ function qn_svdTTN(
   Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in es)                                    # link isometries for SVD compression of TTN
   #inmaps = Dict(e => Dict{Pair{Vector{Op},QN},Int}() for e in es)                                   
   #outmaps = Dict(e => Dict{Pair{Vector{Op},QN},Int}() for e in es)                                   
-  inmaps = Dict{Pair{NamedGraphs.NamedEdge{VT},QN},Dict{Vector{Op},Int}}()                  # map from term in Hamiltonian to incoming channel index for every edge
-  outmaps = Dict{Pair{NamedGraphs.NamedEdge{VT},QN},Dict{Vector{Op},Int}}()                 # map from term in Hamiltonian to outgoing channel index for every edge
+  inmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()                  # map from term in Hamiltonian to incoming channel index for every edge
+  outmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()                 # map from term in Hamiltonian to outgoing channel index for every edge
 
-  op_cache = Dict{Pair{String,VT},ITensor}()
+  op_cache = Dict{Pair{String,Any},ITensor}()
+  
   function calc_qn(term::Vector{Op})
     q = QN()
     for st in term
@@ -406,7 +406,7 @@ function qn_svdTTN(
   #  e => Index((isempty(outmaps[e]) ? 0 : size(Vs[e], 2)) + 2, edge_tag(e)) for e in es
   #])
   ###FIXME: that's an ugly constructor... ###QNIndex(undef) not defined
-  link_space = Dict{NamedGraphs.NamedEdge{VT},Index}()
+  link_space = Dict{edgetype_sites,Index}()
   linkdir = ITensors.using_auto_fermion() ? ITensors.In : ITensors.Out ###FIXME: ??
   for e in es ###this one might also be tricky, in case there's no Vq defined on the edge
     ###also tricky w.r.t. the link direction
