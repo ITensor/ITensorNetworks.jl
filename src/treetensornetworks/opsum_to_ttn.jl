@@ -64,7 +64,7 @@ function svdTTN(
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
   es = reverse(reverse.(post_order_dfs_edges(sites, root_vertex)))                          # store edges in fixed ordering relative to root
   # some things to keep track of
-  ranks = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
+  degrees = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
   Vs = Dict(e => Matrix{coefficient_type}(undef, 1, 1) for e in es)                                  # link isometries for SVD compression of TTN
   inmaps = Dict(e => Dict{Vector{Op},Int}() for e in es)                                    # map from term in Hamiltonian to incoming channel index for every edge
   outmaps = Dict(e => Dict{Vector{Op},Int}() for e in es)                                   # map from term in Hamiltonian to outgoing channel index for every edge
@@ -72,7 +72,7 @@ function svdTTN(
   site_coef_done = Prod{Op}[]                                                               # list of terms for which the coefficient has been added to a site factor
 
   # temporary symbolic representation of TTN Hamiltonian
-  tempTTN = Dict(v => ArrElem{Scaled{coefficient_type,Prod{Op}},ranks[v]}[] for v in vs)
+  tempTTN = Dict(v => ArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
 
   # build compressed finite state machine representation
   for v in vs
@@ -108,7 +108,7 @@ function svdTTN(
       )
 
       # translate into tensor entry
-      T_inds = MVector{ranks[v]}(fill(-1, ranks[v]))
+      T_inds = MVector{degrees[v]}(fill(-1, degrees[v]))
       bond_row = -1
       bond_col = -1
       if !isempty(incoming)
@@ -148,7 +148,7 @@ function svdTTN(
       M = ITensors.toMatrix(inbond_coefs[edges[dim_in]])
       U, S, V = svd(M)
       P = S .^ 2
-      truncate!(P; maxdim=maxdim, cutoff=cutoff, mindim=mindim)
+      truncate!(P; maxdim, cutoff, mindim)
       tdim = length(P)
       nc = size(M, 2)
       Vs[edges[dim_in]] = Matrix{coefficient_type}(V[1:nc, 1:tdim])
@@ -184,8 +184,8 @@ function svdTTN(
       (abs(coefficient(t)) > eps()) || continue
       T = zeros(coefficient_type, linkdims...)
       ct = convert(coefficient_type, coefficient(t))
-      terminal_dims = findall(d -> T_inds[d] == -1, 1:ranks[v])   # directions in which term starts or ends
-      normal_dims = findall(d -> T_inds[d] ≠ -1, 1:ranks[v])      # normal dimensions, do truncation thingies
+      terminal_dims = findall(d -> T_inds[d] == -1, 1:degrees[v])   # directions in which term starts or ends
+      normal_dims = findall(d -> T_inds[d] ≠ -1, 1:degrees[v])      # normal dimensions, do truncation thingies
       T_inds[terminal_dims] .= 1                                  # start in channel 1
       for dout in filter(d -> d ∈ terminal_dims, dims_out)
         T_inds[dout] = linkdims[dout]                             # end in channel linkdims[d] for each dimension d
@@ -213,7 +213,7 @@ function svdTTN(
     # add starting and ending identity operators
     idT = zeros(coefficient_type, linkdims...)
     if isnothing(dim_in)
-      idT[ones(Int, ranks[v])...] = 1.0 # only one real starting identity
+      idT[ones(Int, degrees[v])...] = 1.0 # only one real starting identity
     end
     # ending identities are a little more involved
     if !isnothing(dim_in)
@@ -263,7 +263,7 @@ function qn_svdTTN(
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
   es = reverse(reverse.(post_order_dfs_edges(sites, root_vertex)))                          # store edges in fixed ordering relative to root
   # some things to keep track of
-  ranks = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
+  degrees = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
   Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in es)                                    # link isometries for SVD compression of TTN
   #inmaps = Dict(e => Dict{Pair{Vector{Op},QN},Int}() for e in es)                                   
   #outmaps = Dict(e => Dict{Pair{Vector{Op},QN},Int}() for e in es)                                   
@@ -271,7 +271,7 @@ function qn_svdTTN(
   outmaps = Dict{Pair{NamedGraphs.NamedEdge{VT},QN},Dict{Vector{Op},Int}}()                 # map from term in Hamiltonian to outgoing channel index for every edge
 
   op_cache = Dict{Pair{String,VT},ITensor}()
-  function calcQN(term::Vector{Op})
+  function calc_qn(term::Vector{Op})
     q = QN()
     for st in term
       op_tensor = get(op_cache, ITensors.which_op(st) => ITensors.site(st), nothing)
@@ -288,11 +288,11 @@ function qn_svdTTN(
     return q
   end
 
-  Hflux = -calcQN(terms(first(terms(os))))
+  Hflux = -calc_qn(terms(first(terms(os))))
   inbond_coefs = Dict(e => Dict{QN,Vector{ITensors.MatElem{coefficient_type}}}() for e in es)                         # bond coefficients for incoming edge channels
   site_coef_done = Prod{Op}[]                                                               # list of terms for which the coefficient has been added to a site factor
   # temporary symbolic representation of TTN Hamiltonian
-  tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},ranks[v]}[] for v in vs)
+  tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
 
   # build compressed finite state machine representation
   for v in vs
@@ -329,14 +329,14 @@ function qn_svdTTN(
       )
 
       # compute QNs
-      incoming_qn = calcQN(incoming)
-      not_incoming_qn = calcQN(not_incoming)  ###does this work?
-      outgoing_qns = Dict(e => calcQN(outgoing[e]) for e in edges_out)
-      site_qn = calcQN(onsite)
+      incoming_qn = calc_qn(incoming)
+      not_incoming_qn = calc_qn(not_incoming)  ###does this work?
+      outgoing_qns = Dict(e => calc_qn(outgoing[e]) for e in edges_out)
+      site_qn = calc_qn(onsite)
 
       # initialize QNArrayElement indices and quantum numbers 
-      T_inds = MVector{ranks[v]}(fill(-1, ranks[v]))
-      T_qns = MVector{ranks[v]}(fill(QN(), ranks[v]))
+      T_inds = MVector{degrees[v]}(fill(-1, degrees[v]))
+      T_qns = MVector{degrees[v]}(fill(QN(), degrees[v]))
       # initialize ArrayElement indices for inbond_coefs
       bond_row = -1
       bond_col = -1
@@ -392,7 +392,7 @@ function qn_svdTTN(
         M = ITensors.toMatrix(mat)
         U, S, V = svd(M)
         P = S .^ 2
-        truncate!(P; maxdim=maxdim, cutoff=cutoff, mindim=mindim)
+        truncate!(P; maxdim, cutoff, mindim)
         tdim = length(P)
         nc = size(M, 2) ###CHECK: verify whether this is still correct, diverges from opsum_to_mpo_qn
         Vs[edges[dim_in]][q] = Matrix{coefficient_type}(V[1:nc, 1:tdim]) ###CHECK: verify whether this is still correct, diverges from opsum_to_mpo_qn
@@ -452,20 +452,20 @@ function qn_svdTTN(
     linkdims = dim.(linkinds)
 
     # construct blocks
-    blocks = Dict{Tuple{Block{ranks[v]},Vector{Op}},Array{coefficient_type,ranks[v]}}()
+    blocks = Dict{Tuple{Block{degrees[v]},Vector{Op}},Array{coefficient_type,degrees[v]}}()
     for el in tempTTN[v]
       t = el.val
       (abs(coefficient(t)) > eps()) || continue
-      block_helper_inds = fill(-1, ranks[v]) # we manipulate T_inds later, and loose track of ending/starting information, so keep track of it here
+      block_helper_inds = fill(-1, degrees[v]) # we manipulate T_inds later, and loose track of ending/starting information, so keep track of it here
       T_inds = el.idxs
       T_qns = el.qn_idxs
       ct = convert(coefficient_type, coefficient(t))
       sublinkdims = [
-        (T_inds[i] == -1 ? 1 : qnblockdim(linkinds[i], T_qns[i])) for i in 1:ranks[v]
+        (T_inds[i] == -1 ? 1 : qnblockdim(linkinds[i], T_qns[i])) for i in 1:degrees[v]
       ]
       zero_arr() = zeros(coefficient_type, sublinkdims...)
-      terminal_dims = findall(d -> T_inds[d] == -1, 1:ranks[v])   # directions in which term starts or ends
-      normal_dims = findall(d -> T_inds[d] ≠ -1, 1:ranks[v])      # normal dimensions, do truncation thingies
+      terminal_dims = findall(d -> T_inds[d] == -1, 1:degrees[v])   # directions in which term starts or ends
+      normal_dims = findall(d -> T_inds[d] ≠ -1, 1:degrees[v])      # normal dimensions, do truncation thingies
       T_inds[terminal_dims] .= 1                                  # start in channel 1  ###??
       block_helper_inds[terminal_dims] .= 1
       for dout in filter(d -> d ∈ terminal_dims, dims_out)
@@ -554,7 +554,7 @@ function qn_svdTTN(
     # add starting and ending identity operators
     idT = zeros(coefficient_type, linkdims...)
     if isnothing(dim_in)
-      idT[ones(Int, ranks[v])...] = 1.0 # only one real starting identity
+      idT[ones(Int, degrees[v])...] = 1.0 # only one real starting identity
     end
     # ending identities are a little more involved
     if !isnothing(dim_in)
@@ -846,14 +846,14 @@ function finite_state_machine(
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
   es = reverse(reverse.(post_order_dfs_edges(sites, root_vertex)))                          # store edges in fixed ordering relative to root
   # some things to keep track of
-  ranks = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
+  degrees = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
   linkmaps = Dict(e => Dict{Prod{Op},Int}() for e in es)                                    # map from term in Hamiltonian to edge channel index for every edge
   site_coef_done = Prod{Op}[]                                                               # list of Hamiltonian terms for which the coefficient has been added to a site factor
   edge_orders = DataGraph{V,Vector{edgetype(sites)}}(underlying_graph(sites))               # relate indices of sparse TTN tensor to incident graph edges for each site
 
   for v in vs
     # collect all nontrivial entries of the TTN tensor at vertex v
-    entries = Tuple{MVector{ranks[v],Int},Scaled{coefficient_type,Prod{Op}}}[]
+    entries = Tuple{MVector{degrees[v],Int},Scaled{coefficient_type,Prod{Op}}}[]
 
     # for every vertex, find all edges that contain this vertex
     edges = filter(e -> dst(e) == v || src(e) == v, es)
@@ -885,7 +885,7 @@ function finite_state_machine(
       )
 
       # translate into sparse tensor entry
-      T_inds = MVector{ranks[v]}(fill(-1, ranks[v]))
+      T_inds = MVector{degrees[v]}(fill(-1, degrees[v]))
       if !isnothing(dim_in) && !isempty(incoming)
         T_inds[dim_in] = ITensors.posInLink!(linkmaps[edge_in], ITensors.argument(term)) # get incoming channel
       end
@@ -918,7 +918,7 @@ function finite_state_machine(
     linkdims = Tuple([
       (isempty(linkmaps[e]) ? 0 : maximum(values(linkmaps[e]))) + 2 for e in edges
     ])
-    T = SparseArray{Sum{Scaled{coefficient_type,Prod{Op}}},ranks[v]}(undef, linkdims)
+    T = SparseArray{Sum{Scaled{coefficient_type,Prod{Op}}},degrees[v]}(undef, linkdims)
     for (T_inds, t) in entries
       if !isnothing(dim_in)
         if T_inds[dim_in] == -1
@@ -937,7 +937,7 @@ function finite_state_machine(
     end
     # add starting and ending identity operators
     if isnothing(dim_in)
-      T[ones(Int, ranks[v])...] += one(coefficient_type) * Prod([Op("Id", v)]) # only one real starting identity
+      T[ones(Int, degrees[v])...] += one(coefficient_type) * Prod([Op("Id", v)]) # only one real starting identity
     end
     # ending identities are a little more involved
     if !isnothing(dim_in)
