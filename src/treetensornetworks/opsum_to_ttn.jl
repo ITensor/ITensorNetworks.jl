@@ -52,7 +52,7 @@ function svdTTN(
   root_vertex::VT;
   mindim::Int=1,
   maxdim::Int=typemax(Int),
-  cutoff::eps(coefficient_type) * 10,
+  cutoff=eps(coefficient_type) * 10,
 )::TTN where {VT}
   edgetype_sites = edgetype(sites)
   coefficient_type = ITensors.determineValType(ITensors.terms(os))
@@ -232,8 +232,8 @@ function svdTTN(
 end
 
 function qn_svdTTN(
-  os::OpSum, sites::IndsNetwork, root_vertex::VT; kwargs...
-)::TTN where {VT}
+  os::OpSum, sites::IndsNetwork, root_vertex; kwargs...
+)::TTN
   # Function barrier to improve type stability
   coefficient_type = ITensors.determineValType(terms(os))
   return qn_svdTTN(coefficient_type, os, sites, root_vertex; kwargs...)
@@ -243,11 +243,11 @@ function qn_svdTTN(
   coefficient_type::Type{<:Number},
   os::OpSum,
   sites::IndsNetwork,
-  root_vertex::VT;
+  root_vertex;
   mindim::Int=1,
   maxdim::Int=typemax(Int),
-  cutoff::eps(coefficient_type) * 10,
-)::TTN where {VT}
+  cutoff=eps(coefficient_type) * 10,
+)::TTN
   # check for qns on the site indices
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
   #FIXME: how are sites handled where some sites have QNs and some don't?
