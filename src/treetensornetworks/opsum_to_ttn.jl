@@ -39,9 +39,7 @@ end
 Construct a dense TreeTensorNetwork from a symbolic OpSum representation of a
 Hamiltonian, compressing shared interaction channels.
 """
-function ttn_svd(
-  os::OpSum, sites::IndsNetwork, root_vertex; kwargs...
-)
+function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kwargs...)
   # Function barrier to improve type stability
   coefficient_type = ITensors.determineValType(terms(os))
   return ttn_svd(coefficient_type, os, sites, root_vertex; kwargs...)
@@ -210,35 +208,24 @@ function ttn_svd(
 
   # compress this tempTTN representation into dense form
 
-  #link_space = dictionary([
-  #  e => Index((isempty(outmaps[e]) ? 0 : size(Vs[e], 2)) + 2, edge_tag(e)) for e in es
-  #])
-  ###FIXME: that's an ugly constructor... ###QNIndex(undef) not defined
   link_space = Dict{edgetype_sites,Index}()
   linkdir = ITensors.using_auto_fermion() ? ITensors.In : ITensors.Out ###FIXME: ??
-  for e in es ###this one might also be tricky, in case there's no Vq defined on the edge
-    ###also tricky w.r.t. the link direction
-    ### ---> should we just infer whether the edge is incoming or outgoing and choose linkdir accordingly?
-    ### ===> this is basically decided by daggering in the MPO code (we should be able to stick to this pattern)
+  for e in es
     qi = Vector{Pair{QN,Int}}()
     push!(qi, QN() => 1)
     for (q, Vq) in Vs[e]
       cols = size(Vq, 2)
       if ITensors.using_auto_fermion() # <fermions>
-        push!(qi, (-q) => cols) ###the minus sign comes from the opposite linkdir ?
+        push!(qi, (-q) => cols)
       else
         push!(qi, q => cols)
       end
     end
     push!(qi, Hflux => 1)
-    link_space[e] = Index(qi...; tags=edge_tag(e), dir=linkdir) ##FIXME: maybe a single linkdir is not the right thing to do here
+    link_space[e] = Index(qi...; tags=edge_tag(e), dir=linkdir)
   end
 
   H = TTN(sites)
-  ##Copy from ITensors qn_svdMPO
-  # Find location where block of Index i
-  # matches QN q, but *not* 1 or dim(i)
-  # which are special ending/starting states
   function qnblock(i::Index, q::QN)
     for b in 2:(nblocks(i) - 1)
       flux(i, Block(b)) == q && return b
@@ -327,7 +314,7 @@ function ttn_svd(
 
     for ((b, q_op), m) in blocks
       ###FIXME: make this work if there's no physical degree of freedom at site
-      Op = computeSiteProd(sites, Prod(q_op))  ###FIXME: is this implemented?
+      Op = computeSiteProd(sites, Prod(q_op))
       if hasqns(Op) ###FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
         iszero(nnzblocks(Op)) && continue  ###FIXME: this one may be breaking for no physical indices on site
       end

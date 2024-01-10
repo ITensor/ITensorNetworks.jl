@@ -45,7 +45,7 @@ using Test
       @test Tttno ≈ Tmpo rtol = 1e-6
 
       # this breaks for longer range interactions
-      Hsvd_lr = TTN(Hlr, is; root_vertex=root_vertex,algorithm="svd", cutoff=1e-10)
+      Hsvd_lr = TTN(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)
       Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
       @disable_warn_order begin
         Tttno_lr = prod(Hline_lr)
