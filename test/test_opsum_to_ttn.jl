@@ -21,7 +21,7 @@ using Test
     J1 = -1
     J2 = 2
     h = 0.5
-    H = ising(c; J1=J1, J2=J2, h=h)
+    H = ITensorNetworks.ising(c; J1=J1, J2=J2, h=h)
     # add combination of longer range interactions
     Hlr = copy(H)
     Hlr += 5, "Z", (1, 2), "Z", (2, 2), "Z", (3, 2)
@@ -90,7 +90,7 @@ using Test
     J1 = -1
     J2 = 2
     h = 0.5
-    H = heisenberg(c; J1=J1, J2=J2, h=h)
+    H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)
     # add combination of longer range interactions
     Hlr = copy(H)
     Hlr += 5, "Z", (1, 2), "Z", (2, 2)#, "Z", (3,2)
@@ -151,7 +151,7 @@ using Test
     J1 = -1
     J2 = 2
     h = 0.5
-    H = heisenberg(c; J1=J1, J2=J2, h=h)
+    H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)
     #Hvac = heisenberg(is_missing_site; J1=J1, J2=J2, h=h)
 
     # add combination of longer range interactions
