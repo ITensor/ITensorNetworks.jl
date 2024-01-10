@@ -29,6 +29,7 @@ SplitApplyCombine = "03a91e81-4c3e-53e1-a0a4-9c0c8f19dd66"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
+TupleTools = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 
 [compat]
 AbstractTrees = "0.4.4"
@@ -54,6 +55,7 @@ SplitApplyCombine = "1.2"
 StaticArrays = "1.5.12"
 Suppressor = "0.2"
 TimerOutputs = "0.5.22"
+TupleTools = "1.4"
 julia = "1.7"
 
 [extras]
