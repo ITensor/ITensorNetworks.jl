@@ -54,23 +54,17 @@ function ttn_svd(
   maxdim::Int=typemax(Int),
   cutoff=eps(real(coefficient_type)) * 10,
 )
-  # check for qns on the site indices
-  #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
-  #FIXME: how are sites handled where some sites have QNs and some don't?
   sites = deepcopy(sites0)
   edgetype_sites = edgetype(sites)
   vertextype_sites = vertextype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
   # traverse tree outwards from root vertex
-  ### FIXME: generalize to internal vertices
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
   es = reverse(reverse.(post_order_dfs_edges(sites, root_vertex)))                          # store edges in fixed ordering relative to root
   # some things to keep track of
   degrees = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
   Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in es)                                    # link isometries for SVD compression of TTN
-  #inmaps = Dict(e => Dict{Pair{Vector{Op},QN},Int}() for e in es)                                   
-  #outmaps = Dict(e => Dict{Pair{Vector{Op},QN},Int}() for e in es)                                   
   inmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()                  # map from term in Hamiltonian to incoming channel index for every edge
   outmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()                 # map from term in Hamiltonian to outgoing channel index for every edge
 
@@ -175,19 +169,17 @@ function ttn_svd(
           outmaps, edges[dout] => -outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
         )
         T_inds[dout] = ITensors.posInLink!(coutmap, outgoing[edges[dout]]) # add outgoing channel
-        T_qns[dout] = -outgoing_qns[edges[dout]]  ###minus sign to account for outgoing arrow direction
+        T_qns[dout] = -outgoing_qns[edges[dout]]  # minus sign to account for outgoing arrow direction
       end
       # if term starts at this site, add its coefficient as a site factor
       site_coef = one(coefficient_type)
       if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
         ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
-        # FIXME: maybe put a try block here for a more helpful error message?
-        site_coef = convert(coefficient_type, site_coef) #required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
+        site_coef = convert(coefficient_type, site_coef) # required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
         push!(site_coef_done, ITensors.argument(term))
       end
       # add onsite identity for interactions passing through vertex
-      ### FIXME: generalize to internal vertices, i.e. do not add Id if this is an internal site
       if isempty(onsite)
         if !ITensors.using_auto_fermion() && isfermionic(incoming, sites)
           error("No verified fermion support for automatic TTN constructor!")
@@ -209,8 +201,8 @@ function ttn_svd(
         P = S .^ 2
         truncate!(P; maxdim, cutoff, mindim)
         tdim = length(P)
-        nc = size(M, 2) ###CHECK: verify whether this is still correct, diverges from opsum_to_mpo_qn
-        Vs[edges[dim_in]][q] = Matrix{coefficient_type}(V[1:nc, 1:tdim]) ###CHECK: verify whether this is still correct, diverges from opsum_to_mpo_qn
+        nc = size(M, 2)
+        Vs[edges[dim_in]][q] = Matrix{coefficient_type}(V[1:nc, 1:tdim])
       end
     end
   end
@@ -234,7 +226,7 @@ function ttn_svd(
     link_space[e] = Index(qi...; tags=edge_tag(e), dir=linkdir)
   end
 
-  H = TTN(sites0)   ###initialize TTN without the dummy indices added
+  H = TTN(sites0)   # initialize TTN without the dummy indices added
   function qnblock(i::Index, q::QN)
     for b in 2:(nblocks(i) - 1)
       flux(i, Block(b)) == q && return b
@@ -322,10 +314,9 @@ function ttn_svd(
     end
 
     for ((b, q_op), m) in blocks
-      ###FIXME: make this work if there's no physical degree of freedom at site
       Op = computeSiteProd(sites, Prod(q_op))
       if hasqns(Op) ###FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
-        iszero(nnzblocks(Op)) && continue  ###FIXME: this one may be breaking for no physical indices on site
+        iszero(nnzblocks(Op)) && continue
       end
       sq = flux(Op)
       if !isnothing(sq)
