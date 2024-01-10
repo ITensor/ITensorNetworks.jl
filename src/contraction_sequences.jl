@@ -119,3 +119,17 @@ function contraction_sequence(::Algorithm"kahypar_bipartite", tn; kwargs...)
     tn; optimizer=OMEinsumContractionOrders.KaHyParBipartite(; kwargs...)
   )
 end
+
+function contraction_sequence(::Algorithm"einexpr", tn; optimizer=EinExprs.Exhaustive())
+  is = IndsNetwork(tn)
+  size_dict = Dict(
+    Symbol(id(index)) => dim(index) for
+    index in Iterators.map(i -> only(is[i]), vertices(is))
+  )
+
+  tensors = map(vertex_data(ψ)) do tensor
+    EinExpr(collect(map(Symbol ∘ id, inds(tensor))))
+  end
+
+  return tn = einexpr(optimizer, EinExpr(tensors, size_dict))
+end
