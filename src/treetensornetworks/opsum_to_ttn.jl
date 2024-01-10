@@ -54,7 +54,7 @@ function ttn_svd(
   root_vertex;
   mindim::Int=1,
   maxdim::Int=typemax(Int),
-  cutoff=eps(coefficient_type) * 10,
+  cutoff=eps(real(coefficient_type)) * 10,
 )
   # check for qns on the site indices
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
@@ -263,7 +263,7 @@ function ttn_svd(
     blocks = Dict{Tuple{Block{degrees[v]},Vector{Op}},Array{coefficient_type,degrees[v]}}()
     for el in tempTTN[v]
       t = el.val
-      (abs(coefficient(t)) > eps()) || continue
+      (abs(coefficient(t)) > eps(real(coefficient_type))) || continue
       block_helper_inds = fill(-1, degrees[v]) # we manipulate T_inds later, and loose track of ending/starting information, so keep track of it here
       T_inds = el.idxs
       T_qns = el.qn_idxs
@@ -617,24 +617,3 @@ function Base.zero(::Type{S}) where {S<:Sum}
   return S()
 end
 Base.zero(t::Sum) = zero(typeof(t))
-
-
-#=
-function computeSiteSum(
-  sites::IndsNetwork{V,<:Index}, ops::Sum{Scaled{C,Prod{Op}}}
-)::ITensor where {V,C}
-  coefficient_type = ITensors.determineValType(ITensors.terms(ops))
-  v = ITensors.site(ITensors.argument(ops[1])[1])
-  T =
-    convert(coefficient_type, coefficient(ops[1])) *
-    computeSiteProd(sites, ITensors.argument(ops[1]))
-  for j in 2:length(ops)
-    (ITensors.site(ITensors.argument(ops[j])[1]) != v) &&
-      error("Mismatch of vertex labels in computeSiteSum")
-    T +=
-      convert(coefficient_type, coefficient(ops[j])) *
-      computeSiteProd(sites, ITensors.argument(ops[j]))
-  end
-  return T
-end
-=#
