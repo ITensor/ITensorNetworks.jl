@@ -1,3 +1,5 @@
+using TupleTools: TupleTools
+
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
 
 const AbstractTTN = AbstractTreeTensorNetwork
@@ -334,7 +336,7 @@ function permute(ψ::AbstractTTN, ::Tuple{typeof(linkind),typeof(siteinds),typeo
   ψ̃ = copy(ψ)
   for v in vertices(ψ)
     ls = [only(linkinds(ψ, n => v)) for n in neighbors(ψ, v)] # TODO: won't work for multiple indices per link...
-    ss = sort(Tuple(siteinds(ψ, v)); by=plev)
+    ss = TupleTools.sort(Tuple(siteinds(ψ, v)); by=plev)
     setindex_preserve_graph!(
       ψ̃, permute(ψ[v], filter(!isnothing, (ls[1], ss..., ls[2:end]...))), v
     )
