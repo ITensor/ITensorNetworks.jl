@@ -122,14 +122,17 @@ end
 
 function contraction_sequence(::Algorithm"einexpr", tn; optimizer=EinExprs.Exhaustive())
   is = IndsNetwork(tn)
-  size_dict = Dict(
-    Symbol(id(index)) => dim(index) for
-    index in Iterators.map(i -> only(is[i]), vertices(is))
-  )
 
   tensors = map(vertex_data(ψ)) do tensor
-    EinExpr(collect(map(Symbol ∘ id, inds(tensor))))
+    _inds = collect(map(Symbol ∘ id, inds(tensor)))
+    _size = Dict(_inds .=> size(tensor))
+    EinExpr(_inds, _size)
   end
 
-  return tn = einexpr(optimizer, EinExpr(tensors, size_dict))
+  # TODO (mofeing) list open indices
+  expr = sum(tensors; skip=...)
+  path = einexpr(optimizer, expr)
+
+  # TODO (mofeing) convert EinExpr to contraction sequence
+  return nothing
 end
