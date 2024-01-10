@@ -137,7 +137,7 @@ using Test
     add_edge!(c2, (-1, 1) => (2, 1))
     rem_edge!(c2, (2, 1) => (2, 2))
     rem_edge!(c2, (2, 1) => (3, 1))
-    @show c2
+    #@show c2
 
     is = siteinds("S=1/2", c; conserve_qns=true)
     is_missing_site = siteinds("S=1/2", c2; conserve_qns=true)
@@ -146,7 +146,6 @@ using Test
     # linearized version
     linear_order = [4, 1, 2, 5, 3, 6]
     vmap = Dictionary(vertices(is)[linear_order], 1:length(linear_order))
-    @show filter(d -> !isempty(d), vertex_data(is_missing_site))
     sites = only.(filter(d -> !isempty(d), collect(vertex_data(is_missing_site))))[linear_order]
 
     J1 = -1
