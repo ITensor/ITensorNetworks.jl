@@ -48,7 +48,7 @@ end
 function ttn_svd(
   coefficient_type::Type{<:Number},
   os::OpSum,
-  sites::IndsNetwork,
+  sites0::IndsNetwork,
   root_vertex;
   mindim::Int=1,
   maxdim::Int=typemax(Int),
@@ -57,6 +57,7 @@ function ttn_svd(
   # check for qns on the site indices
   #FIXME: this check for whether or not any of the siteindices has QNs is somewhat ugly
   #FIXME: how are sites handled where some sites have QNs and some don't?
+  sites = deepcopy(sites0)
   edgetype_sites = edgetype(sites)
   vertextype_sites = vertextype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
@@ -93,6 +94,14 @@ function ttn_svd(
   end
 
   Hflux = -calc_qn(terms(first(terms(os))))
+  # insert dummy indices on internal vertices, these will not show up in the final tensor
+  is_internal = Dict{vertextype_sites,Bool}()
+  for v in vs
+    is_internal[v] = isempty(sites[v])
+    if isempty(sites[v])
+      push!(sites[v], Index(Hflux => 1)) ###FIXME: using Hflux may be a problem with AutoFermion, the dummy index has to be bosonic (but the QN of H should be too?) ...
+    end
+  end
   inbond_coefs = Dict(
     e => Dict{QN,Vector{ITensors.MatElem{coefficient_type}}}() for e in es
   )                         # bond coefficients for incoming edge channels
@@ -225,7 +234,7 @@ function ttn_svd(
     link_space[e] = Index(qi...; tags=edge_tag(e), dir=linkdir)
   end
 
-  H = TTN(sites)
+  H = TTN(sites0)   ###initialize TTN without the dummy indices added
   function qnblock(i::Index, q::QN)
     for b in 2:(nblocks(i) - 1)
       flux(i, Block(b)) == q && return b
@@ -342,7 +351,11 @@ function ttn_svd(
       if !thishasqns
         iT = removeqns(iT)
       end
-      H[v] += (iT * Op)
+      if is_internal[v]
+        H[v] += iT
+      else
+        H[v] += (iT * Op)
+      end
     end
 
     linkdims = dim.(linkinds)
@@ -367,7 +380,11 @@ function ttn_svd(
     if !thishasqns
       T = removeqns(T)
     end
-    H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
+    if is_internal[v]
+      H[v] += T
+    else
+      H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
+    end
   end
 
   return H
