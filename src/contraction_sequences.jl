@@ -123,7 +123,7 @@ end
 function contraction_sequence(::Algorithm"einexpr", tn; optimizer=EinExprs.Exhaustive())
   is = IndsNetwork(tn)
 
-  tensors = map(vertex_data(ψ)) do tensor
+  tensors = map(vertex_data(tn)) do tensor
     _inds = collect(map(Symbol ∘ id, inds(tensor)))
     _size = Dict(_inds .=> size(tensor))
     EinExpr(_inds, _size)
