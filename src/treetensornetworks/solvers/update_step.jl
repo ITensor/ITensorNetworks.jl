@@ -182,7 +182,11 @@ function local_update(
   nsites = (region isa AbstractEdge) ? 0 : length(region)
   PH = set_nsite(PH, nsites)
   PH = position(PH, psi, region)
-  phi, info = solver(PH, phi; normalize, region, step_kwargs..., solver_kwargs...)
+  (psi_ref!) = Ref(psi) # create references, in case solver does (out-of-place) modify PH or psi
+  (PH_ref!) = Ref(PH)
+  phi, info = solver(phi;(psi_ref!),(PH_ref!), normalize, region, sweep_regions, sweep_step, step_kwargs..., solver_kwargs...)  # args passed by reference are supposed to be modified out of place
+  psi = psi_ref![] # dereference
+  PH = PH_ref![]
   if !(phi isa ITensor && info isa NamedTuple)
     println("Solver returned the following types: $(typeof(phi)), $(typeof(info))")
     error("In alternating_update, solver must return an ITensor and a NamedTuple")
