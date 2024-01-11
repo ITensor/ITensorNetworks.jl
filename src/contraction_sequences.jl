@@ -1,3 +1,5 @@
+using EinExprs: EinExprs, EinExpr, einexpr
+
 function contraction_sequence(tn::Vector{ITensor}; alg="optimal", kwargs...)
   return contraction_sequence(Algorithm(alg), tn; kwargs...)
 end
