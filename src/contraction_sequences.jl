@@ -1,5 +1,3 @@
-using EinExprs: EinExprs, EinExpr, einexpr
-
 function contraction_sequence(tn::Vector{ITensor}; alg="optimal", kwargs...)
   return contraction_sequence(Algorithm(alg), tn; kwargs...)
 end
@@ -120,26 +118,4 @@ function contraction_sequence(::Algorithm"kahypar_bipartite", tn; kwargs...)
   return optimize_contraction_sequence(
     tn; optimizer=OMEinsumContractionOrders.KaHyParBipartite(; kwargs...)
   )
-end
-
-function contraction_sequence(::Algorithm"einexpr", tn; optimizer=EinExprs.Exhaustive())
-  tensor_map = IdDict(
-    map(pairs(vertex_data(tn))) do (key, tensor)
-      _inds = collect(map(Symbol ∘ id, inds(tensor)))
-      _size = Dict(_inds .=> size(tensor))
-      EinExpr(_inds, _size) => key
-    end,
-  )
-  tensors = collect(keys(tensor_map))
-
-  _openinds = collect(map(Symbol ∘ id, externalinds(tn)))
-  expr = sum(tensors; skip=_openinds)
-  path = einexpr(optimizer, expr)
-
-  function _convert_to_contraction_sequence(subpath)
-    length(subpath.args) == 0 && return tensor_map[subpath]
-    return map(_convert_to_contraction_sequence, subpath.args)
-  end
-
-  return _convert_to_contraction_sequence(path)
 end
