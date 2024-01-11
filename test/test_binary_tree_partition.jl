@@ -1,5 +1,6 @@
 using ITensors, OMEinsumContractionOrders
 using Graphs, NamedGraphs
+using ITensorNetworks
 using ITensors: contract
 using ITensorNetworks:
   _root,
@@ -9,6 +10,7 @@ using ITensorNetworks:
   _contract_deltas_ignore_leaf_partitions,
   _rem_vertex!,
   _DensityMartrixAlgGraph
+using Test
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")

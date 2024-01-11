@@ -10,8 +10,7 @@ using ITensorNetworks:
   belief_propagation,
   approx_network_region,
   contract_inner,
-  message_tensors,
-  nested_graph_leaf_vertices
+  message_tensors
 
 function main()
   n = 4
@@ -31,41 +30,29 @@ function main()
   v = (1, 1)
 
   #Now do Simple Belief Propagation to Measure Sz on Site v
-  mts = message_tensors(
-    ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ))))
-  )
-
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=20)
-
-  numerator_network = approx_network_region(
-    ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
-  )
-  denominator_network = approx_network_region(ψψ, mts, [(v, 1)])
-  sz_bp = contract(numerator_network)[] / contract(denominator_network)[]
+  pψψ = PartitionedITensorNetwork(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+  mts = message_tensors(pψψ)
+  mts = belief_propagation(pψψ, mts; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
+  numerator_tensors = approx_network_region(
+    pψψ, mts, [(v, 1)]; verts_tn=[apply(op("Sz", s[v]), ψ[v])])
+  denominator_tensors = approx_network_region(pψψ, mts, [(v, 1)])
+  sz_bp = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
   println(
     "Simple Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp)
   )
 
-  #Now do General Belief Propagation to Measure Sz on Site v
-  nsites = 4
-  Zp = partition(
-    partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=nsites
-  )
-  Zpp = partition(ψψ; subgraph_vertices=nested_graph_leaf_vertices(Zp))
-  mts = message_tensors(Zpp)
-  mts = belief_propagation(ψψ, mts; contract_kwargs=(; alg="exact"), niters=20)
-  numerator_network = approx_network_region(
-    ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
-  )
-  denominator_network = approx_network_region(ψψ, mts, [(v, 1)])
-  sz_bp = contract(numerator_network)[] / contract(denominator_network)[]
+  #Now do Column-wise General Belief Propagation to Measure Sz on Site v
+  pψψ = PartitionedITensorNetwork(ψψ, collect(values(group(v -> v[1][1], vertices(ψψ)))))
+  mts = message_tensors(pψψ)
+  mts = belief_propagation(pψψ, mts; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
+  numerator_tensors = approx_network_region(
+    pψψ, mts, [(v, 1)]; verts_tn=[apply(op("Sz", s[v]), ψ[v])])
+  denominator_tensors = approx_network_region(pψψ, mts, [(v, 1)])
+  sz_gen_bp = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
   println(
-    "General Belief Propagation (4-site subgraphs) Gives Sz on Site " *
-    string(v) *
-    " as " *
-    string(sz_bp),
+    "General Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_gen_bp)
   )
 
   #Now do General Belief Propagation with Matrix Product State Message Tensors Measure Sz on Site v
@@ -78,30 +65,16 @@ function main()
   ψψ = combine_linkinds(ψψ, combiners)
   ψOψ = combine_linkinds(ψOψ, combiners)
 
-  Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
-  maxdim = 8
-  mts = message_tensors(Z)
-
-  mts = belief_propagation(
-    ψψ,
-    mts;
-    contract_kwargs=(;
-      alg="density_matrix",
-      output_structure=path_graph_structure,
-      maxdim,
-      contraction_sequence_alg="optimal",
-    ),
-  )
-
-  numerator_network = approx_network_region(ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v]))
-  denominator_network = approx_network_region(ψψ, mts, [v])
-  sz_bp = contract(numerator_network)[] / contract(denominator_network)[]
+  pψψ = PartitionedITensorNetwork(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+  mts = message_tensors(pψψ; itensor_constructor=inds_e -> ITensor[dense(delta(i)) for i in inds_e])
+  mts = belief_propagation(pψψ, mts; contract_kwargs=(;alg="density_matrix",output_structure=path_graph_structure,maxdim = 8,contraction_sequence_alg="optimal"))
+  numerator_tensors = approx_network_region(
+    pψψ, mts, [v]; verts_tn=[ψOψ[v]])
+  denominator_tensors = approx_network_region(pψψ, mts, [v])
+  sz_MPS_bp = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
   println(
-    "General Belief Propagation with Column Partitioning and MPS Message Tensors (Max dim 8) Gives Sz on Site " *
-    string(v) *
-    " as " *
-    string(sz_bp),
+    "Column-Wise MPS Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_gen_bp)
   )
 
   #Now do it exactly
