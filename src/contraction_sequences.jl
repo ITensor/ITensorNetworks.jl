@@ -129,8 +129,8 @@ function contraction_sequence(::Algorithm"einexpr", tn; optimizer=EinExprs.Exhau
     EinExpr(_inds, _size)
   end
 
-  # TODO (mofeing) list open indices
-  expr = sum(tensors; skip=...)
+  _openinds = collect(map(Symbol ∘ id, externalinds(tn)))
+  expr = sum(tensors; skip=_openinds)
   path = einexpr(optimizer, expr)
 
   # TODO (mofeing) convert EinExpr to contraction sequence
