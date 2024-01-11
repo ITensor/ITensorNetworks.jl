@@ -123,16 +123,23 @@ function contraction_sequence(::Algorithm"kahypar_bipartite", tn; kwargs...)
 end
 
 function contraction_sequence(::Algorithm"einexpr", tn; optimizer=EinExprs.Exhaustive())
-  tensors = map(tokenized(vertex_data(tn))) do tensor
-    _inds = collect(map(Symbol ∘ id, inds(tensor)))
-    _size = Dict(_inds .=> size(tensor))
-    EinExpr(_inds, _size)
-  end
+  tensor_map = IdDict(
+    map(pairs(vertex_data(tn))) do (key, tensor)
+      _inds = collect(map(Symbol ∘ id, inds(tensor)))
+      _size = Dict(_inds .=> size(tensor))
+      EinExpr(_inds, _size) => key
+    end,
+  )
+  tensors = collect(keys(tensor_map))
 
   _openinds = collect(map(Symbol ∘ id, externalinds(tn)))
   expr = sum(tensors; skip=_openinds)
   path = einexpr(optimizer, expr)
 
-  # TODO (mofeing) convert EinExpr to contraction sequence
-  return nothing
+  function _convert_to_contraction_sequence(subpath)
+    length(subpath.args) == 0 && return tensor_map[subpath]
+    return map(_convert_to_contraction_sequence, subpath.args)
+  end
+
+  return _convert_to_contraction_sequence(path)
 end
