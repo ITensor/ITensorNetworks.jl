@@ -49,12 +49,6 @@ end
   # Random fields h ∈ [-W, W]
   h = W * (2 * rand(nv(c)) .- 1)
 
-  if conserve_qns
-    # QN conservation for non-path graphs is currently broken
-    @test_broken TTN(ITensorNetworks.heisenberg(c; h), s)
-    continue
-  end
-
   H = TTN(ITensorNetworks.heisenberg(c; h), s)
 
   # TODO: Use `TTN(s; states=v -> rand(["↑", "↓"]))` or
