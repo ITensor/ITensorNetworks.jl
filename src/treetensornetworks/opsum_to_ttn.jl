@@ -258,7 +258,7 @@ function ttn_svd(
       T_qns = el.qn_idxs
       ct = convert(coefficient_type, coefficient(t))
       sublinkdims = [
-        (T_inds[i] == -1 ? 1 : qnblockdim(linkinds[i], T_qns[i])) for i in 1:degrees[v]
+        (T_inds[i] == -1 ? 1 : qnblockdim(linkinds[i], ITensors.using_auto_fermion() ? -T_qns[i] : T_qns[i])) for i in 1:degrees[v]
       ]
       zero_arr() = zeros(coefficient_type, sublinkdims...)
       terminal_dims = findall(d -> T_inds[d] == -1, 1:degrees[v])   # directions in which term starts or ends
@@ -273,7 +273,7 @@ function ttn_svd(
 
       # set non-trivial helper inds
       for d in normal_dims
-        block_helper_inds[d] = qnblock(linkinds[d], T_qns[d])
+        block_helper_inds[d] = qnblock(linkinds[d],  ITensors.using_auto_fermion() ? -T_qns[d] : T_qns[d])
       end
 
       @assert all(≠(-1), block_helper_inds)# check that all block indices are set
@@ -286,11 +286,13 @@ function ttn_svd(
       #@show T_inds
       iT_qns = deepcopy(T_qns)
       for d in dims_out
-        if !ITensors.isfermionic(iT_qns[d])
-          iT_qns[d] = -iT_qns[d]
-        end
+        #if !ITensors.using_auto_fermion()
+
+        #if !ITensors.has_fermionic_subspaces(linkinds[d]) ###FIXME: don't understand why it only applies to indices with ferm. subspaces? the logic above for autofermion applies regardless?
+        iT_qns[d] = -iT_qns[d]
+        #end
       end
-      #if !isnothing(dim_in) && ITensors.isfermionic(iT_qns[dim_in])
+      #if !isnothing(dim_in) && ITensors.using_auto_fermion()
       #  iT_qns[dim_in]=-iT_qns[dim_in]
       #end
 
@@ -315,7 +317,7 @@ function ttn_svd(
           z = ct
           temp_inds = copy(T_inds)
           for (i, d) in enumerate(normal_dims)
-            V_factor = Vv[d][iT_qns[d]][T_inds[d], c[i]]
+            V_factor = Vv[d][ITensors.using_auto_fermion() ? iT_qns[d] : iT_qns[d]][T_inds[d], c[i]]
             z *= (d == dim_in ? conj(V_factor) : V_factor) # conjugate incoming isometry factor
             temp_inds[d] = c[i]
           end
@@ -335,6 +337,7 @@ function ttn_svd(
 
     for ((b, q_op), m) in blocks
       Op = computeSiteProd(sites, Prod(q_op))
+      Op = (ITensors.using_auto_fermion() && !isnothing(Op)) ? dag(Op) : Op
       if hasqns(Op) ###FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
         iszero(nnzblocks(Op)) && continue
       end
@@ -345,8 +348,10 @@ function ttn_svd(
       end
       sq = flux(Op)
       if !isnothing(sq)
-        sq = ITensors.using_auto_fermion() ? -sq : sq
+        #sq = ITensors.using_auto_fermion() ? -sq : sq
         cq = rq - sq  #Hflux needs to be the zero element under addition so this is true without loss of generality
+        #cq = -cq
+        #@show cq
         if ITensors.using_auto_fermion()
           ###the underlying linear ordering is the order of given by find_pos_in tree/reverse(post_order_dfs_vertices(sites, root_vertex))
           ###the edges of the tree are also in the corresponding order, and so are the local edges
@@ -371,9 +376,16 @@ function ttn_svd(
       if !thishasqns
         iT = removeqns(iT)
       end
+      
       if is_internal[v]
         H[v] += iT
       else
+        if ITensors.using_auto_fermion()
+          @show flux(iT), flux(Op), flux(iT * Op)
+        end
+        if hasqns(iT)
+          @assert flux(iT * Op) == Hflux
+        end
         H[v] += (iT * Op)
       end
     end
@@ -403,7 +415,11 @@ function ttn_svd(
     if is_internal[v]
       H[v] += T
     else
-      H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
+      if ITensors.using_auto_fermion()
+        H[v] += T * dag(ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))])))
+      else
+        H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
+      end
     end
   end
 

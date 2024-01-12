@@ -7,6 +7,8 @@ using Test
 @testset "OpSum to TTN converter" begin
   @testset "OpSum to TTN" begin
     # small comb tree
+
+    ITensors.disable_auto_fermion()
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
 
@@ -72,6 +74,7 @@ using Test
   end
 
   @testset "OpSum to TTN QN" begin
+    ITensors.disable_auto_fermion()
     # small comb tree
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
@@ -131,12 +134,9 @@ using Test
     @assert ITensors.using_auto_fermion()
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
-    is = siteinds("Fermion", c; conserve_nf=true)
-    is_noqns = copy(is)
-    for v in vertices(is)
-      is_noqns[v] = removeqns(is_noqns[v])
-    end
-
+    #is = siteinds("Fermion", c; conserve_nf=true)
+    is = siteinds("Electron", c; conserve_nf=true,conserve_sz=false)
+    
     # linearized version
     linear_order = [4, 1, 2, 5, 3, 6]
     vmap = Dictionary(vertices(is)[linear_order], 1:length(linear_order))
@@ -147,8 +147,8 @@ using Test
     tp = 0.4
     U = 0.0
     h=0.5
-    H = ITensorNetworks.tight_binding(c; t=t, tp=tp, h=h)
-    #H = ITensorNetworks.hubbard(c; t=t, tp=tp, h=h)
+    #H = ITensorNetworks.tight_binding(c; t=t, tp=tp, h=h)
+    H = ITensorNetworks.hubbard(c; t=t, tp=tp, h=h)
     
     # add combination of longer range interactions
     #Hlr = copy(H)
@@ -164,7 +164,7 @@ using Test
       # get TTN Hamiltonian directly
       Hsvd = TTN(H, is; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      Hline = MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensors.MPO(relabel_sites(H, vmap), sites)
       # compare resulting sparse Hamiltonians
 
       @disable_warn_order begin
