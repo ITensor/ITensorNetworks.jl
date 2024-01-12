@@ -151,8 +151,10 @@ using Test
     H = ITensorNetworks.hubbard(c; t=t, tp=tp, h=h)
     
     # add combination of longer range interactions
-    #Hlr = copy(H)
-    #Hlr += 5, "N", (1, 2), "N", (2, 2)#, "Z", (3,2)
+    Hlr = copy(H)
+    #Hlr += 5, "Cdag", (1, 2), "C", (3, 2)#, "Z", (3,2)
+    #Hlr += 5, "Cdag", (3, 2), "C", (1, 2)#, "Z", (3,2)
+    
     #Hlr += -4, "N", (1, 1), "N", (2, 2)
     #Hlr += 2.0, "Sz", (2, 2), "Sz", (3, 2)
     #Hlr += -1.0, "Sz", (1, 2), "Sz", (3, 1)
