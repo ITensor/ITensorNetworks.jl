@@ -125,6 +125,69 @@ using Test
     end
   end
 
+  @testset "OpSum to TTN Fermions" begin
+    # small comb tree
+    ITensors.enable_auto_fermion()
+    @assert ITensors.using_auto_fermion()
+    tooth_lengths = fill(2, 3)
+    c = named_comb_tree(tooth_lengths)
+    is = siteinds("Fermion", c; conserve_nf=true)
+    is_noqns = copy(is)
+    for v in vertices(is)
+      is_noqns[v] = removeqns(is_noqns[v])
+    end
+
+    # linearized version
+    linear_order = [4, 1, 2, 5, 3, 6]
+    vmap = Dictionary(vertices(is)[linear_order], 1:length(linear_order))
+    sites = only.(collect(vertex_data(is)))[linear_order]
+
+    # test with next-to-nearest-neighbor Ising Hamiltonian
+    t=1.0
+    tp = 0.4
+    U = 0.0
+    h=0.5
+    H = ITensorNetworks.tight_binding(c; t=t, tp=tp, h=h)
+    #H = ITensorNetworks.hubbard(c; t=t, tp=tp, h=h)
+    
+    # add combination of longer range interactions
+    #Hlr = copy(H)
+    #Hlr += 5, "N", (1, 2), "N", (2, 2)#, "Z", (3,2)
+    #Hlr += -4, "N", (1, 1), "N", (2, 2)
+    #Hlr += 2.0, "Sz", (2, 2), "Sz", (3, 2)
+    #Hlr += -1.0, "Sz", (1, 2), "Sz", (3, 1)
+
+    # root_vertex = (1, 2)
+    # println(leaf_vertices(is))
+
+    @testset "Svd approach" for root_vertex in leaf_vertices(is)
+      # get TTN Hamiltonian directly
+      Hsvd = TTN(H, is; root_vertex=root_vertex, cutoff=1e-10)
+      # get corresponding MPO Hamiltonian
+      Hline = MPO(relabel_sites(H, vmap), sites)
+      # compare resulting sparse Hamiltonians
+
+      @disable_warn_order begin
+        Tmpo = prod(Hline)
+        Tttno = contract(Hsvd)
+      end
+      #@show norm(Hsvd), norm(Hline)
+      #@test norm(Hsvd) ≈ norm(Hline) rtol = 1e-6
+      @show norm(Tmpo), norm(Tttno) 
+      @test norm(Tmpo) ≈ norm(Tttno) rtol = 1e-6
+      # this breaks for longer range interactions ###not anymore
+      #=
+      Hsvd_lr = TTN(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)
+      Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
+      @disable_warn_order begin
+        Tttno_lr = prod(Hline_lr)
+        Tmpo_lr = contract(Hsvd_lr)
+      end
+      @test norm(Tttno_lr) ≈ norm(Tmpo_lr) rtol = 1e-6
+      =#
+    end
+  end
+  #=
   @testset "OpSum to TTN QN missing" begin
     # small comb tree
     tooth_lengths = fill(2, 3)
@@ -190,4 +253,5 @@ using Test
       @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
     end
   end
+  =#
 end

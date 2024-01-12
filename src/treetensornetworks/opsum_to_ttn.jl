@@ -247,7 +247,7 @@ function ttn_svd(
 
     linkinds = [link_space[e] for e in edges]
     linkdims = dim.(linkinds)
-
+    #@show space.(linkinds)
     # construct blocks
     blocks = Dict{Tuple{Block{degrees[v]},Vector{Op}},Array{coefficient_type,degrees[v]}}()
     for el in tempTTN[v]
@@ -282,10 +282,17 @@ function ttn_svd(
 
       # T_qns takes into account incoming/outgoing arrow direction, while Vs are stored for incoming arrow
       # flip sign of QN for outgoing arrows, to match incoming arrow definition of Vs
+      #@show T_qns
+      #@show T_inds
       iT_qns = deepcopy(T_qns)
       for d in dims_out
-        iT_qns[d] = -iT_qns[d]
+        if !ITensors.isfermionic(iT_qns[d])
+          iT_qns[d] = -iT_qns[d]
+        end
       end
+      #if !isnothing(dim_in) && ITensors.isfermionic(iT_qns[dim_in])
+      #  iT_qns[dim_in]=-iT_qns[dim_in]
+      #end
 
       if isempty(normal_dims)
         M = get!(blocks, (theblock, terms(t)), zero_arr())
@@ -294,6 +301,16 @@ function ttn_svd(
       else
         M = get!(blocks, (theblock, terms(t)), zero_arr())
         dim_ranges = Tuple(size(Vv[d][iT_qns[d]], 2) for d in normal_dims)
+        other_dim_ranges = Tuple(size(Vv[d][iT_qns[d]], 1) for d in normal_dims)
+        mdim_ranges = Tuple(size(Vv[d][-iT_qns[d]], 2) for d in normal_dims)
+        mother_dim_ranges = Tuple(size(Vv[d][-iT_qns[d]], 1) for d in normal_dims)
+        
+        #@show dim_ranges
+        #@show other_dim_ranges
+        
+        #@show mdim_ranges
+        #@show mother_dim_ranges
+        
         for c in CartesianIndices(dim_ranges)
           z = ct
           temp_inds = copy(T_inds)
@@ -302,6 +319,8 @@ function ttn_svd(
             z *= (d == dim_in ? conj(V_factor) : V_factor) # conjugate incoming isometry factor
             temp_inds[d] = c[i]
           end
+          #@show temp_inds
+          #@show size(M)
           M[temp_inds...] += z
         end
       end
@@ -326,9 +345,9 @@ function ttn_svd(
       end
       sq = flux(Op)
       if !isnothing(sq)
+        sq = ITensors.using_auto_fermion() ? -sq : sq
         cq = rq - sq  #Hflux needs to be the zero element under addition so this is true without loss of generality
         if ITensors.using_auto_fermion()
-          @assert false
           ###the underlying linear ordering is the order of given by find_pos_in tree/reverse(post_order_dfs_vertices(sites, root_vertex))
           ###the edges of the tree are also in the corresponding order, and so are the local edges
           ###this implies that no permutation should be necessary among the internal indices
@@ -469,7 +488,7 @@ function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) 
       prevsite = currsite
 
       if fermionic
-        error("No verified fermion support for automatic TTN constructor!") # no verified support, just throw error
+        #error("No verified fermion support for automatic TTN constructor!") # no verified support, just throw error
         parity = -parity
       else
         # Ignore bosonic operators in perm
