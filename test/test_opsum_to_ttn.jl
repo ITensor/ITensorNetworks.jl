@@ -136,21 +136,19 @@ using Test
     end
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
-    #is = siteinds("Fermion", c; conserve_nf=true)
-    is = siteinds("Electron", c; conserve_nf=true,conserve_sz=true)
+    is = siteinds("Fermion", c; conserve_nf=true)
+    #is = siteinds("Electron", c; conserve_nf=true,conserve_sz=true)
     
     # linearized version
-    linear_order = [4, 1, 2, 5, 3, 6]
-    vmap = Dictionary(vertices(is)[linear_order], 1:length(linear_order))
-    sites = only.(collect(vertex_data(is)))[linear_order]
-
+    #linear_order = [4, 1, 2, 5, 3, 6]
+    
     # test with next-to-nearest-neighbor Ising Hamiltonian
     t=1.0
     tp = 0.4
     U = 0.0
     h=0.5
-    #H = ITensorNetworks.tight_binding(c; t=t, tp=tp, h=h)
-    H = ITensorNetworks.hubbard(c; t=t, tp=tp, h=h)
+    H = ITensorNetworks.tight_binding(c; t=t, tp=tp, h=h)
+    #H = ITensorNetworks.hubbard(c; t=t, tp=tp, h=h)
     
     # add combination of longer range interactions
     Hlr = copy(H)
@@ -168,6 +166,8 @@ using Test
       # get TTN Hamiltonian directly
       Hsvd = TTN(H, is; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
+      sites=only.([is[v] for v in reverse(post_order_dfs_vertices(c, root_vertex))])
+      vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
       Hline = ITensors.MPO(relabel_sites(H, vmap), sites)
       # compare resulting sparse Hamiltonians
 
@@ -175,10 +175,22 @@ using Test
         Tmpo = prod(Hline)
         Tttno = contract(Hsvd)
       end
-      #@show norm(Hsvd), norm(Hline)
-      #@test norm(Hsvd) ≈ norm(Hline) rtol = 1e-6
-      @show norm(Tmpo), norm(Tttno) 
+      # Tmpo ≈ Tttno seems to be broken for fermionic tensors
+      # thus matricize tensors by hand and convert to dense Matrix to compare element by element
+      cTmpo1=combiner(inds(Tmpo)[findall((plev.(inds(Tmpo))).==0)])
+      cTmpo2=combiner(inds(Tmpo)[findall((plev.(inds(Tmpo))).==1)])
+      Tmm=(Tmpo*cTmpo1)*cTmpo2
+      cTttno1=combiner(inds(Tttno)[findall((plev.(inds(Tttno))).==0)])
+      cTttno2=combiner(inds(Tttno)[findall((plev.(inds(Tttno))).==1)])
+      Ttm=(Tttno*cTttno1)*cTttno2
+      Ttm=replaceinds(Ttm, inds(Ttm)[1]=>inds(Tmm)[1])
+      Ttm=replaceinds(Ttm, inds(Ttm)[2]=>inds(Tmm)[2])
+      
       @test norm(Tmpo) ≈ norm(Tttno) rtol = 1e-6
+      @test any(Matrix(dense(Tmm-Ttm),inds(Tmm)[1],inds(Tmm)[2]) .> 1e-14)
+      #@test Tmm ≈ Ttm
+      #@test Tmpo ≈ Tttno rtol = 1e-6
+      
       # this breaks for longer range interactions ###not anymore
       #=
       Hsvd_lr = TTN(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)

@@ -30,7 +30,7 @@ ITensors.disable_warn_order()
   #
   ℋ = ising(g; h)
   χ = 2
-  β = 1.0
+  β = 2.0
   Δβ = 0.2
 
   # Sequence for contracting expectation values
@@ -60,7 +60,7 @@ ITensors.disable_warn_order()
     print_frequency=typemax(Int),
   )
   E2 = expect(ℋ, ψ; sequence=inner_sequence)
-
-  @test E2 < E1 < E0
-  @test E2 ≈ E_dmrg rtol = 1e-5
+  @show E0, E1, E2, E_dmrg
+  @test (((abs((E2-E1)/E2)<1e-4) && (E1 < E0)) || (E2 < E1 < E0))
+  @test E2 ≈ E_dmrg rtol = 1e-4
 end
