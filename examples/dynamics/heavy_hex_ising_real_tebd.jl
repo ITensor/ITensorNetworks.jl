@@ -38,7 +38,7 @@ osprey_processor_graph() = ibm_processor_graph(6, 12)
 
 """Take the expectation value of o on an ITN using belief propagation"""
 function expect_state_SBP(
-  o::ITensor, ψ::AbstractITensorNetwork, ψψ::AbstractITensorNetwork, mts::DataGraph
+  o::ITensor, ψ::AbstractITensorNetwork, pψψ::PartitionedGraph, mts
 )
   Oψ = apply(o, ψ; cutoff=1e-16)
   ψ = copy(ψ)
@@ -46,14 +46,13 @@ function expect_state_SBP(
   vs = vertices(s)[findall(i -> (length(commoninds(s[i], inds(o))) != 0), vertices(s))]
   vs_braket = [(v, 1) for v in vs]
 
-  numerator_network = approx_network_region(
-    ψψ, mts, vs_braket; verts_tn=ITensorNetwork(ITensor[Oψ[v] for v in vs])
-  )
-  denominator_network = approx_network_region(ψψ, mts, vs_braket)
-  num_seq = contraction_sequence(numerator_network; alg="optimal")
-  den_seq = contraction_sequence(numerator_network; alg="optimal")
-  return contract(numerator_network; sequence=num_seq)[] /
-         contract(denominator_network; sequence=den_seq)[]
+  numerator_tensors = approx_network_region(
+    pψψ, mts, vs_braket; verts_tn=ITensor[Oψ[v] for v in vs])
+  denominator_tensors = approx_network_region(pψψ, mts, vs_braket)
+  num_seq = contraction_sequence(numerator_tensors; alg="optimal")
+  den_seq = contraction_sequence(denominator_tensors; alg="optimal")
+  return contract(numerator_tensors; sequence=num_seq)[] /
+         contract(denominator_tensors; sequence=den_seq)[]
 end
 
 function main(θh::Float64, no_trotter_steps::Int64; apply_kwargs...)
@@ -94,7 +93,7 @@ function main(θh::Float64, no_trotter_steps::Int64; apply_kwargs...)
     cur_C = vidal_itn_canonicalness(ψ, bond_tensors)
     if ((i + 1) % gauge_freq) == 0 && (cur_C >= target_c)
       println("Too far from the Vidal gauge. Regauging the state!")
-      ψ, _ = vidal_to_symmetric_gauge(ψ, bond_tensors)
+      ψ, _, _ = vidal_to_symmetric_gauge(ψ, bond_tensors)
       ψ, bond_tensors = vidal_gauge(
         ψ; target_canonicalness=target_c, niters=20, cutoff=1e-14
       )
@@ -102,12 +101,11 @@ function main(θh::Float64, no_trotter_steps::Int64; apply_kwargs...)
   end
 
   #Calculate on-site magnetisations
-  ψ, mts = vidal_to_symmetric_gauge(ψ, bond_tensors)
-  ψψ = norm_network(ψ)
+  ψ, pψψ, mts = vidal_to_symmetric_gauge(ψ, bond_tensors)
   mag_dict = Dict(
     zip(
       [v for v in vertices(ψ)],
-      [expect_state_SBP(op("Z", s[v]), ψ, ψψ, mts) for v in vertices(ψ)],
+      [expect_state_SBP(op("Z", s[v]), ψ, pψψ, mts) for v in vertices(ψ)],
     ),
   )
 

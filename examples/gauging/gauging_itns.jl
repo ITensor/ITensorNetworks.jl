@@ -7,38 +7,36 @@ using SplitApplyCombine
 
 using ITensorNetworks:
   message_tensors,
-  nested_graph_leaf_vertices,
-  belief_propagation_iteration,
   belief_propagation,
-  find_subgraph,
   vidal_gauge,
   symmetric_gauge,
   vidal_itn_canonicalness,
-  vidal_to_symmetric_gauge,
   initialize_bond_tensors,
   vidal_itn_isometries,
   norm_network,
-  edge_sequence
+  edge_sequence,
+  belief_propagation_iteration
 
 using NamedGraphs
 using NamedGraphs: add_edges!, rem_vertex!, hexagonal_lattice_graph
 using Graphs
 
 """Eager Gauging"""
-function eager_gauging(ψ::ITensorNetwork, bond_tensors::DataGraph, mts::DataGraph)
+function eager_gauging(ψ::ITensorNetwork, pψψ::PartitionedGraph, bond_tensors::DataGraph, mts)
   isometries = vidal_itn_isometries(ψ, bond_tensors)
 
   ψ = copy(ψ)
   mts = copy(mts)
   for e in edges(ψ)
-    s1, s2 = find_subgraph((src(e), 1), mts), find_subgraph((dst(e), 1), mts)
+    vsrc, vdst = src(e), dst(e)
+    pe = NamedGraphs.partition_edge(pψψ, NamedEdge((vsrc, 1) => (vdst, 1)))
     normalize!(isometries[e])
     normalize!(isometries[reverse(e)])
-    mts[s1 => s2], mts[s2 => s1] = ITensorNetwork(isometries[e]),
+    mts[pe], mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))] = ITensorNetwork(isometries[e]),
     ITensorNetwork(isometries[reverse(e)])
   end
 
-  ψ, bond_tensors = vidal_gauge(ψ, mts, bond_tensors)
+  ψ, bond_tensors = vidal_gauge(ψ, pψψ, mts, bond_tensors)
 
   return ψ, bond_tensors, mts
 end
@@ -58,12 +56,9 @@ function benchmark_state_gauging(
 
   ψψ = norm_network(ψ)
   ψinit = copy(ψ)
-  vertex_groups = nested_graph_leaf_vertices(partition(ψψ, group(v -> v[1], vertices(ψψ))))
-  mts = message_tensors(partition(ψψ; subgraph_vertices=vertex_groups))
+  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+  mts = message_tensors(pψψ)
   bond_tensors = initialize_bond_tensors(ψ)
-  for e in edges(mts)
-    mts[e] = ITensorNetwork(dense(delta(inds(ITensors.contract(ITensor(mts[e]))))))
-  end
 
   for i in 1:no_iterations
     println("On Iteration " * string(i))
@@ -71,17 +66,16 @@ function benchmark_state_gauging(
     if mode == "belief_propagation"
       if BP_update_order != "parallel"
         times_iters[i] = @elapsed mts, _ = belief_propagation_iteration(
-          ψψ, mts; contract_kwargs=(; alg="exact")
+          pψψ, mts; contract_kwargs=(; alg="exact")
         )
       else
         times_iters[i] = @elapsed mts, _ = belief_propagation_iteration(
-          ψψ, mts; contract_kwargs=(; alg="exact"), edges=edge_sequence(mts; alg="parallel")
-        )
+          pψψ, mts; contract_kwargs=(; alg="exact"), edges=[PartitionEdge.(e) for e in edge_sequence(partitioned_graph(pψψ); alg="parallel")])
       end
 
-      times_gauging[i] = @elapsed ψ, bond_tensors = vidal_gauge(ψinit, mts)
+      times_gauging[i] = @elapsed ψ, bond_tensors = vidal_gauge(ψinit, pψψ, mts)
     elseif mode == "eager"
-      times_iters[i] = @elapsed ψ, bond_tensors, mts = eager_gauging(ψ, bond_tensors, mts)
+      times_iters[i] = @elapsed ψ, bond_tensors, mts = eager_gauging(ψ, pψψ, bond_tensors, mts)
     else
       times_iters[i] = @elapsed begin
         for e in edges(ψ)

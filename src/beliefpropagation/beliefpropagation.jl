@@ -1,5 +1,5 @@
 function message_tensors(
-  ptn::PartitionedITensorNetwork;
+  ptn::PartitionedGraph;
   itensor_constructor=inds_e -> ITensor[dense(delta(inds_e))]
 )
   mts = Dict()
@@ -17,7 +17,7 @@ end
 Do a single update of a message tensor using the current subgraph and the incoming mts
 """
 function update_message_tensor(
-  ptn::PartitionedITensorNetwork,
+  ptn::PartitionedGraph,
   edge::PartitionEdge,
   mts;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
@@ -45,7 +45,7 @@ end
 Do a sequential update of message tensors on `edges` for a given ITensornetwork and its partition into sub graphs
 """
 function belief_propagation_iteration(
-  ptn::PartitionedITensorNetwork,
+  ptn::PartitionedGraph,
   mts,
   edges::Vector{<:PartitionEdge};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
@@ -59,6 +59,7 @@ function belief_propagation_iteration(
     if compute_norm
       LHS, RHS = ITensors.contract(mts[e]),
       ITensors.contract(new_mts[e])
+      #This line only makes sense if the message tensors are rank 2??? Should fix this.
       LHS /= sum(diag(LHS))
       RHS /= sum(diag(RHS))
       c += 0.5 * norm(denseblocks(LHS) - denseblocks(RHS))
@@ -73,7 +74,7 @@ Currently we send the full message tensor data struct to belief_propagation_iter
 mts relevant to that subgraph.
 """
 function belief_propagation_iteration(
-  ptn::PartitionedITensorNetwork,
+  ptn::PartitionedGraph,
   mts,
   edge_groups::Vector{<:Vector{<:PartitionEdge}};
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
@@ -94,7 +95,7 @@ function belief_propagation_iteration(
 end
 
 function belief_propagation_iteration(
-  ptn::PartitionedITensorNetwork,
+  ptn::PartitionedGraph,
   mts;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   compute_norm=false,
@@ -104,7 +105,7 @@ function belief_propagation_iteration(
 end
 
 function belief_propagation(
-  ptn::PartitionedITensorNetwork,
+  ptn::PartitionedGraph,
   mts;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
   niters=default_bp_niters(partitioned_graph(ptn)),
@@ -132,7 +133,7 @@ end
 Given a subet of vertices of a given Tensor Network and the Message Tensors for that network, return a Dictionary with the involved subgraphs as keys and the vector of tensors associated with that subgraph as values
 Specifically, the contraction of the environment tensors and tn[vertices] will be a scalar.
 """
-function get_environment(ptn::PartitionedITensorNetwork, mts, verts::Vector; dir=:in)
+function get_environment(ptn::PartitionedGraph, mts, verts::Vector; dir=:in)
   partition_vertices = unique([NamedGraphs.which_partition(ptn, v) for v in verts])
 
   if dir == :out
@@ -151,7 +152,7 @@ Calculate the contraction of a tensor network centred on the vertices verts. Usi
 Defaults to using tn[verts] as the local network but can be overriden
 """
 function approx_network_region(
-  ptn::PartitionedITensorNetwork,
+  ptn::PartitionedGraph,
   mts,
   verts::Vector;
   verts_tn=ITensor[(unpartitioned_graph(ptn))[v] for v in verts],

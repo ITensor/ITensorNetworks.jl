@@ -12,7 +12,6 @@ using ITensorNetworks:
   approx_network_region,
   contract_inner,
   message_tensors,
-  nested_graph_leaf_vertices,
   edge_sequence
 
 function main()
@@ -39,36 +38,35 @@ function main()
     ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
     #Initial message tensors for BP
-    mts_init = message_tensors(
-      ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ))))
-    )
+    pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+    mts_init = message_tensors(pψψ)
 
     println("\nFirst testing out a $g_label. Random network with bond dim $χ")
 
     #Now test out various sequences
     print("Parallel updates (sequence is irrelevant): ")
     belief_propagation(
-      ψψ,
+      pψψ,
       mts_init;
       contract_kwargs=(; alg="exact"),
       target_precision=1e-10,
       niters=100,
-      edges=edge_sequence(mts_init; alg="parallel"),
+      edges=[PartitionEdge.(e) for e in edge_sequence(partitioned_graph(pψψ); alg="parallel")],
       verbose=true,
     )
     print("Sequential updates (sequence is default edge list of the message tensors): ")
     belief_propagation(
-      ψψ,
+      pψψ,
       mts_init;
       contract_kwargs=(; alg="exact"),
       target_precision=1e-10,
       niters=100,
-      edges=[e for e in edges(mts_init)],
+      edges=PartitionEdge.([e for e in vcat(edges(partitioned_graph(pψψ)), reverse.(edges(partitioned_graph(pψψ))))]),
       verbose=true,
     )
     print("Sequential updates (sequence is our custom sequence finder): ")
     belief_propagation(
-      ψψ,
+      pψψ,
       mts_init;
       contract_kwargs=(; alg="exact"),
       target_precision=1e-10,

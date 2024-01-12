@@ -2,6 +2,7 @@ using ITensors
 using ITensorNetworks
 using Random
 using SplitApplyCombine
+using NamedGraphs
 
 using ITensorNetworks:
   approx_network_region,
@@ -12,7 +13,6 @@ using ITensorNetworks:
 
 function main(; n, niters, network="ising", β=nothing, h=nothing, χ=nothing)
   g_dims = (n, n)
-  @show g_dims
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
 
@@ -30,22 +30,19 @@ function main(; n, niters, network="ising", β=nothing, h=nothing, χ=nothing)
 
   # Site to take expectation value on
   v = (n ÷ 2, n ÷ 2)
-  @show v
 
   #Now do Simple Belief Propagation to Measure Sz on Site v
-  mts = message_tensors(
-    ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ))))
-  )
+  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+  mts = message_tensors(pψψ)
 
-  mts = @time belief_propagation(ψψ, mts; niters, contract_kwargs=(; alg="exact"))
+  mts = @time belief_propagation(pψψ, mts; niters, contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(
-    ψψ, mts, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
-  )
-  denominator_network = approx_network_region(ψψ, mts, [(v, 1)])
+    pψψ, mts, [(v, 1)]; verts_tn=ITensor[apply(op("Sz", s[v]), ψ[v])])
+  denominator_network = approx_network_region(pψψ, mts, [(v, 1)])
   sz_bp =
-    contract(
+    ITensors.contract(
       numerator_network; sequence=contraction_sequence(numerator_network; alg="optimal")
-    )[] / contract(
+    )[] / ITensors.contract(
       denominator_network; sequence=contraction_sequence(denominator_network; alg="optimal")
     )[]
 
@@ -53,16 +50,12 @@ function main(; n, niters, network="ising", β=nothing, h=nothing, χ=nothing)
     "Simple Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp)
   )
 
-  mts_sqrt = message_tensors(
-    ψψ; subgraph_vertices=collect(values(group(v -> v[1], vertices(ψψ))))
-  )
-
-  mts_sqrt = @time sqrt_belief_propagation(ψ, mts_sqrt; niters)
+  mts_sqrt = message_tensors(pψψ)
+  mts_sqrt = @time sqrt_belief_propagation(pψψ, mts_sqrt; niters)
 
   numerator_network = approx_network_region(
-    ψψ, mts_sqrt, [(v, 1)]; verts_tn=ITensorNetwork([apply(op("Sz", s[v]), ψ[v])])
-  )
-  denominator_network = approx_network_region(ψψ, mts_sqrt, [(v, 1)])
+    pψψ, mts_sqrt, [(v, 1)]; verts_tn=ITensor[apply(op("Sz", s[v]), ψ[v])])
+  denominator_network = approx_network_region(pψψ, mts_sqrt, [(v, 1)])
   sz_sqrt_bp =
     contract(
       numerator_network; sequence=contraction_sequence(numerator_network; alg="optimal")

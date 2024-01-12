@@ -30,7 +30,7 @@ function main()
   v = (1, 1)
 
   #Now do Simple Belief Propagation to Measure Sz on Site v
-  pψψ = PartitionedITensorNetwork(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(pψψ)
   mts = belief_propagation(pψψ, mts; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
   numerator_tensors = approx_network_region(
@@ -43,7 +43,7 @@ function main()
   )
 
   #Now do Column-wise General Belief Propagation to Measure Sz on Site v
-  pψψ = PartitionedITensorNetwork(ψψ, collect(values(group(v -> v[1][1], vertices(ψψ)))))
+  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1][1], vertices(ψψ)))))
   mts = message_tensors(pψψ)
   mts = belief_propagation(pψψ, mts; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
   numerator_tensors = approx_network_region(
@@ -65,7 +65,7 @@ function main()
   ψψ = combine_linkinds(ψψ, combiners)
   ψOψ = combine_linkinds(ψOψ, combiners)
 
-  pψψ = PartitionedITensorNetwork(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
   mts = message_tensors(pψψ; itensor_constructor=inds_e -> ITensor[dense(delta(i)) for i in inds_e])
   mts = belief_propagation(pψψ, mts; contract_kwargs=(;alg="density_matrix",output_structure=path_graph_structure,maxdim = 8,contraction_sequence_alg="optimal"))
   numerator_tensors = approx_network_region(
