@@ -130,8 +130,10 @@ using Test
 
   @testset "OpSum to TTN Fermions" begin
     # small comb tree
-    ITensors.enable_auto_fermion()
-    @assert ITensors.using_auto_fermion()
+    auto_fermion_enabled=ITensors.using_auto_fermion()
+    if !auto_fermion_enabled
+      ITensors.enable_auto_fermion()
+    end
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
     #is = siteinds("Fermion", c; conserve_nf=true)
@@ -187,6 +189,9 @@ using Test
       end
       @test norm(Tttno_lr) ≈ norm(Tmpo_lr) rtol = 1e-6
       =#
+    end
+    if !auto_fermion_enabled
+      ITensors.disable_auto_fermion()
     end
   end
   #=
