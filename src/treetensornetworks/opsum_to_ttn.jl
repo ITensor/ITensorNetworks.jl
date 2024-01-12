@@ -4,6 +4,7 @@
 # Utility methods
 # 
 
+
 # linear ordering of vertices in tree graph relative to chosen root, chosen outward from root
 function find_index_in_tree(site, g::AbstractGraph, root_vertex)
   ordering = reverse(post_order_dfs_vertices(g, root_vertex))
@@ -61,6 +62,7 @@ function ttn_svd(
 
   # traverse tree outwards from root vertex
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
+  #ToDo: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
   es = reverse(reverse.(post_order_dfs_edges(sites, root_vertex)))                          # store edges in fixed ordering relative to root
   # some things to keep track of
   degrees = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
@@ -240,7 +242,8 @@ function ttn_svd(
     edges = filter(e -> dst(e) == v || src(e) == v, es)
     dim_in = findfirst(e -> dst(e) == v, edges)
     dims_out = findall(e -> src(e) == v, edges)
-
+    #@show dim_in
+    @assert dim_in == nothing || dim_in == 1
     # slice isometries at this vertex
     Vv = [Vs[e] for e in edges]
 
@@ -318,22 +321,30 @@ function ttn_svd(
       if hasqns(Op) ###FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
         iszero(nnzblocks(Op)) && continue
       end
+      if b[1]==1
+        rq=Hflux  #set QN of non-existing incoming dim to Hflux pr trivial QN?
+      else
+        rq = first(space(linkinds[1])[b[1]])  #get QN of incoming dim
       sq = flux(Op)
       if !isnothing(sq)
+        cq = rq - sq  #Hflux needs to be the zero element under addition so this is true without loss of generality
         if ITensors.using_auto_fermion()
           @assert false
-          ###assuming we want index ordering dim_in, phys..., dims_out...
-          ###but are assembling the tensor by tensor product (dim_in,dims_out...) x (phys...)
+          ###the underlying linear ordering is the order of given by find_pos_in tree/reverse(post_order_dfs_vertices(sites, root_vertex))
+          ###the edges of the tree are also in the corresponding order, and so are the local edges
+          ###this implies that no permutation should be necessary among the internal indices
+          ###then the logic can straightforwardly be generalized from the MPS case
+          ###since
+          ### a) the incoming index should be the first index of the tensor if the incoming index exists
+          ### b) the outgoing indices are the last indices of the tensor, already in the correct order, see above
+          ### c) we should be able to logically combine the outgoing indices into a single index (i.e. sum of outgoing qns)
+          ### d) now the format of the problem is exactly identical to the MPO case
+          ###since we are assembling the tensor by tensor product (dim_in,dims_out...) x (phys...)
           ###we need to undo the autofermion logic.
-          ###this requires the perm and the quantum numbers
-          ###perm is 1,3,2 (switching phys and dims_out dimensions)
-          ###quantum numbers need to be retrieved from block and linkinds
-          ###basically first(space(linkinds[i])[j]) for (i,j) in block
-          ###this logic requires dim_in to be 1 always, i don't think this is guaranteed
-          ###however, maybe it is required when using autofermion?
-          ###so we would have to figure out a perm to bring it into that format
-          ##compute perm factor to bring into this format, combine with perm factor that results from MPS-like logic
-          #perm=(1,3,2)
+          perm=(1,3,2)
+          if ITensors.compute_permfactor(perm,rq,sq,cq) == -1
+            Op .*= -1
+          end
         end
       end
       T = ITensors.BlockSparseTensor(coefficient_type, [b], _linkinds)
@@ -411,7 +422,8 @@ function computeSiteProd(sites::IndsNetwork{V,<:Index}, ops::Prod{Op})::ITensor 
   return T
 end
 
-###CHECK/ToDo: Understand the fermion logic on trees...
+# This is almost an exact copy of ITensors/src/opsum_to_mpo_generic:sorteachterm except for the site ordering being
+# given via find_index_in_tree
 # changed `isless_site` to use tree vertex ordering relative to root
 function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) where {V}
   os = copy(os)
