@@ -263,7 +263,7 @@ function internalinds(tn::AbstractITensorNetwork)
 end
 
 function externalinds(tn::AbstractITensorNetwork)
-  return unique(flatten([uniqueinds(tn, e) for e in edges(tn)]))
+  return unique(flatten([uniqueinds(tn, v) for v in vertices(tn)]))
 end
 
 # Priming and tagging (changing Index identifiers)

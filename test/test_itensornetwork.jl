@@ -217,6 +217,9 @@ using Test
     @test isempty(commoninds(uie, cie))
 
     @test linkinds(ψ, e) == commoninds(ψ[1, 1], ψ[2, 1])
+
+    @test length(externalinds(ψ)) == length(vertices(g))
+    @test length(internalinds(ψ)) == length(edges(g))
   end
 
   @testset "ElType conversion, $new_eltype" for new_eltype in (Float32, ComplexF64)
