@@ -135,7 +135,7 @@ using Test
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
     #is = siteinds("Fermion", c; conserve_nf=true)
-    is = siteinds("Electron", c; conserve_nf=true,conserve_sz=false)
+    is = siteinds("Electron", c; conserve_nf=true,conserve_sz=true)
     
     # linearized version
     linear_order = [4, 1, 2, 5, 3, 6]
