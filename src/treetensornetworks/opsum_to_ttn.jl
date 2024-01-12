@@ -60,7 +60,7 @@ function ttn_svd(
   vertextype_sites = vertextype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
-  linkdir_ref = ITensors.using_auto_fermion() ? ITensors.In : ITensors.In
+  linkdir_ref = ITensors.using_auto_fermion() ? ITensors.In : ITensors.Out
   # traverse tree outwards from root vertex
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
   # ToDo: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
