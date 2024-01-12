@@ -323,6 +323,7 @@ function ttn_svd(
         rq=Hflux  #set QN of non-existing incoming dim to Hflux pr trivial QN?
       else
         rq = first(space(linkinds[1])[b[1]])  #get QN of incoming dim
+      end
       sq = flux(Op)
       if !isnothing(sq)
         cq = rq - sq  #Hflux needs to be the zero element under addition so this is true without loss of generality
