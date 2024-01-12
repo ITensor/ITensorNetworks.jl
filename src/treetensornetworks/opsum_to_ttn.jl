@@ -242,8 +242,6 @@ function ttn_svd(
     edges = filter(e -> dst(e) == v || src(e) == v, es)
     dim_in = findfirst(e -> dst(e) == v, edges)
     dims_out = findall(e -> src(e) == v, edges)
-    #@show dim_in
-    @assert dim_in == nothing || dim_in == 1
     # slice isometries at this vertex
     Vv = [Vs[e] for e in edges]
 
