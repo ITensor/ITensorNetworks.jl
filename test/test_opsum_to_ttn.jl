@@ -188,6 +188,11 @@ using Test
       
       @test norm(Tmpo) ≈ norm(Tttno) rtol = 1e-6
       @test any(Matrix(dense(Tmm-Ttm),inds(Tmm)[1],inds(Tmm)[2]) .> 1e-14)
+      @test any(Matrix(dense(Tmm),inds(Tmm)[1],inds(Tmm)[2]) - Matrix(dense(Ttm),inds(Tmm)[1],inds(Tmm)[2])  .> 1e-14)
+      
+      #@@@test Tmm  ≈ Ttm atol = 1e-8
+      #@test all(Matrix(dense(Tmm-Ttm),inds(Tmm)[1],inds(Tmm)[2]) .≈ 0.0 atol = 1e-8)
+      
       #@test Tmm ≈ Ttm
       #@test Tmpo ≈ Tttno rtol = 1e-6
       
@@ -206,7 +211,7 @@ using Test
       ITensors.disable_auto_fermion()
     end
   end
-  #=
+  
   @testset "OpSum to TTN QN missing" begin
     # small comb tree
     tooth_lengths = fill(2, 3)
@@ -272,5 +277,5 @@ using Test
       @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
     end
   end
-  =#
+  
 end
