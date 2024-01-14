@@ -79,7 +79,7 @@ function hubbard(g::AbstractGraph; U=0.0, t=1.0, tp=0.0, h::Union{<:Real,Vector{
       ℋ -= h[i], "Sz", maybe_only(v)
     end
     if !iszero(U)
-      ℋ = U, "Nupdn", maybe_only(v)
+      ℋ += U, "Nupdn", maybe_only(v)
     end
   end
   return ℋ
