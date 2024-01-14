@@ -113,21 +113,21 @@ end
 
   tooth_lengths = fill(2, 3)
   c = named_comb_tree(tooth_lengths)
-  
-  @testset "Svd approach" for use_qns in [false,true]
-    s = siteinds("S=1/2", c,conserve_qns=use_qns)
-    
+
+  @testset "Svd approach" for use_qns in [false, true]
+    s = siteinds("S=1/2", c; conserve_qns=use_qns)
+
     os = ITensorNetworks.heisenberg(c)
 
     H = TTN(os, s)
-  
+
     # make init_state
-    d=Dict()
-    for (i,v) in enumerate(vertices(s))
+    d = Dict()
+    for (i, v) in enumerate(vertices(s))
       d[v] = isodd(i) ? "Up" : "Dn"
     end
-    states=v -> d[v]
-    psi = TTN(s,states)
+    states = v -> d[v]
+    psi = TTN(s, states)
 
     #    psi = random_ttn(s; link_space=20) #FIXME: random_ttn broken for QN conserving case
 
@@ -144,7 +144,7 @@ end
     vmap = Dictionary(vertices(s)[linear_order], 1:length(linear_order))
     sline = only.(collect(vertex_data(s)))[linear_order]
     Hline = MPO(relabel_sites(os, vmap), sline)
-    psiline = randomMPS(sline, i->isodd(i) ? "Up" : "Dn"; linkdims=20)
+    psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
     e2, psi2 = dmrg(Hline, psiline, sweeps; outputlevel=0)
 
     @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
@@ -152,7 +152,7 @@ end
 end
 
 @testset "Tree DMRG for Fermions" for nsite in [2]
-  auto_fermion_enabled=ITensors.using_auto_fermion()
+  auto_fermion_enabled = ITensors.using_auto_fermion()
   if !auto_fermion_enabled
     ITensors.enable_auto_fermion()
   end
@@ -160,23 +160,23 @@ end
   cutoff = 1e-12
   tooth_lengths = fill(2, 3)
   c = named_comb_tree(tooth_lengths)
-  
+
   @testset "Svd approach" for use_qns in [true]
-    s = siteinds("Electron", c,conserve_qns=use_qns)
-    U=2.0
-    t=1.3
-    tp=0.6
-    os = ITensorNetworks.hubbard(c;U=U,t=t,tp=tp)
+    s = siteinds("Electron", c; conserve_qns=use_qns)
+    U = 2.0
+    t = 1.3
+    tp = 0.6
+    os = ITensorNetworks.hubbard(c; U=U, t=t, tp=tp)
     H = TTN(os, s)
-    
+
     # make init_state
-    d=Dict()
-    for (i,v) in enumerate(vertices(s))
+    d = Dict()
+    for (i, v) in enumerate(vertices(s))
       d[v] = isodd(i) ? "Up" : "Dn"
     end
-    states=v -> d[v]
-    psi = TTN(s,states)
-    
+    states = v -> d[v]
+    psi = TTN(s, states)
+
     nsweeps = 10
     maxdim = [10, 20, 40, 100]
     sweeps = Sweeps(nsweeps) # number of sweeps is 5
@@ -190,7 +190,7 @@ end
     sline = only.(collect(vertex_data(s)))[linear_order]
     #@show sline
     Hline = MPO(relabel_sites(os, vmap), sline)
-    psiline = randomMPS(sline,i->isodd(i) ? "Up" : "Dn"; linkdims=20)
+    psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
     e2, psi2 = dmrg(Hline, psiline, sweeps; outputlevel=0)
     @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
   end
@@ -198,7 +198,6 @@ end
     ITensors.disable_auto_fermion()
   end
 end
-
 
 @testset "Regression test: tree truncation" begin
   maxdim = 4

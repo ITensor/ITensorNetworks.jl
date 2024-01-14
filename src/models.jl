@@ -15,7 +15,7 @@ for n in 1:(N - 1)
   os_dn .+= -t, "Cdagdn", n + 1, "Cdn", n
 end
 =#
-function tight_binding(g::AbstractGraph;t=1.0, tp=0.0, h::Union{<:Real,Vector{<:Real}}=0)
+function tight_binding(g::AbstractGraph; t=1.0, tp=0.0, h::Union{<:Real,Vector{<:Real}}=0)
   h = _maybe_fill(h, nv(g))
   ℋ = OpSum()
   if !iszero(t)
@@ -43,8 +43,6 @@ function tight_binding(g::AbstractGraph;t=1.0, tp=0.0, h::Union{<:Real,Vector{<:
   end
   return ℋ
 end
-
-
 
 """
 t-t' Hubbard Model 

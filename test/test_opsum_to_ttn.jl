@@ -130,7 +130,7 @@ using Test
 
   @testset "OpSum to TTN Fermions" begin
     # small comb tree
-    auto_fermion_enabled=ITensors.using_auto_fermion()
+    auto_fermion_enabled = ITensors.using_auto_fermion()
     if !auto_fermion_enabled
       ITensors.enable_auto_fermion()
     end
@@ -138,23 +138,23 @@ using Test
     c = named_comb_tree(tooth_lengths)
     is = siteinds("Fermion", c; conserve_nf=true)
     #is = siteinds("Electron", c; conserve_nf=true,conserve_sz=true)
-    
+
     # linearized version
     #linear_order = [4, 1, 2, 5, 3, 6]
-    
+
     # test with next-to-nearest-neighbor Ising Hamiltonian
-    t=1.0
+    t = 1.0
     tp = 0.4
     U = 0.0
-    h=0.5
+    h = 0.5
     H = ITensorNetworks.tight_binding(c; t=t, tp=tp, h=h)
     #H = ITensorNetworks.hubbard(c; t=t, tp=tp, h=h)
-    
+
     # add combination of longer range interactions
     Hlr = copy(H)
     #Hlr += 5, "Cdag", (1, 2), "C", (3, 2)#, "Z", (3,2)
     #Hlr += 5, "Cdag", (3, 2), "C", (1, 2)#, "Z", (3,2)
-    
+
     #Hlr += -4, "N", (1, 1), "N", (2, 2)
     #Hlr += 2.0, "Sz", (2, 2), "Sz", (3, 2)
     #Hlr += -1.0, "Sz", (1, 2), "Sz", (3, 1)
@@ -166,7 +166,7 @@ using Test
       # get TTN Hamiltonian directly
       Hsvd = TTN(H, is; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      sites=only.([is[v] for v in reverse(post_order_dfs_vertices(c, root_vertex))])
+      sites = only.([is[v] for v in reverse(post_order_dfs_vertices(c, root_vertex))])
       vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
       Hline = ITensors.MPO(relabel_sites(H, vmap), sites)
       # compare resulting sparse Hamiltonians
@@ -177,25 +177,28 @@ using Test
       end
       # Tmpo ≈ Tttno seems to be broken for fermionic tensors
       # thus matricize tensors by hand and convert to dense Matrix to compare element by element
-      cTmpo1=combiner(inds(Tmpo)[findall((plev.(inds(Tmpo))).==0)])
-      cTmpo2=combiner(inds(Tmpo)[findall((plev.(inds(Tmpo))).==1)])
-      Tmm=(Tmpo*cTmpo1)*cTmpo2
-      cTttno1=combiner(inds(Tttno)[findall((plev.(inds(Tttno))).==0)])
-      cTttno2=combiner(inds(Tttno)[findall((plev.(inds(Tttno))).==1)])
-      Ttm=(Tttno*cTttno1)*cTttno2
-      Ttm=replaceinds(Ttm, inds(Ttm)[1]=>inds(Tmm)[1])
-      Ttm=replaceinds(Ttm, inds(Ttm)[2]=>inds(Tmm)[2])
-      
+      cTmpo1 = combiner(inds(Tmpo)[findall((plev.(inds(Tmpo))) .== 0)])
+      cTmpo2 = combiner(inds(Tmpo)[findall((plev.(inds(Tmpo))) .== 1)])
+      Tmm = (Tmpo * cTmpo1) * cTmpo2
+      cTttno1 = combiner(inds(Tttno)[findall((plev.(inds(Tttno))) .== 0)])
+      cTttno2 = combiner(inds(Tttno)[findall((plev.(inds(Tttno))) .== 1)])
+      Ttm = (Tttno * cTttno1) * cTttno2
+      Ttm = replaceinds(Ttm, inds(Ttm)[1] => inds(Tmm)[1])
+      Ttm = replaceinds(Ttm, inds(Ttm)[2] => inds(Tmm)[2])
+
       @test norm(Tmpo) ≈ norm(Tttno) rtol = 1e-6
-      @test any(Matrix(dense(Tmm-Ttm),inds(Tmm)[1],inds(Tmm)[2]) .> 1e-14)
-      @test any(Matrix(dense(Tmm),inds(Tmm)[1],inds(Tmm)[2]) - Matrix(dense(Ttm),inds(Tmm)[1],inds(Tmm)[2])  .> 1e-14)
-      
+      @test any(Matrix(dense(Tmm - Ttm), inds(Tmm)[1], inds(Tmm)[2]) .> 1e-14)
+      @test any(
+        Matrix(dense(Tmm), inds(Tmm)[1], inds(Tmm)[2]) -
+        Matrix(dense(Ttm), inds(Tmm)[1], inds(Tmm)[2]) .> 1e-14,
+      )
+
       #@@@test Tmm  ≈ Ttm atol = 1e-8
       #@test all(Matrix(dense(Tmm-Ttm),inds(Tmm)[1],inds(Tmm)[2]) .≈ 0.0 atol = 1e-8)
-      
+
       #@test Tmm ≈ Ttm
       #@test Tmpo ≈ Tttno rtol = 1e-6
-      
+
       # this breaks for longer range interactions ###not anymore
       #=
       Hsvd_lr = TTN(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)
@@ -211,7 +214,7 @@ using Test
       ITensors.disable_auto_fermion()
     end
   end
-  
+
   @testset "OpSum to TTN QN missing" begin
     # small comb tree
     tooth_lengths = fill(2, 3)
@@ -277,5 +280,4 @@ using Test
       @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
     end
   end
-  
 end

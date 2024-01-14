@@ -4,7 +4,6 @@
 # Utility methods
 # 
 
-
 # linear ordering of vertices in tree graph relative to chosen root, chosen outward from root
 function find_index_in_tree(site, g::AbstractGraph, root_vertex)
   ordering = reverse(post_order_dfs_vertices(g, root_vertex))
@@ -145,7 +144,7 @@ function ttn_svd(
       not_incoming_qn = calc_qn(not_incoming)
       outgoing_qns = Dict(e => calc_qn(outgoing[e]) for e in edges_out)
       site_qn = calc_qn(onsite)
-      
+
       # initialize QNArrayElement indices and quantum numbers 
       T_inds = MVector{degrees[v]}(fill(-1, degrees[v]))
       T_qns = MVector{degrees[v]}(fill(QN(), degrees[v]))
@@ -155,9 +154,9 @@ function ttn_svd(
       if !isempty(incoming)
         # get the correct map from edge=>QN to term and channel
         # this checks if term exists on edge=>QN ( otherwise insert it) and returns it's index
-        coutmap = get!(outmaps, edge_in => not_incoming_qn , Dict{Vector{Op},Int}())
+        coutmap = get!(outmaps, edge_in => not_incoming_qn, Dict{Vector{Op},Int}())
         cinmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
-        
+
         bond_row = ITensors.posInLink!(cinmap, incoming)
         bond_col = ITensors.posInLink!(coutmap, not_incoming) # get incoming channel
         bond_coef = convert(coefficient_type, ITensors.coefficient(term))
@@ -166,7 +165,7 @@ function ttn_svd(
         )
         push!(q_inbond_coefs, ITensors.MatElem(bond_row, bond_col, bond_coef))
         T_inds[dim_in] = bond_col
-        T_qns[dim_in] = -incoming_qn 
+        T_qns[dim_in] = -incoming_qn
       end
       for dout in dims_out
         coutmap = get!(
@@ -269,10 +268,10 @@ function ttn_svd(
 
       # set non-trivial helper inds
       for d in normal_dims
-        block_helper_inds[d] = qnblock(linkinds[d],  T_qns[d])
+        block_helper_inds[d] = qnblock(linkinds[d], T_qns[d])
       end
       @assert all(≠(-1), block_helper_inds)# check that all block indices are set
-      
+
       # make and fill Block 
       theblock = Block(Tuple(block_helper_inds))
       if isempty(normal_dims)
@@ -281,7 +280,7 @@ function ttn_svd(
         M[] += ct
       else
         M = get!(blocks, (theblock, terms(t)), zero_arr())
-        dim_ranges = Tuple(size(Vv[d][T_qns[d]], 2) for d in normal_dims)        
+        dim_ranges = Tuple(size(Vv[d][T_qns[d]], 2) for d in normal_dims)
         for c in CartesianIndices(dim_ranges) # applies isometries in a element-wise manner
           z = ct
           temp_inds = copy(T_inds)
@@ -310,13 +309,13 @@ function ttn_svd(
       end
       sq = flux(Op)
       if !isnothing(sq)
-        rq =(b[1]==1 ? Hflux : first(space(linkinds[1])[b[1]])) # get row (dim_in) QN
+        rq = (b[1] == 1 ? Hflux : first(space(linkinds[1])[b[1]])) # get row (dim_in) QN
         cq = rq - sq # get column (out_dims) QN
         if ITensors.using_auto_fermion()
           # we need to account for the direct product below ordering the physical indices as the last indices
           # although they are in between incoming and outgoing indices in the canonical site-ordering
-          perm=(1,3,2)
-          if ITensors.compute_permfactor(perm,rq,sq,cq) == -1
+          perm = (1, 3, 2)
+          if ITensors.compute_permfactor(perm, rq, sq, cq) == -1
             Op .*= -1
           end
         end
@@ -327,7 +326,7 @@ function ttn_svd(
       if !thishasqns
         iT = removeqns(iT)
       end
-      
+
       if is_internal[v]
         H[v] += iT
       else

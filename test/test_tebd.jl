@@ -61,6 +61,6 @@ ITensors.disable_warn_order()
   )
   E2 = expect(ℋ, ψ; sequence=inner_sequence)
   @show E0, E1, E2, E_dmrg
-  @test (((abs((E2-E1)/E2)<1e-4) && (E1 < E0)) || (E2 < E1 < E0))
+  @test (((abs((E2 - E1) / E2) < 1e-4) && (E1 < E0)) || (E2 < E1 < E0))
   @test E2 ≈ E_dmrg rtol = 1e-4
 end
