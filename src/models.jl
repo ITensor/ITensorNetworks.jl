@@ -1,20 +1,6 @@
 _maybe_fill(x, n) = x
 _maybe_fill(x::Number, n) = fill(x, n)
 
-#= Make the free fermion Hamiltonian for the up spins
-os_up = OpSum()
-for n in 1:(N - 1)
-  os_up .+= -t, "Cdagup", n, "Cup", n + 1
-  os_up .+= -t, "Cdagup", n + 1, "Cup", n
-end
-
-# Make the free fermion Hamiltonian for the down spins
-os_dn = OpSum()
-for n in 1:(N - 1)
-  os_dn .+= -t, "Cdagdn", n, "Cdn", n + 1
-  os_dn .+= -t, "Cdagdn", n + 1, "Cdn", n
-end
-=#
 function tight_binding(g::AbstractGraph; t=1.0, tp=0.0, h::Union{<:Real,Vector{<:Real}}=0)
   h = _maybe_fill(h, nv(g))
   ℋ = OpSum()
