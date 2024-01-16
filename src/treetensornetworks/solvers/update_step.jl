@@ -45,7 +45,7 @@ function update_step(
   (step_observer!)=observer(),
   sweep::Int=1,
   reverse_step::Bool=false,
-  sweep_regions=default_sweep_regions(nsite, psi;reverse_step),
+  sweep_regions=default_sweep_regions(nsite, psi; reverse_step),
   kwargs...,
 )
   PH = copy(PH)
@@ -185,7 +185,17 @@ function local_update(
   PH = position(PH, psi, region)
   (psi_ref!) = Ref(psi) # create references, in case solver does (out-of-place) modify PH or psi
   (PH_ref!) = Ref(PH)
-  phi, info = solver(phi;(psi_ref!),(PH_ref!), normalize, region, sweep_regions, sweep_step, step_kwargs..., solver_kwargs...)  # args passed by reference are supposed to be modified out of place
+  phi, info = solver(
+    phi;
+    (psi_ref!),
+    (PH_ref!),
+    normalize,
+    region,
+    sweep_regions,
+    sweep_step,
+    step_kwargs...,
+    solver_kwargs...,
+  )  # args passed by reference are supposed to be modified out of place
   psi = psi_ref![] # dereference
   PH = PH_ref![]
   if !(phi isa ITensor && info isa NamedTuple)

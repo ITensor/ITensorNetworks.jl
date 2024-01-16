@@ -164,11 +164,11 @@ using Test
 
     ψ0 = random_mps(s; internal_inds_space=10)
 
-    function solver(psi0; (psi_ref!),(PH_ref!), time_step, kwargs...)
+    function solver(psi0; (psi_ref!), (PH_ref!), time_step, kwargs...)
       solver_kwargs = (;
         ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
       )
-      PH=PH_ref![]
+      PH = PH_ref![]
       psi, exp_info = exponentiate(PH, time_step, psi0; solver_kwargs...)
       return psi, (; info=exp_info)
     end
@@ -553,11 +553,11 @@ end
 
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
-    function solver(psi0; (psi_ref!),(PH_ref!), time_step, kwargs...)
+    function solver(psi0; (psi_ref!), (PH_ref!), time_step, kwargs...)
       solver_kwargs = (;
         ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
       )
-      PH=PH_ref![]
+      PH = PH_ref![]
       psi, exp_info = exponentiate(PH, time_step, psi0; solver_kwargs...)
       return psi, (; info=exp_info)
     end
