@@ -1,72 +1,3 @@
-function exponentiate_solver()
-  function solver(
-    init;
-    psi_ref!,
-    PH_ref!,
-    ishermitian=true,
-    issymmetric=true,
-    region,
-    sweep_regions,
-    sweep_step,
-    solver_krylovdim=30,
-    solver_maxiter=100,
-    solver_outputlevel=0,
-    solver_tol=1E-12,
-    substep,
-    normalize,
-    time_step,
-  )
-    #H=copy(PH_ref![])
-    H=PH_ref![] ###since we are not changing H we don't need the copy
-    # let's test whether given region and sweep regions we can find out what the previous and next region were
-    # this will be needed in subspace expansion
-    region_ind=sweep_step
-    next_region=region_ind==length(sweep_regions) ? nothing : first(sweep_regions[region_ind+1])
-    previous_region=region_ind==1 ? nothing : first(sweep_regions[region_ind-1])
-    
-    phi, exp_info = KrylovKit.exponentiate(
-      H,
-      time_step,
-      init;
-      ishermitian,
-      issymmetric,
-      tol=solver_tol,
-      krylovdim=solver_krylovdim,
-      maxiter=solver_maxiter,
-      verbosity=solver_outputlevel,
-      eager=true,
-    )
-    return phi, (; info=exp_info)
-  end
-  return solver
-end
-
-function applyexp_solver()
-  function solver(
-    init;
-    psi_ref!,
-    PH_ref!,
-    region,
-    sweep_regions,
-    sweep_step,
-    solver_krylovdim=30,
-    solver_outputlevel=0,
-    solver_tol=1E-8,
-    substep,
-    time_step,
-    normalize,
-  )
-    H=PH_ref![]
-    #applyexp tol is absolute, compute from tol_per_unit_time:
-    tol = abs(time_step) * tol_per_unit_time
-    psi, exp_info = applyexp(
-      H, time_step, init; tol, maxiter=solver_krylovdim, outputlevel=solver_outputlevel
-    )
-    return psi, (; info=exp_info)
-  end
-  return solver
-end
-
 function _compute_nsweeps(nsteps, t, time_step, order)
   nsweeps_per_step = order / 2
   nsweeps = 1
@@ -183,15 +114,6 @@ Optional keyword arguments:
 * `observer` - object implementing the Observer interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
-function tdvp(H, t::Number, init::AbstractTTN; solver_backend="exponentiate", kwargs...)
-  if solver_backend == "exponentiate"
-    solver = exponentiate_solver
-  elseif solver_backend == "applyexp"
-    solver = applyexp_solver
-  else
-    error(
-      "solver_backend=$solver_backend not recognized (options are \"applyexp\" or \"exponentiate\")",
-    )
-  end
+function tdvp(H, t::Number, init::AbstractTTN; solver=exponentiate_solver, kwargs...)
   return tdvp(solver(), H, t, init; kwargs...)
 end

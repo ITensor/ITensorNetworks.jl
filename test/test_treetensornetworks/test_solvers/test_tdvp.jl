@@ -4,6 +4,7 @@ using KrylovKit: exponentiate
 using Observers
 using Random
 using Test
+#exponentiate_solver=ITensorNetworks.exponentiate_solver #ToDo: how to best handle importing etc.
 
 @testset "MPS TDVP" begin
   @testset "Basic TDVP" begin
@@ -31,7 +32,7 @@ using Test
     #
     #Different backend solvers, default solver_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(
-      H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1, solver_backend="exponentiate"
+      H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1, solver=exponentiate_solver
     )
     @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
 
@@ -48,7 +49,7 @@ using Test
 
     #Different backend solvers, default solver_backend = "applyexp"
     ψ2_exponentiate_backend = tdvp(
-      H, +0.1im, ψ1; nsteps=1, cutoff, solver_backend="exponentiate"
+      H, +0.1im, ψ1; nsteps=1, cutoff, solver=exponentiate_solver
     )
     @test ψ2 ≈ ψ2_exponentiate_backend rtol = 1e-7
 
@@ -84,7 +85,7 @@ using Test
 
     #Different backend solvers, default solver_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(
-      Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1, solver_backend="exponentiate"
+      Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1, solver=exponentiate_solver
     )
     @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
 
@@ -101,7 +102,7 @@ using Test
 
     #Different backend solvers, default solver_backend = "applyexp"
     ψ2_exponentiate_backend = tdvp(
-      Hs, +0.1im, ψ1; nsteps=1, cutoff, solver_backend="exponentiate"
+      Hs, +0.1im, ψ1; nsteps=1, cutoff, solver=exponentiate_solver
     )
     @test ψ2 ≈ ψ2_exponentiate_backend rtol = 1e-7
 
@@ -249,7 +250,7 @@ using Test
         solver_tol=1e-12,
         solver_maxiter=500,
         solver_krylovdim=25,
-        solver_backend="exponentiate",
+        solver=exponentiate_solver,
       )
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
@@ -385,7 +386,7 @@ using Test
         reverse_step,
         normalize=true,
         solver_krylovdim=15,
-        solver_backend="exponentiate",
+        solver=ITensorNetworks.exponentiate_solver,
       )
     end
 

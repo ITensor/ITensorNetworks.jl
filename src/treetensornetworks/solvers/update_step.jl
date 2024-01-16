@@ -44,7 +44,8 @@ function update_step(
   step_printer=step_printer,
   (step_observer!)=observer(),
   sweep::Int=1,
-  sweep_regions=default_sweep_regions(nsite, psi),
+  reverse_step::Bool=false,
+  sweep_regions=default_sweep_regions(nsite, psi;reverse_step),
   kwargs...,
 )
   PH = copy(PH)
