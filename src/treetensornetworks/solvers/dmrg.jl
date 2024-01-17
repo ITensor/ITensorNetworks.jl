@@ -11,22 +11,6 @@ function dmrg_sweep(
   return tdvp_sweep(2,nsite,Inf,graph;root_vertex,reverse_step=false)
 end
 
-
-function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)  ###move this to a different file, algorithmic level idea
-  return vcat(
-    [
-      half_sweep(
-        direction(half),
-        graph,
-        make_region;
-        nsite,
-        region_args=(; substep=half),
-        kwargs...,
-      ) for half in 1:2
-    ]...,
-  )
-end
-
 function dmrg(
   updater,
   H,
