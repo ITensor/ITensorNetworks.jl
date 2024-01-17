@@ -4,22 +4,11 @@ using NamedGraphs
 using ITensorNetworks
 using ITensorUnicodePlots
 
-function heisenberg(g::AbstractGraph)
-  # TODO: os = Sum{Op}()
-  os = OpSum()
-  for e in edges(g)
-    os += 1 / 2, "S⁺", src(e), "S⁻", dst(e)
-    os += 1 / 2, "S⁺", src(e), "S⁻", dst(e)
-    os += "Sᶻ", src(e), "Sᶻ", dst(e)
-  end
-  return os
-end
-
 system_dims = (3, 3)
 g = named_grid(system_dims)
 s = siteinds("S=1/2", g)
 
-ℋ = heisenberg(g)
+ℋ = ITensorNetworks.heisenberg(g)
 
 χ = 5
 ψ = ITensorNetwork(s; link_space=χ)

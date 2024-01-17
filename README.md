@@ -36,18 +36,18 @@ and 3 edge(s):
 3 => 4
 
 with vertex data:
-4-element Dictionaries.Dictionary{Int64, Any}
- 1 │ ((dim=2|id=739|"1↔2"),)
- 2 │ ((dim=2|id=739|"1↔2"), (dim=2|id=920|"2↔3"))
- 3 │ ((dim=2|id=920|"2↔3"), (dim=2|id=761|"3↔4"))
- 4 │ ((dim=2|id=761|"3↔4"),)
+4-element Dictionary{Int64, Any}
+ 1 │ ((dim=2|id=739|"1,2"),)
+ 2 │ ((dim=2|id=739|"1,2"), (dim=2|id=920|"2,3"))
+ 3 │ ((dim=2|id=920|"2,3"), (dim=2|id=761|"3,4"))
+ 4 │ ((dim=2|id=761|"3,4"),)
 
 julia> tn[1]
-ITensor ord=1 (dim=2|id=739|"1↔2")
+ITensor ord=1 (dim=2|id=739|"1,2")
 NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.Dense{NDTensors.EmptyNumber, Vector{NDTensors.EmptyNumber}}}
 
 julia> tn[2]
-ITensor ord=2 (dim=2|id=739|"1↔2") (dim=2|id=920|"2↔3")
+ITensor ord=2 (dim=2|id=739|"1,2") (dim=2|id=920|"2,3")
 NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.Dense{NDTensors.EmptyNumber, Vector{NDTensors.EmptyNumber}}}
 
 julia> neighbors(tn, 1)
@@ -88,14 +88,14 @@ and 4 edge(s):
 (1, 2) => (2, 2)
 
 with vertex data:
-4-element Dictionaries.Dictionary{Tuple{Int64, Int64}, Any}
- (1, 1) │ ((dim=2|id=74|"1×1↔2×1"), (dim=2|id=723|"1×1↔1×2"))
- (2, 1) │ ((dim=2|id=74|"1×1↔2×1"), (dim=2|id=823|"2×1↔2×2"))
- (1, 2) │ ((dim=2|id=723|"1×1↔1×2"), (dim=2|id=712|"1×2↔2×2"))
- (2, 2) │ ((dim=2|id=823|"2×1↔2×2"), (dim=2|id=712|"1×2↔2×2"))
+4-element Dictionary{Tuple{Int64, Int64}, Any}
+ (1, 1) │ ((dim=2|id=74|"1×1,2×1"), (dim=2|id=723|"1×1,1×2"))
+ (2, 1) │ ((dim=2|id=74|"1×1,2×1"), (dim=2|id=823|"2×1,2×2"))
+ (1, 2) │ ((dim=2|id=723|"1×1,1×2"), (dim=2|id=712|"1×2,2×2"))
+ (2, 2) │ ((dim=2|id=823|"2×1,2×2"), (dim=2|id=712|"1×2,2×2"))
 
 julia> tn[1, 1]
-ITensor ord=2 (dim=2|id=74|"1×1↔2×1") (dim=2|id=723|"1×1↔1×2")
+ITensor ord=2 (dim=2|id=74|"1×1,2×1") (dim=2|id=723|"1×1,1×2")
 NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.Dense{NDTensors.EmptyNumber, Vector{NDTensors.EmptyNumber}}}
 
 julia> neighbors(tn, (1, 1))
@@ -118,9 +118,9 @@ and 1 edge(s):
 (1, 1) => (1, 2)
 
 with vertex data:
-2-element Dictionaries.Dictionary{Tuple{Int64, Int64}, Any}
- (1, 1) │ ((dim=2|id=74|"1×1↔2×1"), (dim=2|id=723|"1×1↔1×2"))
- (1, 2) │ ((dim=2|id=723|"1×1↔1×2"), (dim=2|id=712|"1×2↔2×2"))
+2-element Dictionary{Tuple{Int64, Int64}, Any}
+ (1, 1) │ ((dim=2|id=74|"1×1,2×1"), (dim=2|id=723|"1×1,1×2"))
+ (1, 2) │ ((dim=2|id=723|"1×1,1×2"), (dim=2|id=712|"1×2,2×2"))
 
 julia> tn_2 = subgraph(v -> v[1] == 2, tn)
 ITensorNetwork{Tuple{Int64, Int64}} with 2 vertices:
@@ -132,9 +132,9 @@ and 1 edge(s):
 (2, 1) => (2, 2)
 
 with vertex data:
-2-element Dictionaries.Dictionary{Tuple{Int64, Int64}, Any}
- (2, 1) │ ((dim=2|id=74|"1×1↔2×1"), (dim=2|id=823|"2×1↔2×2"))
- (2, 2) │ ((dim=2|id=823|"2×1↔2×2"), (dim=2|id=712|"1×2↔2×2"))
+2-element Dictionary{Tuple{Int64, Int64}, Any}
+ (2, 1) │ ((dim=2|id=74|"1×1,2×1"), (dim=2|id=823|"2×1,2×2"))
+ (2, 2) │ ((dim=2|id=823|"2×1,2×2"), (dim=2|id=712|"1×2,2×2"))
 ```
 
 
@@ -155,13 +155,13 @@ and 2 edge(s):
 2 => 3
 
 with vertex data:
-3-element Dictionaries.Dictionary{Int64, Vector{Index}}
+3-element Dictionary{Int64, Vector{Index}}
  1 │ Index[(dim=2|id=598|"S=1/2,Site,n=1")]
  2 │ Index[(dim=2|id=457|"S=1/2,Site,n=2")]
  3 │ Index[(dim=2|id=683|"S=1/2,Site,n=3")]
 
 and edge data:
-0-element Dictionaries.Dictionary{NamedEdge{Int64}, Vector{Index}}
+0-element Dictionary{NamedEdge{Int64}, Vector{Index}}
 
 julia> tn1 = ITensorNetwork(s; link_space=2)
 ITensorNetwork{Int64} with 3 vertices:
@@ -175,10 +175,10 @@ and 2 edge(s):
 2 => 3
 
 with vertex data:
-3-element Dictionaries.Dictionary{Int64, Any}
- 1 │ ((dim=2|id=598|"S=1/2,Site,n=1"), (dim=2|id=123|"1↔2"))
- 2 │ ((dim=2|id=457|"S=1/2,Site,n=2"), (dim=2|id=123|"1↔2"), (dim=2|id=656|"2↔3…
- 3 │ ((dim=2|id=683|"S=1/2,Site,n=3"), (dim=2|id=656|"2↔3"))
+3-element Dictionary{Int64, Any}
+ 1 │ ((dim=2|id=598|"S=1/2,Site,n=1"), (dim=2|id=123|"1,2"))
+ 2 │ ((dim=2|id=457|"S=1/2,Site,n=2"), (dim=2|id=123|"1,2"), (dim=2|id=656|"2,3…
+ 3 │ ((dim=2|id=683|"S=1/2,Site,n=3"), (dim=2|id=656|"2,3"))
 
 julia> tn2 = ITensorNetwork(s; link_space=2)
 ITensorNetwork{Int64} with 3 vertices:
@@ -192,10 +192,10 @@ and 2 edge(s):
 2 => 3
 
 with vertex data:
-3-element Dictionaries.Dictionary{Int64, Any}
- 1 │ ((dim=2|id=598|"S=1/2,Site,n=1"), (dim=2|id=382|"1↔2"))
- 2 │ ((dim=2|id=457|"S=1/2,Site,n=2"), (dim=2|id=382|"1↔2"), (dim=2|id=190|"2↔3…
- 3 │ ((dim=2|id=683|"S=1/2,Site,n=3"), (dim=2|id=190|"2↔3"))
+3-element Dictionary{Int64, Any}
+ 1 │ ((dim=2|id=598|"S=1/2,Site,n=1"), (dim=2|id=382|"1,2"))
+ 2 │ ((dim=2|id=457|"S=1/2,Site,n=2"), (dim=2|id=382|"1,2"), (dim=2|id=190|"2,3…
+ 3 │ ((dim=2|id=683|"S=1/2,Site,n=3"), (dim=2|id=190|"2,3"))
 
 julia> @visualize tn1;
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
