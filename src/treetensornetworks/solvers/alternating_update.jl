@@ -56,7 +56,8 @@ function alternating_update(
   insert_function!(sweep_observer!, "sweep_printer" => sweep_printer) # FIX THIS
 
   for which_sweep in 1:nsweeps
-    if !isnothing(write_when_maxdim_exceeds) && maxdim[which_sweep] > write_when_maxdim_exceeds
+    if !isnothing(write_when_maxdim_exceeds) &&
+      maxdim[which_sweep] > write_when_maxdim_exceeds
       if outputlevel >= 2
         println(
           "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim[which_sweep] = $(maxdim[which_sweep]), writing environment tensors to disk",
@@ -64,7 +65,7 @@ function alternating_update(
       end
       PH = disk(PH)
     end
-    
+
     sw_time = @elapsed begin
       psi, PH = sweep_update(
         updater,
@@ -73,10 +74,11 @@ function alternating_update(
         outputlevel,
         which_sweep,
         sweep_params=(;
-        maxdim=maxdim[which_sweep],
-        mindim=mindim[which_sweep],
-        cutoff=cutoff[which_sweep],
-        noise=noise[which_sweep]),
+          maxdim=maxdim[which_sweep],
+          mindim=mindim[which_sweep],
+          cutoff=cutoff[which_sweep],
+          noise=noise[which_sweep],
+        ),
         updater_kwargs,
         kwargs...,
       )
@@ -86,7 +88,7 @@ function alternating_update(
 
     checkdone(; psi, which_sweep, outputlevel, kwargs...) && break
   end
-   select!(sweep_observer!, Observers.DataFrames.Not("sweep_printer"))
+  select!(sweep_observer!, Observers.DataFrames.Not("sweep_printer"))
   return psi
 end
 
@@ -119,7 +121,9 @@ each step of the algorithm when optimizing the MPS.
 Returns:
 * `psi::MPS` - time-evolved MPS
 """
-function alternating_update(updater, Hs::Vector{<:AbstractTTN}, psi0::AbstractTTN; kwargs...)
+function alternating_update(
+  updater, Hs::Vector{<:AbstractTTN}, psi0::AbstractTTN; kwargs...
+)
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)
     check_hascommoninds(siteinds, H, psi0')

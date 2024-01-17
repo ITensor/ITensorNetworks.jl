@@ -2,13 +2,10 @@
 Overload of `ITensors.dmrg`.
 """
 
-
 function dmrg_sweep(
-  nsite::Int,
-  graph::AbstractGraph;
-  root_vertex=default_root_vertex(graph),
+  nsite::Int, graph::AbstractGraph; root_vertex=default_root_vertex(graph)
 )
-  return tdvp_sweep(2,nsite,Inf,graph;root_vertex,reverse_step=false)
+  return tdvp_sweep(2, nsite, Inf, graph; root_vertex, reverse_step=false)
 end
 
 function dmrg(
@@ -21,15 +18,14 @@ function dmrg(
   root_vertex=default_root_vertex(init),
   updater_kwargs=NamedTuple(;),
   kwargs...,
-  )
-  region_updates = dmrg_sweep(nsite,init; root_vertex)
+)
+  region_updates = dmrg_sweep(nsite, init; root_vertex)
 
   psi = alternating_update(
     updater, H, init; nsweeps, sweep_observer!, region_updates, updater_kwargs, kwargs...
   )
   return psi
 end
-
 
 function dmrg(H, init::AbstractTTN; updater=eigsolve_updater, kwargs...)
   return dmrg(updater, H, init; kwargs...)
@@ -39,5 +35,3 @@ end
 Overload of `KrylovKit.eigsolve`.
 """
 eigsolve(H, init::AbstractTTN; kwargs...) = dmrg(H, init; kwargs...)
-
-
