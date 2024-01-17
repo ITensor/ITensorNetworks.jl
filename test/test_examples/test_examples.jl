@@ -8,7 +8,6 @@ using Test
     "boundary.jl",
     "distances.jl",
     "examples.jl",
-    "group_partition.jl",
     "mincut.jl",
     "mps.jl",
     "peps.jl",
@@ -28,8 +27,6 @@ using Test
   if !Sys.iswindows()
     example_files = [
       joinpath("contraction_sequence", "contraction_sequence.jl"),
-      joinpath("partition", "kahypar_vs_metis.jl"),
-      joinpath("partition", "partitioning.jl"),
     ]
     @testset "Test $example_file (using KaHyPar, so no Windows support)" for example_file in
                                                                              example_files

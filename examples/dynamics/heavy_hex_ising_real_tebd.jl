@@ -47,7 +47,7 @@ function expect_state_SBP(
   vs_braket = [(v, 1) for v in vs]
 
   numerator_tensors = approx_network_region(
-    pψψ, mts, vs_braket; verts_tn=ITensor[Oψ[v] for v in vs])
+    pψψ, mts, vs_braket; verts_tensors=ITensor[Oψ[v] for v in vs])
   denominator_tensors = approx_network_region(pψψ, mts, vs_braket)
   num_seq = contraction_sequence(numerator_tensors; alg="optimal")
   den_seq = contraction_sequence(denominator_tensors; alg="optimal")
