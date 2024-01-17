@@ -37,14 +37,13 @@ using SplitApplyCombine
   pψψ_symm_V2 = PartitionedGraph(
     ψψ_symm_V2, collect(values(group(v -> v[1], vertices(ψψ_symm_V2))))
   )
-  ψ_symm_mts_V2 = message_tensors(pψψ_symm_V2)
   ψ_symm_mts_V2 = belief_propagation(
-    pψψ_symm_V2, ψ_symm_mts_V2; contract_kwargs=(; alg="exact"), niters=50
+    pψψ_symm_V2; contract_kwargs=(; alg="exact"), niters=50
   )
 
   for m_e in values(ψ_symm_mts_V2)
     #Test all message tensors are approximately diagonal
-    @test diagITensor(vector(diag(m_e)), inds(m_e)) ≈ m_e atol = 1e-8
+    @test diagITensor(vector(diag(only(m_e))), inds(only(m_e))) ≈ only(m_e) atol = 1e-8
   end
 
   ψ_vidal, bond_tensors = vidal_gauge(ψ; target_canonicalness=1e-6)

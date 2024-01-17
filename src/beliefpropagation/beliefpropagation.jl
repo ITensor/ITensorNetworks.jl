@@ -35,8 +35,12 @@ function update_message_tensor(
     mt = contract(contract_list; sequence=contraction_sequence(contract_list; alg="optimal"))
   end
 
-  mt = ITensor(mt)
-  normalize!(mt)
+  if isa(mt, ITensor) 
+    mt = ITensor[mt]
+  elseif isa(mt, ITensorNetwork)
+    mt = ITensor(mt)
+  end
+  normalize!.(mt)
 
   return mt
 end
@@ -129,6 +133,10 @@ function belief_propagation(
   return mts
 end
 
+function belief_propagation(ptn::PartitionedGraph; itensor_constructor=inds_e -> ITensor[dense(delta(inds_e))], kwargs...)
+  mts = message_tensors(ptn; itensor_constructor)
+  return belief_propagation(ptn, mts; kwargs...)
+end
 """
 Given a subet of vertices of a given Tensor Network and the Message Tensors for that network, return a Dictionary with the involved subgraphs as keys and the vector of tensors associated with that subgraph as values
 Specifically, the contraction of the environment tensors and tn[vertices] will be a scalar.
@@ -155,9 +163,9 @@ function approx_network_region(
   ptn::PartitionedGraph,
   mts,
   verts::Vector;
-  verts_tn=ITensor[(unpartitioned_graph(ptn))[v] for v in verts],
+  verts_tensors=ITensor[(unpartitioned_graph(ptn))[v] for v in verts],
 )
   environment_tensors = get_environment(ptn, mts, verts)
 
-  return vcat(environment_tensors, verts_tn)
+  return vcat(environment_tensors, verts_tensors)
 end

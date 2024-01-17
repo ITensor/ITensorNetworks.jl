@@ -33,11 +33,10 @@ function main(; n, niters, network="ising", β=nothing, h=nothing, χ=nothing)
 
   #Now do Simple Belief Propagation to Measure Sz on Site v
   pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = message_tensors(pψψ)
 
-  mts = @time belief_propagation(pψψ, mts; niters, contract_kwargs=(; alg="exact"))
+  mts = @time belief_propagation(pψψ; niters, contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(
-    pψψ, mts, [(v, 1)]; verts_tn=ITensor[apply(op("Sz", s[v]), ψ[v])])
+    pψψ, mts, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])])
   denominator_network = approx_network_region(pψψ, mts, [(v, 1)])
   sz_bp =
     ITensors.contract(
@@ -50,11 +49,10 @@ function main(; n, niters, network="ising", β=nothing, h=nothing, χ=nothing)
     "Simple Belief Propagation Gives Sz on Site " * string(v) * " as " * string(sz_bp)
   )
 
-  mts_sqrt = message_tensors(pψψ)
-  mts_sqrt = @time sqrt_belief_propagation(pψψ, mts_sqrt; niters)
+  mts_sqrt = @time sqrt_belief_propagation(pψψ; niters)
 
   numerator_network = approx_network_region(
-    pψψ, mts_sqrt, [(v, 1)]; verts_tn=ITensor[apply(op("Sz", s[v]), ψ[v])])
+    pψψ, mts_sqrt, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])])
   denominator_network = approx_network_region(pψψ, mts_sqrt, [(v, 1)])
   sz_sqrt_bp =
     contract(

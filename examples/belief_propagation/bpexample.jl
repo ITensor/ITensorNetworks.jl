@@ -31,10 +31,9 @@ function main()
 
   #Now do Simple Belief Propagation to Measure Sz on Site v
   pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = message_tensors(pψψ)
-  mts = belief_propagation(pψψ, mts; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
+  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
   numerator_tensors = approx_network_region(
-    pψψ, mts, [(v, 1)]; verts_tn=[apply(op("Sz", s[v]), ψ[v])])
+    pψψ, mts, [(v, 1)]; verts_tensors=[apply(op("Sz", s[v]), ψ[v])])
   denominator_tensors = approx_network_region(pψψ, mts, [(v, 1)])
   sz_bp = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
@@ -44,10 +43,9 @@ function main()
 
   #Now do Column-wise General Belief Propagation to Measure Sz on Site v
   pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1][1], vertices(ψψ)))))
-  mts = message_tensors(pψψ)
-  mts = belief_propagation(pψψ, mts; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
+  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
   numerator_tensors = approx_network_region(
-    pψψ, mts, [(v, 1)]; verts_tn=[apply(op("Sz", s[v]), ψ[v])])
+    pψψ, mts, [(v, 1)]; verts_tensors=[apply(op("Sz", s[v]), ψ[v])])
   denominator_tensors = approx_network_region(pψψ, mts, [(v, 1)])
   sz_gen_bp = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
@@ -66,10 +64,9 @@ function main()
   ψOψ = combine_linkinds(ψOψ, combiners)
 
   pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = message_tensors(pψψ; itensor_constructor=inds_e -> ITensor[dense(delta(i)) for i in inds_e])
-  mts = belief_propagation(pψψ, mts; contract_kwargs=(;alg="density_matrix",output_structure=path_graph_structure,maxdim = 8,contraction_sequence_alg="optimal"))
+  mts = belief_propagation(pψψ; itensor_constructor=inds_e -> ITensor[dense(delta(i)) for i in inds_e], contract_kwargs=(;alg="density_matrix",output_structure=path_graph_structure,maxdim = 8,contraction_sequence_alg="optimal"))
   numerator_tensors = approx_network_region(
-    pψψ, mts, [v]; verts_tn=[ψOψ[v]])
+    pψψ, mts, [v]; verts_tensors=[ψOψ[v]])
   denominator_tensors = approx_network_region(pψψ, mts, [v])
   sz_MPS_bp = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 

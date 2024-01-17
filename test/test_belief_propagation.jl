@@ -38,10 +38,9 @@ ITensors.disable_warn_order()
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
   pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = message_tensors(pψψ)
-  mts = belief_propagation(pψψ, mts; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
+  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
   numerator_tensors = approx_network_region(
-    pψψ, mts, [(v, 1)]; verts_tn=[apply(op("Sz", s[v]), ψ[v])])
+    pψψ, mts, [(v, 1)]; verts_tensors=[apply(op("Sz", s[v]), ψ[v])])
   denominator_tensors = approx_network_region(pψψ, mts, [(v, 1)])
   bp_sz = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
@@ -63,10 +62,9 @@ ITensors.disable_warn_order()
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
   pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = message_tensors(pψψ)
-  mts = belief_propagation(pψψ, mts; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
+  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
   numerator_tensors = approx_network_region(
-    pψψ, mts, [(v, 1)]; verts_tn=[apply(op("Sz", s[v]), ψ[v])])
+    pψψ, mts, [(v, 1)]; verts_tensors=[apply(op("Sz", s[v]), ψ[v])])
   denominator_tensors = approx_network_region(pψψ, mts, [(v, 1)])
   bp_sz = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
@@ -89,10 +87,9 @@ ITensors.disable_warn_order()
   nsites = 2
   p_vertices = NamedGraphs.partition_vertices(underlying_graph(ψψ); nvertices_per_partition = nsites)
   pψψ = PartitionedGraph(ψψ, p_vertices)
-  mts = message_tensors(pψψ)
-  mts = belief_propagation(pψψ, mts; contract_kwargs=(; alg="exact"), niters = 20)
+  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), niters = 20)
   numerator_network = approx_network_region(
-    pψψ, mts, vs; verts_tn=ITensor[ψOψ[v] for v in vs])
+    pψψ, mts, vs; verts_tensors=ITensor[ψOψ[v] for v in vs])
 
   denominator_network = approx_network_region(pψψ, mts, vs)
   bp_szsz =
@@ -110,8 +107,7 @@ ITensors.disable_warn_order()
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
   pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = message_tensors(pψψ)
-  mts = belief_propagation(pψψ, mts; contract_kwargs=(; alg="exact"), niters = 20)
+  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), niters = 20)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   rdm = ITensors.contract(
@@ -119,7 +115,7 @@ ITensors.disable_warn_order()
       pψψ,
       mts,
       [(v, 2) for v in vs];
-      verts_tn=ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]],
+      verts_tensors=ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]],
     ),
   )
 
@@ -131,40 +127,37 @@ ITensors.disable_warn_order()
   @test all(>=(0), real(eigs)) && all(==(0), imag(eigs))
 
   #Test more advanced block BP with MPS message tensors on a grid 
-  # g_dims = (5, 4)
-  # g = named_grid(g_dims)
-  # s = siteinds("S=1/2", g)
-  # χ = 2
-  # ψ = randomITensorNetwork(s; link_space=χ)
-  # maxdim = 16
-  # v = (2, 2)
+  g_dims = (5, 4)
+  g = named_grid(g_dims)
+  s = siteinds("S=1/2", g)
+  χ = 2
+  ψ = randomITensorNetwork(s; link_space=χ)
+  maxdim = 16
+  v = (2, 2)
 
-  # ψψ = flatten_networks(ψ, dag(ψ); combine_linkinds=false, map_bra_linkinds=prime)
-  # Oψ = copy(ψ)
-  # Oψ[v] = apply(op("Sz", s[v]), ψ[v])
-  # ψOψ = flatten_networks(ψ, dag(Oψ); combine_linkinds=false, map_bra_linkinds=prime)
+  ψψ = flatten_networks(ψ, dag(ψ); combine_linkinds=false, map_bra_linkinds=prime)
+  Oψ = copy(ψ)
+  Oψ[v] = apply(op("Sz", s[v]), ψ[v])
+  ψOψ = flatten_networks(ψ, dag(Oψ); combine_linkinds=false, map_bra_linkinds=prime)
 
-  # combiners = linkinds_combiners(ψψ)
-  # ψψ = combine_linkinds(ψψ, combiners)
-  # ψOψ = combine_linkinds(ψOψ, combiners)
+  combiners = linkinds_combiners(ψψ)
+  ψψ = combine_linkinds(ψψ, combiners)
+  ψOψ = combine_linkinds(ψOψ, combiners)
 
-  # Z = partition(ψψ, group(v -> v[1], vertices(ψψ)))
-  # mts = message_tensors(Z)
-  # mts = belief_propagation(
-  #   ψψ,
-  #   mts;
-  #   contract_kwargs=(;
-  #     alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16, maxdim
-  #   ),
-  # )
+  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+  mts = belief_propagation(
+    pψψ;
+    contract_kwargs=(;
+      alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16, maxdim
+    ),
+  )
 
-  # numerator_network = approx_network_region(ψψ, mts, [v]; verts_tn=ITensorNetwork(ψOψ[v]))
+  numerator_tensors = approx_network_region(pψψ, mts, [v]; verts_tensors=ITensor[ψOψ[v]])
+  denominator_tensors = approx_network_region(pψψ, mts, [v])
+  bp_sz = ITensors.contract(numerator_tensors)[] / ITensors.contract(denominator_tensors)[]
 
-  # denominator_network = approx_network_region(ψψ, mts, [v])
-  # bp_sz = ITensors.contract(numerator_network)[] / ITensors.contract(denominator_network)[]
+  exact_sz =
+    contract_boundary_mps(ψOψ; cutoff=1e-16) / contract_boundary_mps(ψψ; cutoff=1e-16)
 
-  # exact_sz =
-  #   contract_boundary_mps(ψOψ; cutoff=1e-16) / contract_boundary_mps(ψψ; cutoff=1e-16)
-
-  # @test abs.(bp_sz - exact_sz) <= 1e-5
+  @test abs.(bp_sz - exact_sz) <= 1e-5
 end

@@ -67,6 +67,11 @@ function sqrt_belief_propagation(
   return sqr_message_tensors(sqrt_mts)
 end
 
+function sqrt_belief_propagation(ptn::PartitionedGraph; kwargs...)
+  mts = message_tensors(ptn)
+  return sqrt_belief_propagation(ptn, mts; kwargs...)
+end
+
 function update_sqrt_message_tensor(
   pψψ::PartitionedGraph, edge::PartitionEdge, sqrt_mts;
 )

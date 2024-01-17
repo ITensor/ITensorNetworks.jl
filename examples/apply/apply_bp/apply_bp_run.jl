@@ -8,9 +8,9 @@ opname = "RandomUnitary"
 # graph = named_comb_tree
 graph = named_grid
 
-dims = (6, 6)
+dims = (6,6)
 
-ψ_bp, mts_bp, ψ_vidal, mts_vidal = main(;
+ψ_bp, pψψ_bp, mts_bp, ψ_vidal, pψψ_vidal, mts_vidal = main(;
   seed=1234,
   opname,
   graph,
@@ -24,31 +24,33 @@ dims = (6, 6)
 
 v = dims .÷ 2
 
-sz_bp = @show expect_bp("Sz", v, ψ_bp, mts_bp)
-sz_vidal = @show expect_bp("Sz", v, ψ_vidal, mts_vidal)
+sz_bp = @show expect_bp("Sz", v, ψ_bp, pψψ_bp, mts_bp)
+sz_vidal = @show expect_bp("Sz", v, ψ_vidal, pψψ_vidal, mts_vidal)
 @show abs(sz_bp - sz_vidal) / abs(sz_vidal)
 
 # Run BP again
 mts_bp = belief_propagation(
-  norm_network(ψ_bp),
+  pψψ_bp,
   mts_bp;
   contract_kwargs=(; alg="exact"),
   niters=50,
-  target_precision=1e-5,
+  target_precision=1e-7,
+  verbose = true
 )
 mts_vidal = belief_propagation(
-  norm_network(ψ_vidal),
+  pψψ_vidal,
   mts_vidal;
   contract_kwargs=(; alg="exact"),
   niters=50,
-  target_precision=1e-5,
+  target_precision=1e-7,
+  verbose = true
 )
 
-sz_bp = @show expect_bp("Sz", v, ψ_bp, mts_bp)
-sz_vidal = @show expect_bp("Sz", v, ψ_vidal, mts_vidal)
+sz_bp = @show expect_bp("Sz", v, ψ_bp, pψψ_bp, mts_bp)
+sz_vidal = @show expect_bp("Sz", v, ψ_vidal, pψψ_vidal, mts_vidal)
 @show abs(sz_bp - sz_vidal) / abs(sz_vidal)
 
-ψ_symmetric, _ = symmetric_gauge(ψ_bp)
+ψ_symmetric, _, _ = symmetric_gauge(ψ_bp)
 
 v⃗ⱼ = [v .+ (1, 0), v .- (1, 0), v .+ (0, 1), v .- (0, 1)]
 ψ_bp_v = vertex_array(ψ_bp, v, v⃗ⱼ)

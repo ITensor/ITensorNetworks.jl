@@ -32,10 +32,10 @@ function vidal_gauge(
     edge_ind_sim = sim(edge_ind)
 
     X_D, X_U = eigen(
-      ITensor(mts[pe]); ishermitian=true, cutoff=eigen_message_tensor_cutoff
+      only(mts[pe]); ishermitian=true, cutoff=eigen_message_tensor_cutoff
     )
     Y_D, Y_U = eigen(
-      ITensor(mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))]); ishermitian=true, cutoff=eigen_message_tensor_cutoff
+      only(mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))]); ishermitian=true, cutoff=eigen_message_tensor_cutoff
     )
     X_D, Y_D = map_diag(x -> x + regularization, X_D),
     map_diag(x -> x + regularization, Y_D)
@@ -130,7 +130,7 @@ function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
     setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vsrc]), vsrc)
     setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vdst]), vdst)
 
-    ψsymm_mts[pe], ψsymm_mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))] = copy(ITensor[bond_tensors[e]]), copy(ITensor[bond_tensors[e]])
+    ψsymm_mts[pe], ψsymm_mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))] = copy(ITensor[dense(bond_tensors[e])]), copy(ITensor[dense(bond_tensors[e])])
   end
 
   ψψsymm = norm_network(ψsymm)
