@@ -1,5 +1,5 @@
 
-function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)
+function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)  ###move this to a different file, algorithmic level idea
   return vcat(
     [
       half_sweep(
@@ -14,11 +14,12 @@ function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)
   )
 end
 
-function step_printer(;
-  cutoff, maxdim, mindim, outputlevel::Int=0, psi, region, spec, sweep_step
+function region_printer(;
+  cutoff, maxdim, mindim, outputlevel::Int=0, psi, region_updates, spec, which_region_update, which_sweep,kwargs...
 )
   if outputlevel >= 2
-    @printf("Sweep %d, region=%s \n", sweep, region)
+    region=first(region_updates[which_region_update])
+    @printf("Sweep %d, region=%s \n", which_sweep, region)
     print("  Truncated using")
     @printf(" cutoff=%.1E", cutoff)
     @printf(" maxdim=%d", maxdim)
@@ -35,51 +36,51 @@ function step_printer(;
   end
 end
 
-function update_step(
+function sweep_update(
   solver,
   PH,
   psi::AbstractTTN;
-  normalize::Bool=false,
-  nsite::Int=2,
+  normalize::Bool=false,      # ToDo: think about where to put the default, probably this default is best defined at algorithmic level
+  outputlevel,
   step_printer=step_printer,
-  (step_observer!)=observer(),
-  sweep::Int=1,
-  reverse_step::Bool=false,
-  sweep_regions=default_sweep_regions(nsite, psi; reverse_step),
-  kwargs...,
+  (region_observer!)=observer(),  # ToDo: change name to region_observer! ?
+  which_sweep::Int,
+  sweep_params::NamedTuple,
+  region_updates,# =default_sweep_regions(nsite, psi; reverse_step),   #move default up to algorithmic level
+  updater_kwargs,
 )
-  PH = copy(PH)
-  psi = copy(psi)
-
-  insert_function!(step_observer!, "step_printer" => step_printer)
+  insert_function!(region_observer!, "region_printer" => region_printer) #ToDo fix this
 
   # Append empty namedtuple to each element if not already present
-  # (Needed to handle user-provided sweep_regions)
-  sweep_regions = append_missing_namedtuple.(to_tuple.(sweep_regions))
+  # (Needed to handle user-provided region_updates)
+  region_updates = append_missing_namedtuple.(to_tuple.(region_updates))
 
   if nv(psi) == 1
     error(
       "`alternating_update` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
-
-  for (sweep_step, (region, step_kwargs)) in enumerate(sweep_regions)
-    psi, PH = local_update(
+  
+  for which_region_update in eachindex(region_updates)
+    # merge sweep params in step_kwargs
+    (region, region_kwargs)=region_updates[which_region_update]
+    region_kwargs=merge(region_kwargs, sweep_params)    #in this case sweep params has precedence over step_kwargs --- correct behaviour?
+    psi, PH = region_update(
       solver,
       PH,
-      psi,
-      region;
+      psi;
       normalize,
-      step_kwargs,
-      step_observer!,
-      sweep,
-      sweep_regions,
-      sweep_step,
-      kwargs...,
+      outputlevel,
+      which_sweep,
+      region_updates,
+      which_region_update,
+      region_kwargs,
+      region_observer!,
+      updater_kwargs,
     )
   end
 
-  select!(step_observer!, Observers.DataFrames.Not("step_printer")) # remove step_printer
+   select!(region_observer!, Observers.DataFrames.Not("region_printer")) # remove step_printer #todo fix this
   # Just to be sure:
   normalize && normalize!(psi)
 
@@ -155,46 +156,44 @@ function insert_local_tensor(psi::AbstractTTN, phi::ITensor, e::NamedEdge; kwarg
 end
 
 #TODO: clean this up:
+# also can we entirely rely on directionality of edges by construction?
 current_ortho(::Type{<:Vector{<:V}}, st) where {V} = first(st)
 current_ortho(::Type{NamedEdge{V}}, st) where {V} = src(st)
 current_ortho(st) = current_ortho(typeof(st), st)
 
-function local_update(
-  solver,
+function region_update(
+  updater,
   PH,
-  psi,
-  region;
+  psi;
   normalize,
-  noise,
-  cutoff::AbstractFloat=1E-16,
-  maxdim::Int=typemax(Int),
-  mindim::Int=1,
-  outputlevel::Int=0,
-  step_kwargs=NamedTuple(),
-  step_observer!,
-  sweep,
-  sweep_regions,
-  sweep_step,
-  solver_kwargs...,
+  outputlevel,
+  which_sweep,
+  region_updates,
+  which_region_update,
+  region_kwargs,
+  region_observer!,
+  #insertion_kwargs,  #ToDo: later
+  #extraction_kwargs, #ToDo: implement later with possibility to pass custom extraction/insertion func (or code into func)
+  updater_kwargs
 )
+  region=first(region_updates[which_region_update])
   psi = orthogonalize(psi, current_ortho(region))
-  psi, phi = extract_local_tensor(psi, region)
-
-  nsites = (region isa AbstractEdge) ? 0 : length(region)
+  psi, phi = extract_local_tensor(psi, region;)
+  nsites = (region isa AbstractEdge) ? 0 : length(region) #ToDo move into separate funtion
   PH = set_nsite(PH, nsites)
   PH = position(PH, psi, region)
-  (psi_ref!) = Ref(psi) # create references, in case solver does (out-of-place) modify PH or psi
-  (PH_ref!) = Ref(PH)
-  phi, info = solver(
+  psi_ref! = Ref(psi) # create references, in case solver does (out-of-place) modify PH or psi
+  PH_ref! = Ref(PH) 
+  phi, info = updater(
     phi;
-    (psi_ref!),
-    (PH_ref!),
-    normalize,
-    region,
-    sweep_regions,
-    sweep_step,
-    step_kwargs...,
-    solver_kwargs...,
+    psi_ref!,
+    PH_ref!,
+    outputlevel,
+    which_sweep,
+    region_updates,
+    which_region_update,
+    region_kwargs,
+    updater_kwargs
   )  # args passed by reference are supposed to be modified out of place
   psi = psi_ref![] # dereference
   PH = PH_ref![]
@@ -205,30 +204,35 @@ function local_update(
   normalize && (phi /= norm(phi))
 
   drho = nothing
-  ortho = "left"
+  ortho = "left"    #i guess with respect to ordered vertices that's valid but may be cleaner to use next_region logic
   #if noise > 0.0 && isforward(direction)
   #  drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
+  # so noiseterm is a solver
   #end
 
   psi, spec = insert_local_tensor(
-    psi, phi, region; eigen_perturbation=drho, ortho, normalize, maxdim, mindim, cutoff
+    psi, phi, region; eigen_perturbation=drho, ortho, normalize,
+    maxdim=region_kwargs[:maxdim],
+    mindim=region_kwargs[:mindim],
+    cutoff=region_kwargs[:cutoff]
   )
 
   update!(
-    step_observer!;
+    region_observer!;
     cutoff,
     maxdim,
     mindim,
-    sweep_step,
-    total_sweep_steps=length(sweep_regions),
-    end_of_sweep=(sweep_step == length(sweep_regions)),
+    which_region_update,
+    region_updates,
+    total_sweep_steps=length(region_updates),
+    end_of_sweep=(which_region_update == length(region_updates)),
     psi,
     region,
-    sweep,
+    which_sweep,
     spec,
     outputlevel,
     info...,
-    step_kwargs...,
+    region_kwargs...,
   )
   return psi, PH
 end

@@ -57,7 +57,7 @@ function tdvp_sweep(
 end
 
 function tdvp(
-  solver,
+  updater,
   H,
   t::Number,
   init::AbstractTTN;
@@ -68,17 +68,18 @@ function tdvp(
   (sweep_observer!)=observer(),
   root_vertex=default_root_vertex(init),
   reverse_step=true,
+  updater_kwargs=NamedTuple(;),
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
-  sweep_regions = tdvp_sweep(order, nsite, time_step, init; root_vertex, reverse_step)
+  region_updates = tdvp_sweep(order, nsite, time_step, init; root_vertex, reverse_step)
 
-  function sweep_time_printer(; outputlevel, sweep, kwargs...)
+  function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
     if outputlevel >= 1
       sweeps_per_step = order ÷ 2
       if sweep % sweeps_per_step == 0
-        current_time = (sweep / sweeps_per_step) * time_step
-        println("Current time (sweep $sweep) = ", round(current_time; digits=3))
+        current_time = (which_sweep / sweeps_per_step) * time_step
+        println("Current time (sweep $which_sweep) = ", round(current_time; digits=3))
       end
     end
     return nothing
@@ -87,7 +88,7 @@ function tdvp(
   insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
 
   psi = alternating_update(
-    solver, H, init; nsweeps, sweep_observer!, sweep_regions, nsite, kwargs...
+    updater, H, init; nsweeps, sweep_observer!, region_updates, updater_kwargs, kwargs...
   )
 
   # remove sweep_time_printer from sweep_observer!
@@ -114,6 +115,6 @@ Optional keyword arguments:
 * `observer` - object implementing the Observer interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
-function tdvp(H, t::Number, init::AbstractTTN; solver=exponentiate_solver, kwargs...)
-  return tdvp(solver(), H, t, init; kwargs...)
+function tdvp(H, t::Number, init::AbstractTTN; updater=exponentiate_updater, kwargs...)
+  return tdvp(updater, H, t, init; kwargs...)
 end
