@@ -1,38 +1,39 @@
 
-function eigsolve_solver(;
-  solver_which_eigenvalue=:SR,   #TODO: settle on pattern to pass solver kwargs
-  ishermitian=true,
-  solver_tol=1e-14,
-  solver_krylovdim=3,
-  solver_maxiter=1,
-  solver_verbosity=0,
-)
-  function solver(
-    init;
-    psi_ref!,
-    PH_ref!,
-    normalize,
-    region,
-    sweep_regions,
-    sweep_step,
-    sweep_kwargs...,
-    # slurp solver_kwargs?  #TODO: homogenize how the solver kwargs are passed
+function eigsolve_updater(
+  init;
+  psi_ref!,
+  PH_ref!,
+  outputlevel,
+  which_sweep,
+  region_updates, 
+  which_region_update,
+  region_kwargs,
+  updater_kwargs,
   )
-    howmany = 1
-    which = solver_which_eigenvalue
-    vals, vecs, info = eigsolve(
-      PH_ref![],
+
+  default_updater_kwargs=(;
+  solver_which_eigenvalue=:SR, 
+  ishermitian=true,
+  tol=1e-14,
+  krylovdim=3,
+  maxiter=1,
+  outputlevel=0,
+  eager=false,
+  )
+  updater_kwargs=merge(default_updater_kwargs,updater_kwargs)  #last collection has precedence
+  howmany=1
+  which=updater_kwargs[:solver_which_eigenvalue]
+  vals, vecs, info = KrylovKit.eigsolve(PH_ref![],
       init,
       howmany,
       which;
-      ishermitian,
-      tol=solver_tol,
-      krylovdim=solver_krylovdim,
-      maxiter=solver_maxiter,
-      verbosity=solver_verbosity,
+      ishermitian=updater_kwargs[:ishermitian],
+      tol=updater_kwargs[:tol],
+      krylovdim=updater_kwargs[:krylovdim],
+      maxiter=updater_kwargs[:maxiter],
+      verbosity=updater_kwargs[:outputlevel],
+      eager=updater_kwargs[:eager],
     )
-    phi = vecs[1]
-    return phi, (; solver_info=info, energies=vals)
-  end
-  return solver
+  return vecs[1], (; info, energies=vals)
 end
+  

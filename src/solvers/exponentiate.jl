@@ -3,10 +3,10 @@
     psi_ref!,
     PH_ref!,
     outputlevel,
-    which_sweep,  # keep, change name
+    which_sweep,
     region_updates, 
     which_region_update,
-    region_kwargs, # region_kwargs (timestep for solver)
+    region_kwargs,
     updater_kwargs,
   ) 
     default_updater_kwargs=(;
