@@ -31,11 +31,11 @@ function vidal_gauge(
     edge_ind = commoninds(ψvsrc, ψvdst)
     edge_ind_sim = sim(edge_ind)
 
-    X_D, X_U = eigen(
-      only(mts[pe]); ishermitian=true, cutoff=eigen_message_tensor_cutoff
-    )
+    X_D, X_U = eigen(only(mts[pe]); ishermitian=true, cutoff=eigen_message_tensor_cutoff)
     Y_D, Y_U = eigen(
-      only(mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))]); ishermitian=true, cutoff=eigen_message_tensor_cutoff
+      only(mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))]);
+      ishermitian=true,
+      cutoff=eigen_message_tensor_cutoff,
     )
     X_D, Y_D = map_diag(x -> x + regularization, X_D),
     map_diag(x -> x + regularization, Y_D)
@@ -87,7 +87,14 @@ function vidal_gauge(
 )
   bond_tensors = initialize_bond_tensors(ψ)
   return vidal_gauge(
-    ψ, pψψ, mts, bond_tensors; eigen_message_tensor_cutoff, regularization, edges, svd_kwargs...
+    ψ,
+    pψψ,
+    mts,
+    bond_tensors;
+    eigen_message_tensor_cutoff,
+    regularization,
+    edges,
+    svd_kwargs...,
   )
 end
 
@@ -113,7 +120,9 @@ function vidal_gauge(
     target_precision=target_canonicalness,
     verbose,
   )
-  return vidal_gauge(ψ, pψψ, mts; eigen_message_tensor_cutoff, regularization, svd_kwargs...)
+  return vidal_gauge(
+    ψ, pψψ, mts; eigen_message_tensor_cutoff, regularization, svd_kwargs...
+  )
 end
 
 """Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (partitionedgraph, message tensors)"""
@@ -130,7 +139,10 @@ function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
     setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vsrc]), vsrc)
     setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vdst]), vdst)
 
-    ψsymm_mts[pe], ψsymm_mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))] = copy(ITensor[dense(bond_tensors[e])]), copy(ITensor[dense(bond_tensors[e])])
+    ψsymm_mts[pe], ψsymm_mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))] = copy(
+      ITensor[dense(bond_tensors[e])]
+    ),
+    copy(ITensor[dense(bond_tensors[e])])
   end
 
   ψψsymm = norm_network(ψsymm)
@@ -162,7 +174,10 @@ end
 
 """Transform from the Symmetric Gauge (message tensors) to the Vidal Gauge (bond tensors)"""
 function symmetric_to_vidal_gauge(
-  ψ::ITensorNetwork, pψψ::PartitionedGraph, mts; regularization=10 * eps(real(scalartype(ψ)))
+  ψ::ITensorNetwork,
+  pψψ::PartitionedGraph,
+  mts;
+  regularization=10 * eps(real(scalartype(ψ))),
 )
   bond_tensors = DataGraph{vertextype(ψ),ITensor,ITensor}(underlying_graph(ψ))
 

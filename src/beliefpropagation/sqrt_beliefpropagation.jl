@@ -72,20 +72,24 @@ function sqrt_belief_propagation(ptn::PartitionedGraph; kwargs...)
   return sqrt_belief_propagation(ptn, mts; kwargs...)
 end
 
-function update_sqrt_message_tensor(
-  pψψ::PartitionedGraph, edge::PartitionEdge, sqrt_mts;
-)
+function update_sqrt_message_tensor(pψψ::PartitionedGraph, edge::PartitionEdge, sqrt_mts;)
   v = only(filter(v -> v[2] == 1, vertices(pψψ, src(edge))))
   site_itensor = unpartitioned_graph(pψψ)[v]
   incoming_messages = [
-    sqrt_mts[PartitionEdge(e_in)] for e_in in setdiff(boundary_edges(partitioned_graph(pψψ), [NamedGraphs.parent(src(edge))]; dir=:in), [reverse(NamedGraphs.parent(edge))])
+    sqrt_mts[PartitionEdge(e_in)] for e_in in setdiff(
+      boundary_edges(partitioned_graph(pψψ), [NamedGraphs.parent(src(edge))]; dir=:in),
+      [reverse(NamedGraphs.parent(edge))],
+    )
   ]
   incoming_messages = reduce(vcat, incoming_messages; init=ITensor[])
   contract_list = ITensor[incoming_messages; site_itensor]
   contract_output = contract(
     contract_list; sequence=contraction_sequence(contract_list; alg="optimal")
   )
-  left_inds = [uniqueinds(contract_output, site_itensor); siteinds(unpartitioned_graph(pψψ), v)]
+  left_inds = [
+    uniqueinds(contract_output, site_itensor)
+    siteinds(unpartitioned_graph(pψψ), v)
+  ]
   Q, R = qr(contract_output, left_inds)
   normalize!(R)
   return R
@@ -99,17 +103,19 @@ function sqrt_message_tensors(
 )
   sqrt_mts = copy(mts)
   for e in PartitionEdge.(edges(partitioned_graph(pψψ)))
-    vsrc, vdst = filter(v -> v[2] == 1, vertices(pψψ, src(e))), filter(v -> v[2] == 1, vertices(pψψ, dst(e)))
-    ψvsrc, ψvdst = unpartitioned_graph(pψψ)[only(vsrc)],unpartitioned_graph(pψψ)[only(vdst)]
+    vsrc, vdst = filter(v -> v[2] == 1, vertices(pψψ, src(e))),
+    filter(v -> v[2] == 1, vertices(pψψ, dst(e)))
+    ψvsrc, ψvdst = unpartitioned_graph(pψψ)[only(vsrc)],
+    unpartitioned_graph(pψψ)[only(vdst)]
 
     edge_ind = commoninds(ψvsrc, ψvdst)
     edge_ind_sim = sim(edge_ind)
 
-    X_D, X_U = eigen(
-      only(mts[e]); ishermitian=true, cutoff=eigen_message_tensor_cutoff
-    )
+    X_D, X_U = eigen(only(mts[e]); ishermitian=true, cutoff=eigen_message_tensor_cutoff)
     Y_D, Y_U = eigen(
-      only(mts[PartitionEdge(reverse(NamedGraphs.parent(e)))]); ishermitian=true, cutoff=eigen_message_tensor_cutoff
+      only(mts[PartitionEdge(reverse(NamedGraphs.parent(e)))]);
+      ishermitian=true,
+      cutoff=eigen_message_tensor_cutoff,
     )
     X_D, Y_D = map_diag(x -> x + regularization, X_D),
     map_diag(x -> x + regularization, Y_D)

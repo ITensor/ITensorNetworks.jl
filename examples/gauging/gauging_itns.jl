@@ -22,7 +22,9 @@ using NamedGraphs: add_edges!, rem_vertex!, hexagonal_lattice_graph
 using Graphs
 
 """Eager Gauging"""
-function eager_gauging(ψ::ITensorNetwork, pψψ::PartitionedGraph, bond_tensors::DataGraph, mts)
+function eager_gauging(
+  ψ::ITensorNetwork, pψψ::PartitionedGraph, bond_tensors::DataGraph, mts
+)
   isometries = vidal_itn_isometries(ψ, bond_tensors)
 
   ψ = copy(ψ)
@@ -32,7 +34,9 @@ function eager_gauging(ψ::ITensorNetwork, pψψ::PartitionedGraph, bond_tensors
     pe = NamedGraphs.partition_edge(pψψ, NamedEdge((vsrc, 1) => (vdst, 1)))
     normalize!(isometries[e])
     normalize!(isometries[reverse(e)])
-    mts[pe], mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))] = ITensorNetwork(isometries[e]),
+    mts[pe], mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))] = ITensorNetwork(
+      isometries[e]
+    ),
     ITensorNetwork(isometries[reverse(e)])
   end
 
@@ -70,12 +74,20 @@ function benchmark_state_gauging(
         )
       else
         times_iters[i] = @elapsed mts, _ = belief_propagation_iteration(
-          pψψ, mts; contract_kwargs=(; alg="exact"), edges=[PartitionEdge.(e) for e in edge_sequence(partitioned_graph(pψψ); alg="parallel")])
+          pψψ,
+          mts;
+          contract_kwargs=(; alg="exact"),
+          edges=[
+            PartitionEdge.(e) for e in edge_sequence(partitioned_graph(pψψ); alg="parallel")
+          ],
+        )
       end
 
       times_gauging[i] = @elapsed ψ, bond_tensors = vidal_gauge(ψinit, pψψ, mts)
     elseif mode == "eager"
-      times_iters[i] = @elapsed ψ, bond_tensors, mts = eager_gauging(ψ, pψψ, bond_tensors, mts)
+      times_iters[i] = @elapsed ψ, bond_tensors, mts = eager_gauging(
+        ψ, pψψ, bond_tensors, mts
+      )
     else
       times_iters[i] = @elapsed begin
         for e in edges(ψ)

@@ -37,9 +37,7 @@ hummingbird_processor_graph() = ibm_processor_graph(2, 4)
 osprey_processor_graph() = ibm_processor_graph(6, 12)
 
 """Take the expectation value of o on an ITN using belief propagation"""
-function expect_state_SBP(
-  o::ITensor, ψ::AbstractITensorNetwork, pψψ::PartitionedGraph, mts
-)
+function expect_state_SBP(o::ITensor, ψ::AbstractITensorNetwork, pψψ::PartitionedGraph, mts)
   Oψ = apply(o, ψ; cutoff=1e-16)
   ψ = copy(ψ)
   s = siteinds(ψ)
@@ -47,7 +45,8 @@ function expect_state_SBP(
   vs_braket = [(v, 1) for v in vs]
 
   numerator_tensors = approx_network_region(
-    pψψ, mts, vs_braket; verts_tensors=ITensor[Oψ[v] for v in vs])
+    pψψ, mts, vs_braket; verts_tensors=ITensor[Oψ[v] for v in vs]
+  )
   denominator_tensors = approx_network_region(pψψ, mts, vs_braket)
   num_seq = contraction_sequence(numerator_tensors; alg="optimal")
   den_seq = contraction_sequence(denominator_tensors; alg="optimal")

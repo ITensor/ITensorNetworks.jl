@@ -36,7 +36,8 @@ function main(; n, niters, network="ising", β=nothing, h=nothing, χ=nothing)
 
   mts = @time belief_propagation(pψψ; niters, contract_kwargs=(; alg="exact"))
   numerator_network = approx_network_region(
-    pψψ, mts, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])])
+    pψψ, mts, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])]
+  )
   denominator_network = approx_network_region(pψψ, mts, [(v, 1)])
   sz_bp =
     ITensors.contract(
@@ -52,7 +53,8 @@ function main(; n, niters, network="ising", β=nothing, h=nothing, χ=nothing)
   mts_sqrt = @time sqrt_belief_propagation(pψψ; niters)
 
   numerator_network = approx_network_region(
-    pψψ, mts_sqrt, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])])
+    pψψ, mts_sqrt, [(v, 1)]; verts_tensors=ITensor[apply(op("Sz", s[v]), ψ[v])]
+  )
   denominator_network = approx_network_region(pψψ, mts_sqrt, [(v, 1)])
   sz_sqrt_bp =
     contract(

@@ -1,6 +1,5 @@
 function message_tensors(
-  ptn::PartitionedGraph;
-  itensor_constructor=inds_e -> ITensor[dense(delta(inds_e))]
+  ptn::PartitionedGraph; itensor_constructor=inds_e -> ITensor[dense(delta(inds_e))]
 )
   mts = Dict()
   for e in PartitionEdge.(edges(partitioned_graph(ptn)))
@@ -23,19 +22,27 @@ function update_message_tensor(
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
   incoming_messages = [
-    mts[PartitionEdge(e_in)] for e_in in setdiff(boundary_edges(partitioned_graph(ptn), [NamedGraphs.parent(src(edge))]; dir=:in), [reverse(NamedGraphs.parent(edge))])
+    mts[PartitionEdge(e_in)] for e_in in setdiff(
+      boundary_edges(partitioned_graph(ptn), [NamedGraphs.parent(src(edge))]; dir=:in),
+      [reverse(NamedGraphs.parent(edge))],
+    )
   ]
   incoming_messages = reduce(vcat, incoming_messages; init=ITensor[])
 
-  contract_list = ITensor[incoming_messages; ITensor(unpartitioned_graph(subgraph(ptn, [src(edge)])))]
+  contract_list = ITensor[
+    incoming_messages
+    ITensor(unpartitioned_graph(subgraph(ptn, [src(edge)])))
+  ]
 
   if contract_kwargs.alg != "exact"
     mt, _ = contract(ITensorNetwork(contract_list); contract_kwargs...)
   else
-    mt = contract(contract_list; sequence=contraction_sequence(contract_list; alg="optimal"))
+    mt = contract(
+      contract_list; sequence=contraction_sequence(contract_list; alg="optimal")
+    )
   end
 
-  if isa(mt, ITensor) 
+  if isa(mt, ITensor)
     mt = ITensor[mt]
   elseif isa(mt, ITensorNetwork)
     mt = ITensor(mt)
@@ -61,8 +68,7 @@ function belief_propagation_iteration(
     new_mts[e] = update_message_tensor(ptn, e, new_mts; contract_kwargs)
 
     if compute_norm
-      LHS, RHS = ITensors.contract(mts[e]),
-      ITensors.contract(new_mts[e])
+      LHS, RHS = ITensors.contract(mts[e]), ITensors.contract(new_mts[e])
       #This line only makes sense if the message tensors are rank 2??? Should fix this.
       LHS /= sum(diag(LHS))
       RHS /= sum(diag(RHS))
@@ -133,7 +139,11 @@ function belief_propagation(
   return mts
 end
 
-function belief_propagation(ptn::PartitionedGraph; itensor_constructor=inds_e -> ITensor[dense(delta(inds_e))], kwargs...)
+function belief_propagation(
+  ptn::PartitionedGraph;
+  itensor_constructor=inds_e -> ITensor[dense(delta(inds_e))],
+  kwargs...,
+)
   mts = message_tensors(ptn; itensor_constructor)
   return belief_propagation(ptn, mts; kwargs...)
 end
@@ -148,10 +158,15 @@ function get_environment(ptn::PartitionedGraph, mts, verts::Vector; dir=:in)
     return get_environment(ptn, mts, setdiff(vertices(ptn), verts))
   end
 
-  env_tensors = [mts[PartitionEdge(e)] for e in boundary_edges(partitioned_graph(ptn), NamedGraphs.parent.(partition_vertices); dir=:in)]
-  env_tensors = reduce(vcat, env_tensors; init = ITensor[])
-  central_tensors = ITensor[(unpartitioned_graph(ptn))[v] for v in setdiff(vertices(ptn, partition_vertices), verts)]
-  
+  env_tensors = [
+    mts[PartitionEdge(e)] for e in
+    boundary_edges(partitioned_graph(ptn), NamedGraphs.parent.(partition_vertices); dir=:in)
+  ]
+  env_tensors = reduce(vcat, env_tensors; init=ITensor[])
+  central_tensors = ITensor[
+    (unpartitioned_graph(ptn))[v] for v in setdiff(vertices(ptn, partition_vertices), verts)
+  ]
+
   return vcat(env_tensors, central_tensors)
 end
 

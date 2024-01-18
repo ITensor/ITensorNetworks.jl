@@ -38,9 +38,12 @@ ITensors.disable_warn_order()
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
   pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
+  mts = belief_propagation(
+    pψψ; contract_kwargs=(; alg="exact"), verbose=true, niters=10, target_precision=1e-3
+  )
   numerator_tensors = approx_network_region(
-    pψψ, mts, [(v, 1)]; verts_tensors=[apply(op("Sz", s[v]), ψ[v])])
+    pψψ, mts, [(v, 1)]; verts_tensors=[apply(op("Sz", s[v]), ψ[v])]
+  )
   denominator_tensors = approx_network_region(pψψ, mts, [(v, 1)])
   bp_sz = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
@@ -62,9 +65,12 @@ ITensors.disable_warn_order()
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
   pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), verbose = true, niters = 10, target_precision = 1e-3)
+  mts = belief_propagation(
+    pψψ; contract_kwargs=(; alg="exact"), verbose=true, niters=10, target_precision=1e-3
+  )
   numerator_tensors = approx_network_region(
-    pψψ, mts, [(v, 1)]; verts_tensors=[apply(op("Sz", s[v]), ψ[v])])
+    pψψ, mts, [(v, 1)]; verts_tensors=[apply(op("Sz", s[v]), ψ[v])]
+  )
   denominator_tensors = approx_network_region(pψψ, mts, [(v, 1)])
   bp_sz = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
@@ -85,11 +91,14 @@ ITensors.disable_warn_order()
     ITensors.contract(ψψ; sequence=contract_seq)[]
 
   nsites = 2
-  p_vertices = NamedGraphs.partition_vertices(underlying_graph(ψψ); nvertices_per_partition = nsites)
+  p_vertices = NamedGraphs.partition_vertices(
+    underlying_graph(ψψ); nvertices_per_partition=nsites
+  )
   pψψ = PartitionedGraph(ψψ, p_vertices)
-  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), niters = 20)
+  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), niters=20)
   numerator_network = approx_network_region(
-    pψψ, mts, vs; verts_tensors=ITensor[ψOψ[v] for v in vs])
+    pψψ, mts, vs; verts_tensors=ITensor[ψOψ[v] for v in vs]
+  )
 
   denominator_network = approx_network_region(pψψ, mts, vs)
   bp_szsz =
@@ -107,7 +116,7 @@ ITensors.disable_warn_order()
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
   pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), niters = 20)
+  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), niters=20)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   rdm = ITensors.contract(

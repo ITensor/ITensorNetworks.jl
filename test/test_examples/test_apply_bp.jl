@@ -9,7 +9,7 @@ include(joinpath(pkgdir(ITensorNetworks), "examples", "apply", "apply_bp", "appl
   graphs = (named_comb_tree, named_grid)
   dims = (6, 6)
   @testset "$opname, $graph" for opname in opnames, graph in graphs
-    ψ_bp, mts_bp, ψ_vidal, mts_vidal = @suppress main(;
+    ψ_bp, pψψ_bp, mts_bp, ψ_vidal, pψψ_vidal, mts_vidal = @suppress main(;
       seed=1234,
       opname,
       graph,
@@ -21,8 +21,8 @@ include(joinpath(pkgdir(ITensorNetworks), "examples", "apply", "apply_bp", "appl
       reduced=true,
     )
     v = dims .÷ 2
-    sz_bp = expect_bp("Sz", v, ψ_bp, mts_bp)
-    sz_vidal = expect_bp("Sz", v, ψ_vidal, mts_vidal)
+    sz_bp = expect_bp("Sz", v, ψ_bp, pψψ_bp, mts_bp)
+    sz_vidal = expect_bp("Sz", v, ψ_vidal, pψψ_vidal, mts_vidal)
     @test sz_bp ≈ sz_vidal rtol = 1e-5
   end
 end

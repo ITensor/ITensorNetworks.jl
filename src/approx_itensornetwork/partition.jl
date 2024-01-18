@@ -75,19 +75,18 @@ function findfirst_on_edges(f::Function, graph::AbstractDataGraph)
 end
 
 function subgraphs(g::AbstractSimpleGraph, subgraph_vertices)
-    return subgraphs(NamedGraph(g), subgraph_vertices)
+  return subgraphs(NamedGraph(g), subgraph_vertices)
 end
-  
-  """
-      subgraphs(g::AbstractGraph, subgraph_vertices)
-  
-  Return a collection of subgraphs of `g` defined by the subgraph
-  vertices `subgraph_vertices`.
-  """
+
+"""
+    subgraphs(g::AbstractGraph, subgraph_vertices)
+
+Return a collection of subgraphs of `g` defined by the subgraph
+vertices `subgraph_vertices`.
+"""
 function subgraphs(g::AbstractGraph, subgraph_vertices)
-    return map(vs -> subgraph(g, vs), subgraph_vertices)
+  return map(vs -> subgraph(g, vs), subgraph_vertices)
 end
-  
 
 """
     subgraphs(g::AbstractGraph; npartitions::Integer, kwargs...)

@@ -25,9 +25,7 @@ using Test
     @suppress include(joinpath(pkgdir(ITensorNetworks), "examples", example_file))
   end
   if !Sys.iswindows()
-    example_files = [
-      joinpath("contraction_sequence", "contraction_sequence.jl"),
-    ]
+    example_files = [joinpath("contraction_sequence", "contraction_sequence.jl")]
     @testset "Test $example_file (using KaHyPar, so no Windows support)" for example_file in
                                                                              example_files
       @suppress include(joinpath(pkgdir(ITensorNetworks), "examples", example_file))

@@ -8,11 +8,7 @@ using Graphs
 using NamedGraphs
 
 using ITensorNetworks:
-  belief_propagation,
-  approx_network_region,
-  contract_inner,
-  message_tensors,
-  edge_sequence
+  belief_propagation, approx_network_region, contract_inner, message_tensors, edge_sequence
 
 function main()
   g_labels = [
@@ -51,7 +47,9 @@ function main()
       contract_kwargs=(; alg="exact"),
       target_precision=1e-10,
       niters=100,
-      edges=[PartitionEdge.(e) for e in edge_sequence(partitioned_graph(pψψ); alg="parallel")],
+      edges=[
+        PartitionEdge.(e) for e in edge_sequence(partitioned_graph(pψψ); alg="parallel")
+      ],
       verbose=true,
     )
     print("Sequential updates (sequence is default edge list of the message tensors): ")
@@ -61,7 +59,10 @@ function main()
       contract_kwargs=(; alg="exact"),
       target_precision=1e-10,
       niters=100,
-      edges=PartitionEdge.([e for e in vcat(edges(partitioned_graph(pψψ)), reverse.(edges(partitioned_graph(pψψ))))]),
+      edges=PartitionEdge.([
+        e for
+        e in vcat(edges(partitioned_graph(pψψ)), reverse.(edges(partitioned_graph(pψψ))))
+      ]),
       verbose=true,
     )
     print("Sequential updates (sequence is our custom sequence finder): ")

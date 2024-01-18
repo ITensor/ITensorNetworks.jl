@@ -122,7 +122,11 @@ function simple_update_vidal(os, ψ::ITensorNetwork; maxdim, regauge=false)
       println("regauge")
       ψ_symmetric, pψψ_symmetric, mts = vidal_to_symmetric_gauge(ψ, bond_tensors)
       mts = belief_propagation(
-        pψψ_symmetric, mts; contract_kwargs=(; alg="exact"), niters=50, target_precision=1e-5
+        pψψ_symmetric,
+        mts;
+        contract_kwargs=(; alg="exact"),
+        niters=50,
+        target_precision=1e-5,
       )
       ψ, bond_tensors = vidal_gauge(ψ_symmetric, pψψ_symmetric, mts)
     end

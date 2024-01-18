@@ -8,7 +8,7 @@ opname = "RandomUnitary"
 # graph = named_comb_tree
 graph = named_grid
 
-dims = (6,6)
+dims = (6, 6)
 
 ψ_bp, pψψ_bp, mts_bp, ψ_vidal, pψψ_vidal, mts_vidal = main(;
   seed=1234,
@@ -35,7 +35,7 @@ mts_bp = belief_propagation(
   contract_kwargs=(; alg="exact"),
   niters=50,
   target_precision=1e-7,
-  verbose = true
+  verbose=true,
 )
 mts_vidal = belief_propagation(
   pψψ_vidal,
@@ -43,7 +43,7 @@ mts_vidal = belief_propagation(
   contract_kwargs=(; alg="exact"),
   niters=50,
   target_precision=1e-7,
-  verbose = true
+  verbose=true,
 )
 
 sz_bp = @show expect_bp("Sz", v, ψ_bp, pψψ_bp, mts_bp)
