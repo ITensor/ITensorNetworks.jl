@@ -32,7 +32,7 @@ end
 
 function tdvp_sweep(
   order::Int,
-  nsite::Int,
+  nsites::Int,
   time_step::Number,
   graph::AbstractGraph;
   root_vertex=default_root_vertex(graph),
@@ -46,7 +46,7 @@ function tdvp_sweep(
       graph,
       make_region;
       root_vertex,
-      nsite,
+      nsites,
       region_args=(; substep, time_step=sub_time_step),
       reverse_args=(; substep, time_step=-sub_time_step),
       reverse_step,
@@ -62,7 +62,7 @@ function tdvp(
   t::Number,
   init::AbstractTTN;
   time_step::Number=t,
-  nsite=2,
+  nsites=2,
   nsteps=nothing,
   order::Integer=2,
   (sweep_observer!)=observer(),
@@ -72,7 +72,7 @@ function tdvp(
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
-  region_updates = tdvp_sweep(order, nsite, time_step, init; root_vertex, reverse_step)
+  region_updates = tdvp_sweep(order, nsites, time_step, init; root_vertex, reverse_step)
 
   function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
     if outputlevel >= 1

@@ -25,14 +25,14 @@ exponentiate_updater=ITensorNetworks.exponentiate_updater #ToDo: how to best han
     ψ0 = random_mps(s; internal_inds_space=10)
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
+    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
     #
     #TODO: exponentiate is now the default, so switch this to applyexp
     #
     #Different backend updaters, default updater_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(
-      H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1, updater=exponentiate_updater
+      H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1, updater=exponentiate_updater
     )
     @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
 
@@ -81,11 +81,11 @@ exponentiate_updater=ITensorNetworks.exponentiate_updater #ToDo: how to best han
 
     ψ0 = random_mps(s; internal_inds_space=10)
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
     #Different backend updaters, default updater_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(
-      Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1, updater=exponentiate_updater
+      Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1, updater=exponentiate_updater
     )
     @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
 
@@ -131,7 +131,7 @@ exponentiate_updater=ITensorNetworks.exponentiate_updater #ToDo: how to best han
     ψ0 = random_mps(s; internal_inds_space=10)
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; time_step=-0.05im, order, cutoff, nsite=1)
+    ψ1 = tdvp(H, -0.1im, ψ0; time_step=-0.05im, order, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -175,7 +175,7 @@ exponentiate_updater=ITensorNetworks.exponentiate_updater #ToDo: how to best han
       return psi, (; info=exp_info)
     end
 
-    ψ1 = tdvp(updater, H, -0.1im, ψ0; cutoff, nsite=1)
+    ψ1 = tdvp(updater, H, -0.1im, ψ0; cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -316,9 +316,9 @@ exponentiate_updater=ITensorNetworks.exponentiate_updater #ToDo: how to best han
       psi = apply(gates, psi; cutoff)
       #normalize!(psi)
 
-      nsite = (step <= 3 ? 2 : 1)
+      nsites = (step <= 3 ? 2 : 1)
       phi = tdvp(
-        H, -tau * im, phi; nsteps=1, cutoff, nsite, normalize=true, updater_kwargs=(;krylovdim=15)
+        H, -tau * im, phi; nsteps=1, cutoff, nsites, normalize=true, updater_kwargs=(;krylovdim=15)
       )
 
       Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
@@ -376,9 +376,9 @@ exponentiate_updater=ITensorNetworks.exponentiate_updater #ToDo: how to best han
     psi2 = deepcopy(psi)
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
-      nsite = (step <= 10 ? 2 : 1)
+      nsites = (step <= 10 ? 2 : 1)
       psi = tdvp(
-        H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, updater_kwargs=(;krylovdim=15)
+        H, -tau, psi; cutoff, nsites, reverse_step, normalize=true, updater_kwargs=(;krylovdim=15)
       )
       #Different backend updaters, default updater_backend = "applyexp"
       psi2 = tdvp(
@@ -386,7 +386,7 @@ exponentiate_updater=ITensorNetworks.exponentiate_updater #ToDo: how to best han
         -tau,
         psi2;
         cutoff,
-        nsite,
+        nsites,
         reverse_step,
         normalize=true,
         updater_kwargs=(;krylovdim=15),
@@ -482,7 +482,7 @@ end
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
+    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -524,7 +524,7 @@ end
 
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -566,10 +566,10 @@ end
       return psi, (; info=exp_info)
     end
 
-    ψ1 = tdvp(updater, H, -0.1im, ψ0; cutoff, nsite=1)
+    ψ1 = tdvp(updater, H, -0.1im, ψ0; cutoff, nsites=1)
 
-    #@test ψ1 ≈ tdvp(updater, -0.1im, H, ψ0; cutoff, nsite=1)
-    #@test ψ1 ≈ tdvp(updater, H, ψ0, -0.1im; cutoff, nsite=1)
+    #@test ψ1 ≈ tdvp(updater, -0.1im, H, ψ0; cutoff, nsites=1)
+    #@test ψ1 ≈ tdvp(updater, H, ψ0, -0.1im; cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -683,9 +683,9 @@ end
       psi = apply(gates, psi; cutoff, maxdim)
       #normalize!(psi)
 
-      nsite = (step <= 3 ? 2 : 1)
+      nsites = (step <= 3 ? 2 : 1)
       phi = tdvp(
-        H, -tau * im, phi; nsteps=1, cutoff, nsite, normalize=true, updater_kwargs=(;krylovdim=15)
+        H, -tau * im, phi; nsteps=1, cutoff, nsites, normalize=true, updater_kwargs=(;krylovdim=15)
       )
 
       Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
@@ -734,9 +734,9 @@ end
 
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
-      nsite = (step <= 10 ? 2 : 1)
+      nsites = (step <= 10 ? 2 : 1)
       psi = tdvp(
-        H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, updater_kwargs=(;krylovdim=15)
+        H, -tau, psi; cutoff, nsites, reverse_step, normalize=true, updater_kwargs=(;krylovdim=15)
       )
     end
 

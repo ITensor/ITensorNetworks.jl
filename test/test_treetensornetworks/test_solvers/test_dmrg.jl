@@ -5,7 +5,7 @@ using Random
 using Test
 using Observers
 
-@testset "MPS DMRG" for nsite in [1, 2]
+@testset "MPS DMRG" for nsites in [1, 2]
   N = 10
   cutoff = 1e-12
 
@@ -31,13 +31,13 @@ using Observers
   e2, psi2 = dmrg(H_mpo, psi_mps; nsweeps, maxdim, outputlevel=0)
 
   psi = dmrg(
-    H, psi; nsweeps, maxdim, cutoff, nsite, updater_kwargs=(; krylovdim=3, maxiter=1)
+    H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
   @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
 
   # Alias for `ITensorNetworks.dmrg`
   psi = eigsolve(
-    H, psi; nsweeps, maxdim, cutoff, nsite, updater_kwargs=(; krylovdim=3, maxiter=1)
+    H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
   @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
 
@@ -113,7 +113,7 @@ end
   psi = dmrg(H, psi; nsweeps, maxdim, cutoff)
 end
 
-@testset "Tree DMRG" for nsite in [1, 2]
+@testset "Tree DMRG" for nsites in [1, 2]
   cutoff = 1e-12
 
   tooth_lengths = fill(2, 3)
@@ -132,7 +132,7 @@ end
   maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
   cutoff!(sweeps, cutoff)
   psi = dmrg(
-    H, psi; nsweeps, maxdim, cutoff, nsite, updater_kwargs=(; krylovdim=3, maxiter=1)
+    H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
 
   # Compare to `ITensors.MPO` version of `dmrg`
@@ -148,7 +148,7 @@ end
 
 @testset "Regression test: tree truncation" begin
   maxdim = 4
-  nsite = 2
+  nsites = 2
   nsweeps = 10
 
   c = named_comb_tree((3, 2))
@@ -156,7 +156,7 @@ end
   os = ITensorNetworks.heisenberg(c)
   H = TTN(os, s)
   psi = random_ttn(s; link_space=5)
-  psi = dmrg(H, psi; nsweeps, maxdim, nsite)
+  psi = dmrg(H, psi; nsweeps, maxdim, nsites)
 
   @test all(edge_data(linkdims(psi)) .<= maxdim)
 end

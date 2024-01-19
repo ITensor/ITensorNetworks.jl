@@ -1,12 +1,12 @@
 
-function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)  ###move this to a different file, algorithmic level idea
+function default_sweep_regions(nsites, graph::AbstractGraph; kwargs...)  ###move this to a different file, algorithmic level idea
   return vcat(
     [
       half_sweep(
         direction(half),
         graph,
         make_region;
-        nsite,
+        nsites,
         region_args=(; half_sweep=half),
         kwargs...,
       ) for half in 1:2
@@ -14,7 +14,7 @@ function default_sweep_regions(nsite, graph::AbstractGraph; kwargs...)  ###move 
   )
 end
 
-function region_printer(;
+function region_update_printer(;
   cutoff, maxdim, mindim, outputlevel::Int=0, psi, region_updates, spec, which_region_update, which_sweep,kwargs...
 )
   if outputlevel >= 2
@@ -42,14 +42,14 @@ function sweep_update(
   psi::AbstractTTN;
   normalize::Bool=false,      # ToDo: think about where to put the default, probably this default is best defined at algorithmic level
   outputlevel,
-  step_printer=step_printer,
+  region_update_printer=region_update_printer,
   (region_observer!)=observer(),  # ToDo: change name to region_observer! ?
   which_sweep::Int,
   sweep_params::NamedTuple,
   region_updates,# =default_sweep_regions(nsite, psi; reverse_step),   #move default up to algorithmic level
   updater_kwargs,
 )
-  insert_function!(region_observer!, "region_printer" => region_printer) #ToDo fix this
+  insert_function!(region_observer!, "region_update_printer" => region_update_printer) #ToDo fix this
 
   # Append empty namedtuple to each element if not already present
   # (Needed to handle user-provided region_updates)
@@ -80,7 +80,7 @@ function sweep_update(
     )
   end
 
-   select!(region_observer!, Observers.DataFrames.Not("region_printer")) # remove step_printer #todo fix this
+   select!(region_observer!, Observers.DataFrames.Not("region_update_printer")) # remove update_printer
   # Just to be sure:
   normalize && normalize!(psi)
 

@@ -3,9 +3,11 @@ Overload of `ITensors.dmrg`.
 """
 
 function dmrg_sweep(
-  nsite::Int, graph::AbstractGraph; root_vertex=default_root_vertex(graph)
+  nsites::Int, graph::AbstractGraph; root_vertex=default_root_vertex(graph)
 )
-  return tdvp_sweep(2, nsite, Inf, graph; root_vertex, reverse_step=false)
+  order = 2
+  time_step = Inf
+  return tdvp_sweep(order, nsites, time_step, graph; root_vertex, reverse_step=false)
 end
 
 function dmrg(
@@ -13,13 +15,13 @@ function dmrg(
   H,
   init::AbstractTTN;
   nsweeps,  #it makes sense to require this to be defined
-  nsite=2,
+  nsites=2,
   (sweep_observer!)=observer(),
   root_vertex=default_root_vertex(init),
   updater_kwargs=NamedTuple(;),
   kwargs...,
 )
-  region_updates = dmrg_sweep(nsite, init; root_vertex)
+  region_updates = dmrg_sweep(nsites, init; root_vertex)
 
   psi = alternating_update(
     updater, H, init; nsweeps, sweep_observer!, region_updates, updater_kwargs, kwargs...
