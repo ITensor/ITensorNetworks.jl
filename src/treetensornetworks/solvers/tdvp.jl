@@ -68,7 +68,7 @@ function tdvp(
   (sweep_observer!)=observer(),
   root_vertex=default_root_vertex(init),
   reverse_step=true,
-  updater_kwargs=NamedTuple(;),
+  updater_kwargs=(;),
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
