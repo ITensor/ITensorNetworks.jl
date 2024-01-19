@@ -36,13 +36,13 @@ function exponentiate_updater(
     H,
     time_step,
     init;
-    ishermitian=updater_kwargs[:ishermitian],
-    issymmetric=updater_kwargs[:issymmetric],
-    tol=updater_kwargs[:tol],
-    krylovdim=updater_kwargs[:krylovdim],
-    maxiter=updater_kwargs[:maxiter],
-    verbosity=updater_kwargs[:outputlevel],
-    eager=updater_kwargs[:eager],
+    ishermitian=updater_kwargs.ishermitian,
+    issymmetric=updater_kwargs.issymmetric,
+    tol=updater_kwargs.tol,
+    krylovdim=updater_kwargs.krylovdim,
+    maxiter=updater_kwargs.maxiter,
+    verbosity=updater_kwargs.outputlevel,
+    eager=updater_kwargs.eager,
   )
   return phi, (; info=exp_info)
 end

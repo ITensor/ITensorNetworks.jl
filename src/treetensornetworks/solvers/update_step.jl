@@ -212,9 +212,9 @@ function region_update(
 
   psi, spec = insert_local_tensor(
     psi, phi, region; eigen_perturbation=drho, ortho, normalize,
-    maxdim=region_kwargs[:maxdim],
-    mindim=region_kwargs[:mindim],
-    cutoff=region_kwargs[:cutoff]
+    maxdim=region_kwargs.maxdim,
+    mindim=region_kwargs.mindim,
+    cutoff=region_kwargs.cutoff
   )
 
   update!(

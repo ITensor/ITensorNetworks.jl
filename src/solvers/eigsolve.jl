@@ -20,18 +20,18 @@ function eigsolve_updater(
   )
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedence
   howmany = 1
-  which = updater_kwargs[:which_eigenvalue]
+  which = updater_kwargs.which_eigenvalue
   vals, vecs, info = eigsolve(
     PH_ref![],
     init,
     howmany,
     which;
-    ishermitian=updater_kwargs[:ishermitian],
-    tol=updater_kwargs[:tol],
-    krylovdim=updater_kwargs[:krylovdim],
-    maxiter=updater_kwargs[:maxiter],
-    verbosity=updater_kwargs[:outputlevel],
-    eager=updater_kwargs[:eager],
+    ishermitian=updater_kwargs.ishermitian,
+    tol=updater_kwargs.tol,
+    krylovdim=updater_kwargs.krylovdim,
+    maxiter=updater_kwargs.maxiter,
+    verbosity=updater_kwargs.outputlevel,
+    eager=updater_kwargs.eager,
   )
   return vecs[1], (; info, eigvals=vals)
 end
