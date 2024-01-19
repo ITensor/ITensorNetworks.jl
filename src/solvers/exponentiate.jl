@@ -32,7 +32,7 @@ function exponentiate_updater(
     region_ind == length(region_updates) ? nothing : first(region_updates[region_ind + 1])
   previous_region = region_ind == 1 ? nothing : first(region_updates[region_ind - 1])
 
-  phi, exp_info = KrylovKit.exponentiate(
+  phi, exp_info = exponentiate(
     H,
     time_step,
     init;

@@ -76,7 +76,7 @@ end
 
   region(; which_region_update, region_updates, kw...) =
     first(region_updates[which_region_update])
-  energy(; energies, kw...) = energies[1]
+  energy(; eigvals, kw...) = eigvals[1]
   region_observer! = observer(region, sweep, energy)
 
   psi = dmrg(H, psi; nsweeps, maxdim, cutoff, sweep_observer!, region_observer!)

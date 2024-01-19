@@ -34,7 +34,7 @@ import .DataGraphs:
 
 import Graphs: SimpleGraph, is_directed, weights
 
-import KrylovKit: eigsolve, linsolve
+import KrylovKit: eigsolve, linsolve, exponentiate
 
 import LinearAlgebra: factorize, normalize, normalize!, qr, svd
 

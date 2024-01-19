@@ -1,4 +1,3 @@
-
 function eigsolve_updater(
   init;
   psi_ref!,
@@ -11,7 +10,7 @@ function eigsolve_updater(
   updater_kwargs,
 )
   default_updater_kwargs = (;
-    solver_which_eigenvalue=:SR,
+    which_eigenvalue=:SR,
     ishermitian=true,
     tol=1e-14,
     krylovdim=3,
@@ -21,8 +20,8 @@ function eigsolve_updater(
   )
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedence
   howmany = 1
-  which = updater_kwargs[:solver_which_eigenvalue]
-  vals, vecs, info = KrylovKit.eigsolve(
+  which = updater_kwargs[:which_eigenvalue]
+  vals, vecs, info = eigsolve(
     PH_ref![],
     init,
     howmany,
@@ -34,5 +33,5 @@ function eigsolve_updater(
     verbosity=updater_kwargs[:outputlevel],
     eager=updater_kwargs[:eager],
   )
-  return vecs[1], (; info, energies=vals)
+  return vecs[1], (; info, eigvals=vals)
 end

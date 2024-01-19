@@ -1,10 +1,10 @@
 using ITensors
 using ITensorNetworks
+using ITensorNetworks: exponentiate_updater
 using KrylovKit: exponentiate
 using Observers
 using Random
 using Test
-exponentiate_updater=ITensorNetworks.exponentiate_updater #ToDo: how to best handle importing etc.
 
 @testset "MPS TDVP" begin
   @testset "Basic TDVP" begin
