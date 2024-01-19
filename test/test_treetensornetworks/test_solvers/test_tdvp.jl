@@ -28,7 +28,7 @@ using Test
     ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
     #
-    #TODO: exponentiate is now the default, so switch this to applyexp
+    #TODO: applyexp is removed, no need to test a different backend here and below for now.
     #
     #Different backend updaters, default updater_backend = "applyexp"
     ψ1_exponentiate_backend = tdvp(
