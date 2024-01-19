@@ -108,8 +108,6 @@ include(joinpath("Graphs", "abstractgraph.jl"))
 include(joinpath("Graphs", "abstractdatagraph.jl"))
 include(joinpath("solvers", "eigsolve.jl"))
 include(joinpath("solvers", "exponentiate.jl"))
-include(joinpath("treetensornetworks", "solvers", "applyexp.jl")) #this defines the primitive before the solver function
-include(joinpath("solvers", "applyexp.jl"))
 include(joinpath("solvers", "dmrg_x_solver.jl"))
 include(joinpath("treetensornetworks", "abstracttreetensornetwork.jl"))
 include(joinpath("treetensornetworks", "ttn.jl"))
