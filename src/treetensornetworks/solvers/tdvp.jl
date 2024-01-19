@@ -58,21 +58,21 @@ end
 
 function tdvp(
   updater,
-  H,
+  operator,
   t::Number,
-  init::AbstractTTN;
+  init_state::AbstractTTN;
   time_step::Number=t,
   nsites=2,
   nsteps=nothing,
   order::Integer=2,
   (sweep_observer!)=observer(),
-  root_vertex=default_root_vertex(init),
+  root_vertex=default_root_vertex(init_state),
   reverse_step=true,
   updater_kwargs=(;),
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
-  region_updates = tdvp_sweep(order, nsites, time_step, init; root_vertex, reverse_step)
+  region_updates = tdvp_sweep(order, nsites, time_step, init_state; root_vertex, reverse_step)
 
   function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
     if outputlevel >= 1
@@ -87,26 +87,26 @@ function tdvp(
 
   insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
 
-  psi = alternating_update(
-    updater, H, init; nsweeps, sweep_observer!, region_updates, updater_kwargs, kwargs...
+  state = alternating_update(
+    updater, operator, init_state; nsweeps, sweep_observer!, region_updates, updater_kwargs, kwargs...
   )
 
   # remove sweep_time_printer from sweep_observer!
   select!(sweep_observer!, Observers.DataFrames.Not("sweep_time_printer"))
 
-  return psi
+  return state
 end
 
 """
-    tdvp(H::TTN, t::Number, psi0::TTN; kwargs...)
+    tdvp(operator::TTN, t::Number, init_state::TTN; kwargs...)
 
 Use the time dependent variational principle (TDVP) algorithm
-to approximately compute `exp(H*t)*psi0` using an efficient algorithm based
+to approximately compute `exp(operator*t)*init_state` using an efficient algorithm based
 on alternating optimization of the state tensors and local Krylov
-exponentiation of H. The time parameter `t` can be a real or complex number.
+exponentiation of operator. The time parameter `t` can be a real or complex number.
                     
 Returns:
-* `psi` - time-evolved state
+* `state` - time-evolved state
 
 Optional keyword arguments:
 * `time_step::Number = t` - time step to use when evolving the state. Smaller time steps generally give more accurate results but can make the algorithm take more computational time to run.
@@ -115,6 +115,6 @@ Optional keyword arguments:
 * `observer` - object implementing the Observer interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
-function tdvp(H, t::Number, init::AbstractTTN; updater=exponentiate_updater, kwargs...)
-  return tdvp(updater, H, t, init; kwargs...)
+function tdvp(operator, t::Number, init_state::AbstractTTN; updater=exponentiate_updater, kwargs...)
+  return tdvp(updater, operator, t, init_state; kwargs...)
 end

@@ -1,7 +1,7 @@
 function exponentiate_updater(
   init;
-  psi_ref!,
-  PH_ref!,
+  state!,
+  projected_operator!,
   outputlevel,
   which_sweep,
   region_updates,
@@ -19,8 +19,8 @@ function exponentiate_updater(
     eager=true,
   )
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedence
-  #H=copy(PH_ref![])
-  H = PH_ref![] ###since we are not changing H we don't need the copy
+  #H=copy(projected_operator![])
+  projected_operator = projected_operator![] ###since we are not changing H we don't need the copy
   # let's test whether given region and sweep regions we can find out what the previous and next region were
   # this will be needed in subspace expansion
   #@show step_kwargs
@@ -33,7 +33,7 @@ function exponentiate_updater(
   previous_region = region_ind == 1 ? nothing : first(region_updates[region_ind - 1])
 
   phi, exp_info = exponentiate(
-    H,
+    projected_operator,
     time_step,
     init;
     ishermitian=updater_kwargs.ishermitian,

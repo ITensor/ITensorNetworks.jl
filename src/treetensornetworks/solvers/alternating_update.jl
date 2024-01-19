@@ -26,10 +26,10 @@ function process_sweeps(
   return maxdim, mindim, cutoff, noise, kwargs
 end
 
-function sweep_printer(; outputlevel, psi, which_sweep, sw_time)
+function sweep_printer(; outputlevel, state, which_sweep, sw_time)
   if outputlevel >= 1
     print("After sweep ", which_sweep, ":")
-    print(" maxlinkdim=", maxlinkdim(psi))
+    print(" maxlinkdim=", maxlinkdim(state))
     print(" cpu_time=", round(sw_time; digits=3))
     println()
     flush(stdout)
@@ -38,8 +38,8 @@ end
 
 function alternating_update(
   updater,
-  PH,
-  psi0::AbstractTTN;
+  projected_operator,
+  init_state::AbstractTTN;
   checkdone=(; kws...) -> false,
   outputlevel::Integer=0,
   nsweeps::Integer=1,
@@ -51,7 +51,7 @@ function alternating_update(
 )
   maxdim, mindim, cutoff, noise, kwargs = process_sweeps(nsweeps; kwargs...)
 
-  psi = copy(psi0)
+  state = copy(init_state)
 
   insert_function!(sweep_observer!, "sweep_printer" => sweep_printer) # FIX THIS
 
@@ -63,7 +63,7 @@ function alternating_update(
           "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim[which_sweep] = $(maxdim[which_sweep]), writing environment tensors to disk",
         )
       end
-      PH = disk(PH)
+      projected_operator = disk(projected_operator)
     end
     sweep_params=(;
     maxdim=maxdim[which_sweep],
@@ -72,10 +72,10 @@ function alternating_update(
     noise=noise[which_sweep],
     )
     sw_time = @elapsed begin
-      psi, PH = sweep_update(
+      state, projected_operator = sweep_update(
         updater,
-        PH,
-        psi;
+        projected_operator,
+        state;
         outputlevel,
         which_sweep,
         sweep_params,
@@ -84,30 +84,30 @@ function alternating_update(
       )
     end
 
-    update!(sweep_observer!; psi, which_sweep, sw_time, outputlevel)
+    update!(sweep_observer!; state, which_sweep, sw_time, outputlevel)
 
-    checkdone(; psi, which_sweep, outputlevel, kwargs...) && break
+    checkdone(; state, which_sweep, outputlevel, kwargs...) && break
   end
   select!(sweep_observer!, Observers.DataFrames.Not("sweep_printer"))
-  return psi
+  return state
 end
 
-function alternating_update(updater, H::AbstractTTN, psi0::AbstractTTN; kwargs...)
-  check_hascommoninds(siteinds, H, psi0)
-  check_hascommoninds(siteinds, H, psi0')
+function alternating_update(updater, H::AbstractTTN, init_state::AbstractTTN; kwargs...)
+  check_hascommoninds(siteinds, H, init_state)
+  check_hascommoninds(siteinds, H, init_state')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
-  PH = ProjTTN(H)
-  return alternating_update(updater, PH, psi0; kwargs...)
+  projected_operator = ProjTTN(H)
+  return alternating_update(updater, projected_operator, init_state; kwargs...)
 end
 
 """
-    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number; kwargs...)
-    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number, sweeps::Sweeps; kwargs...)
+    tdvp(Hs::Vector{MPO},init_state::MPS,t::Number; kwargs...)
+    tdvp(Hs::Vector{MPO},init_state::MPS,t::Number, sweeps::Sweeps; kwargs...)
 
 Use the time dependent variational principle (TDVP) algorithm
-to compute `exp(t*H)*psi0` using an efficient algorithm based
+to compute `exp(t*H)*init_state` using an efficient algorithm based
 on alternating optimization of the MPS tensors and local Krylov
 exponentiation of H.
                     
@@ -119,16 +119,16 @@ the set of MPOs [H1,H2,H3,..] is efficiently looped over at
 each step of the algorithm when optimizing the MPS.
 
 Returns:
-* `psi::MPS` - time-evolved MPS
+* `state::MPS` - time-evolved MPS
 """
 function alternating_update(
-  updater, Hs::Vector{<:AbstractTTN}, psi0::AbstractTTN; kwargs...
+  updater, Hs::Vector{<:AbstractTTN}, init_state::AbstractTTN; kwargs...
 )
   for H in Hs
-    check_hascommoninds(siteinds, H, psi0)
-    check_hascommoninds(siteinds, H, psi0')
+    check_hascommoninds(siteinds, H, init_state)
+    check_hascommoninds(siteinds, H, init_state')
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
-  PHs = ProjTTNSum(Hs)
-  return alternating_update(updater, PHs, psi0; kwargs...)
+  projected_operators = ProjTTNSum(Hs)
+  return alternating_update(updater, projected_operators, init_state; kwargs...)
 end

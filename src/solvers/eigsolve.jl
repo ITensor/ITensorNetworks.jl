@@ -1,7 +1,7 @@
 function eigsolve_updater(
   init;
-  psi_ref!,
-  PH_ref!,
+  state!,
+  projected_operator!,
   outputlevel,
   which_sweep,
   region_updates,
@@ -22,7 +22,7 @@ function eigsolve_updater(
   howmany = 1
   which = updater_kwargs.which_eigenvalue
   vals, vecs, info = eigsolve(
-    PH_ref![],
+    projected_operator![],
     init,
     howmany,
     which;

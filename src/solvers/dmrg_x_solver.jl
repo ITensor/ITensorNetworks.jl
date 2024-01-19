@@ -1,7 +1,7 @@
 function dmrg_x_solver(
   init;
-  psi_ref!,
-  PH_ref!,
+  state!,
+  projected_operator!,
   normalize=nothing,
   region,
   sweep_regions,
@@ -9,7 +9,7 @@ function dmrg_x_solver(
   half_sweep,
   step_kwargs...,
 )
-  H = contract(PH_ref![], ITensor(1.0))
+  H = contract(projected_operator![], ITensor(1.0))
   D, U = eigen(H; ishermitian=true)
   u = uniqueind(U, H)
   max_overlap, max_ind = findmax(abs, array(dag(init) * U))
