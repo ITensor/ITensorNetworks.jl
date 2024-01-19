@@ -18,7 +18,7 @@ function dmrg(
   nsites=2,
   (sweep_observer!)=observer(),
   root_vertex=default_root_vertex(init),
-  updater_kwargs=NamedTuple(;),
+  updater_kwargs=(;),
   kwargs...,
 )
   region_updates = dmrg_sweep(nsites, init; root_vertex)
