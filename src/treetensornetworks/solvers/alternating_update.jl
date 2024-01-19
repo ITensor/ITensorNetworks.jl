@@ -65,7 +65,12 @@ function alternating_update(
       end
       PH = disk(PH)
     end
-
+    sweep_params=(;
+    maxdim=maxdim[which_sweep],
+    mindim=mindim[which_sweep],
+    cutoff=cutoff[which_sweep],
+    noise=noise[which_sweep],
+    )
     sw_time = @elapsed begin
       psi, PH = sweep_update(
         updater,
@@ -73,12 +78,7 @@ function alternating_update(
         psi;
         outputlevel,
         which_sweep,
-        sweep_params=(;
-          maxdim=maxdim[which_sweep],
-          mindim=mindim[which_sweep],
-          cutoff=cutoff[which_sweep],
-          noise=noise[which_sweep],
-        ),
+        sweep_params,
         updater_kwargs,
         kwargs...,
       )
