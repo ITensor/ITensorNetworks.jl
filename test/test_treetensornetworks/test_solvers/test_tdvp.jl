@@ -542,7 +542,8 @@ end
     # Should rotate back to original state:
     @test abs(inner(ψ0, ψ2)) > 0.99
   end
-#=
+  # ToDo: Discuss whether the test commented out here is necessary given the new design?
+  #=
   @testset "Custom updater in TDVP" begin
     cutoff = 1e-12
 

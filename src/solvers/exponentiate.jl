@@ -4,13 +4,13 @@ function exponentiate_updater(
   projected_operator!,
   outputlevel,
   which_sweep,
-  region_updates,
+  sweep_plan,
   which_region_update,
   region_kwargs,
   updater_kwargs,
 )
   default_updater_kwargs = (;
-    krylovdim=30,  #from here only solver kwargs
+    krylovdim=30,
     maxiter=100,
     verbosity=0,
     tol=1E-12,
@@ -18,10 +18,11 @@ function exponentiate_updater(
     issymmetric=true,
     eager=true,
   )
+  
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedence
   result, exp_info = exponentiate(
     projected_operator![],
-    time_step,
+    region_kwargs.time_step,
     init;
     updater_kwargs...
   )

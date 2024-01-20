@@ -74,8 +74,8 @@ end
   sweep(; which_sweep, kw...) = which_sweep
   sweep_observer! = observer(sweep)
 
-  region(; which_region_update, region_updates, kw...) =
-    first(region_updates[which_region_update])
+  region(; which_region_update, sweep_plan, kw...) =
+    first(sweep_plan[which_region_update])
   energy(; eigvals, kw...) = eigvals[1]
   region_observer! = observer(region, sweep, energy)
 

@@ -15,10 +15,10 @@ function default_sweep_regions(nsites, graph::AbstractGraph; kwargs...)  ###move
 end
 
 function region_update_printer(;
-  cutoff, maxdim, mindim, outputlevel::Int=0, state, region_updates, spec, which_region_update, which_sweep,kwargs...
+  cutoff, maxdim, mindim, outputlevel::Int=0, state, sweep_plan, spec, which_region_update, which_sweep,kwargs...
 )
   if outputlevel >= 2
-    region=first(region_updates[which_region_update])
+    region=first(sweep_plan[which_region_update])
     @printf("Sweep %d, region=%s \n", which_sweep, region)
     print("  Truncated using")
     @printf(" cutoff=%.1E", cutoff)
@@ -53,7 +53,7 @@ function sweep_update(
 
   # Append empty namedtuple to each element if not already present
   # (Needed to handle user-provided region_updates)
-  region_updates = append_missing_namedtuple.(to_tuple.(region_updates))
+  sweep_plan = append_missing_namedtuple.(to_tuple.(sweep_plan))
 
   if nv(state) == 1
     error(
@@ -71,7 +71,7 @@ function sweep_update(
       normalize,
       outputlevel,
       which_sweep,
-      region_updates,
+      sweep_plan,
       which_region_update,
       region_kwargs,
       region_observer!,
@@ -167,7 +167,7 @@ function region_update(
   normalize,
   outputlevel,
   which_sweep,
-  region_updates,
+  sweep_plan,
   which_region_update,
   region_kwargs,
   region_observer!,
@@ -175,7 +175,7 @@ function region_update(
   #extraction_kwargs, #ToDo: implement later with possibility to pass custom extraction/insertion func (or code into func)
   updater_kwargs
 )
-  region=first(region_updates[which_region_update])
+  region=first(sweep_plan[which_region_update])
   state = orthogonalize(state, current_ortho(region))
   state, phi = extract_local_tensor(state, region;)
   nsites = (region isa AbstractEdge) ? 0 : length(region) #ToDo move into separate funtion
@@ -189,7 +189,7 @@ function region_update(
     projected_operator!,
     outputlevel,
     which_sweep,
-    region_updates,
+    sweep_plan,
     which_region_update,
     region_kwargs,
     updater_kwargs
@@ -222,9 +222,9 @@ function region_update(
     maxdim,
     mindim,
     which_region_update,
-    region_updates,
-    total_sweep_steps=length(region_updates),
-    end_of_sweep=(which_region_update == length(region_updates)),
+    sweep_plan,
+    total_sweep_steps=length(sweep_plan),
+    end_of_sweep=(which_region_update == length(sweep_plan)),
     state,
     region,
     which_sweep,

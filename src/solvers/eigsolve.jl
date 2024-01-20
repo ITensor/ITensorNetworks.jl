@@ -4,7 +4,7 @@ function eigsolve_updater(
   projected_operator!,
   outputlevel,
   which_sweep,
-  region_updates,
+  sweep_plan,
   which_region_update,
   region_kwargs,
   updater_kwargs,
@@ -20,13 +20,17 @@ function eigsolve_updater(
   )
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedence
   howmany = 1
-  which = updater_kwargs.which_eigenvalue
+  which, updater_kwargs =  _pop_which_eigenvalue(;updater_kwargs...)
   vals, vecs, info = eigsolve(
     projected_operator![],
     init,
     howmany,
     which;
-    updater_kwargs... # leaves it to the user to supply only supported kwargs
+    updater_kwargs... #this leaves it
   )
   return vecs[1], (; info, eigvals=vals)
+end
+
+function _pop_which_eigenvalue(;which_eigenvalue, kwargs...)
+  return which_eigenvalue, NamedTuple(kwargs)
 end
