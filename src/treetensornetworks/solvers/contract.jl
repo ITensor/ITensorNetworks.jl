@@ -1,18 +1,11 @@
-function contract_solver(PH, psi; normalize, region, half_sweep)
-  v = ITensor(1.0)
-  for j in sites(PH)
-    v *= PH.psi0[j]
-  end
-  Hpsi0 = contract(PH, v)
-  return Hpsi0, NamedTuple()
-end
-
 function contract(
   ::Algorithm"fit",
   tn1::AbstractTTN,
   tn2::AbstractTTN;
   init=random_ttn(flatten_external_indsnetwork(tn1, tn2); link_space=trivial_space(tn1)),
   nsweeps=1,
+  nsites=2, # used to be default of call to default_sweep_regions
+  updater_kwargs=(;),
   kwargs...,
 )
   n = nv(tn1)
@@ -42,7 +35,8 @@ function contract(
   ## end
 
   PH = ProjTTNApply(tn2, tn1)
-  psi = alternating_update(contract_solver, PH, init; nsweeps, kwargs...)
+  sweep_plan = default_sweep_regions(nsites, init; kwargs...)
+  psi = alternating_update(contract_updater, PH, init; nsweeps, sweep_plan, updater_kwargs, kwargs...)
 
   return psi
 end
