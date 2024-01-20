@@ -2,12 +2,12 @@
 Overload of `ITensors.dmrg`.
 """
 
-function dmrg_sweep(
+function dmrg_sweep_plan(
   nsites::Int, graph::AbstractGraph; root_vertex=default_root_vertex(graph)
 )
   order = 2
   time_step = Inf
-  return tdvp_sweep(order, nsites, time_step, graph; root_vertex, reverse_step=false)
+  return tdvp_sweep_plan(order, nsites, time_step, graph; root_vertex, reverse_step=false)
 end
 
 function dmrg(
@@ -21,10 +21,10 @@ function dmrg(
   updater_kwargs=(;),
   kwargs...,
 )
-  region_updates = dmrg_sweep(nsites, init; root_vertex)
+  sweep_plan = dmrg_sweep_plan(nsites, init; root_vertex)
 
   psi = alternating_update(
-    updater, H, init; nsweeps, sweep_observer!, region_updates, updater_kwargs, kwargs...
+    updater, H, init; nsweeps, sweep_observer!, sweep_plan, updater_kwargs, kwargs...
   )
   return psi
 end

@@ -30,7 +30,7 @@ function sub_time_steps(order)
   end
 end
 
-function tdvp_sweep(
+function tdvp_sweep_plan(
   order::Int,
   nsites::Int,
   time_step::Number,
@@ -38,7 +38,7 @@ function tdvp_sweep(
   root_vertex=default_root_vertex(graph),
   reverse_step=true,
 )
-  sweep = []
+  sweep_plan = []
   for (substep, fac) in enumerate(sub_time_steps(order))
     sub_time_step = time_step * fac
     half = half_sweep(
@@ -51,9 +51,9 @@ function tdvp_sweep(
       reverse_args=(; substep, time_step=-sub_time_step),
       reverse_step,
     )
-    append!(sweep, half)
+    append!(sweep_plan, half)
   end
-  return sweep
+  return sweep_plan
 end
 
 function tdvp(
@@ -72,7 +72,7 @@ function tdvp(
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
-  region_updates = tdvp_sweep(order, nsites, time_step, init_state; root_vertex, reverse_step)
+  sweep_plan = tdvp_sweep_plan(order, nsites, time_step, init_state; root_vertex, reverse_step)
 
   function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
     if outputlevel >= 1
@@ -88,7 +88,7 @@ function tdvp(
   insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
 
   state = alternating_update(
-    updater, operator, init_state; nsweeps, sweep_observer!, region_updates, updater_kwargs, kwargs...
+    updater, operator, init_state; nsweeps, sweep_observer!, sweep_plan, updater_kwargs, kwargs...
   )
 
   # remove sweep_time_printer from sweep_observer!

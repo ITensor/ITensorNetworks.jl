@@ -46,7 +46,7 @@ function sweep_update(
   (region_observer!)=observer(),  # ToDo: change name to region_observer! ?
   which_sweep::Int,
   sweep_params::NamedTuple,
-  region_updates,# =default_sweep_regions(nsite, state; reverse_step),   #move default up to algorithmic level
+  sweep_plan,
   updater_kwargs,
 )
   insert_function!(region_observer!, "region_update_printer" => region_update_printer) #ToDo fix this
@@ -61,10 +61,9 @@ function sweep_update(
     )
   end
   
-  for which_region_update in eachindex(region_updates)
-    # merge sweep params in step_kwargs
-    (region, region_kwargs)=region_updates[which_region_update]
-    region_kwargs=merge(region_kwargs, sweep_params)    #in this case sweep params has precedence over step_kwargs --- correct behaviour?
+  for which_region_update in eachindex(sweep_plan)
+    (region, region_kwargs)=sweep_plan[which_region_update]
+    region_kwargs=merge(region_kwargs, sweep_params)    # sweep params has precedence over step_kwargs
     state, projected_operator = region_update(
       solver,
       projected_operator,
