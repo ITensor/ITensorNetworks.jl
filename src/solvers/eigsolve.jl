@@ -15,7 +15,7 @@ function eigsolve_updater(
     tol=1e-14,
     krylovdim=3,
     maxiter=1,
-    outputlevel=0,
+    verbosity=0,
     eager=false,
   )
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedence
@@ -26,12 +26,7 @@ function eigsolve_updater(
     init,
     howmany,
     which;
-    ishermitian=updater_kwargs.ishermitian,
-    tol=updater_kwargs.tol,
-    krylovdim=updater_kwargs.krylovdim,
-    maxiter=updater_kwargs.maxiter,
-    verbosity=updater_kwargs.outputlevel,
-    eager=updater_kwargs.eager,
+    updater_kwargs... # leaves it to the user to supply only supported kwargs
   )
   return vecs[1], (; info, eigvals=vals)
 end
