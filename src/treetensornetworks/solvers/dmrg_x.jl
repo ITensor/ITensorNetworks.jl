@@ -20,4 +20,3 @@ end
 function dmrg_x(operator, init::AbstractTTN; updater=dmrg_x_updater, kwargs...)
   return dmrg_x(updater, operator, init; kwargs...)
 end
-

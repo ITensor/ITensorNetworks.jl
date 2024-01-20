@@ -18,13 +18,10 @@ function exponentiate_updater(
     issymmetric=true,
     eager=true,
   )
-  
+
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedence
   result, exp_info = exponentiate(
-    projected_operator![],
-    region_kwargs.time_step,
-    init;
-    updater_kwargs...
+    projected_operator![], region_kwargs.time_step, init; updater_kwargs...
   )
   return result, (; info=exp_info)
 end

@@ -65,11 +65,11 @@ function alternating_update(
       end
       projected_operator = disk(projected_operator)
     end
-    sweep_params=(;
-    maxdim=maxdim[which_sweep],
-    mindim=mindim[which_sweep],
-    cutoff=cutoff[which_sweep],
-    noise=noise[which_sweep],
+    sweep_params = (;
+      maxdim=maxdim[which_sweep],
+      mindim=mindim[which_sweep],
+      cutoff=cutoff[which_sweep],
+      noise=noise[which_sweep],
     )
     sw_time = @elapsed begin
       state, projected_operator = sweep_update(

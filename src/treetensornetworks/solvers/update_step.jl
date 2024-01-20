@@ -15,10 +15,19 @@ function default_sweep_regions(nsites, graph::AbstractGraph; kwargs...)  ###move
 end
 
 function region_update_printer(;
-  cutoff, maxdim, mindim, outputlevel::Int=0, state, sweep_plan, spec, which_region_update, which_sweep,kwargs...
+  cutoff,
+  maxdim,
+  mindim,
+  outputlevel::Int=0,
+  state,
+  sweep_plan,
+  spec,
+  which_region_update,
+  which_sweep,
+  kwargs...,
 )
   if outputlevel >= 2
-    region=first(sweep_plan[which_region_update])
+    region = first(sweep_plan[which_region_update])
     @printf("Sweep %d, region=%s \n", which_sweep, region)
     print("  Truncated using")
     @printf(" cutoff=%.1E", cutoff)
@@ -60,10 +69,10 @@ function sweep_update(
       "`alternating_update` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
-  
+
   for which_region_update in eachindex(sweep_plan)
-    (region, region_kwargs)=sweep_plan[which_region_update]
-    region_kwargs=merge(region_kwargs, sweep_params)    # sweep params has precedence over step_kwargs
+    (region, region_kwargs) = sweep_plan[which_region_update]
+    region_kwargs = merge(region_kwargs, sweep_params)    # sweep params has precedence over step_kwargs
     state, projected_operator = region_update(
       solver,
       projected_operator,
@@ -79,7 +88,7 @@ function sweep_update(
     )
   end
 
-   select!(region_observer!, Observers.DataFrames.Not("region_update_printer")) # remove update_printer
+  select!(region_observer!, Observers.DataFrames.Not("region_update_printer")) # remove update_printer
   # Just to be sure:
   normalize && normalize!(state)
 
@@ -173,16 +182,16 @@ function region_update(
   region_observer!,
   #insertion_kwargs,  #ToDo: later
   #extraction_kwargs, #ToDo: implement later with possibility to pass custom extraction/insertion func (or code into func)
-  updater_kwargs
+  updater_kwargs,
 )
-  region=first(sweep_plan[which_region_update])
+  region = first(sweep_plan[which_region_update])
   state = orthogonalize(state, current_ortho(region))
   state, phi = extract_local_tensor(state, region;)
   nsites = (region isa AbstractEdge) ? 0 : length(region) #ToDo move into separate funtion
   projected_operator = set_nsite(projected_operator, nsites)
   projected_operator = position(projected_operator, state, region)
   state! = Ref(state) # create references, in case solver does (out-of-place) modify PH or state
-  projected_operator! = Ref(projected_operator) 
+  projected_operator! = Ref(projected_operator)
   phi, info = updater(
     phi;
     state!,
@@ -192,7 +201,7 @@ function region_update(
     sweep_plan,
     which_region_update,
     region_kwargs,
-    updater_kwargs
+    updater_kwargs,
   )  # args passed by reference are supposed to be modified out of place
   state = state![] # dereference
   projected_operator = projected_operator![]
@@ -210,10 +219,15 @@ function region_update(
   #end
 
   state, spec = insert_local_tensor(
-    state, phi, region; eigen_perturbation=drho, ortho, normalize,
+    state,
+    phi,
+    region;
+    eigen_perturbation=drho,
+    ortho,
+    normalize,
     maxdim=region_kwargs.maxdim,
     mindim=region_kwargs.mindim,
-    cutoff=region_kwargs.cutoff
+    cutoff=region_kwargs.cutoff,
   )
 
   update!(

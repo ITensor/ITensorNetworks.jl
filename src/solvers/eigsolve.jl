@@ -20,17 +20,17 @@ function eigsolve_updater(
   )
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedence
   howmany = 1
-  which, updater_kwargs =  _pop_which_eigenvalue(;updater_kwargs...)
+  which, updater_kwargs = _pop_which_eigenvalue(; updater_kwargs...)
   vals, vecs, info = eigsolve(
     projected_operator![],
     init,
     howmany,
     which;
-    updater_kwargs... #this leaves it
+    updater_kwargs..., #this leaves it
   )
   return vecs[1], (; info, eigvals=vals)
 end
 
-function _pop_which_eigenvalue(;which_eigenvalue, kwargs...)
+function _pop_which_eigenvalue(; which_eigenvalue, kwargs...)
   return which_eigenvalue, NamedTuple(kwargs)
 end

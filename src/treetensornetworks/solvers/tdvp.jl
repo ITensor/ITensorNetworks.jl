@@ -72,7 +72,9 @@ function tdvp(
   kwargs...,
 )
   nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
-  sweep_plan = tdvp_sweep_plan(order, nsites, time_step, init_state; root_vertex, reverse_step)
+  sweep_plan = tdvp_sweep_plan(
+    order, nsites, time_step, init_state; root_vertex, reverse_step
+  )
 
   function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
     if outputlevel >= 1
@@ -88,7 +90,14 @@ function tdvp(
   insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
 
   state = alternating_update(
-    updater, operator, init_state; nsweeps, sweep_observer!, sweep_plan, updater_kwargs, kwargs...
+    updater,
+    operator,
+    init_state;
+    nsweeps,
+    sweep_observer!,
+    sweep_plan,
+    updater_kwargs,
+    kwargs...,
   )
 
   # remove sweep_time_printer from sweep_observer!
@@ -115,6 +124,8 @@ Optional keyword arguments:
 * `observer` - object implementing the Observer interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
-function tdvp(operator, t::Number, init_state::AbstractTTN; updater=exponentiate_updater, kwargs...)
+function tdvp(
+  operator, t::Number, init_state::AbstractTTN; updater=exponentiate_updater, kwargs...
+)
   return tdvp(updater, operator, t, init_state; kwargs...)
 end

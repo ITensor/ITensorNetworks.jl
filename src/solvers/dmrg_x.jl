@@ -10,9 +10,8 @@ function dmrg_x_updater(
   updater_kwargs,
 )
   # this updater does not seem to accept any kwargs?
-  default_updater_kwargs = (;
-  )
-  updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  
+  default_updater_kwargs = (;)
+  updater_kwargs = merge(default_updater_kwargs, updater_kwargs)
   H = contract(projected_operator![], ITensor(1.0))
   D, U = eigen(H; ishermitian=true)
   u = uniqueind(U, H)

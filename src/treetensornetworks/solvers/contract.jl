@@ -36,7 +36,9 @@ function contract(
 
   PH = ProjTTNApply(tn2, tn1)
   sweep_plan = default_sweep_regions(nsites, init; kwargs...)
-  psi = alternating_update(contract_updater, PH, init; nsweeps, sweep_plan, updater_kwargs, kwargs...)
+  psi = alternating_update(
+    contract_updater, PH, init; nsweeps, sweep_plan, updater_kwargs, kwargs...
+  )
 
   return psi
 end
