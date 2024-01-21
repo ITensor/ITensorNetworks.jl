@@ -235,10 +235,7 @@ using Test
         state;
         cutoff,
         normalize=false,
-        updater_kwargs=(;
-        tol=1e-12,
-        maxiter=500,
-        krylovdim=25,)
+        updater_kwargs=(; tol=1e-12, maxiter=500, krylovdim=25),
       )
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
@@ -250,10 +247,7 @@ using Test
         psi2;
         cutoff,
         normalize=false,
-        updater_kwargs=(;
-        tol=1e-12,
-        maxiter=500,
-        krylovdim=25,),
+        updater_kwargs=(; tol=1e-12, maxiter=500, krylovdim=25),
         updater=exponentiate_updater,
       )
       # TODO: What should `expect` output? Right now
@@ -318,7 +312,14 @@ using Test
 
       nsites = (step <= 3 ? 2 : 1)
       phi = tdvp(
-        H, -tau * im, phi; nsteps=1, cutoff, nsites, normalize=true, updater_kwargs=(;krylovdim=15)
+        H,
+        -tau * im,
+        phi;
+        nsteps=1,
+        cutoff,
+        nsites,
+        normalize=true,
+        updater_kwargs=(; krylovdim=15),
       )
 
       Sz1[step] = real(expect("Sz", state; vertices=[c])[c])
@@ -378,7 +379,14 @@ using Test
     for (step, t) in enumerate(trange)
       nsites = (step <= 10 ? 2 : 1)
       state = tdvp(
-        H, -tau, state; cutoff, nsites, reverse_step, normalize=true, updater_kwargs=(;krylovdim=15)
+        H,
+        -tau,
+        state;
+        cutoff,
+        nsites,
+        reverse_step,
+        normalize=true,
+        updater_kwargs=(; krylovdim=15),
       )
       #Different backend updaters, default updater_backend = "applyexp"
       psi2 = tdvp(
@@ -389,7 +397,7 @@ using Test
         nsites,
         reverse_step,
         normalize=true,
-        updater_kwargs=(;krylovdim=15),
+        updater_kwargs=(; krylovdim=15),
         updater=ITensorNetworks.exponentiate_updater,
       )
     end
@@ -588,7 +596,7 @@ end
     # Should rotate back to original state:
     @test abs(inner(ψ0, ψ2)) > 0.99
   end
-=#
+  =#
   @testset "Accuracy Test" begin
     tau = 0.1
     ttotal = 1.0
@@ -625,10 +633,7 @@ end
         state;
         cutoff,
         normalize=false,
-        updater_kwargs=(;
-        tol=1e-12,
-        maxiter=500,
-        krylovdim=25,)
+        updater_kwargs=(; tol=1e-12, maxiter=500, krylovdim=25),
       )
       push!(Sz_tdvp, real(expect("Sz", state; vertices=[c])[c]))
       push!(Sz_exact, real(scalar(dag(prime(statex, s[c])) * Szc * statex)))
@@ -686,7 +691,14 @@ end
 
       nsites = (step <= 3 ? 2 : 1)
       phi = tdvp(
-        H, -tau * im, phi; nsteps=1, cutoff, nsites, normalize=true, updater_kwargs=(;krylovdim=15)
+        H,
+        -tau * im,
+        phi;
+        nsteps=1,
+        cutoff,
+        nsites,
+        normalize=true,
+        updater_kwargs=(; krylovdim=15),
       )
 
       Sz1[step] = real(expect("Sz", state; vertices=[c])[c])
@@ -737,7 +749,14 @@ end
     for (step, t) in enumerate(trange)
       nsites = (step <= 10 ? 2 : 1)
       state = tdvp(
-        H, -tau, state; cutoff, nsites, reverse_step, normalize=true, updater_kwargs=(;krylovdim=15)
+        H,
+        -tau,
+        state;
+        cutoff,
+        nsites,
+        reverse_step,
+        normalize=true,
+        updater_kwargs=(; krylovdim=15),
       )
     end
 
