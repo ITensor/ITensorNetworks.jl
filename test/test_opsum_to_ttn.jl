@@ -1,8 +1,21 @@
 using Dictionaries
 using ITensors
+using ITensorGaussianMPS: hopping_hamiltonian#, eigen_gaussian
 using ITensorNetworks
 using Random
 using Test
+
+function _fermionic_to_dense_matrix(A)
+  cA1 = combiner(inds(A)[findall((plev.(inds(A))) .== 0)])
+  cA2 = combiner(inds(A)[findall((plev.(inds(A))) .== 1)])
+  return (A * cA1) * cA2
+end
+
+function _make_inds_same(A,B)
+  B = replaceinds(B, inds(B)[1] => inds(A)[1])
+  B = replaceinds(B, inds(B)[2] => inds(A)[2])
+  return A,B
+end
 
 @testset "OpSum to TTN converter" begin
   @testset "OpSum to TTN" begin
@@ -149,7 +162,7 @@ using Test
     h = 0.5
     H = ITensorNetworks.tight_binding(c; t=t, tp=tp, h=h)
     #H = ITensorNetworks.hubbard(c; t=t, tp=tp, h=h)
-
+    
     # add combination of longer range interactions
     Hlr = copy(H)
     #Hlr += 5, "Cdag", (1, 2), "C", (3, 2)#, "Z", (3,2)
@@ -170,29 +183,31 @@ using Test
       vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
       Hline = ITensors.MPO(relabel_sites(H, vmap), sites)
       # compare resulting sparse Hamiltonians
-
+      Hmat_sp=hopping_hamiltonian(relabel_sites(H, vmap))
       @disable_warn_order begin
         Tmpo = prod(Hline)
         Tttno = contract(Hsvd)
       end
-      # Tmpo ≈ Tttno seems to be broken for fermionic tensors
-      # thus matricize tensors by hand and convert to dense Matrix to compare element by element
-      cTmpo1 = combiner(inds(Tmpo)[findall((plev.(inds(Tmpo))) .== 0)])
-      cTmpo2 = combiner(inds(Tmpo)[findall((plev.(inds(Tmpo))) .== 1)])
-      Tmm = (Tmpo * cTmpo1) * cTmpo2
-      cTttno1 = combiner(inds(Tttno)[findall((plev.(inds(Tttno))) .== 0)])
-      cTttno2 = combiner(inds(Tttno)[findall((plev.(inds(Tttno))) .== 1)])
-      Ttm = (Tttno * cTttno1) * cTttno2
-      Ttm = replaceinds(Ttm, inds(Ttm)[1] => inds(Tmm)[1])
-      Ttm = replaceinds(Ttm, inds(Ttm)[2] => inds(Tmm)[2])
-
+      
+      # verify that the norm isn't 0 and thus the same (which would indicate a problem with the autofermion system
+      @test norm(Tmpo) > 0
+      @test norm(Tttno) > 0
       @test norm(Tmpo) ≈ norm(Tttno) rtol = 1e-6
-      @test any(Matrix(dense(Tmm - Ttm), inds(Tmm)[1], inds(Tmm)[2]) .> 1e-14)
-      @test any(
-        Matrix(dense(Tmm), inds(Tmm)[1], inds(Tmm)[2]) -
-        Matrix(dense(Ttm), inds(Tmm)[1], inds(Tmm)[2]) .> 1e-14,
-      )
+      
+      @test_broken Tmpo ≈ Tttno # ToDo fix comparison for fermionic tensors
+      # In the meantime: matricize tensors and convert to dense Matrix to compare element by element
+      Tmm = _fermionic_to_dense_matrix(Tmpo)
+      Ttm = _fermionic_to_dense_matrix(Tttno)
+      Tmm,Ttm=_make_inds_same(Tmm,Ttm)
+      
+      dTmm=Matrix(dense(Tmm), inds(Tmm)[1], inds(Tmm)[2])
+      dTtm=Matrix(dense(Ttm), inds(Tmm)[1], inds(Tmm)[2])
+      @test any( dTmm - dTtm .> 1e-14 )
 
+      # also compare with energies obtained from single-particle Hamiltonian
+      GS_mb,_,_=eigsolve(dTtm,1, :SR,eltype(dTtm))
+      spectrum_sp=eigvals(Hmat_sp)
+      @test minimum(cumsum(spectrum_sp)) ≈ GS_mb[1] atol=1e-8
       #@@@test Tmm  ≈ Ttm atol = 1e-8
       #@test all(Matrix(dense(Tmm-Ttm),inds(Tmm)[1],inds(Tmm)[2]) .≈ 0.0 atol = 1e-8)
 
