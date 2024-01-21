@@ -27,15 +27,6 @@ using Test
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
-    #
-    #TODO: applyexp is removed, no need to test a different backend here and below for now.
-    #
-    #Different backend updaters, default updater_backend = "applyexp"
-    ψ1_exponentiate_backend = tdvp(
-      H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1, updater=exponentiate_updater
-    )
-    @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
-
     @test norm(ψ1) ≈ 1.0
 
     ## Should lose fidelity:
@@ -46,12 +37,6 @@ using Test
 
     # Time evolve backwards:
     ψ2 = tdvp(H, +0.1im, ψ1; nsteps=1, cutoff)
-
-    #Different backend updaters, default updater_backend = "applyexp"
-    ψ2_exponentiate_backend = tdvp(
-      H, +0.1im, ψ1; nsteps=1, cutoff, updater=exponentiate_updater
-    )
-    @test ψ2 ≈ ψ2_exponentiate_backend rtol = 1e-7
 
     @test norm(ψ2) ≈ 1.0
 
@@ -83,12 +68,6 @@ using Test
 
     ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
-    #Different backend updaters, default updater_backend = "applyexp"
-    ψ1_exponentiate_backend = tdvp(
-      Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1, updater=exponentiate_updater
-    )
-    @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
-
     @test norm(ψ1) ≈ 1.0
 
     ## Should lose fidelity:
@@ -99,12 +78,6 @@ using Test
 
     # Time evolve backwards:
     ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
-
-    #Different backend updaters, default updater_backend = "applyexp"
-    ψ2_exponentiate_backend = tdvp(
-      Hs, +0.1im, ψ1; nsteps=1, cutoff, updater=exponentiate_updater
-    )
-    @test ψ2 ≈ ψ2_exponentiate_backend rtol = 1e-7
 
     @test norm(ψ2) ≈ 1.0
 
@@ -146,54 +119,7 @@ using Test
     # Should rotate back to original state:
     @test abs(inner(ψ0, ψ2)) > 0.99
   end
-  #=
-  @testset_broken "Custom updater in TDVP" begin
-    N = 10
-    cutoff = 1e-12
-
-    s = siteinds("S=1/2", N)
-
-    os = OpSum()
-    for j in 1:(N - 1)
-      os += 0.5, "S+", j, "S-", j + 1
-      os += 0.5, "S-", j, "S+", j + 1
-      os += "Sz", j, "Sz", j + 1
-    end
-
-    H = mpo(os, s)
-
-    ψ0 = random_mps(s; internal_inds_space=10)
-
-    function updater(psi0; (state!), (projected_operator!), kwargs...)
-      updater_kwargs = (;
-        ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
-      )
-      time_step=get(step_kwargs,:time_step,nothing)
-      @assert !isnothing(time_step) 
-      PH = projected_operator![]
-      state, exp_info = exponentiate(PH, time_step, psi0; updater_kwargs...)
-      return state, (; info=exp_info)
-    end
-
-    ψ1 = tdvp(updater, H, -0.1im, ψ0; cutoff, nsites=1)
-
-    @test norm(ψ1) ≈ 1.0
-
-    ## Should lose fidelity:
-    #@test abs(inner(ψ0,ψ1)) < 0.9
-
-    # Average energy should be conserved:
-    @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
-
-    # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
-
-    @test norm(ψ2) ≈ 1.0
-
-    # Should rotate back to original state:
-    @test abs(inner(ψ0, ψ2)) > 0.99
-  end
-  =#
+ 
   @testset "Accuracy Test" begin
     N = 4
     tau = 0.1
@@ -388,21 +314,7 @@ using Test
         normalize=true,
         updater_kwargs=(; krylovdim=15),
       )
-      #Different backend updaters, default updater_backend = "applyexp"
-      psi2 = tdvp(
-        H,
-        -tau,
-        psi2;
-        cutoff,
-        nsites,
-        reverse_step,
-        normalize=true,
-        updater_kwargs=(; krylovdim=15),
-        updater=ITensorNetworks.exponentiate_updater,
-      )
     end
-
-    @test state ≈ psi2 rtol = 1e-6
 
     en1 = inner(state', H, state)
     en2 = inner(psi2', H, psi2)
@@ -462,9 +374,6 @@ using Test
     Sz2_step = region_obs.Sz
     En2_step = region_obs.En
     infos = region_obs.info
-
-    #@show sweep_obs
-    #@show step_obs
 
     #
     # Could use ideas of other things to test here
@@ -550,53 +459,7 @@ end
     # Should rotate back to original state:
     @test abs(inner(ψ0, ψ2)) > 0.99
   end
-  # ToDo: Discuss whether the test commented out here is necessary given the new design?
-  #=
-  @testset "Custom updater in TDVP" begin
-    cutoff = 1e-12
-
-    tooth_lengths = fill(2, 3)
-    root_vertex = (3, 2)
-    c = named_comb_tree(tooth_lengths)
-    s = siteinds("S=1/2", c)
-
-    os = ITensorNetworks.heisenberg(c)
-
-    H = TTN(os, s)
-
-    ψ0 = normalize!(random_ttn(s; link_space=10))
-
-    function updater(psi0; (state!), (projected_operator!), time_step, kwargs...)
-      updater_kwargs = (;
-        ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
-      )
-      PH = projected_operator![]
-      psi, exp_info = exponentiate(PH, time_step, psi0; updater_kwargs...)
-      return psi, (; info=exp_info)
-    end
-
-    ψ1 = tdvp(updater, H, -0.1im, ψ0; cutoff, nsites=1)
-
-    #@test ψ1 ≈ tdvp(updater, -0.1im, H, ψ0; cutoff, nsites=1)
-    #@test ψ1 ≈ tdvp(updater, H, ψ0, -0.1im; cutoff, nsites=1)
-
-    @test norm(ψ1) ≈ 1.0
-
-    ## Should lose fidelity:
-    #@test abs(inner(ψ0,ψ1)) < 0.9
-
-    # Average energy should be conserved:
-    @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
-
-    # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
-
-    @test norm(ψ2) ≈ 1.0
-
-    # Should rotate back to original state:
-    @test abs(inner(ψ0, ψ2)) > 0.99
-  end
-  =#
+  
   @testset "Accuracy Test" begin
     tau = 0.1
     ttotal = 1.0
