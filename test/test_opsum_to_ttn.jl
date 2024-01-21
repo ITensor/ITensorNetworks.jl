@@ -11,10 +11,10 @@ function _fermionic_to_dense_matrix(A)
   return (A * cA1) * cA2
 end
 
-function _make_inds_same(A,B)
+function _make_inds_same(A, B)
   B = replaceinds(B, inds(B)[1] => inds(A)[1])
   B = replaceinds(B, inds(B)[2] => inds(A)[2])
-  return A,B
+  return A, B
 end
 
 @testset "OpSum to TTN converter" begin
@@ -150,14 +150,14 @@ end
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
     is = siteinds("Fermion", c; conserve_nf=true)
-    
+
     # test with next-nearest neighbor tight-binding model
     t = 1.0
     tp = 0.4
     U = 0.0
     h = 0.5
     H = ITensorNetworks.tight_binding(c; t=t, tp=tp, h=h)
-    
+
     # add combination of longer range interactions
     Hlr = copy(H)
 
@@ -169,32 +169,31 @@ end
       vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
       Hline = ITensors.MPO(relabel_sites(H, vmap), sites)
       # compare resulting sparse Hamiltonians
-      Hmat_sp=hopping_hamiltonian(relabel_sites(H, vmap))
+      Hmat_sp = hopping_hamiltonian(relabel_sites(H, vmap))
       @disable_warn_order begin
         Tmpo = prod(Hline)
         Tttno = contract(Hsvd)
       end
-      
+
       # verify that the norm isn't 0 and thus the same (which would indicate a problem with the autofermion system
       @test norm(Tmpo) > 0
       @test norm(Tttno) > 0
       @test norm(Tmpo) ≈ norm(Tttno) rtol = 1e-6
-      
+
       @test_broken Tmpo ≈ Tttno # ToDo fix comparison for fermionic tensors
       # In the meantime: matricize tensors and convert to dense Matrix to compare element by element
       Tmm = _fermionic_to_dense_matrix(Tmpo)
       Ttm = _fermionic_to_dense_matrix(Tttno)
-      Tmm,Ttm=_make_inds_same(Tmm,Ttm)
-      
-      dTmm=Matrix(dense(Tmm), inds(Tmm)[1], inds(Tmm)[2])
-      dTtm=Matrix(dense(Ttm), inds(Tmm)[1], inds(Tmm)[2])
-      @test any( dTmm - dTtm .> 1e-14 )
+      Tmm, Ttm = _make_inds_same(Tmm, Ttm)
+
+      dTmm = Matrix(dense(Tmm), inds(Tmm)[1], inds(Tmm)[2])
+      dTtm = Matrix(dense(Ttm), inds(Tmm)[1], inds(Tmm)[2])
+      @test any(dTmm - dTtm .> 1e-14)
 
       # also compare with energies obtained from single-particle Hamiltonian
-      GS_mb,_,_=eigsolve(dTtm,1, :SR,eltype(dTtm))
-      spectrum_sp=eigvals(Hmat_sp)
-      @test minimum(cumsum(spectrum_sp)) ≈ GS_mb[1] atol=1e-8
-
+      GS_mb, _, _ = eigsolve(dTtm, 1, :SR, eltype(dTtm))
+      spectrum_sp = eigvals(Hmat_sp)
+      @test minimum(cumsum(spectrum_sp)) ≈ GS_mb[1] atol = 1e-8
     end
     if !auto_fermion_enabled
       ITensors.disable_auto_fermion()
@@ -214,7 +213,7 @@ end
     add_edge!(c2, (-1, 1) => (2, 1))
     rem_edge!(c2, (2, 1) => (2, 2))
     rem_edge!(c2, (2, 1) => (3, 1))
-    
+
     is = siteinds("S=1/2", c; conserve_qns=true)
     is_missing_site = siteinds("S=1/2", c2; conserve_qns=true)
     is_missing_site[(-1, 1)] = Vector{Index}[]
@@ -228,7 +227,7 @@ end
     J2 = 2
     h = 0.5
     # connectivity of the Hamiltonian is that of the original comb graph
-    H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)  
+    H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)
 
     # add combination of longer range interactions
     Hlr = copy(H)

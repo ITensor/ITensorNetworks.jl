@@ -139,8 +139,8 @@ end
     maxdim = [10, 20, 40, 100]
     @show use_qns
     psi = dmrg(
-    H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
-  )
+      H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
+    )
 
     # Compare to `ITensors.MPO` version of `dmrg`
     linear_order = [4, 1, 2, 5, 3, 6]
@@ -156,11 +156,11 @@ end
 
 @testset "Tree DMRG for Fermions" for nsites in [2] #ToDo: change to [1,2] when random_ttn works with QNs
   auto_fermion_enabled = ITensors.using_auto_fermion()
-  use_qns=true
+  use_qns = true
   cutoff = 1e-12
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
-  
+
   # setup model
   tooth_lengths = fill(2, 3)
   c = named_comb_tree(tooth_lengths)
@@ -174,14 +174,14 @@ end
   linear_order = [4, 1, 2, 5, 3, 6]
   vmap = Dictionary(vertices(s)[linear_order], 1:length(linear_order))
   sline = only.(collect(vertex_data(s)))[linear_order]
-  
+
   # get MPS / MPO with JW string result
   ITensors.disable_auto_fermion()
   Hline = MPO(relabel_sites(os, vmap), sline)
   psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
   e_jw, psi_jw = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
   ITensors.enable_auto_fermion()
-  
+
   # now get auto-fermion results 
   H = TTN(os, s)
   # make init_state
@@ -191,17 +191,19 @@ end
   end
   states = v -> d[v]
   psi = TTN(s, states)
-  psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1))
+  psi = dmrg(
+    H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
+  )
 
   # Compare to `ITensors.MPO` version of `dmrg`
   Hline = MPO(relabel_sites(os, vmap), sline)
   psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
   e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
-  
+
   @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
   @test e2 ≈ e_jw atol = 1e-5
   @test inner(psi2', Hline, psi2) ≈ e_jw atol = 1e-5
-  
+
   if !auto_fermion_enabled
     ITensors.disable_auto_fermion()
   end
@@ -220,6 +222,6 @@ end
   psi = dmrg(H, psi; nsweeps, maxdim, nsites)
 
   @test all(edge_data(linkdims(psi)) .<= maxdim)
-end 
+end
 
 nothing
