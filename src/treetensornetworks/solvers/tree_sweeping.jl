@@ -3,12 +3,12 @@ direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
 function make_region(
   edge;
   last_edge=false,
-  nsite=1,
+  nsites=1,
   region_args=(;),
   reverse_args=region_args,
   reverse_step=false,
 )
-  if nsite == 1
+  if nsites == 1
     site = ([src(edge)], region_args)
     bond = (edge, reverse_args)
     region = reverse_step ? (site, bond) : (site,)
@@ -17,7 +17,7 @@ function make_region(
     else
       return region
     end
-  elseif nsite == 2
+  elseif nsites == 2
     sites_two = ([src(edge), dst(edge)], region_args)
     sites_one = ([dst(edge)], reverse_args)
     region = reverse_step ? (sites_two, sites_one) : (sites_two,)
@@ -27,7 +27,7 @@ function make_region(
       return region
     end
   else
-    error("nsite=$nsite not supported in alternating_update / update_step")
+    error("nsites=$nsites not supported in alternating_update / update_step")
   end
 end
 
