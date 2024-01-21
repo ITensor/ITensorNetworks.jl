@@ -7,7 +7,7 @@ using Test
   n = 10
   s = siteinds("S=1/2", n; conserve_qns)
 
-  Random.seed!(12)
+  Random.seed!(123)
 
   W = 12
   # Random fields h ∈ [-W, W]

@@ -133,9 +133,6 @@ end
 
     nsweeps = 10
     maxdim = [10, 20, 40, 100]
-    sweeps = Sweeps(nsweeps) # number of sweeps is 5
-    maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
-    cutoff!(sweeps, cutoff)
     @show use_qns
     psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1)
 
@@ -145,7 +142,7 @@ end
     sline = only.(collect(vertex_data(s)))[linear_order]
     Hline = MPO(relabel_sites(os, vmap), sline)
     psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
-    e2, psi2 = dmrg(Hline, psiline, sweeps; outputlevel=0)
+    e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
     @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
   end
@@ -179,9 +176,6 @@ end
 
     nsweeps = 10
     maxdim = [10, 20, 40, 100]
-    sweeps = Sweeps(nsweeps) # number of sweeps is 5
-    maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
-    cutoff!(sweeps, cutoff)
     psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1)
 
     # Compare to `ITensors.MPO` version of `dmrg`
@@ -191,7 +185,7 @@ end
     #@show sline
     Hline = MPO(relabel_sites(os, vmap), sline)
     psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
-    e2, psi2 = dmrg(Hline, psiline, sweeps; outputlevel=0)
+    e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
     @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
   end
   if !auto_fermion_enabled
@@ -212,6 +206,6 @@ end
   psi = dmrg(H, psi; nsweeps, maxdim, nsite)
 
   @test all(edge_data(linkdims(psi)) .<= maxdim)
-end
+end 
 
 nothing
