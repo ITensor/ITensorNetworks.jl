@@ -119,7 +119,7 @@ using Test
     # Should rotate back to original state:
     @test abs(inner(ψ0, ψ2)) > 0.99
   end
- 
+
   @testset "Accuracy Test" begin
     N = 4
     tau = 0.1
@@ -456,7 +456,7 @@ end
     # Should rotate back to original state:
     @test abs(inner(ψ0, ψ2)) > 0.99
   end
-  
+
   @testset "Accuracy Test" begin
     tau = 0.1
     ttotal = 1.0

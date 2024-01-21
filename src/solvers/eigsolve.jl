@@ -23,11 +23,7 @@ function eigsolve_updater(
   (; which_eigval) = updater_kwargs
   updater_kwargs = Base.structdiff(updater_kwargs, (; which_eigval=nothing))
   vals, vecs, info = eigsolve(
-    projected_operator![],
-    init,
-    howmany,
-    which_eigval;
-    updater_kwargs...,
+    projected_operator![], init, howmany, which_eigval; updater_kwargs...
   )
   return vecs[1], (; info, eigvals=vals)
 end
