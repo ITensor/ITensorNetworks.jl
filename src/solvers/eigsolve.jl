@@ -10,7 +10,7 @@ function eigsolve_updater(
   updater_kwargs,
 )
   default_updater_kwargs = (;
-    which_eigenvalue=:SR,
+    which_eigval=:SR,
     ishermitian=true,
     tol=1e-14,
     krylovdim=3,
@@ -20,13 +20,14 @@ function eigsolve_updater(
   )
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedence
   howmany = 1
-  which, updater_kwargs = _pop_which_eigenvalue(; updater_kwargs...)
+  (; which_eigval) = updater_kwargs
+  updater_kwargs = Base.structdiff(updater_kwargs, (; which_eigval=nothing))
   vals, vecs, info = eigsolve(
     projected_operator![],
     init,
     howmany,
-    which;
-    updater_kwargs..., #this leaves it
+    which_eigval;
+    updater_kwargs...,
   )
   return vecs[1], (; info, eigvals=vals)
 end

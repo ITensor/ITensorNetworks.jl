@@ -9,11 +9,11 @@ function contract_updater(
   region_kwargs,
   updater_kwargs,
 )
-  v = ITensor(1.0)
+  v = ITensor(true)
   projected_operator = projected_operator![]
   for j in sites(projected_operator)
     v *= projected_operator.psi0[j]
   end
-  Hpsi0 = contract(projected_operator, v)
-  return Hpsi0, (;)
+  vp = contract(projected_operator, v)
+  return vp, (;)
 end

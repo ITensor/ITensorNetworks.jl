@@ -12,7 +12,7 @@ function dmrg_x_updater(
   # this updater does not seem to accept any kwargs?
   default_updater_kwargs = (;)
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)
-  H = contract(projected_operator![], ITensor(1.0))
+  H = contract(projected_operator![], ITensor(true))
   D, U = eigen(H; ishermitian=true)
   u = uniqueind(U, H)
   max_overlap, max_ind = findmax(abs, array(dag(init) * U))
