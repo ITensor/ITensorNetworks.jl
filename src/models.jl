@@ -1,15 +1,17 @@
 _maybe_fill(x, n) = x
 _maybe_fill(x::Number, n) = fill(x, n)
 
-function nth_nearest_neighbors(g,v,n::Int)  #ToDo: Add test for this.
-  if n>=2
-    return setdiff(neighborhood(g, v, n), union(neighborhood(g, v, n-1),neighborhood(g, v, n-2)))
+function nth_nearest_neighbors(g, v, n::Int)  #ToDo: Add test for this.
+  if n >= 2
+    return setdiff(
+      neighborhood(g, v, n), union(neighborhood(g, v, n - 1), neighborhood(g, v, n - 2))
+    )
   else
     return neighborhood(g, v, 1)
   end
 end
 
-next_nearest_neighbors(g,v) = nth_nearest_neighbors(g,v,2)
+next_nearest_neighbors(g, v) = nth_nearest_neighbors(g, v, 2)
 
 function tight_binding(g::AbstractGraph; t=1, tp=0, h=0)
   h = _maybe_fill(h, nv(g))
@@ -23,7 +25,7 @@ function tight_binding(g::AbstractGraph; t=1, tp=0, h=0)
   if !iszero(t')
     # TODO, more clever way of looping over next to nearest neighbors?
     for (i, v) in enumerate(vertices(g))
-      for nn in next_nearest_neighbors(g,v)
+      for nn in next_nearest_neighbors(g, v)
         ℋ -= tp, "Cdag", maybe_only(v), "C", maybe_only(nn)
         ℋ -= tp, "Cdag", maybe_only(nn), "C", maybe_only(v)
       end
@@ -54,7 +56,7 @@ function hubbard(g::AbstractGraph; U=0, t=1, tp=0, h=0)
   if !iszero(tp)
     # TODO, more clever way of looping over next to nearest neighbors?
     for (i, v) in enumerate(vertices(g))
-      for nn in next_nearest_neighbors(g,v)
+      for nn in next_nearest_neighbors(g, v)
         ℋ -= tp, "Cdagup", maybe_only(v), "Cup", maybe_only(nn)
         ℋ -= tp, "Cdagup", maybe_only(nn), "Cup", maybe_only(v)
         ℋ -= tp, "Cdagdn", maybe_only(v), "Cdn", maybe_only(nn)
@@ -88,7 +90,7 @@ function heisenberg(g::AbstractGraph; J1=1, J2=0, h=0)
   end
   if !iszero(J2)
     for (i, v) in enumerate(vertices(g))
-      for nn in next_nearest_neighbors(g,v)
+      for nn in next_nearest_neighbors(g, v)
         ℋ += J2 / 2, "S+", maybe_only(v), "S-", maybe_only(nn)
         ℋ += J2 / 2, "S-", maybe_only(v), "S+", maybe_only(nn)
         ℋ += J2, "Sz", maybe_only(v), "Sz", maybe_only(nn)
@@ -116,7 +118,7 @@ function ising(g::AbstractGraph; J1=-1, J2=0, h=0)
   end
   if !iszero(J2)
     for (i, v) in enumerate(vertices(g))
-      for nn in next_nearest_neighbors(g,v)
+      for nn in next_nearest_neighbors(g, v)
         ℋ += J2, "Sz", maybe_only(v), "Sz", maybe_only(nn)
       end
     end
