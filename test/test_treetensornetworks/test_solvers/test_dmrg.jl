@@ -154,46 +154,54 @@ end
   end
 end
 
-@testset "Tree DMRG for Fermions" for nsites in [2]
+@testset "Tree DMRG for Fermions" for nsites in [2] #ToDo: change to [1,2] when random_ttn works with QNs
   auto_fermion_enabled = ITensors.using_auto_fermion()
-  if !auto_fermion_enabled
-    ITensors.enable_auto_fermion()
-  end
-
+  use_qns=true
   cutoff = 1e-12
+  nsweeps = 10
+  maxdim = [10, 20, 40, 100]
+  
+  # setup model
   tooth_lengths = fill(2, 3)
   c = named_comb_tree(tooth_lengths)
+  s = siteinds("Electron", c; conserve_qns=use_qns)
+  U = 2.0
+  t = 1.3
+  tp = 0.6
+  os = ITensorNetworks.hubbard(c; U=U, t=t, tp=tp)
 
-  @testset "Svd approach" for use_qns in [true]
-    s = siteinds("Electron", c; conserve_qns=use_qns)
-    U = 2.0
-    t = 1.3
-    tp = 0.6
-    os = ITensorNetworks.hubbard(c; U=U, t=t, tp=tp)
-    H = TTN(os, s)
-
-    # make init_state
-    d = Dict()
-    for (i, v) in enumerate(vertices(s))
-      d[v] = isodd(i) ? "Up" : "Dn"
-    end
-    states = v -> d[v]
-    psi = TTN(s, states)
-
-    nsweeps = 10
-    maxdim = [10, 20, 40, 100]
-    psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1))
-
-    # Compare to `ITensors.MPO` version of `dmrg`
-    linear_order = [4, 1, 2, 5, 3, 6]
-    vmap = Dictionary(vertices(s)[linear_order], 1:length(linear_order))
-    sline = only.(collect(vertex_data(s)))[linear_order]
-    #@show sline
-    Hline = MPO(relabel_sites(os, vmap), sline)
-    psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
-    e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
-    @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
+  # for conversion to ITensors.MPO
+  linear_order = [4, 1, 2, 5, 3, 6]
+  vmap = Dictionary(vertices(s)[linear_order], 1:length(linear_order))
+  sline = only.(collect(vertex_data(s)))[linear_order]
+  
+  # get MPS / MPO with JW string result
+  ITensors.disable_auto_fermion()
+  Hline = MPO(relabel_sites(os, vmap), sline)
+  psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+  e_jw, psi_jw = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
+  ITensors.enable_auto_fermion()
+  
+  # now get auto-fermion results 
+  H = TTN(os, s)
+  # make init_state
+  d = Dict()
+  for (i, v) in enumerate(vertices(s))
+    d[v] = isodd(i) ? "Up" : "Dn"
   end
+  states = v -> d[v]
+  psi = TTN(s, states)
+  psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1))
+
+  # Compare to `ITensors.MPO` version of `dmrg`
+  Hline = MPO(relabel_sites(os, vmap), sline)
+  psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+  e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
+  
+  @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
+  @test e2 ≈ e_jw atol = 1e-5
+  @test inner(psi2', Hline, psi2) ≈ e_jw atol = 1e-5
+  
   if !auto_fermion_enabled
     ITensors.disable_auto_fermion()
   end
