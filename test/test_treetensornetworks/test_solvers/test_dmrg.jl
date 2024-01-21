@@ -112,7 +112,7 @@ end
   psi = dmrg(H, psi; nsweeps, maxdim, cutoff)
 end
 
-@testset "Tree DMRG" for nsite in [2]
+@testset "Tree DMRG" for nsites in [2]
   cutoff = 1e-12
 
   tooth_lengths = fill(2, 3)
@@ -154,7 +154,7 @@ end
   end
 end
 
-@testset "Tree DMRG for Fermions" for nsite in [2]
+@testset "Tree DMRG for Fermions" for nsites in [2]
   auto_fermion_enabled = ITensors.using_auto_fermion()
   if !auto_fermion_enabled
     ITensors.enable_auto_fermion()
@@ -182,7 +182,7 @@ end
 
     nsweeps = 10
     maxdim = [10, 20, 40, 100]
-    psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1)
+    psi = dmrg(H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1))
 
     # Compare to `ITensors.MPO` version of `dmrg`
     linear_order = [4, 1, 2, 5, 3, 6]
