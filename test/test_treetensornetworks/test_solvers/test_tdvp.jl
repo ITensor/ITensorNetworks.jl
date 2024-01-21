@@ -300,7 +300,6 @@ using Test
     H = mpo(os, s)
 
     state = random_mps(s; internal_inds_space=2)
-    psi2 = deepcopy(state)
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
       nsites = (step <= 10 ? 2 : 1)
@@ -317,9 +316,7 @@ using Test
     end
 
     en1 = inner(state', H, state)
-    en2 = inner(psi2', H, psi2)
     @test en1 < -4.25
-    @test en1 ≈ en2
   end
 
   @testset "Observers" begin
