@@ -16,17 +16,15 @@ using Test
 
   ψ = mps(s; states=(v -> rand(["↑", "↓"])))
 
-  dmrg_x_kwargs = (
-    nsweeps=20, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0
-  )
+  dmrg_x_kwargs = (nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
 
-  ϕ = dmrg_x(H, ψ; nsite=2, dmrg_x_kwargs...)
+  ϕ = dmrg_x(H, ψ; nsites=2, dmrg_x_kwargs...)
 
   @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ', H, ϕ) / inner(ϕ, ϕ) rtol = 1e-1
   @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ)^2 rtol = 1e-7
   @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ', H, ϕ)^2 rtol = 1e-7
 
-  ϕ̃ = dmrg_x(H, ϕ; nsite=1, dmrg_x_kwargs...)
+  ϕ̃ = dmrg_x(H, ϕ; nsites=1, dmrg_x_kwargs...)
 
   @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ̃', H, ϕ̃) / inner(ϕ̃, ϕ̃) rtol = 1e-1
   @test inner(H, ϕ̃, H, ϕ̃) ≈ inner(ϕ̃', H, ϕ̃)^2 rtol = 1e-3
@@ -34,10 +32,7 @@ using Test
   # @test abs(loginner(ϕ̃, ϕ) / n) ≈ 0.0 atol = 1e-6
 end
 
-@testset "Tree DMRG-X" for conserve_qns in (
-  false,
-  true, # OpSum → TTN with QNs not working for non-path graphs
-)
+@testset "Tree DMRG-X" for conserve_qns in (false, true)
   tooth_lengths = fill(2, 3)
   root_vertex = (3, 2)
   c = named_comb_tree(tooth_lengths)
@@ -55,17 +50,15 @@ end
   # `ttns(s; states=v -> rand(["↑", "↓"]))`
   ψ = normalize!(TTN(s, v -> rand(["↑", "↓"])))
 
-  dmrg_x_kwargs = (
-    nsweeps=20, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0
-  )
+  dmrg_x_kwargs = (nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
 
-  ϕ = dmrg_x(H, ψ; nsite=2, dmrg_x_kwargs...)
+  ϕ = dmrg_x(H, ψ; nsites=2, dmrg_x_kwargs...)
 
   @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ', H, ϕ) / inner(ϕ, ϕ) rtol = 1e-1
   @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ)^2 rtol = 1e-2
   @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ', H, ϕ)^2 rtol = 1e-7
 
-  ϕ̃ = dmrg_x(H, ϕ; nsite=1, dmrg_x_kwargs...)
+  ϕ̃ = dmrg_x(H, ϕ; nsites=1, dmrg_x_kwargs...)
 
   @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ̃', H, ϕ̃) / inner(ϕ̃, ϕ̃) rtol = 1e-1
   @test inner(H, ϕ̃, H, ϕ̃) ≈ inner(ϕ̃', H, ϕ̃)^2 rtol = 1e-6
