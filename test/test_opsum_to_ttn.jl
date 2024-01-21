@@ -1,6 +1,6 @@
 using Dictionaries
 using ITensors
-using ITensorGaussianMPS: hopping_hamiltonian#, eigen_gaussian
+using ITensorGaussianMPS: hopping_hamiltonian
 using ITensorNetworks
 using Random
 using Test
@@ -150,30 +150,16 @@ end
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
     is = siteinds("Fermion", c; conserve_nf=true)
-    #is = siteinds("Electron", c; conserve_nf=true,conserve_sz=true)
-
-    # linearized version
-    #linear_order = [4, 1, 2, 5, 3, 6]
-
-    # test with next-to-nearest-neighbor Ising Hamiltonian
+    
+    # test with next-nearest neighbor tight-binding model
     t = 1.0
     tp = 0.4
     U = 0.0
     h = 0.5
     H = ITensorNetworks.tight_binding(c; t=t, tp=tp, h=h)
-    #H = ITensorNetworks.hubbard(c; t=t, tp=tp, h=h)
     
     # add combination of longer range interactions
     Hlr = copy(H)
-    #Hlr += 5, "Cdag", (1, 2), "C", (3, 2)#, "Z", (3,2)
-    #Hlr += 5, "Cdag", (3, 2), "C", (1, 2)#, "Z", (3,2)
-
-    #Hlr += -4, "N", (1, 1), "N", (2, 2)
-    #Hlr += 2.0, "Sz", (2, 2), "Sz", (3, 2)
-    #Hlr += -1.0, "Sz", (1, 2), "Sz", (3, 1)
-
-    # root_vertex = (1, 2)
-    # println(leaf_vertices(is))
 
     @testset "Svd approach" for root_vertex in leaf_vertices(is)
       # get TTN Hamiltonian directly
@@ -208,22 +194,7 @@ end
       GS_mb,_,_=eigsolve(dTtm,1, :SR,eltype(dTtm))
       spectrum_sp=eigvals(Hmat_sp)
       @test minimum(cumsum(spectrum_sp)) ≈ GS_mb[1] atol=1e-8
-      #@@@test Tmm  ≈ Ttm atol = 1e-8
-      #@test all(Matrix(dense(Tmm-Ttm),inds(Tmm)[1],inds(Tmm)[2]) .≈ 0.0 atol = 1e-8)
 
-      #@test Tmm ≈ Ttm
-      #@test Tmpo ≈ Tttno rtol = 1e-6
-
-      # this breaks for longer range interactions ###not anymore
-      #=
-      Hsvd_lr = TTN(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)
-      Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
-      @disable_warn_order begin
-        Tttno_lr = prod(Hline_lr)
-        Tmpo_lr = contract(Hsvd_lr)
-      end
-      @test norm(Tttno_lr) ≈ norm(Tmpo_lr) rtol = 1e-6
-      =#
     end
     if !auto_fermion_enabled
       ITensors.disable_auto_fermion()
@@ -235,6 +206,7 @@ end
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
     c2 = copy(c)
+    ## add an internal vertex into the comb graph c2
     import ITensorNetworks: add_vertex!, rem_vertex!, add_edge!, rem_edge!
     add_vertex!(c2, (-1, 1))
     add_edge!(c2, (-1, 1) => (2, 2))
@@ -242,8 +214,7 @@ end
     add_edge!(c2, (-1, 1) => (2, 1))
     rem_edge!(c2, (2, 1) => (2, 2))
     rem_edge!(c2, (2, 1) => (3, 1))
-    #@show c2
-
+    
     is = siteinds("S=1/2", c; conserve_qns=true)
     is_missing_site = siteinds("S=1/2", c2; conserve_qns=true)
     is_missing_site[(-1, 1)] = Vector{Index}[]
@@ -256,8 +227,8 @@ end
     J1 = -1
     J2 = 2
     h = 0.5
-    H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)
-    #Hvac = heisenberg(is_missing_site; J1=J1, J2=J2, h=h)
+    # connectivity of the Hamiltonian is that of the original comb graph
+    H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)  
 
     # add combination of longer range interactions
     Hlr = copy(H)
@@ -265,9 +236,6 @@ end
     Hlr += -4, "Z", (1, 1), "Z", (2, 2)
     Hlr += 2.0, "Z", (2, 2), "Z", (3, 2)
     Hlr += -1.0, "Z", (1, 2), "Z", (3, 1)
-
-    # root_vertex = (1, 2)
-    # println(leaf_vertices(is))
 
     @testset "Svd approach" for root_vertex in leaf_vertices(is)
       # get TTN Hamiltonian directly
@@ -283,7 +251,6 @@ end
 
       @test Tttno ≈ Tmpo rtol = 1e-6
 
-      # this breaks for longer range interactions ###not anymore
       Hsvd_lr = TTN(
         Hlr, is_missing_site; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10
       )
