@@ -4,6 +4,7 @@ using ITensorGaussianMPS: hopping_hamiltonian
 using ITensorNetworks
 using Random
 using LinearAlgebra: eigvals
+using Graphs: add_vertex!, rem_vertex!, add_edge!, rem_edge!
 using Test
 
 function to_matrix(t::ITensor)
@@ -16,8 +17,8 @@ end
 @testset "OpSum to TTN converter" begin
   @testset "OpSum to TTN" begin
     # small comb tree
-
-    ITensors.disable_auto_fermion()
+    auto_fermion_enabled = ITensors.using_auto_fermion()
+    ITensors.disable_auto_fermion() # ToDo: remove when autofermion incompatibility with no QNs is fixed
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
 
@@ -64,9 +65,14 @@ end
       end
       @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
     end
+    if auto_fermion_enabled
+      ITensors.enable_auto_fermion()
+    end
   end
 
   @testset "Multiple onsite terms (regression test for issue #62)" begin
+    auto_fermion_enabled = ITensors.using_auto_fermion()
+    ITensors.disable_auto_fermion() # ToDo: remove when autofermion incompatibility with no QNs is fixed
     grid_dims = (2, 1)
     g = named_grid(grid_dims)
     s = siteinds("S=1/2", g)
@@ -80,10 +86,12 @@ end
     H3 = TTN(os1 + os2, s)
 
     @test H1 + H2 ≈ H3 rtol = 1e-6
+    if auto_fermion_enabled
+      ITensors.enable_auto_fermion()
+    end
   end
 
   @testset "OpSum to TTN QN" begin
-    ITensors.disable_auto_fermion()
     # small comb tree
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
@@ -198,7 +206,6 @@ end
     c = named_comb_tree(tooth_lengths)
     c2 = copy(c)
     ## add an internal vertex into the comb graph c2
-    import ITensorNetworks: add_vertex!, rem_vertex!, add_edge!, rem_edge!
     add_vertex!(c2, (-1, 1))
     add_edge!(c2, (-1, 1) => (2, 2))
     add_edge!(c2, (-1, 1) => (3, 1))
