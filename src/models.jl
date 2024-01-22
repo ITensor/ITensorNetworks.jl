@@ -2,13 +2,8 @@ _maybe_fill(x, n) = x
 _maybe_fill(x::Number, n) = fill(x, n)
 
 function nth_nearest_neighbors(g, v, n::Int)  #ToDo: Add test for this.
-  if n >= 2
-    return setdiff(
-      neighborhood(g, v, n), union(neighborhood(g, v, n - 1), neighborhood(g, v, n - 2))
-    )
-  else
-    return neighborhood(g, v, 1)
-  end
+  isone(n) && return neighborhood(g, v, 1)
+  return setdiff( neighborhood(g, v, n), neighborhood(g, v, n - 1) )
 end
 
 next_nearest_neighbors(g, v) = nth_nearest_neighbors(g, v, 2)
@@ -90,6 +85,8 @@ function heisenberg(g::AbstractGraph; J1=1, J2=0, h=0)
   end
   if !iszero(J2)
     for (i, v) in enumerate(vertices(g))
+      @show v
+      @show next_nearest_neighbors(g, v)
       for nn in next_nearest_neighbors(g, v)
         ℋ += J2 / 2, "S+", maybe_only(v), "S-", maybe_only(nn)
         ℋ += J2 / 2, "S-", maybe_only(v), "S+", maybe_only(nn)

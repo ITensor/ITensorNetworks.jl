@@ -3,6 +3,7 @@ using ITensors
 using ITensorGaussianMPS: hopping_hamiltonian
 using ITensorNetworks
 using Random
+using LinearAlgebra: eigvals
 using Test
 
 function _fermionic_to_dense_matrix(A)
