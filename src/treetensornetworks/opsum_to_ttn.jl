@@ -447,7 +447,6 @@ function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) 
       prevsite = currsite
 
       if fermionic
-        #error("No verified fermion support for automatic TTN constructor!") # no verified support, just throw error
         parity = -parity
       else
         # Ignore bosonic operators in perm

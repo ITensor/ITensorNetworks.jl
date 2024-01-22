@@ -168,7 +168,7 @@ end
   U = 2.0
   t = 1.3
   tp = 0.6
-  os = ITensorNetworks.hubbard(c; U=U, t=t, tp=tp)
+  os = ITensorNetworks.hubbard(c; U, t, tp)
 
   # for conversion to ITensors.MPO
   linear_order = [4, 1, 2, 5, 3, 6]

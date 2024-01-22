@@ -156,7 +156,7 @@ end
     tp = 0.4
     U = 0.0
     h = 0.5
-    H = ITensorNetworks.tight_binding(c; t=t, tp=tp, h=h)
+    H = ITensorNetworks.tight_binding(c; t, tp, h)
 
     # add combination of longer range interactions
     Hlr = copy(H)
@@ -165,7 +165,7 @@ end
       # get TTN Hamiltonian directly
       Hsvd = TTN(H, is; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      sites = only.([is[v] for v in reverse(post_order_dfs_vertices(c, root_vertex))])
+      sites = [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
       vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
       Hline = ITensors.MPO(relabel_sites(H, vmap), sites)
       # compare resulting sparse Hamiltonians
@@ -188,7 +188,7 @@ end
 
       dTmm = Matrix(dense(Tmm), inds(Tmm)[1], inds(Tmm)[2])
       dTtm = Matrix(dense(Ttm), inds(Tmm)[1], inds(Tmm)[2])
-      @test any(dTmm - dTtm .> 1e-14)
+      @test any(>(1e-14), dTmm - dTtm)
 
       # also compare with energies obtained from single-particle Hamiltonian
       GS_mb, _, _ = eigsolve(dTtm, 1, :SR, eltype(dTtm))
