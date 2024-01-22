@@ -272,5 +272,3 @@ function ITensors.ITensor(ψ::ITensorNetwork)
     return ITensor[ψ[v] for v in vertices(ψ)]
   end
 end
-
-NamedGraphs.parent_graph(ψ::ITensorNetwork) = NamedGraphs.parent_graph(underlying_graph(ψ))

@@ -59,7 +59,7 @@ Note: for a given binary tree with n indices, the output partition will contain 
 Note: name of vertices in the output partition are the same as the name of vertices
   in `inds_btree`.
 """
-function partition(
+function _partition(
   ::Algorithm"mincut_recursive_bisection", tn::ITensorNetwork, inds_btree::DataGraph
 )
   @assert _is_rooted_directed_binary_tree(inds_btree)
@@ -115,7 +115,7 @@ function partition(
   end
   tn_deltas = ITensorNetwork(vcat(output_deltas_vector...))
   tn_scalars = ITensorNetwork(vcat(scalars_vector...))
-  par = partition(disjoint_union(out_tn, tn_deltas, tn_scalars), subgraph_vs)
+  par = _partition(disjoint_union(out_tn, tn_deltas, tn_scalars), subgraph_vs)
   @assert is_tree(par)
   name_map = Dict()
   for (i, v) in enumerate(pre_order_dfs_vertices(inds_btree, root))
@@ -124,6 +124,6 @@ function partition(
   return rename_vertices(par, name_map)
 end
 
-function partition(tn::ITensorNetwork, inds_btree::DataGraph; alg::String)
-  return partition(Algorithm(alg), tn, inds_btree)
+function _partition(tn::ITensorNetwork, inds_btree::DataGraph; alg::String)
+  return _partition(Algorithm(alg), tn, inds_btree)
 end

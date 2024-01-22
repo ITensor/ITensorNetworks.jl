@@ -75,12 +75,8 @@ end
 function update_sqrt_message_tensor(pψψ::PartitionedGraph, edge::PartitionEdge, sqrt_mts;)
   v = only(filter(v -> v[2] == 1, vertices(pψψ, src(edge))))
   site_itensor = unpartitioned_graph(pψψ)[v]
-  incoming_messages = [
-    sqrt_mts[PartitionEdge(e_in)] for e_in in setdiff(
-      boundary_edges(partitioned_graph(pψψ), [NamedGraphs.parent(src(edge))]; dir=:in),
-      [reverse(NamedGraphs.parent(edge))],
-    )
-  ]
+  p_edges = setdiff(partitionedges(pψψ, boundary_edges(pψψ, [v]; dir=:in)), [reverse(edge)])
+  incoming_messages = [sqrt_mts[e_in] for e_in in p_edges]
   incoming_messages = reduce(vcat, incoming_messages; init=ITensor[])
   contract_list = ITensor[incoming_messages; site_itensor]
   contract_output = contract(
@@ -102,7 +98,7 @@ function sqrt_message_tensors(
   regularization=10 * eps(real(scalartype(unpartitioned_graph(pψψ)))),
 )
   sqrt_mts = copy(mts)
-  for e in PartitionEdge.(edges(partitioned_graph(pψψ)))
+  for e in partitionedges(pψψ)
     vsrc, vdst = filter(v -> v[2] == 1, vertices(pψψ, src(e))),
     filter(v -> v[2] == 1, vertices(pψψ, dst(e)))
     ψvsrc, ψvdst = unpartitioned_graph(pψψ)[only(vsrc)],
@@ -113,9 +109,7 @@ function sqrt_message_tensors(
 
     X_D, X_U = eigen(only(mts[e]); ishermitian=true, cutoff=eigen_message_tensor_cutoff)
     Y_D, Y_U = eigen(
-      only(mts[PartitionEdge(reverse(NamedGraphs.parent(e)))]);
-      ishermitian=true,
-      cutoff=eigen_message_tensor_cutoff,
+      only(mts[reverse(e)]); ishermitian=true, cutoff=eigen_message_tensor_cutoff
     )
     X_D, Y_D = map_diag(x -> x + regularization, X_D),
     map_diag(x -> x + regularization, Y_D)
@@ -125,7 +119,7 @@ function sqrt_message_tensors(
     rootY = Y_U * rootY_D * prime(dag(Y_U))
 
     sqrt_mts[e] = ITensor[rootX]
-    sqrt_mts[PartitionEdge(reverse(NamedGraphs.parent(e)))] = ITensor[rootY]
+    sqrt_mts[reverse(e)] = ITensor[rootY]
   end
   return sqrt_mts
 end
@@ -134,14 +128,14 @@ function sqr_message_tensors(sqrt_mts)
   mts = copy(sqrt_mts)
   for e in keys(sqrt_mts)
     sqrt_mt = only(sqrt_mts[e])
-    sqrt_mt_rev = only(sqrt_mts[PartitionEdge(reverse(NamedGraphs.parent(e)))])
+    sqrt_mt_rev = only(sqrt_mts[reverse(e)])
     l = commoninds(sqrt_mt, sqrt_mt_rev)
     mt = dag(prime(sqrt_mt, l)) * sqrt_mt
     normalize!(mt)
     mt_rev = dag(prime(sqrt_mt_rev, l)) * sqrt_mt_rev
     normalize!(mt_rev)
     mts[e] = ITensor[mt]
-    mts[PartitionEdge(reverse(NamedGraphs.parent(e)))] = ITensor[mt_rev]
+    mts[reverse(e)] = ITensor[mt_rev]
   end
   return mts
 end

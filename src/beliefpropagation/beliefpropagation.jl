@@ -2,12 +2,12 @@ function message_tensors(
   ptn::PartitionedGraph; itensor_constructor=inds_e -> ITensor[dense(delta(inds_e))]
 )
   mts = Dict()
-  for e in PartitionEdge.(edges(partitioned_graph(ptn)))
+  for e in partitionedges(ptn)
     src_e_itn = unpartitioned_graph(subgraph(ptn, [src(e)]))
     dst_e_itn = unpartitioned_graph(subgraph(ptn, [dst(e)]))
     inds_e = commoninds(src_e_itn, dst_e_itn)
     mts[e] = itensor_constructor(inds_e)
-    mts[PartitionEdge(reverse(NamedGraphs.parent(e)))] = dag.(mts[e])
+    mts[reverse(e)] = dag.(mts[e])
   end
   return mts
 end
@@ -21,12 +21,11 @@ function update_message_tensor(
   mts;
   contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
 )
-  incoming_messages = [
-    mts[PartitionEdge(e_in)] for e_in in setdiff(
-      boundary_edges(partitioned_graph(ptn), [NamedGraphs.parent(src(edge))]; dir=:in),
-      [reverse(NamedGraphs.parent(edge))],
-    )
-  ]
+  pedges = setdiff(
+    partitionedges(ptn, boundary_edges(ptn, vertices(ptn, src(edge)); dir=:in)),
+    [reverse(edge)],
+  )
+  incoming_messages = [mts[e_in] for e_in in pedges]
   incoming_messages = reduce(vcat, incoming_messages; init=ITensor[])
 
   contract_list = ITensor[
@@ -35,18 +34,14 @@ function update_message_tensor(
   ]
 
   if contract_kwargs.alg != "exact"
-    mt, _ = contract(ITensorNetwork(contract_list); contract_kwargs...)
+    mt = first(contract(ITensorNetwork(contract_list); contract_kwargs...))
   else
     mt = contract(
       contract_list; sequence=contraction_sequence(contract_list; alg="optimal")
     )
   end
 
-  if isa(mt, ITensor)
-    mt = ITensor[mt]
-  elseif isa(mt, ITensorNetwork)
-    mt = ITensor(mt)
-  end
+  mt = isa(mt, ITensor) ? ITensor[mt] : ITensor(mt)
   normalize!.(mt)
 
   return mt
@@ -152,19 +147,18 @@ Given a subet of vertices of a given Tensor Network and the Message Tensors for 
 Specifically, the contraction of the environment tensors and tn[vertices] will be a scalar.
 """
 function get_environment(ptn::PartitionedGraph, mts, verts::Vector; dir=:in)
-  partition_vertices = unique([NamedGraphs.which_partition(ptn, v) for v in verts])
+  partition_verts = partitionvertices(ptn, verts)
+  central_verts = vertices(ptn, partition_verts)
 
   if dir == :out
     return get_environment(ptn, mts, setdiff(vertices(ptn), verts))
   end
 
-  env_tensors = [
-    mts[PartitionEdge(e)] for e in
-    boundary_edges(partitioned_graph(ptn), NamedGraphs.parent.(partition_vertices); dir=:in)
-  ]
+  pedges = partitionedges(ptn, boundary_edges(ptn, central_verts; dir=:in))
+  env_tensors = [mts[e] for e in pedges]
   env_tensors = reduce(vcat, env_tensors; init=ITensor[])
   central_tensors = ITensor[
-    (unpartitioned_graph(ptn))[v] for v in setdiff(vertices(ptn, partition_vertices), verts)
+    (unpartitioned_graph(ptn))[v] for v in setdiff(central_verts, verts)
   ]
 
   return vcat(env_tensors, central_tensors)

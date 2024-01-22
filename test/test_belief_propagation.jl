@@ -91,9 +91,7 @@ ITensors.disable_warn_order()
     ITensors.contract(ψψ; sequence=contract_seq)[]
 
   nsites = 2
-  p_vertices = NamedGraphs.partition_vertices(
-    underlying_graph(ψψ); nvertices_per_partition=nsites
-  )
+  p_vertices = partitioned_vertices(underlying_graph(ψψ); nvertices_per_partition=nsites)
   pψψ = PartitionedGraph(ψψ, p_vertices)
   mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), niters=20)
   numerator_network = approx_network_region(

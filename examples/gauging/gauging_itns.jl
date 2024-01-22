@@ -31,12 +31,10 @@ function eager_gauging(
   mts = copy(mts)
   for e in edges(ψ)
     vsrc, vdst = src(e), dst(e)
-    pe = NamedGraphs.partition_edge(pψψ, NamedEdge((vsrc, 1) => (vdst, 1)))
+    pe = which_partitionedge(pψψ, NamedEdge((vsrc, 1) => (vdst, 1)))
     normalize!(isometries[e])
     normalize!(isometries[reverse(e)])
-    mts[pe], mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))] = ITensorNetwork(
-      isometries[e]
-    ),
+    mts[pe], mts[reverse(pe)] = ITensorNetwork(isometries[e]),
     ITensorNetwork(isometries[reverse(e)])
   end
 

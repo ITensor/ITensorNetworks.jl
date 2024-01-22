@@ -69,7 +69,7 @@ function approx_itensornetwork(
   contraction_sequence_alg="optimal",
   contraction_sequence_kwargs=(;),
 )
-  par = partition(tn, inds_btree; alg="mincut_recursive_bisection")
+  par = _partition(tn, inds_btree; alg="mincut_recursive_bisection")
   output_tn, log_root_norm = approx_itensornetwork(
     alg,
     par;

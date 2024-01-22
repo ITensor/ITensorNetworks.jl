@@ -61,13 +61,13 @@ function simple_update_bp(
       v⃗ = neighbor_vertices(ψ, o)
       for e in edges
         @assert order(only(mts[e])) == 2
-        @assert order(only(mts[PartitionEdge(reverse(NamedGraphs.parent(e)))])) == 2
+        @assert order(only(mts[reverse(e)])) == 2
       end
 
       @assert length(v⃗) == 2
       v1, v2 = v⃗
 
-      pe = NamedGraphs.partition_edge(pψψ, NamedEdge((v1, 1) => (v2, 1)))
+      pe = partitionedge(pψψ, NamedEdge((v1, 1) => (v2, 1)))
       envs = get_environment(pψψ, mts, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
       obs = observer()
       # TODO: Make a version of `apply` that accepts message tensors,
@@ -91,7 +91,7 @@ function simple_update_bp(
       ψψ = norm_network(ψ)
       pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
       mts[pe] = dense.(obs.singular_values)
-      mts[PartitionEdge(reverse(NamedGraphs.parent(pe)))] = dense.(obs.singular_values)
+      mts[reverse(pe)] = dense.(obs.singular_values)
     end
     if regauge
       println("regauge")

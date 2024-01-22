@@ -53,7 +53,8 @@ using NamedGraphs:
   parent_graph,
   vertex_to_parent_vertex,
   parent_vertices_to_vertices,
-  not_implemented
+  not_implemented,
+  parent
 
 include("imports.jl")
 
