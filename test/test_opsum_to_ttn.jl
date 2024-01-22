@@ -6,16 +6,19 @@ using Random
 using LinearAlgebra: eigvals
 using Test
 
-function _fermionic_to_dense_matrix(A)
-  cA1 = combiner(inds(A)[findall((plev.(inds(A))) .== 0)])
-  cA2 = combiner(inds(A)[findall((plev.(inds(A))) .== 1)])
-  return (A * cA1) * cA2
-end
-
-function _make_inds_same(A, B)
-  B = replaceinds(B, inds(B)[1] => inds(A)[1])
-  B = replaceinds(B, inds(B)[2] => inds(A)[2])
-  return A, B
+function _to_matrices_with_same_inds(t::ITensor,s::ITensor)
+  c = combiner(inds(t; plev=0))
+  tc = (t * c) * dag(c')
+  c2 = combiner(inds(s; plev=0))
+  sc = (s * c2) * dag(c2')
+  
+  cind = combinedind(c)
+  cind2 = combinedind(c2)
+  sc=replaceinds(sc,(cind2,cind2'),(cind,cind'))
+  
+  tm=matrix(tc, cind', cind)
+  sm=matrix(sc, cind',cind)
+  return tm, sm
 end
 
 @testset "OpSum to TTN converter" begin
@@ -183,12 +186,7 @@ end
 
       @test_broken Tmpo ≈ Tttno # ToDo fix comparison for fermionic tensors
       # In the meantime: matricize tensors and convert to dense Matrix to compare element by element
-      Tmm = _fermionic_to_dense_matrix(Tmpo)
-      Ttm = _fermionic_to_dense_matrix(Tttno)
-      Tmm, Ttm = _make_inds_same(Tmm, Ttm)
-
-      dTmm = Matrix(dense(Tmm), inds(Tmm)[1], inds(Tmm)[2])
-      dTtm = Matrix(dense(Ttm), inds(Tmm)[1], inds(Tmm)[2])
+      dTmm,dTtm = _to_matrices_with_same_inds(Tmpo,Tttno)
       @test any(>(1e-14), dTmm - dTtm)
 
       # also compare with energies obtained from single-particle Hamiltonian
