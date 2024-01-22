@@ -54,12 +54,16 @@ function ttn_svd(
   maxdim::Int=typemax(Int),
   cutoff=eps(real(coefficient_type)) * 10,
 )
-  sites = deepcopy(sites0)
+  # fermionic and non-fermionic QNIndices have opposite default index direction
+  # which causes problems when using the autofermion sign with non-fermionic QNIndex
+  # ToDo: remove conditional when this is addressed
+  linkdir_ref = ITensors.using_auto_fermion() ? ITensors.In : ITensors.In
+  
+  sites = deepcopy(sites0)  # deepcopy because of inplace modification to handle internal indices 
   edgetype_sites = edgetype(sites)
   vertextype_sites = vertextype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
-  linkdir_ref = ITensors.using_auto_fermion() ? ITensors.In : ITensors.Out
   # traverse tree outwards from root vertex
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
   # ToDo: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
