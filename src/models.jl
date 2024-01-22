@@ -85,8 +85,6 @@ function heisenberg(g::AbstractGraph; J1=1, J2=0, h=0)
   end
   if !iszero(J2)
     for (i, v) in enumerate(vertices(g))
-      @show v
-      @show next_nearest_neighbors(g, v)
       for nn in next_nearest_neighbors(g, v)
         ℋ += J2 / 2, "S+", maybe_only(v), "S-", maybe_only(nn)
         ℋ += J2 / 2, "S-", maybe_only(v), "S+", maybe_only(nn)
