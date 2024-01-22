@@ -54,13 +54,16 @@ function ttn_svd(
   maxdim::Int=typemax(Int),
   cutoff=eps(real(coefficient_type)) * 10,
 )
-  sites = deepcopy(sites0)
+  linkdir_ref = ITensors.In   # safe to always use autofermion default here
+
+  sites = copy(sites0)  # copy because of modification to handle internal indices 
   edgetype_sites = edgetype(sites)
   vertextype_sites = vertextype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
   # traverse tree outwards from root vertex
   vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
+  # ToDo: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
   es = reverse(reverse.(post_order_dfs_edges(sites, root_vertex)))                          # store edges in fixed ordering relative to root
   # some things to keep track of
   degrees = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
@@ -81,7 +84,7 @@ function ttn_svd(
         op_cache[ITensors.which_op(st) => ITensors.site(st)] = op_tensor
       end
       if !isnothing(flux(op_tensor))
-        q -= flux(op_tensor)
+        q += flux(op_tensor)
       end
     end
     return q
@@ -93,13 +96,13 @@ function ttn_svd(
   for v in vs
     is_internal[v] = isempty(sites[v])
     if isempty(sites[v])
-      push!(sites[v], Index(Hflux => 1)) ###FIXME: using Hflux may be a problem with AutoFermion, the dummy index has to be bosonic (but the QN of H should be too?) ...
+      sites[v] = [Index(Hflux => 1)]
     end
   end
   inbond_coefs = Dict(
     e => Dict{QN,Vector{ITensors.MatElem{coefficient_type}}}() for e in es
   )                         # bond coefficients for incoming edge channels
-  site_coef_done = Prod{Op}[]                                                               # list of terms for which the coefficient has been added to a site factor
+  site_coef_done = Prod{Op}[] # list of terms for which the coefficient has been added to a site factor
   # temporary symbolic representation of TTN Hamiltonian
   tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
 
@@ -139,7 +142,7 @@ function ttn_svd(
 
       # compute QNs
       incoming_qn = calc_qn(incoming)
-      not_incoming_qn = calc_qn(not_incoming)  ###does this work?
+      not_incoming_qn = calc_qn(not_incoming)
       outgoing_qns = Dict(e => calc_qn(outgoing[e]) for e in edges_out)
       site_qn = calc_qn(onsite)
 
@@ -151,9 +154,10 @@ function ttn_svd(
       bond_col = -1
       if !isempty(incoming)
         # get the correct map from edge=>QN to term and channel
-        coutmap = get!(outmaps, edge_in => -not_incoming_qn, Dict{Vector{Op},Int}())
-        cinmap = get!(inmaps, edge_in => incoming_qn, Dict{Vector{Op},Int}())
         # this checks if term exists on edge=>QN ( otherwise insert it) and returns it's index
+        coutmap = get!(outmaps, edge_in => not_incoming_qn, Dict{Vector{Op},Int}())
+        cinmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
+
         bond_row = ITensors.posInLink!(cinmap, incoming)
         bond_col = ITensors.posInLink!(coutmap, not_incoming) # get incoming channel
         bond_coef = convert(coefficient_type, ITensors.coefficient(term))
@@ -162,14 +166,14 @@ function ttn_svd(
         )
         push!(q_inbond_coefs, ITensors.MatElem(bond_row, bond_col, bond_coef))
         T_inds[dim_in] = bond_col
-        T_qns[dim_in] = incoming_qn
+        T_qns[dim_in] = -incoming_qn
       end
       for dout in dims_out
         coutmap = get!(
-          outmaps, edges[dout] => -outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
+          outmaps, edges[dout] => outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
         )
         T_inds[dout] = ITensors.posInLink!(coutmap, outgoing[edges[dout]]) # add outgoing channel
-        T_qns[dout] = -outgoing_qns[edges[dout]]  # minus sign to account for outgoing arrow direction
+        T_qns[dout] = outgoing_qns[edges[dout]]
       end
       # if term starts at this site, add its coefficient as a site factor
       site_coef = one(coefficient_type)
@@ -192,6 +196,7 @@ function ttn_svd(
 
       push!(tempTTN[v], el)
     end
+
     ITensors.remove_dups!(tempTTN[v])
     # manual truncation: isometry on incoming edge
     if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
@@ -210,20 +215,15 @@ function ttn_svd(
   # compress this tempTTN representation into dense form
 
   link_space = Dict{edgetype_sites,Index}()
-  linkdir = ITensors.using_auto_fermion() ? ITensors.In : ITensors.Out ###FIXME: ??
   for e in es
     qi = Vector{Pair{QN,Int}}()
     push!(qi, QN() => 1)
     for (q, Vq) in Vs[e]
       cols = size(Vq, 2)
-      if ITensors.using_auto_fermion() # <fermions>
-        push!(qi, (-q) => cols)
-      else
-        push!(qi, q => cols)
-      end
+      push!(qi, q => cols)
     end
     push!(qi, Hflux => 1)
-    link_space[e] = Index(qi...; tags=edge_tag(e), dir=linkdir)
+    link_space[e] = Index(qi...; tags=edge_tag(e), dir=linkdir_ref)
   end
 
   H = TTN(sites0)   # initialize TTN without the dummy indices added
@@ -240,12 +240,9 @@ function ttn_svd(
     edges = filter(e -> dst(e) == v || src(e) == v, es)
     dim_in = findfirst(e -> dst(e) == v, edges)
     dims_out = findall(e -> src(e) == v, edges)
-
     # slice isometries at this vertex
     Vv = [Vs[e] for e in edges]
-
     linkinds = [link_space[e] for e in edges]
-    linkdims = dim.(linkinds)
 
     # construct blocks
     blocks = Dict{Tuple{Block{degrees[v]},Vector{Op}},Array{coefficient_type,degrees[v]}}()
@@ -274,30 +271,22 @@ function ttn_svd(
       for d in normal_dims
         block_helper_inds[d] = qnblock(linkinds[d], T_qns[d])
       end
-
       @assert all(≠(-1), block_helper_inds)# check that all block indices are set
-      # make Block 
+
+      # make and fill Block 
       theblock = Block(Tuple(block_helper_inds))
-
-      # T_qns takes into account incoming/outgoing arrow direction, while Vs are stored for incoming arrow
-      # flip sign of QN for outgoing arrows, to match incoming arrow definition of Vs
-      iT_qns = deepcopy(T_qns)
-      for d in dims_out
-        iT_qns[d] = -iT_qns[d]
-      end
-
       if isempty(normal_dims)
         M = get!(blocks, (theblock, terms(t)), zero_arr())
         @assert isone(length(M))
         M[] += ct
       else
         M = get!(blocks, (theblock, terms(t)), zero_arr())
-        dim_ranges = Tuple(size(Vv[d][iT_qns[d]], 2) for d in normal_dims)
-        for c in CartesianIndices(dim_ranges)
+        dim_ranges = Tuple(size(Vv[d][T_qns[d]], 2) for d in normal_dims)
+        for c in CartesianIndices(dim_ranges) # applies isometries in a element-wise manner
           z = ct
           temp_inds = copy(T_inds)
           for (i, d) in enumerate(normal_dims)
-            V_factor = Vv[d][iT_qns[d]][T_inds[d], c[i]]
+            V_factor = Vv[d][T_qns[d]][T_inds[d], c[i]]
             z *= (d == dim_in ? conj(V_factor) : V_factor) # conjugate incoming isometry factor
             temp_inds[d] = c[i]
           end
@@ -308,6 +297,7 @@ function ttn_svd(
 
     H[v] = ITensor()
 
+    # make the final arrow directions
     _linkinds = copy(linkinds)
     if !isnothing(dim_in)
       _linkinds[dim_in] = dag(_linkinds[dim_in])
@@ -315,25 +305,20 @@ function ttn_svd(
 
     for ((b, q_op), m) in blocks
       Op = computeSiteProd(sites, Prod(q_op))
-      if hasqns(Op) ###FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
+      if hasqns(Op) # FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
         iszero(nnzblocks(Op)) && continue
       end
       sq = flux(Op)
       if !isnothing(sq)
+        rq = (b[1] == 1 ? Hflux : first(space(linkinds[1])[b[1]])) # get row (dim_in) QN
+        cq = rq - sq # get column (out_dims) QN
         if ITensors.using_auto_fermion()
-          @assert false
-          ###assuming we want index ordering dim_in, phys..., dims_out...
-          ###but are assembling the tensor by tensor product (dim_in,dims_out...) x (phys...)
-          ###we need to undo the autofermion logic.
-          ###this requires the perm and the quantum numbers
-          ###perm is 1,3,2 (switching phys and dims_out dimensions)
-          ###quantum numbers need to be retrieved from block and linkinds
-          ###basically first(space(linkinds[i])[j]) for (i,j) in block
-          ###this logic requires dim_in to be 1 always, i don't think this is guaranteed
-          ###however, maybe it is required when using autofermion?
-          ###so we would have to figure out a perm to bring it into that format
-          ##compute perm factor to bring into this format, combine with perm factor that results from MPS-like logic
-          #perm=(1,3,2)
+          # we need to account for the direct product below ordering the physical indices as the last indices
+          # although they are in between incoming and outgoing indices in the canonical site-ordering
+          perm = (1, 3, 2)
+          if ITensors.compute_permfactor(perm, rq, sq, cq) == -1
+            Op .*= -1
+          end
         end
       end
       T = ITensors.BlockSparseTensor(coefficient_type, [b], _linkinds)
@@ -342,9 +327,13 @@ function ttn_svd(
       if !thishasqns
         iT = removeqns(iT)
       end
+
       if is_internal[v]
         H[v] += iT
       else
+        if hasqns(iT)
+          @assert flux(iT * Op) == Hflux
+        end
         H[v] += (iT * Op)
       end
     end
@@ -411,7 +400,8 @@ function computeSiteProd(sites::IndsNetwork{V,<:Index}, ops::Prod{Op})::ITensor 
   return T
 end
 
-###CHECK/ToDo: Understand the fermion logic on trees...
+# This is almost an exact copy of ITensors/src/opsum_to_mpo_generic:sorteachterm except for the site ordering being
+# given via find_index_in_tree
 # changed `isless_site` to use tree vertex ordering relative to root
 function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) where {V}
   os = copy(os)
@@ -458,7 +448,6 @@ function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) 
       prevsite = currsite
 
       if fermionic
-        error("No verified fermion support for automatic TTN constructor!") # no verified support, just throw error
         parity = -parity
       else
         # Ignore bosonic operators in perm

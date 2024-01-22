@@ -1,12 +1,24 @@
 using Dictionaries
 using ITensors
+using ITensorGaussianMPS: hopping_hamiltonian
 using ITensorNetworks
 using Random
+using LinearAlgebra: eigvals
+using Graphs: add_vertex!, rem_vertex!, add_edge!, rem_edge!
 using Test
+
+function to_matrix(t::ITensor)
+  c = combiner(inds(t; plev=0))
+  tc = (t * c) * dag(c')
+  cind = combinedind(c)
+  return matrix(tc, cind', cind)
+end
 
 @testset "OpSum to TTN converter" begin
   @testset "OpSum to TTN" begin
     # small comb tree
+    auto_fermion_enabled = ITensors.using_auto_fermion()
+    ITensors.disable_auto_fermion() # ToDo: remove when autofermion incompatibility with no QNs is fixed
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
 
@@ -53,9 +65,14 @@ using Test
       end
       @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
     end
+    if auto_fermion_enabled
+      ITensors.enable_auto_fermion()
+    end
   end
 
   @testset "Multiple onsite terms (regression test for issue #62)" begin
+    auto_fermion_enabled = ITensors.using_auto_fermion()
+    ITensors.disable_auto_fermion() # ToDo: remove when autofermion incompatibility with no QNs is fixed
     grid_dims = (2, 1)
     g = named_grid(grid_dims)
     s = siteinds("S=1/2", g)
@@ -69,6 +86,9 @@ using Test
     H3 = TTN(os1 + os2, s)
 
     @test H1 + H2 ≈ H3 rtol = 1e-6
+    if auto_fermion_enabled
+      ITensors.enable_auto_fermion()
+    end
   end
 
   @testset "OpSum to TTN QN" begin
@@ -125,19 +145,73 @@ using Test
     end
   end
 
+  @testset "OpSum to TTN Fermions" begin
+    # small comb tree
+    auto_fermion_enabled = ITensors.using_auto_fermion()
+    if !auto_fermion_enabled
+      ITensors.enable_auto_fermion()
+    end
+    tooth_lengths = fill(2, 3)
+    c = named_comb_tree(tooth_lengths)
+    is = siteinds("Fermion", c; conserve_nf=true)
+
+    # test with next-nearest neighbor tight-binding model
+    t = 1.0
+    tp = 0.4
+    U = 0.0
+    h = 0.5
+    H = ITensorNetworks.tight_binding(c; t, tp, h)
+
+    # add combination of longer range interactions
+    Hlr = copy(H)
+
+    @testset "Svd approach" for root_vertex in leaf_vertices(is)
+      # get TTN Hamiltonian directly
+      Hsvd = TTN(H, is; root_vertex=root_vertex, cutoff=1e-10)
+      # get corresponding MPO Hamiltonian
+      sites = [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
+      vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
+      Hline = ITensors.MPO(relabel_sites(H, vmap), sites)
+      # compare resulting sparse Hamiltonians
+      Hmat_sp = hopping_hamiltonian(relabel_sites(H, vmap))
+      @disable_warn_order begin
+        Tmpo = prod(Hline)
+        Tttno = contract(Hsvd)
+      end
+
+      # verify that the norm isn't 0 and thus the same (which would indicate a problem with the autofermion system
+      @test norm(Tmpo) > 0
+      @test norm(Tttno) > 0
+      @test norm(Tmpo) ≈ norm(Tttno) rtol = 1e-6
+
+      @test_broken Tmpo ≈ Tttno # ToDo fix comparison for fermionic tensors
+      # In the meantime: matricize tensors and convert to dense Matrix to compare element by element
+      dTmm = to_matrix(Tmpo)
+      dTtm = to_matrix(Tttno)
+      @test any(>(1e-14), dTmm - dTtm)
+
+      # also compare with energies obtained from single-particle Hamiltonian
+      GS_mb, _, _ = eigsolve(dTtm, 1, :SR, eltype(dTtm))
+      spectrum_sp = eigvals(Hmat_sp)
+      @test minimum(cumsum(spectrum_sp)) ≈ GS_mb[1] atol = 1e-8
+    end
+    if !auto_fermion_enabled
+      ITensors.disable_auto_fermion()
+    end
+  end
+
   @testset "OpSum to TTN QN missing" begin
     # small comb tree
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
     c2 = copy(c)
-    import ITensorNetworks: add_vertex!, rem_vertex!, add_edge!, rem_edge!
+    ## add an internal vertex into the comb graph c2
     add_vertex!(c2, (-1, 1))
     add_edge!(c2, (-1, 1) => (2, 2))
     add_edge!(c2, (-1, 1) => (3, 1))
     add_edge!(c2, (-1, 1) => (2, 1))
     rem_edge!(c2, (2, 1) => (2, 2))
     rem_edge!(c2, (2, 1) => (3, 1))
-    #@show c2
 
     is = siteinds("S=1/2", c; conserve_qns=true)
     is_missing_site = siteinds("S=1/2", c2; conserve_qns=true)
@@ -151,8 +225,8 @@ using Test
     J1 = -1
     J2 = 2
     h = 0.5
+    # connectivity of the Hamiltonian is that of the original comb graph
     H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)
-    #Hvac = heisenberg(is_missing_site; J1=J1, J2=J2, h=h)
 
     # add combination of longer range interactions
     Hlr = copy(H)
@@ -161,24 +235,19 @@ using Test
     Hlr += 2.0, "Z", (2, 2), "Z", (3, 2)
     Hlr += -1.0, "Z", (1, 2), "Z", (3, 1)
 
-    # root_vertex = (1, 2)
-    # println(leaf_vertices(is))
-
     @testset "Svd approach" for root_vertex in leaf_vertices(is)
       # get TTN Hamiltonian directly
       Hsvd = TTN(H, is_missing_site; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
       Hline = MPO(relabel_sites(H, vmap), sites)
-      # compare resulting sparse Hamiltonians
 
+      # compare resulting sparse Hamiltonians
       @disable_warn_order begin
         Tmpo = prod(Hline)
         Tttno = contract(Hsvd)
       end
-
       @test Tttno ≈ Tmpo rtol = 1e-6
 
-      # this breaks for longer range interactions ###not anymore
       Hsvd_lr = TTN(
         Hlr, is_missing_site; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10
       )
