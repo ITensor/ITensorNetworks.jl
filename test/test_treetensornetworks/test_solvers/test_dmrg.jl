@@ -119,6 +119,12 @@ end
   c = named_comb_tree(tooth_lengths)
 
   @testset "Svd approach" for use_qns in [false, true]
+    auto_fermion_enabled = ITensors.using_auto_fermion()
+    if use_qns  # test whether autofermion breaks things when using non-fermionic QNs
+      ITensors.enable_auto_fermion()
+    else        # when using no QNs, autofermion breaks # ToDo reference Issue in ITensors
+      ITensors.disable_auto_fermion()
+    end
     s = siteinds("S=1/2", c; conserve_qns=use_qns)
 
     os = ITensorNetworks.heisenberg(c)
@@ -151,6 +157,10 @@ end
     e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
     @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
+    
+    if !auto_fermion_enabled
+      ITensors.disable_auto_fermion()
+    end
   end
 end
 
