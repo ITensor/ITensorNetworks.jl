@@ -1,5 +1,6 @@
 using ITensors
 using ITensorNetworks
+using ITensorNetworks: exponentiate_updater
 using KrylovKit: exponentiate
 using Observers
 using Random
@@ -24,16 +25,7 @@ using Test
     ψ0 = random_mps(s; internal_inds_space=10)
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
-
-    #
-    #TODO: exponentiate is now the default, so switch this to applyexp
-    #
-    #Different backend solvers, default solver_backend = "applyexp"
-    ψ1_exponentiate_backend = tdvp(
-      H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1, solver_backend="exponentiate"
-    )
-    @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
+    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -45,12 +37,6 @@ using Test
 
     # Time evolve backwards:
     ψ2 = tdvp(H, +0.1im, ψ1; nsteps=1, cutoff)
-
-    #Different backend solvers, default solver_backend = "applyexp"
-    ψ2_exponentiate_backend = tdvp(
-      H, +0.1im, ψ1; nsteps=1, cutoff, solver_backend="exponentiate"
-    )
-    @test ψ2 ≈ ψ2_exponentiate_backend rtol = 1e-7
 
     @test norm(ψ2) ≈ 1.0
 
@@ -80,13 +66,7 @@ using Test
 
     ψ0 = random_mps(s; internal_inds_space=10)
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
-
-    #Different backend solvers, default solver_backend = "applyexp"
-    ψ1_exponentiate_backend = tdvp(
-      Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1, solver_backend="exponentiate"
-    )
-    @test ψ1 ≈ ψ1_exponentiate_backend rtol = 1e-7
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -98,12 +78,6 @@ using Test
 
     # Time evolve backwards:
     ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
-
-    #Different backend solvers, default solver_backend = "applyexp"
-    ψ2_exponentiate_backend = tdvp(
-      Hs, +0.1im, ψ1; nsteps=1, cutoff, solver_backend="exponentiate"
-    )
-    @test ψ2 ≈ ψ2_exponentiate_backend rtol = 1e-7
 
     @test norm(ψ2) ≈ 1.0
 
@@ -130,7 +104,7 @@ using Test
     ψ0 = random_mps(s; internal_inds_space=10)
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; time_step=-0.05im, order, cutoff, nsite=1)
+    ψ1 = tdvp(H, -0.1im, ψ0; time_step=-0.05im, order, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -139,50 +113,6 @@ using Test
 
     # Time evolve backwards:
     ψ2 = tdvp(H, +0.1im, ψ1; time_step=+0.05im, order, cutoff)
-
-    @test norm(ψ2) ≈ 1.0
-
-    # Should rotate back to original state:
-    @test abs(inner(ψ0, ψ2)) > 0.99
-  end
-
-  @testset "Custom solver in TDVP" begin
-    N = 10
-    cutoff = 1e-12
-
-    s = siteinds("S=1/2", N)
-
-    os = OpSum()
-    for j in 1:(N - 1)
-      os += 0.5, "S+", j, "S-", j + 1
-      os += 0.5, "S-", j, "S+", j + 1
-      os += "Sz", j, "Sz", j + 1
-    end
-
-    H = mpo(os, s)
-
-    ψ0 = random_mps(s; internal_inds_space=10)
-
-    function solver(PH, psi0; time_step, kwargs...)
-      solver_kwargs = (;
-        ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
-      )
-      psi, exp_info = exponentiate(PH, time_step, psi0; solver_kwargs...)
-      return psi, (; info=exp_info)
-    end
-
-    ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
-
-    @test norm(ψ1) ≈ 1.0
-
-    ## Should lose fidelity:
-    #@test abs(inner(ψ0,ψ1)) < 0.9
-
-    # Average energy should be conserved:
-    @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
-
-    # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -209,9 +139,9 @@ using Test
 
     Ut = exp(-im * tau * HM)
 
-    psi = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
-    psi2 = deepcopy(psi)
-    psix = contract(psi)
+    state = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    psi2 = deepcopy(state)
+    psix = contract(state)
 
     Sz_tdvp = Float64[]
     Sz_tdvp2 = Float64[]
@@ -225,19 +155,17 @@ using Test
       psix = noprime(Ut * psix)
       psix /= norm(psix)
 
-      psi = tdvp(
+      state = tdvp(
         H,
         -im * tau,
-        psi;
+        state;
         cutoff,
         normalize=false,
-        solver_tol=1e-12,
-        solver_maxiter=500,
-        solver_krylovdim=25,
+        updater_kwargs=(; tol=1e-12, maxiter=500, krylovdim=25),
       )
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
-      push!(Sz_tdvp, real(expect("Sz", psi; vertices=[c])[c]))
+      push!(Sz_tdvp, real(expect("Sz", state; vertices=[c])[c]))
 
       psi2 = tdvp(
         H,
@@ -245,17 +173,15 @@ using Test
         psi2;
         cutoff,
         normalize=false,
-        solver_tol=1e-12,
-        solver_maxiter=500,
-        solver_krylovdim=25,
-        solver_backend="exponentiate",
+        updater_kwargs=(; tol=1e-12, maxiter=500, krylovdim=25),
+        updater=exponentiate_updater,
       )
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
       push!(Sz_tdvp2, real(expect("Sz", psi2; vertices=[c])[c]))
 
       push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
-      F = abs(scalar(dag(psix) * contract(psi)))
+      F = abs(scalar(dag(psix) * contract(state)))
     end
 
     @test norm(Sz_tdvp - Sz_exact) < 1e-5
@@ -292,8 +218,8 @@ using Test
     end
     append!(gates, reverse(gates))
 
-    psi = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
-    phi = deepcopy(psi)
+    state = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    phi = deepcopy(state)
     c = div(N, 2)
 
     #
@@ -307,17 +233,24 @@ using Test
     #En2 = zeros(Nsteps)
 
     for step in 1:Nsteps
-      psi = apply(gates, psi; cutoff)
-      #normalize!(psi)
+      state = apply(gates, state; cutoff)
+      #normalize!(state)
 
-      nsite = (step <= 3 ? 2 : 1)
+      nsites = (step <= 3 ? 2 : 1)
       phi = tdvp(
-        H, -tau * im, phi; nsteps=1, cutoff, nsite, normalize=true, solver_krylovdim=15
+        H,
+        -tau * im,
+        phi;
+        nsteps=1,
+        cutoff,
+        nsites,
+        normalize=true,
+        updater_kwargs=(; krylovdim=15),
       )
 
-      Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
+      Sz1[step] = real(expect("Sz", state; vertices=[c])[c])
       #Sz2[step] = real(expect("Sz", phi; vertices=[c])[c])
-      En1[step] = real(inner(psi', H, psi))
+      En1[step] = real(inner(state', H, state))
       #En2[step] = real(inner(phi', H, phi))
     end
 
@@ -328,8 +261,8 @@ using Test
     phi = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
 
     obs = Observer(
-      "Sz" => (; psi) -> expect("Sz", psi; vertices=[c])[c],
-      "En" => (; psi) -> real(inner(psi', H, psi)),
+      "Sz" => (; state) -> expect("Sz", state; vertices=[c])[c],
+      "En" => (; state) -> real(inner(state', H, state)),
     )
 
     phi = tdvp(
@@ -366,34 +299,24 @@ using Test
 
     H = mpo(os, s)
 
-    psi = random_mps(s; internal_inds_space=2)
-    psi2 = deepcopy(psi)
+    state = random_mps(s; internal_inds_space=2)
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
-      nsite = (step <= 10 ? 2 : 1)
-      psi = tdvp(
-        H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
-      )
-      #Different backend solvers, default solver_backend = "applyexp"
-      psi2 = tdvp(
+      nsites = (step <= 10 ? 2 : 1)
+      state = tdvp(
         H,
         -tau,
-        psi2;
+        state;
         cutoff,
-        nsite,
+        nsites,
         reverse_step,
         normalize=true,
-        solver_krylovdim=15,
-        solver_backend="exponentiate",
+        updater_kwargs=(; krylovdim=15),
       )
     end
 
-    @test psi ≈ psi2 rtol = 1e-6
-
-    en1 = inner(psi', H, psi)
-    en2 = inner(psi2', H, psi2)
+    en1 = inner(state', H, state)
     @test en1 < -4.25
-    @test en1 ≈ en2
   end
 
   @testset "Observers" begin
@@ -418,39 +341,36 @@ using Test
     # Using Observers.jl
     # 
 
-    measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
-    measure_en(; psi) = real(inner(psi', H, psi))
+    measure_sz(; state) = expect("Sz", state; vertices=[c])[c]
+    measure_en(; state) = real(inner(state', H, state))
     sweep_obs = Observer("Sz" => measure_sz, "En" => measure_en)
 
     get_info(; info) = info
-    step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
-    step_measure_en(; psi) = real(inner(psi', H, psi))
-    step_obs = Observer(
+    step_measure_sz(; state) = expect("Sz", state; vertices=[c])[c]
+    step_measure_en(; state) = real(inner(state', H, state))
+    region_obs = Observer(
       "Sz" => step_measure_sz, "En" => step_measure_en, "info" => get_info
     )
 
-    psi2 = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    state2 = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
     tdvp(
       H,
       -im * ttotal,
-      psi2;
+      state2;
       time_step=-im * tau,
       cutoff,
       normalize=false,
       (sweep_observer!)=sweep_obs,
-      (step_observer!)=step_obs,
+      (region_observer!)=region_obs,
       root_vertex=N, # defaults to 1, which breaks observer equality
     )
 
     Sz2 = sweep_obs.Sz
     En2 = sweep_obs.En
 
-    Sz2_step = step_obs.Sz
-    En2_step = step_obs.En
-    infos = step_obs.info
-
-    #@show sweep_obs
-    #@show step_obs
+    Sz2_step = region_obs.Sz
+    En2_step = region_obs.En
+    infos = region_obs.info
 
     #
     # Could use ideas of other things to test here
@@ -476,7 +396,7 @@ end
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
+    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -518,7 +438,7 @@ end
 
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsite=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -530,50 +450,6 @@ end
 
     # Time evolve backwards:
     ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
-
-    @test norm(ψ2) ≈ 1.0
-
-    # Should rotate back to original state:
-    @test abs(inner(ψ0, ψ2)) > 0.99
-  end
-
-  @testset "Custom solver in TDVP" begin
-    cutoff = 1e-12
-
-    tooth_lengths = fill(2, 3)
-    root_vertex = (3, 2)
-    c = named_comb_tree(tooth_lengths)
-    s = siteinds("S=1/2", c)
-
-    os = ITensorNetworks.heisenberg(c)
-
-    H = TTN(os, s)
-
-    ψ0 = normalize!(random_ttn(s; link_space=10))
-
-    function solver(PH, psi0; time_step, kwargs...)
-      solver_kwargs = (;
-        ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
-      )
-      psi, exp_info = exponentiate(PH, time_step, psi0; solver_kwargs...)
-      return psi, (; info=exp_info)
-    end
-
-    ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
-
-    #@test ψ1 ≈ tdvp(solver, -0.1im, H, ψ0; cutoff, nsite=1)
-    #@test ψ1 ≈ tdvp(solver, H, ψ0, -0.1im; cutoff, nsite=1)
-
-    @test norm(ψ1) ≈ 1.0
-
-    ## Should lose fidelity:
-    #@test abs(inner(ψ0,ψ1)) < 0.9
-
-    # Average energy should be conserved:
-    @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
-
-    # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -597,8 +473,8 @@ end
 
     Ut = exp(-im * tau * HM)
 
-    psi = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
-    psix = contract(psi)
+    state = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    statex = contract(state)
 
     Sz_tdvp = Float64[]
     Sz_exact = Float64[]
@@ -608,22 +484,20 @@ end
 
     Nsteps = Int(ttotal / tau)
     for step in 1:Nsteps
-      psix = noprime(Ut * psix)
-      psix /= norm(psix)
+      statex = noprime(Ut * statex)
+      statex /= norm(statex)
 
-      psi = tdvp(
+      state = tdvp(
         H,
         -im * tau,
-        psi;
+        state;
         cutoff,
         normalize=false,
-        solver_tol=1e-12,
-        solver_maxiter=500,
-        solver_krylovdim=25,
+        updater_kwargs=(; tol=1e-12, maxiter=500, krylovdim=25),
       )
-      push!(Sz_tdvp, real(expect("Sz", psi; vertices=[c])[c]))
-      push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
-      F = abs(scalar(dag(psix) * contract(psi)))
+      push!(Sz_tdvp, real(expect("Sz", state; vertices=[c])[c]))
+      push!(Sz_exact, real(scalar(dag(prime(statex, s[c])) * Szc * statex)))
+      F = abs(scalar(dag(statex) * contract(state)))
     end
 
     @test norm(Sz_tdvp - Sz_exact) < 1e-5
@@ -657,8 +531,8 @@ end
     end
     append!(gates, reverse(gates))
 
-    psi = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
-    phi = copy(psi)
+    state = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    phi = copy(state)
     c = (2, 1)
 
     #
@@ -672,17 +546,24 @@ end
     En2 = zeros(Nsteps)
 
     for step in 1:Nsteps
-      psi = apply(gates, psi; cutoff, maxdim)
-      #normalize!(psi)
+      state = apply(gates, state; cutoff, maxdim)
+      #normalize!(state)
 
-      nsite = (step <= 3 ? 2 : 1)
+      nsites = (step <= 3 ? 2 : 1)
       phi = tdvp(
-        H, -tau * im, phi; nsteps=1, cutoff, nsite, normalize=true, solver_krylovdim=15
+        H,
+        -tau * im,
+        phi;
+        nsteps=1,
+        cutoff,
+        nsites,
+        normalize=true,
+        updater_kwargs=(; krylovdim=15),
       )
 
-      Sz1[step] = real(expect("Sz", psi; vertices=[c])[c])
+      Sz1[step] = real(expect("Sz", state; vertices=[c])[c])
       Sz2[step] = real(expect("Sz", phi; vertices=[c])[c])
-      En1[step] = real(inner(psi', H, psi))
+      En1[step] = real(inner(state', H, state))
       En2[step] = real(inner(phi', H, phi))
     end
 
@@ -692,8 +573,8 @@ end
 
     phi = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
     obs = Observer(
-      "Sz" => (; psi) -> expect("Sz", psi; vertices=[c])[c],
-      "En" => (; psi) -> real(inner(psi', H, psi)),
+      "Sz" => (; state) -> expect("Sz", state; vertices=[c])[c],
+      "En" => (; state) -> real(inner(state', H, state)),
     )
     phi = tdvp(
       H,
@@ -702,7 +583,7 @@ end
       time_step=-im * tau,
       cutoff,
       normalize=false,
-      (step_observer!)=obs,
+      (region_observer!)=obs,
       root_vertex=(3, 2),
     )
 
@@ -722,17 +603,24 @@ end
     os = ITensorNetworks.heisenberg(c)
     H = TTN(os, s)
 
-    psi = normalize!(random_ttn(s; link_space=2))
+    state = normalize!(random_ttn(s; link_space=2))
 
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
-      nsite = (step <= 10 ? 2 : 1)
-      psi = tdvp(
-        H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
+      nsites = (step <= 10 ? 2 : 1)
+      state = tdvp(
+        H,
+        -tau,
+        state;
+        cutoff,
+        nsites,
+        reverse_step,
+        normalize=true,
+        updater_kwargs=(; krylovdim=15),
       )
     end
 
-    @test inner(psi', H, psi) < -2.47
+    @test inner(state', H, state) < -2.47
   end
 
   # TODO: verify quantum number suport in ITensorNetworks

@@ -46,7 +46,7 @@ using Test
 
   # Test with nsite=1
   Hpsi_guess = random_mps(t; internal_inds_space=32)
-  Hpsi = apply(H, psi; alg="fit", init=Hpsi_guess, nsite=1, nsweeps=4)
+  Hpsi = apply(H, psi; alg="fit", init=Hpsi_guess, nsites=1, nsweeps=4)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
 end
 
@@ -84,7 +84,7 @@ end
 
   # Test with nsite=1
   Hpsi_guess = random_ttn(t; link_space=4)
-  Hpsi = apply(H, psi; alg="fit", nsite=1, nsweeps=4, init=Hpsi_guess)
+  Hpsi = apply(H, psi; alg="fit", nsites=1, nsweeps=4, init=Hpsi_guess)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
 end
 

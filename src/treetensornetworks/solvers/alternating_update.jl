@@ -26,10 +26,10 @@ function process_sweeps(
   return maxdim, mindim, cutoff, noise, kwargs
 end
 
-function sweep_printer(; outputlevel, psi, sweep, sw_time)
+function sweep_printer(; outputlevel, state, which_sweep, sw_time)
   if outputlevel >= 1
-    print("After sweep ", sweep, ":")
-    print(" maxlinkdim=", maxlinkdim(psi))
+    print("After sweep ", which_sweep, ":")
+    print(" maxlinkdim=", maxlinkdim(state))
     print(" cpu_time=", round(sw_time; digits=3))
     println()
     flush(stdout)
@@ -37,72 +37,77 @@ function sweep_printer(; outputlevel, psi, sweep, sw_time)
 end
 
 function alternating_update(
-  solver,
-  PH,
-  psi0::AbstractTTN;
+  updater,
+  projected_operator,
+  init_state::AbstractTTN;
   checkdone=(; kws...) -> false,
   outputlevel::Integer=0,
   nsweeps::Integer=1,
   (sweep_observer!)=observer(),
   sweep_printer=sweep_printer,
   write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
+  updater_kwargs,
   kwargs...,
 )
   maxdim, mindim, cutoff, noise, kwargs = process_sweeps(nsweeps; kwargs...)
 
-  psi = copy(psi0)
+  state = copy(init_state)
 
-  insert_function!(sweep_observer!, "sweep_printer" => sweep_printer)
+  insert_function!(sweep_observer!, "sweep_printer" => sweep_printer) # FIX THIS
 
-  for sweep in 1:nsweeps
-    if !isnothing(write_when_maxdim_exceeds) && maxdim[sweep] > write_when_maxdim_exceeds
+  for which_sweep in 1:nsweeps
+    if !isnothing(write_when_maxdim_exceeds) &&
+      maxdim[which_sweep] > write_when_maxdim_exceeds
       if outputlevel >= 2
         println(
-          "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim[sweep] = $(maxdim[sweep]), writing environment tensors to disk",
+          "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim[which_sweep] = $(maxdim[which_sweep]), writing environment tensors to disk",
         )
       end
-      PH = disk(PH)
+      projected_operator = disk(projected_operator)
     end
-
+    sweep_params = (;
+      maxdim=maxdim[which_sweep],
+      mindim=mindim[which_sweep],
+      cutoff=cutoff[which_sweep],
+      noise=noise[which_sweep],
+    )
     sw_time = @elapsed begin
-      psi, PH = update_step(
-        solver,
-        PH,
-        psi;
+      state, projected_operator = sweep_update(
+        updater,
+        projected_operator,
+        state;
         outputlevel,
-        sweep,
-        maxdim=maxdim[sweep],
-        mindim=mindim[sweep],
-        cutoff=cutoff[sweep],
-        noise=noise[sweep],
+        which_sweep,
+        sweep_params,
+        updater_kwargs,
         kwargs...,
       )
     end
 
-    update!(sweep_observer!; psi, sweep, sw_time, outputlevel)
+    update!(sweep_observer!; state, which_sweep, sw_time, outputlevel)
 
-    checkdone(; psi, sweep, outputlevel, kwargs...) && break
+    checkdone(; state, which_sweep, outputlevel, kwargs...) && break
   end
-  select!(sweep_observer!, Observers.DataFrames.Not("sweep_printer")) # remove sweep_printer
-  return psi
+  select!(sweep_observer!, Observers.DataFrames.Not("sweep_printer"))
+  return state
 end
 
-function alternating_update(solver, H::AbstractTTN, psi0::AbstractTTN; kwargs...)
-  check_hascommoninds(siteinds, H, psi0)
-  check_hascommoninds(siteinds, H, psi0')
+function alternating_update(updater, H::AbstractTTN, init_state::AbstractTTN; kwargs...)
+  check_hascommoninds(siteinds, H, init_state)
+  check_hascommoninds(siteinds, H, init_state')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
-  PH = ProjTTN(H)
-  return alternating_update(solver, PH, psi0; kwargs...)
+  projected_operator = ProjTTN(H)
+  return alternating_update(updater, projected_operator, init_state; kwargs...)
 end
 
 """
-    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number; kwargs...)
-    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number, sweeps::Sweeps; kwargs...)
+    tdvp(Hs::Vector{MPO},init_state::MPS,t::Number; kwargs...)
+    tdvp(Hs::Vector{MPO},init_state::MPS,t::Number, sweeps::Sweeps; kwargs...)
 
 Use the time dependent variational principle (TDVP) algorithm
-to compute `exp(t*H)*psi0` using an efficient algorithm based
+to compute `exp(t*H)*init_state` using an efficient algorithm based
 on alternating optimization of the MPS tensors and local Krylov
 exponentiation of H.
                     
@@ -114,14 +119,16 @@ the set of MPOs [H1,H2,H3,..] is efficiently looped over at
 each step of the algorithm when optimizing the MPS.
 
 Returns:
-* `psi::MPS` - time-evolved MPS
+* `state::MPS` - time-evolved MPS
 """
-function alternating_update(solver, Hs::Vector{<:AbstractTTN}, psi0::AbstractTTN; kwargs...)
+function alternating_update(
+  updater, Hs::Vector{<:AbstractTTN}, init_state::AbstractTTN; kwargs...
+)
   for H in Hs
-    check_hascommoninds(siteinds, H, psi0)
-    check_hascommoninds(siteinds, H, psi0')
+    check_hascommoninds(siteinds, H, init_state)
+    check_hascommoninds(siteinds, H, init_state')
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
-  PHs = ProjTTNSum(Hs)
-  return alternating_update(solver, PHs, psi0; kwargs...)
+  projected_operators = ProjTTNSum(Hs)
+  return alternating_update(updater, projected_operators, init_state; kwargs...)
 end

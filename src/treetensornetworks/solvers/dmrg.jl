@@ -1,58 +1,36 @@
-function eigsolve_solver(;
-  solver_which_eigenvalue=:SR,
-  ishermitian=true,
-  solver_tol=1e-14,
-  solver_krylovdim=3,
-  solver_maxiter=1,
-  solver_verbosity=0,
-)
-  function solver(H, init; normalize=nothing, region=nothing, half_sweep=nothing)
-    howmany = 1
-    which = solver_which_eigenvalue
-    vals, vecs, info = eigsolve(
-      H,
-      init,
-      howmany,
-      which;
-      ishermitian,
-      tol=solver_tol,
-      krylovdim=solver_krylovdim,
-      maxiter=solver_maxiter,
-      verbosity=solver_verbosity,
-    )
-    psi = vecs[1]
-    return psi, (; solver_info=info, energies=vals)
-  end
-  return solver
-end
-
 """
 Overload of `ITensors.dmrg`.
 """
+
+function dmrg_sweep_plan(
+  nsites::Int, graph::AbstractGraph; root_vertex=default_root_vertex(graph)
+)
+  order = 2
+  time_step = Inf
+  return tdvp_sweep_plan(order, nsites, time_step, graph; root_vertex, reverse_step=false)
+end
+
 function dmrg(
+  updater,
   H,
   init::AbstractTTN;
-  solver_which_eigenvalue=:SR,
-  ishermitian=true,
-  solver_tol=1e-14,
-  solver_krylovdim=3,
-  solver_maxiter=1,
-  solver_verbosity=0,
+  nsweeps,  #it makes sense to require this to be defined
+  nsites=2,
+  (sweep_observer!)=observer(),
+  root_vertex=default_root_vertex(init),
+  updater_kwargs=(;),
   kwargs...,
 )
-  return alternating_update(
-    eigsolve_solver(;
-      solver_which_eigenvalue,
-      ishermitian,
-      solver_tol,
-      solver_krylovdim,
-      solver_maxiter,
-      solver_verbosity,
-    ),
-    H,
-    init;
-    kwargs...,
+  sweep_plan = dmrg_sweep_plan(nsites, init; root_vertex)
+
+  psi = alternating_update(
+    updater, H, init; nsweeps, sweep_observer!, sweep_plan, updater_kwargs, kwargs...
   )
+  return psi
+end
+
+function dmrg(H, init::AbstractTTN; updater=eigsolve_updater, kwargs...)
+  return dmrg(updater, H, init; kwargs...)
 end
 
 """

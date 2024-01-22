@@ -23,6 +23,29 @@ ode_kwargs = (; reltol=1e-8, abstol=1e-8)
 
 ω⃗ = [ω₁, ω₂]
 f⃗ = [t -> cos(ω * t) for ω in ω⃗]
+ode_updater_kwargs = (; f=f⃗, solver_alg=ode_alg, ode_kwargs)
+
+function ode_updater(
+  init;
+  state!,
+  projected_operator!,
+  outputlevel,
+  which_sweep,
+  sweep_plan,
+  which_region_update,
+  region_kwargs,
+  updater_kwargs,
+)
+  time_step = region_kwargs.time_step
+  f⃗ = updater_kwargs.f
+  ode_kwargs = updater_kwargs.ode_kwargs
+  solver_alg = updater_kwargs.solver_alg
+  H⃗₀ = projected_operator![]
+  result, info = ode_solver(
+    -im * TimeDependentSum(f⃗, H⃗₀), time_step, init; solver_alg, ode_kwargs...
+  )
+  return result, (; info)
+end
 
 function tdvp_ode_solver(H⃗₀, ψ₀; time_step, kwargs...)
   psi_t, info = ode_solver(
@@ -32,6 +55,7 @@ function tdvp_ode_solver(H⃗₀, ψ₀; time_step, kwargs...)
 end
 
 krylov_kwargs = (; tol=1e-8, eager=true)
+krylov_updater_kwargs = (; f=f⃗, krylov_kwargs)
 
 function krylov_solver(H⃗₀, ψ₀; time_step, ishermitian=false, issymmetric=false, kwargs...)
   psi_t, info = krylov_solver(
@@ -45,6 +69,38 @@ function krylov_solver(H⃗₀, ψ₀; time_step, ishermitian=false, issymmetric
   return psi_t, (; info)
 end
 
+function krylov_updater(
+  init;
+  state!,
+  projected_operator!,
+  outputlevel,
+  which_sweep,
+  sweep_plan,
+  which_region_update,
+  region_kwargs,
+  updater_kwargs,
+)
+  default_updater_kwargs = (; ishermitian=false, issymmetric=false)
+
+  updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedenc
+  time_step = region_kwargs.time_step
+  f⃗ = updater_kwargs.f
+  krylov_kwargs = updater_kwargs.krylov_kwargs
+  ishermitian = updater_kwargs.ishermitian
+  issymmetric = updater_kwargs.issymmetric
+  H⃗₀ = projected_operator![]
+
+  result, info = krylov_solver(
+    -im * TimeDependentSum(f⃗, H⃗₀),
+    time_step,
+    init;
+    krylov_kwargs...,
+    ishermitian,
+    issymmetric,
+  )
+  return result, (; info)
+end
+
 @testset "MPS: Time dependent Hamiltonian" begin
   n = 4
   J₁ = 1.0
@@ -53,7 +109,7 @@ end
   time_step = 0.1
   time_total = 1.0
 
-  nsite = 2
+  nsites = 2
   maxdim = 100
   cutoff = 1e-8
 
@@ -65,9 +121,28 @@ end
 
   ψ₀ = complex(mps(s; states=(j -> isodd(j) ? "↑" : "↓")))
 
-  ψₜ_ode = tdvp(tdvp_ode_solver, H⃗₀, time_total, ψ₀; time_step, maxdim, cutoff, nsite)
+  ψₜ_ode = tdvp(
+    ode_updater,
+    H⃗₀,
+    time_total,
+    ψ₀;
+    time_step,
+    maxdim,
+    cutoff,
+    nsites,
+    updater_kwargs=ode_updater_kwargs,
+  )
 
-  ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_total, ψ₀; time_step, cutoff, nsite)
+  ψₜ_krylov = tdvp(
+    krylov_updater,
+    H⃗₀,
+    time_total,
+    ψ₀;
+    time_step,
+    cutoff,
+    nsites,
+    updater_kwargs=krylov_updater_kwargs,
+  )
 
   ψₜ_full, _ = tdvp_ode_solver(contract.(H⃗₀), contract(ψ₀); time_step=time_total)
 
@@ -96,7 +171,7 @@ end
   time_step = 0.1
   time_total = 1.0
 
-  nsite = 2
+  nsites = 2
   maxdim = 100
   cutoff = 1e-8
 
@@ -108,9 +183,28 @@ end
 
   ψ₀ = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
 
-  ψₜ_ode = tdvp(tdvp_ode_solver, H⃗₀, time_total, ψ₀; time_step, maxdim, cutoff, nsite)
+  ψₜ_ode = tdvp(
+    ode_updater,
+    H⃗₀,
+    time_total,
+    ψ₀;
+    time_step,
+    maxdim,
+    cutoff,
+    nsites,
+    updater_kwargs=ode_updater_kwargs,
+  )
 
-  ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_total, ψ₀; time_step, cutoff, nsite)
+  ψₜ_krylov = tdvp(
+    krylov_updater,
+    H⃗₀,
+    time_total,
+    ψ₀;
+    time_step,
+    cutoff,
+    nsites,
+    updater_kwargs=krylov_updater_kwargs,
+  )
 
   ψₜ_full, _ = tdvp_ode_solver(contract.(H⃗₀), contract(ψ₀); time_step=time_total)
 
