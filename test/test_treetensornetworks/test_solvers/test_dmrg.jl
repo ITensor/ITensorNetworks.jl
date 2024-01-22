@@ -118,7 +118,7 @@ end
   tooth_lengths = fill(2, 3)
   c = named_comb_tree(tooth_lengths)
 
-  @testset "Svd approach" for use_qns in [false, true]
+  @testset "SVD approach" for use_qns in [false, true]
     auto_fermion_enabled = ITensors.using_auto_fermion()
     if use_qns  # test whether autofermion breaks things when using non-fermionic QNs
       ITensors.enable_auto_fermion()
