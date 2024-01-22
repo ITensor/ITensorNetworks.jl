@@ -18,7 +18,6 @@ function tight_binding(g::AbstractGraph; t=1, tp=0, h=0)
     end
   end
   if !iszero(t')
-    # TODO, more clever way of looping over next to nearest neighbors?
     for (i, v) in enumerate(vertices(g))
       for nn in next_nearest_neighbors(g, v)
         ℋ -= tp, "Cdag", maybe_only(v), "C", maybe_only(nn)
