@@ -5,7 +5,7 @@ with the same binary tree structure. `root` is the root vertex of the
 pre-order depth-first-search traversal used to perform the truncations.
 """
 function approx_itensornetwork(
-  ::Algorithm"density_matrix",
+  alg::Union{Algorithm"density_matrix",Algorithm"density_matrix_direct_eigen"},
   binary_tree_partition::DataGraph;
   root,
   cutoff=1e-15,
@@ -22,6 +22,8 @@ function approx_itensornetwork(
   partition_wo_deltas = _contract_deltas_ignore_leaf_partitions(
     binary_tree_partition; root=root
   )
+  density_matrix_alg =
+    alg isa Algorithm"density_matrix_direct_eigen" ? "direct_eigen" : "qr_svd"
   return _approx_itensornetwork_density_matrix!(
     partition_wo_deltas,
     underlying_graph(binary_tree_partition);
@@ -30,6 +32,7 @@ function approx_itensornetwork(
     maxdim,
     contraction_sequence_alg,
     contraction_sequence_kwargs,
+    density_matrix_alg,
   )
 end
 
@@ -61,7 +64,9 @@ with a binary tree structure. The binary tree structure is defined based
 on `inds_btree`, which is a directed binary tree DataGraph of indices.
 """
 function approx_itensornetwork(
-  alg::Union{Algorithm"density_matrix",Algorithm"ttn_svd"},
+  alg::Union{
+    Algorithm"density_matrix",Algorithm"density_matrix_direct_eigen",Algorithm"ttn_svd"
+  },
   tn::ITensorNetwork,
   inds_btree::DataGraph;
   cutoff=1e-15,
@@ -96,7 +101,9 @@ Approximate a given ITensorNetwork `tn` into an output ITensorNetwork with `outp
 `output_structure` outputs a directed binary tree DataGraph defining the desired graph structure.
 """
 function approx_itensornetwork(
-  alg::Union{Algorithm"density_matrix",Algorithm"ttn_svd"},
+  alg::Union{
+    Algorithm"density_matrix",Algorithm"density_matrix_direct_eigen",Algorithm"ttn_svd"
+  },
   tn::ITensorNetwork,
   output_structure::Function=path_graph_structure;
   cutoff=1e-15,

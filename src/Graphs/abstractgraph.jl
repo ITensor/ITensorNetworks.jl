@@ -38,17 +38,17 @@ end
 Return the root vertex of a rooted directed graph
 """
 @traitfn function _root(graph::AbstractGraph::IsDirected)
-  @assert _is_rooted(graph) "the input $(graph) has to be rooted"
-  v = vertices(graph)[1]
-  while parent_vertex(graph, v) != nothing
-    v = parent_vertex(graph, v)
-  end
-  return v
+  __roots = _roots(graph)
+  @assert length(__roots) == 1 "the input $(graph) has to be rooted"
+  return __roots[1]
+end
+
+@traitfn function _roots(graph::AbstractGraph::IsDirected)
+  return [v for v in vertices(graph) if parent_vertex(graph, v) == nothing]
 end
 
 @traitfn function _is_rooted(graph::AbstractGraph::IsDirected)
-  roots = [v for v in vertices(graph) if parent_vertex(graph, v) == nothing]
-  return length(roots) == 1
+  return length(_roots(graph)) == 1
 end
 
 @traitfn function _is_rooted_directed_binary_tree(graph::AbstractGraph::IsDirected)
