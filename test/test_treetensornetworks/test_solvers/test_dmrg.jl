@@ -157,7 +157,7 @@ end
     e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
     @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
-    
+
     if !auto_fermion_enabled
       ITensors.disable_auto_fermion()
     end

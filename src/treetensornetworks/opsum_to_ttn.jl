@@ -58,7 +58,7 @@ function ttn_svd(
   # which causes problems when using the autofermion sign with non-fermionic QNIndex
   # ToDo: remove conditional when this is addressed
   linkdir_ref = ITensors.using_auto_fermion() ? ITensors.In : ITensors.In
-  
+
   sites = deepcopy(sites0)  # deepcopy because of inplace modification to handle internal indices 
   edgetype_sites = edgetype(sites)
   vertextype_sites = vertextype(sites)

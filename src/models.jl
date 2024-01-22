@@ -3,7 +3,7 @@ _maybe_fill(x::Number, n) = fill(x, n)
 
 function nth_nearest_neighbors(g, v, n::Int)  #ToDo: Add test for this.
   isone(n) && return neighborhood(g, v, 1)
-  return setdiff( neighborhood(g, v, n), neighborhood(g, v, n - 1) )
+  return setdiff(neighborhood(g, v, n), neighborhood(g, v, n - 1))
 end
 
 next_nearest_neighbors(g, v) = nth_nearest_neighbors(g, v, 2)
