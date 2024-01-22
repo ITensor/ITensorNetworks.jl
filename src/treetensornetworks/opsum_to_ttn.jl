@@ -56,7 +56,7 @@ function ttn_svd(
 )
   linkdir_ref = ITensors.In   # safe to always use autofermion default here
 
-  sites = copy(sites0)  # deepcopy because of inplace modification to handle internal indices 
+  sites = copy(sites0)  # copy because of modification to handle internal indices 
   edgetype_sites = edgetype(sites)
   vertextype_sites = vertextype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
