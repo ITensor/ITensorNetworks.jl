@@ -6,19 +6,11 @@ using Random
 using LinearAlgebra: eigvals
 using Test
 
-function _to_matrices_with_same_inds(t::ITensor, s::ITensor)
+function to_matrix(t::ITensor)
   c = combiner(inds(t; plev=0))
   tc = (t * c) * dag(c')
-  c2 = combiner(inds(s; plev=0))
-  sc = (s * c2) * dag(c2')
-
   cind = combinedind(c)
-  cind2 = combinedind(c2)
-  sc = replaceinds(sc, (cind2, cind2'), (cind, cind'))
-
-  tm = matrix(tc, cind', cind)
-  sm = matrix(sc, cind', cind)
-  return tm, sm
+  return matrix(tc, cind', cind)
 end
 
 @testset "OpSum to TTN converter" begin
@@ -186,7 +178,8 @@ end
 
       @test_broken Tmpo ≈ Tttno # ToDo fix comparison for fermionic tensors
       # In the meantime: matricize tensors and convert to dense Matrix to compare element by element
-      dTmm, dTtm = _to_matrices_with_same_inds(Tmpo, Tttno)
+      dTmm = to_matrix(Tmpo)
+      dTtm = to_matrix(Tttno)
       @test any(>(1e-14), dTmm - dTtm)
 
       # also compare with energies obtained from single-particle Hamiltonian
@@ -240,13 +233,12 @@ end
       Hsvd = TTN(H, is_missing_site; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
       Hline = MPO(relabel_sites(H, vmap), sites)
-      # compare resulting sparse Hamiltonians
 
+      # compare resulting sparse Hamiltonians
       @disable_warn_order begin
         Tmpo = prod(Hline)
         Tttno = contract(Hsvd)
       end
-
       @test Tttno ≈ Tmpo rtol = 1e-6
 
       Hsvd_lr = TTN(
