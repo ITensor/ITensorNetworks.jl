@@ -1,10 +1,11 @@
 using ITensorNetworks
 using ITensorNetworks:
   belief_propagation,
-  get_environment,
+  get_environment_tensors,
   contract_inner,
   message_tensors,
   vidal_gauge,
+  vidal_apply,
   vidal_to_symmetric_gauge,
   norm_network
 using Test
@@ -29,16 +30,16 @@ using SplitApplyCombine
   ψψ = norm_network(ψ)
 
   #Simple Belief Propagation Grouping
-  pψψ_SBP = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+  pψψ_SBP = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
   mtsSBP = belief_propagation(pψψ_SBP; contract_kwargs=(; alg="exact"), niters=50)
-  envsSBP = get_environment(pψψ_SBP, mtsSBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
+  envsSBP = get_environment_tensors(pψψ_SBP, mtsSBP, PartitionVertex.([v1, v2]))
 
   ψ_vidal, bond_tensors = vidal_gauge(ψ, pψψ_SBP, mtsSBP)
 
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
-  pψψ_GBP = PartitionedGraph(ψψ, collect(values(group(v -> v[1][1], vertices(ψψ)))))
+  pψψ_GBP = PartitionedGraph(ψψ, group(v -> v[1][1], vertices(ψψ)))
   mtsGBP = belief_propagation(pψψ_GBP; contract_kwargs=(; alg="exact"), niters=50)
-  envsGBP = get_environment(pψψ_GBP, mtsGBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
+  envsGBP = get_environment_tensors(pψψ_GBP, mtsGBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
   ngates = 5
 
@@ -55,7 +56,9 @@ using SplitApplyCombine
       print_fidelity_loss=true,
       envisposdef=true,
     )
-    ψOVidal, bond_tensors_t = apply(o, ψ_vidal, bond_tensors; maxdim=χ, normalize=true)
+    ψOVidal, bond_tensors_t = vidal_apply(
+      o, ψ_vidal, bond_tensors; maxdim=χ, normalize=true
+    )
     ψOVidal_symm, _ = vidal_to_symmetric_gauge(ψOVidal, bond_tensors_t)
     ψOGBP = apply(
       o,

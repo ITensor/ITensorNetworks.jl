@@ -34,9 +34,7 @@ using SplitApplyCombine
         sqrt(contract_inner(ψ_symm, ψ_symm) * contract_inner(ψ, ψ)) ≈ 1.0
 
   ψψ_symm_V2 = ψ_symm ⊗ prime(dag(ψ_symm); sites=[])
-  pψψ_symm_V2 = PartitionedGraph(
-    ψψ_symm_V2, collect(values(group(v -> v[1], vertices(ψψ_symm_V2))))
-  )
+  pψψ_symm_V2 = PartitionedGraph(ψψ_symm_V2, group(v -> v[1], vertices(ψψ_symm_V2)))
   ψ_symm_mts_V2 = belief_propagation(
     pψψ_symm_V2; contract_kwargs=(; alg="exact"), niters=50
   )

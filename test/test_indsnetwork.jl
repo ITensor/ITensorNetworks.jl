@@ -1,7 +1,6 @@
 using Dictionaries
 using ITensors
 using ITensorNetworks
-using ITensorNetworks: dim
 using Random
 using Test
 

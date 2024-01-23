@@ -297,10 +297,10 @@ end
 #In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
 """Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
 Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site"""
-function ITensors.apply(
+function vidal_apply(
   o::Union{ITensor,NamedEdge},
   ψ::AbstractITensorNetwork,
-  bond_tensors::DataGraph;
+  bond_tensors;
   normalize=false,
   apply_kwargs...,
 )
@@ -314,13 +314,13 @@ function ITensors.apply(
 
     for vn in neighbors(ψ, src(e))
       if (vn != dst(e))
-        ψv1 = noprime(ψv1 * bond_tensors[vn => src(e)])
+        ψv1 = noprime(ψv1 * bond_tensors[NamedEdge(vn => src(e))])
       end
     end
 
     for vn in neighbors(ψ, dst(e))
       if (vn != src(e))
-        ψv2 = noprime(ψv2 * bond_tensors[vn => dst(e)])
+        ψv2 = noprime(ψv2 * bond_tensors[NamedEdge(vn => dst(e))])
       end
     end
 
@@ -339,17 +339,17 @@ function ITensors.apply(
     replaceind!(S, ind_to_replace, ind_to_replace_with')
     replaceind!(V, ind_to_replace, ind_to_replace_with)
 
-    ψv1, bond_tensors[e], ψv2 = U * Qᵥ₁, S, V * Qᵥ₂
+    ψv1, bond_tensors[e], bond_tensors[reverse(e)], ψv2 = U * Qᵥ₁, S, S, V * Qᵥ₂
 
     for vn in neighbors(ψ, src(e))
       if (vn != dst(e))
-        ψv1 = noprime(ψv1 * inv_diag(bond_tensors[vn => src(e)]))
+        ψv1 = noprime(ψv1 * inv_diag(bond_tensors[NamedEdge(vn => src(e))]))
       end
     end
 
     for vn in neighbors(ψ, dst(e))
       if (vn != src(e))
-        ψv2 = noprime(ψv2 * inv_diag(bond_tensors[vn => dst(e)]))
+        ψv2 = noprime(ψv2 * inv_diag(bond_tensors[NamedEdge(vn => dst(e))]))
       end
     end
 

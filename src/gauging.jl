@@ -1,10 +1,11 @@
 """initialize bond tensors of an ITN to identity matrices"""
 function initialize_bond_tensors(ψ::ITensorNetwork; index_map=prime)
-  bond_tensors = DataGraph{vertextype(ψ),ITensor,ITensor}(underlying_graph(ψ))
+  bond_tensors = Dict()
 
   for e in edges(ψ)
     index = commoninds(ψ[src(e)], ψ[dst(e)])
     bond_tensors[e] = dense(delta(index, index_map(index)))
+    bond_tensors[reverse(e)] = bond_tensors[e]
   end
 
   return bond_tensors
@@ -15,7 +16,7 @@ function vidal_gauge(
   ψ::ITensorNetwork,
   pψψ::PartitionedGraph,
   mts,
-  bond_tensors::DataGraph;
+  bond_tensors;
   eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
   regularization=10 * eps(real(scalartype(ψ))),
   edges=NamedGraphs.edges(ψ),
@@ -67,7 +68,7 @@ function vidal_gauge(
       [commoninds(S, U)..., commoninds(S, V)...] =>
         [new_edge_ind..., prime(new_edge_ind)...],
     )
-    bond_tensors[e] = S
+    bond_tensors[e], bond_tensors[reverse(e)] = S, S
   end
 
   return ψ_vidal, bond_tensors
@@ -107,7 +108,7 @@ function vidal_gauge(
   svd_kwargs...,
 )
   ψψ = norm_network(ψ)
-  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+  pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
   mts = message_tensors(pψψ)
 
   mts = belief_propagation(
@@ -124,10 +125,10 @@ function vidal_gauge(
 end
 
 """Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (partitionedgraph, message tensors)"""
-function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
+function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors)
   ψsymm = copy(ψ)
   ψψsymm = norm_network(ψsymm)
-  pψψsymm = PartitionedGraph(ψψsymm, collect(values(group(v -> v[1], vertices(ψψsymm)))))
+  pψψsymm = PartitionedGraph(ψψsymm, group(v -> v[1], vertices(ψψsymm)))
   ψsymm_mts = message_tensors(pψψsymm)
 
   for e in edges(ψsymm)
@@ -142,7 +143,7 @@ function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
   end
 
   ψψsymm = norm_network(ψsymm)
-  pψψsymm = PartitionedGraph(ψψsymm, collect(values(group(v -> v[1], vertices(ψψsymm)))))
+  pψψsymm = PartitionedGraph(ψψsymm, group(v -> v[1], vertices(ψψsymm)))
 
   return ψsymm, pψψsymm, ψsymm_mts
 end
@@ -175,14 +176,14 @@ function symmetric_to_vidal_gauge(
   mts;
   regularization=10 * eps(real(scalartype(ψ))),
 )
-  bond_tensors = DataGraph{vertextype(ψ),ITensor,ITensor}(underlying_graph(ψ))
+  bond_tensors = Dict()
 
   ψ_vidal = copy(ψ)
 
   for e in edges(ψ)
     vsrc, vdst = src(e), dst(e)
     pe = partitionedge(pψψ, NamedEdge((vsrc, 1) => (vdst, 1)))
-    bond_tensors[e] = only(mts[pe])
+    bond_tensors[e], bond_tensors[reverse(e)] = only(mts[pe]), only(mts[pe])
     invroot_S = invsqrt_diag(map_diag(x -> x + regularization, bond_tensors[e]))
     setindex_preserve_graph!(ψ_vidal, noprime(invroot_S * ψ_vidal[vsrc]), vsrc)
     setindex_preserve_graph!(ψ_vidal, noprime(invroot_S * ψ_vidal[vdst]), vdst)
@@ -194,16 +195,16 @@ end
 """Function to measure the 'isometries' of a state in the Vidal Gauge"""
 function vidal_itn_isometries(
   ψ::ITensorNetwork,
-  bond_tensors::DataGraph;
+  bond_tensors;
   edges=vcat(NamedGraphs.edges(ψ), reverse.(NamedGraphs.edges(ψ))),
 )
-  isometries = DataGraph{vertextype(ψ),ITensor,ITensor}(directed_graph(underlying_graph(ψ)))
+  isometries = Dict()
 
   for e in edges
     vsrc, vdst = src(e), dst(e)
     ψv = copy(ψ[vsrc])
     for vn in setdiff(neighbors(ψ, vsrc), [vdst])
-      ψv = noprime(ψv * bond_tensors[vn => vsrc])
+      ψv = noprime(ψv * bond_tensors[NamedEdge(vn => vsrc)])
     end
 
     ψvdag = dag(ψv)
@@ -215,19 +216,19 @@ function vidal_itn_isometries(
 end
 
 """Function to measure the 'canonicalness' of a state in the Vidal Gauge"""
-function vidal_itn_canonicalness(ψ::ITensorNetwork, bond_tensors::DataGraph)
+function vidal_itn_canonicalness(ψ::ITensorNetwork, bond_tensors)
   f = 0
 
   isometries = vidal_itn_isometries(ψ, bond_tensors)
 
-  for e in edges(isometries)
+  for e in keys(isometries)
     LHS = isometries[e] / sum(diag(isometries[e]))
     id = dense(delta(inds(LHS)))
     id /= sum(diag(id))
     f += 0.5 * norm(id - LHS)
   end
 
-  return f / (length(edges(isometries)))
+  return f / (length(keys(isometries)))
 end
 
 """Function to measure the 'canonicalness' of a state in the Symmetric Gauge"""

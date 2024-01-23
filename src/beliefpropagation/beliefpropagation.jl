@@ -3,8 +3,8 @@ function message_tensors(
 )
   mts = Dict()
   for e in partitionedges(ptn)
-    src_e_itn = unpartitioned_graph(subgraph(ptn, [src(e)]))
-    dst_e_itn = unpartitioned_graph(subgraph(ptn, [dst(e)]))
+    src_e_itn = subgraph(ptn, src(e))
+    dst_e_itn = subgraph(ptn, dst(e))
     inds_e = commoninds(src_e_itn, dst_e_itn)
     mts[e] = itensor_constructor(inds_e)
     mts[reverse(e)] = dag.(mts[e])
@@ -16,10 +16,7 @@ end
 Do a single update of a message tensor using the current subgraph and the incoming mts
 """
 function update_message_tensor(
-  ptn::PartitionedGraph,
-  edge::PartitionEdge,
-  mts;
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  ptn::PartitionedGraph, edge::PartitionEdge, mts; contract_kwargs=(; alg="exact")
 )
   pedges = setdiff(
     partitionedges(ptn, boundary_edges(ptn, vertices(ptn, src(edge)); dir=:in)),
@@ -30,7 +27,7 @@ function update_message_tensor(
 
   contract_list = ITensor[
     incoming_messages
-    ITensor(unpartitioned_graph(subgraph(ptn, [src(edge)])))
+    ITensor(subgraph(ptn, src(edge)))
   ]
 
   if contract_kwargs.alg != "exact"
@@ -54,7 +51,7 @@ function belief_propagation_iteration(
   ptn::PartitionedGraph,
   mts,
   edges::Vector{<:PartitionEdge};
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  contract_kwargs=(; alg="exact"),
   compute_norm=false,
 )
   new_mts = copy(mts)
@@ -82,7 +79,7 @@ function belief_propagation_iteration(
   ptn::PartitionedGraph,
   mts,
   edge_groups::Vector{<:Vector{<:PartitionEdge}};
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  contract_kwargs=(; alg="exact"),
   compute_norm=false,
 )
   new_mts = copy(mts)
@@ -102,7 +99,7 @@ end
 function belief_propagation_iteration(
   ptn::PartitionedGraph,
   mts;
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  contract_kwargs=(; alg="exact"),
   compute_norm=false,
   edges=PartitionEdge.(edge_sequence(partitioned_graph(ptn))),
 )
@@ -112,7 +109,7 @@ end
 function belief_propagation(
   ptn::PartitionedGraph,
   mts;
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  contract_kwargs=(; alg="exact"),
   niters=default_bp_niters(partitioned_graph(ptn)),
   target_precision=nothing,
   edges=PartitionEdge.(edge_sequence(partitioned_graph(ptn))),
@@ -143,16 +140,11 @@ function belief_propagation(
   return belief_propagation(ptn, mts; kwargs...)
 end
 """
-Given a subet of vertices of a given Tensor Network and the Message Tensors for that network, return a Dictionary with the involved subgraphs as keys and the vector of tensors associated with that subgraph as values
-Specifically, the contraction of the environment tensors and tn[vertices] will be a scalar.
+Given a subet of partitionvertices of a ptn get the incoming message tensors to that region
 """
-function get_environment(ptn::PartitionedGraph, mts, verts::Vector; dir=:in)
+function get_environment_tensors(ptn::PartitionedGraph, mts, verts::Vector)
   partition_verts = partitionvertices(ptn, verts)
   central_verts = vertices(ptn, partition_verts)
-
-  if dir == :out
-    return get_environment(ptn, mts, setdiff(vertices(ptn), verts))
-  end
 
   pedges = partitionedges(ptn, boundary_edges(ptn, central_verts; dir=:in))
   env_tensors = [mts[e] for e in pedges]
@@ -162,6 +154,12 @@ function get_environment(ptn::PartitionedGraph, mts, verts::Vector; dir=:in)
   ]
 
   return vcat(env_tensors, central_tensors)
+end
+
+function get_environment_tensors(
+  ptn::PartitionedGraph, mts, partition_verts::Vector{<:PartitionVertex}
+)
+  return get_environment_tensors(ptn, mts, vertices(ptn, partition_verts))
 end
 
 """
@@ -174,7 +172,18 @@ function approx_network_region(
   verts::Vector;
   verts_tensors=ITensor[(unpartitioned_graph(ptn))[v] for v in verts],
 )
-  environment_tensors = get_environment(ptn, mts, verts)
+  environment_tensors = get_environment_tensors(ptn, mts, verts)
 
   return vcat(environment_tensors, verts_tensors)
+end
+
+function approx_network_region(
+  ptn::PartitionedGraph,
+  mts,
+  partition_verts::Vector{<:PartitionVertex};
+  verts_tensors=ITensor[
+    (unpartitioned_graph(ptn))[v] for v in vertices(ptn, partition_verts)
+  ],
+)
+  return approx_network_region(ptn, mts, vertices(ptn, partition_verts); verts_tensors)
 end

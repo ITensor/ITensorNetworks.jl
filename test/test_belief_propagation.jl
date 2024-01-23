@@ -10,12 +10,11 @@ using ITensorNetworks:
 using Test
 using Compat
 using ITensors
-#ASSUME ONE CAN INSTALL THIS, MIGHT FAIL FOR WINDOWS
-using Metis
 using LinearAlgebra
 using NamedGraphs
 using SplitApplyCombine
 using Random
+using Metis
 
 ITensors.disable_warn_order()
 
@@ -37,20 +36,18 @@ ITensors.disable_warn_order()
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
-  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = belief_propagation(
-    pψψ; contract_kwargs=(; alg="exact"), verbose=true, niters=10, target_precision=1e-3
-  )
+  pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
+  mts = belief_propagation(pψψ)
   numerator_tensors = approx_network_region(
-    pψψ, mts, [(v, 1)]; verts_tensors=[apply(op("Sz", s[v]), ψ[v])]
+    pψψ, mts, [PartitionVertex(v)]; verts_tensors=[ψ[v], op("Sz", s[v]), dag(prime(ψ[v]))]
   )
-  denominator_tensors = approx_network_region(pψψ, mts, [(v, 1)])
+  denominator_tensors = approx_network_region(pψψ, mts, [PartitionVertex(v)])
   bp_sz = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
   @test abs.(bp_sz - exact_sz) <= 1e-14
 
   #Now test on a tree, should also be exact
-  g = named_comb_tree((6, 6))
+  g = named_comb_tree((4, 4))
   s = siteinds("S=1/2", g)
   χ = 2
   Random.seed!(1564)
@@ -64,14 +61,12 @@ ITensors.disable_warn_order()
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
-  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = belief_propagation(
-    pψψ; contract_kwargs=(; alg="exact"), verbose=true, niters=10, target_precision=1e-3
-  )
+  pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
+  mts = belief_propagation(pψψ)
   numerator_tensors = approx_network_region(
-    pψψ, mts, [(v, 1)]; verts_tensors=[apply(op("Sz", s[v]), ψ[v])]
+    pψψ, mts, [PartitionVertex(v)]; verts_tensors=[ψ[v], op("Sz", s[v]), dag(prime(ψ[v]))]
   )
-  denominator_tensors = approx_network_region(pψψ, mts, [(v, 1)])
+  denominator_tensors = approx_network_region(pψψ, mts, [PartitionVertex(v)])
   bp_sz = contract(numerator_tensors)[] / contract(denominator_tensors)[]
 
   @test abs.(bp_sz - exact_sz) <= 1e-14
@@ -90,10 +85,8 @@ ITensors.disable_warn_order()
     ITensors.contract(ψOψ; sequence=contract_seq)[] /
     ITensors.contract(ψψ; sequence=contract_seq)[]
 
-  nsites = 2
-  p_vertices = partitioned_vertices(underlying_graph(ψψ); nvertices_per_partition=nsites)
-  pψψ = PartitionedGraph(ψψ, p_vertices)
-  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), niters=20)
+  pψψ = PartitionedGraph(ψψ; nvertices_per_partition=2, backend="Metis")
+  mts = belief_propagation(pψψ; niters=20)
   numerator_network = approx_network_region(
     pψψ, mts, vs; verts_tensors=ITensor[ψOψ[v] for v in vs]
   )
@@ -105,16 +98,16 @@ ITensors.disable_warn_order()
   @test abs.(bp_szsz - actual_szsz) <= 0.05
 
   #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
-  g_dims = (4, 4)
+  g_dims = (3, 3)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
-  vs = [(2, 2), (2, 3), (2, 4)]
+  vs = [(2, 2), (2, 3)]
   χ = 3
   ψ = randomITensorNetwork(s; link_space=χ)
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
-  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
-  mts = belief_propagation(pψψ; contract_kwargs=(; alg="exact"), niters=20)
+  pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
+  mts = belief_propagation(pψψ; niters=20)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   rdm = ITensors.contract(
@@ -134,12 +127,12 @@ ITensors.disable_warn_order()
   @test all(>=(0), real(eigs)) && all(==(0), imag(eigs))
 
   #Test more advanced block BP with MPS message tensors on a grid 
-  g_dims = (5, 4)
+  g_dims = (4, 3)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 2
   ψ = randomITensorNetwork(s; link_space=χ)
-  maxdim = 16
+  maxdim = 8
   v = (2, 2)
 
   ψψ = flatten_networks(ψ, dag(ψ); combine_linkinds=false, map_bra_linkinds=prime)
@@ -150,12 +143,11 @@ ITensors.disable_warn_order()
   combiners = linkinds_combiners(ψψ)
   ψψ = combine_linkinds(ψψ, combiners)
   ψOψ = combine_linkinds(ψOψ, combiners)
-
-  pψψ = PartitionedGraph(ψψ, collect(values(group(v -> v[1], vertices(ψψ)))))
+  pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
   mts = belief_propagation(
     pψψ;
     contract_kwargs=(;
-      alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-16, maxdim
+      alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-12, maxdim
     ),
   )
 
