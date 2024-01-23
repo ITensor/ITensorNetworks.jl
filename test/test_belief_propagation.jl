@@ -2,11 +2,11 @@ using ITensorNetworks
 using ITensorNetworks:
   ising_network,
   belief_propagation,
-  approx_network_region,
   split_index,
   contract_inner,
   contract_boundary_mps,
-  message_tensors
+  message_tensors,
+  environment_tensors
 using Test
 using Compat
 using ITensors
@@ -38,13 +38,11 @@ ITensors.disable_warn_order()
 
   pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
   mts = belief_propagation(pψψ)
-  numerator_tensors = approx_network_region(
-    pψψ, mts, [PartitionVertex(v)]; verts_tensors=[ψ[v], op("Sz", s[v]), dag(prime(ψ[v]))]
-  )
-  denominator_tensors = approx_network_region(pψψ, mts, [PartitionVertex(v)])
-  bp_sz = contract(numerator_tensors)[] / contract(denominator_tensors)[]
+  env_tensors = environment_tensors(pψψ, mts, [PartitionVertex(v)])
+  numerator = contract(vcat(env_tensors, ITensor[ψ[v], op("Sz", s[v]), dag(prime(ψ[v]))]))[]
+  denominator = contract(vcat(env_tensors, ITensor[ψ[v], op("I", s[v]), dag(prime(ψ[v]))]))[]
 
-  @test abs.(bp_sz - exact_sz) <= 1e-14
+  @test abs.((numerator / denominator) - exact_sz) <= 1e-14
 
   #Now test on a tree, should also be exact
   g = named_comb_tree((4, 4))
@@ -63,13 +61,11 @@ ITensors.disable_warn_order()
 
   pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
   mts = belief_propagation(pψψ)
-  numerator_tensors = approx_network_region(
-    pψψ, mts, [PartitionVertex(v)]; verts_tensors=[ψ[v], op("Sz", s[v]), dag(prime(ψ[v]))]
-  )
-  denominator_tensors = approx_network_region(pψψ, mts, [PartitionVertex(v)])
-  bp_sz = contract(numerator_tensors)[] / contract(denominator_tensors)[]
+  env_tensors = environment_tensors(pψψ, mts, [PartitionVertex(v)])
+  numerator = contract(vcat(env_tensors, ITensor[ψ[v], op("Sz", s[v]), dag(prime(ψ[v]))]))[]
+  denominator = contract(vcat(env_tensors, ITensor[ψ[v], op("I", s[v]), dag(prime(ψ[v]))]))[]
 
-  @test abs.(bp_sz - exact_sz) <= 1e-14
+  @test abs.((numerator / denominator) - exact_sz) <= 1e-14
 
   #Now test two-site expec taking on the partition function of the Ising model. Not exact, but close
   g_dims = (3, 4)
@@ -87,15 +83,12 @@ ITensors.disable_warn_order()
 
   pψψ = PartitionedGraph(ψψ; nvertices_per_partition=2, backend="Metis")
   mts = belief_propagation(pψψ; niters=20)
-  numerator_network = approx_network_region(
-    pψψ, mts, vs; verts_tensors=ITensor[ψOψ[v] for v in vs]
-  )
 
-  denominator_network = approx_network_region(pψψ, mts, vs)
-  bp_szsz =
-    ITensors.contract(numerator_network)[] / ITensors.contract(denominator_network)[]
+  env_tensors = environment_tensors(pψψ, mts, vs)
+  numerator = contract(vcat(env_tensors, ITensor[ψOψ[v] for v in vs]))[]
+  denominator = contract(vcat(env_tensors, ITensor[ψψ[v] for v in vs]))[]
 
-  @test abs.(bp_szsz - actual_szsz) <= 0.05
+  @test abs.((numerator / denominator) - actual_szsz) <= 0.05
 
   #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
   g_dims = (3, 3)
@@ -110,13 +103,9 @@ ITensors.disable_warn_order()
   mts = belief_propagation(pψψ; niters=20)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
+  env_tensors = environment_tensors(pψψ, mts, [(v, 2) for v in vs])
   rdm = ITensors.contract(
-    approx_network_region(
-      pψψ,
-      mts,
-      [(v, 2) for v in vs];
-      verts_tensors=ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]],
-    ),
+    vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]])
   )
 
   rdm = array((rdm * combiner(inds(rdm; plev=0)...)) * combiner(inds(rdm; plev=1)...))
@@ -151,12 +140,12 @@ ITensors.disable_warn_order()
     ),
   )
 
-  numerator_tensors = approx_network_region(pψψ, mts, [v]; verts_tensors=ITensor[ψOψ[v]])
-  denominator_tensors = approx_network_region(pψψ, mts, [v])
-  bp_sz = ITensors.contract(numerator_tensors)[] / ITensors.contract(denominator_tensors)[]
+  env_tensors = environment_tensors(pψψ, mts, [v])
+  numerator = contract(vcat(env_tensors, ITensor[ψOψ[v]]))[]
+  denominator = contract(vcat(env_tensors, ITensor[ψψ[v]]))[]
 
   exact_sz =
     contract_boundary_mps(ψOψ; cutoff=1e-16) / contract_boundary_mps(ψψ; cutoff=1e-16)
 
-  @test abs.(bp_sz - exact_sz) <= 1e-5
+  @test abs.((numerator / denominator) - exact_sz) <= 1e-5
 end

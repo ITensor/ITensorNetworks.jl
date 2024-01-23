@@ -142,7 +142,7 @@ end
 """
 Given a subet of partitionvertices of a ptn get the incoming message tensors to that region
 """
-function get_environment_tensors(ptn::PartitionedGraph, mts, verts::Vector)
+function environment_tensors(ptn::PartitionedGraph, mts, verts::Vector)
   partition_verts = partitionvertices(ptn, verts)
   central_verts = vertices(ptn, partition_verts)
 
@@ -156,34 +156,8 @@ function get_environment_tensors(ptn::PartitionedGraph, mts, verts::Vector)
   return vcat(env_tensors, central_tensors)
 end
 
-function get_environment_tensors(
+function environment_tensors(
   ptn::PartitionedGraph, mts, partition_verts::Vector{<:PartitionVertex}
 )
-  return get_environment_tensors(ptn, mts, vertices(ptn, partition_verts))
-end
-
-"""
-Calculate the contraction of a tensor network centred on the vertices verts. Using message tensors.
-Defaults to using tn[verts] as the local network but can be overriden
-"""
-function approx_network_region(
-  ptn::PartitionedGraph,
-  mts,
-  verts::Vector;
-  verts_tensors=ITensor[(unpartitioned_graph(ptn))[v] for v in verts],
-)
-  environment_tensors = get_environment_tensors(ptn, mts, verts)
-
-  return vcat(environment_tensors, verts_tensors)
-end
-
-function approx_network_region(
-  ptn::PartitionedGraph,
-  mts,
-  partition_verts::Vector{<:PartitionVertex};
-  verts_tensors=ITensor[
-    (unpartitioned_graph(ptn))[v] for v in vertices(ptn, partition_verts)
-  ],
-)
-  return approx_network_region(ptn, mts, vertices(ptn, partition_verts); verts_tensors)
+  return environment_tensors(ptn, mts, vertices(ptn, partition_verts))
 end
