@@ -8,8 +8,7 @@ tn = ITensorNetwork(named_grid((6, 3)); link_space=4)
 
 @visualize tn
 
-pvertices = partitioned_vertices(underlying_graph(tn); nvertices_per_partition=2)
-ptn = PartitionedGraph(tn, pvertices)
+ptn = PartitionedGraph(tn; nvertices_per_partition=2)
 sub_vs_1 = vertices(ptn, PartitionVertex(1))
 sub_vs_2 = vertices(ptn, PartitionVertex(2))
 

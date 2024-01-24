@@ -300,7 +300,7 @@ Gate does not necessarily need to be passed. Can supply an edge to do an identit
 function vidal_apply(
   o::Union{ITensor,NamedEdge},
   ψ::AbstractITensorNetwork,
-  bond_tensors;
+  bond_tensors::DataGraph;
   normalize=false,
   apply_kwargs...,
 )
@@ -314,13 +314,13 @@ function vidal_apply(
 
     for vn in neighbors(ψ, src(e))
       if (vn != dst(e))
-        ψv1 = noprime(ψv1 * bond_tensors[NamedEdge(vn => src(e))])
+        ψv1 = noprime(ψv1 * bond_tensors[vn => src(e)])
       end
     end
 
     for vn in neighbors(ψ, dst(e))
       if (vn != src(e))
-        ψv2 = noprime(ψv2 * bond_tensors[NamedEdge(vn => dst(e))])
+        ψv2 = noprime(ψv2 * bond_tensors[vn => dst(e)])
       end
     end
 
@@ -336,20 +336,20 @@ function vidal_apply(
 
     ind_to_replace = commonind(V, S)
     ind_to_replace_with = commonind(U, S)
-    replaceind!(S, ind_to_replace, ind_to_replace_with')
-    replaceind!(V, ind_to_replace, ind_to_replace_with)
+    S = replaceind(S, ind_to_replace => ind_to_replace_with')
+    V = replaceind(V, ind_to_replace => ind_to_replace_with)
 
-    ψv1, bond_tensors[e], bond_tensors[reverse(e)], ψv2 = U * Qᵥ₁, S, S, V * Qᵥ₂
+    ψv1, bond_tensors[e], ψv2 = U * Qᵥ₁, S, V * Qᵥ₂
 
     for vn in neighbors(ψ, src(e))
       if (vn != dst(e))
-        ψv1 = noprime(ψv1 * inv_diag(bond_tensors[NamedEdge(vn => src(e))]))
+        ψv1 = noprime(ψv1 * inv_diag(bond_tensors[vn => src(e)]))
       end
     end
 
     for vn in neighbors(ψ, dst(e))
       if (vn != src(e))
-        ψv2 = noprime(ψv2 * inv_diag(bond_tensors[NamedEdge(vn => dst(e))]))
+        ψv2 = noprime(ψv2 * inv_diag(bond_tensors[vn => dst(e)]))
       end
     end
 

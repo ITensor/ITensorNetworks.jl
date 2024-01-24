@@ -5,11 +5,9 @@ using ITensorNetworks:
   contract_inner,
   symmetric_gauge,
   symmetric_to_vidal_gauge,
-  message_tensors,
   vidal_itn_canonicalness,
   vidal_gauge,
-  symmetric_itn_canonicalness,
-  belief_propagation_iteration
+  symmetric_itn_canonicalness
 using NamedGraphs
 using Test
 using Compat
@@ -35,9 +33,7 @@ using SplitApplyCombine
 
   ψψ_symm_V2 = ψ_symm ⊗ prime(dag(ψ_symm); sites=[])
   pψψ_symm_V2 = PartitionedGraph(ψψ_symm_V2, group(v -> v[1], vertices(ψψ_symm_V2)))
-  ψ_symm_mts_V2 = belief_propagation(
-    pψψ_symm_V2; contract_kwargs=(; alg="exact"), niters=50
-  )
+  ψ_symm_mts_V2 = belief_propagation(pψψ_symm_V2; niters=50)
 
   for m_e in values(ψ_symm_mts_V2)
     #Test all message tensors are approximately diagonal

@@ -1,11 +1,10 @@
 """initialize bond tensors of an ITN to identity matrices"""
 function initialize_bond_tensors(ψ::ITensorNetwork; index_map=prime)
-  bond_tensors = Dict()
+  bond_tensors = DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))
 
   for e in edges(ψ)
     index = commoninds(ψ[src(e)], ψ[dst(e)])
-    bond_tensors[e] = dense(delta(index, index_map(index)))
-    bond_tensors[reverse(e)] = bond_tensors[e]
+    bond_tensors[e] = denseblocks(delta(index, index_map(index)))
   end
 
   return bond_tensors
@@ -16,7 +15,7 @@ function vidal_gauge(
   ψ::ITensorNetwork,
   pψψ::PartitionedGraph,
   mts,
-  bond_tensors;
+  bond_tensors::DataGraph;
   eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
   regularization=10 * eps(real(scalartype(ψ))),
   edges=NamedGraphs.edges(ψ),
@@ -68,7 +67,7 @@ function vidal_gauge(
       [commoninds(S, U)..., commoninds(S, V)...] =>
         [new_edge_ind..., prime(new_edge_ind)...],
     )
-    bond_tensors[e], bond_tensors[reverse(e)] = S, S
+    bond_tensors[e] = S
   end
 
   return ψ_vidal, bond_tensors
@@ -109,27 +108,19 @@ function vidal_gauge(
 )
   ψψ = norm_network(ψ)
   pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
-  mts = message_tensors(pψψ)
 
-  mts = belief_propagation(
-    pψψ,
-    mts;
-    contract_kwargs=(; alg="exact"),
-    niters,
-    target_precision=target_canonicalness,
-    verbose,
-  )
+  mts = belief_propagation(pψψ; niters, target_precision=target_canonicalness, verbose)
   return vidal_gauge(
     ψ, pψψ, mts; eigen_message_tensor_cutoff, regularization, svd_kwargs...
   )
 end
 
 """Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (partitionedgraph, message tensors)"""
-function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors)
+function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
   ψsymm = copy(ψ)
   ψψsymm = norm_network(ψsymm)
   pψψsymm = PartitionedGraph(ψψsymm, group(v -> v[1], vertices(ψψsymm)))
-  ψsymm_mts = message_tensors(pψψsymm)
+  ψsymm_mts = default_bp_cache(pψψsymm)
 
   for e in edges(ψsymm)
     vsrc, vdst = src(e), dst(e)
@@ -176,7 +167,7 @@ function symmetric_to_vidal_gauge(
   mts;
   regularization=10 * eps(real(scalartype(ψ))),
 )
-  bond_tensors = Dict()
+  bond_tensors = DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))
 
   ψ_vidal = copy(ψ)
 
@@ -195,7 +186,7 @@ end
 """Function to measure the 'isometries' of a state in the Vidal Gauge"""
 function vidal_itn_isometries(
   ψ::ITensorNetwork,
-  bond_tensors;
+  bond_tensors::DataGraph;
   edges=vcat(NamedGraphs.edges(ψ), reverse.(NamedGraphs.edges(ψ))),
 )
   isometries = Dict()
@@ -204,7 +195,7 @@ function vidal_itn_isometries(
     vsrc, vdst = src(e), dst(e)
     ψv = copy(ψ[vsrc])
     for vn in setdiff(neighbors(ψ, vsrc), [vdst])
-      ψv = noprime(ψv * bond_tensors[NamedEdge(vn => vsrc)])
+      ψv = noprime(ψv * bond_tensors[vn => vsrc])
     end
 
     ψvdag = dag(ψv)
@@ -216,7 +207,7 @@ function vidal_itn_isometries(
 end
 
 """Function to measure the 'canonicalness' of a state in the Vidal Gauge"""
-function vidal_itn_canonicalness(ψ::ITensorNetwork, bond_tensors)
+function vidal_itn_canonicalness(ψ::ITensorNetwork, bond_tensors::DataGraph)
   f = 0
 
   isometries = vidal_itn_isometries(ψ, bond_tensors)

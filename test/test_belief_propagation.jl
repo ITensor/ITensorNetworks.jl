@@ -5,7 +5,6 @@ using ITensorNetworks:
   split_index,
   contract_inner,
   contract_boundary_mps,
-  message_tensors,
   environment_tensors
 using Test
 using Compat
@@ -121,7 +120,6 @@ ITensors.disable_warn_order()
   s = siteinds("S=1/2", g)
   χ = 2
   ψ = randomITensorNetwork(s; link_space=χ)
-  maxdim = 8
   v = (2, 2)
 
   ψψ = flatten_networks(ψ, dag(ψ); combine_linkinds=false, map_bra_linkinds=prime)
@@ -133,12 +131,9 @@ ITensors.disable_warn_order()
   ψψ = combine_linkinds(ψψ, combiners)
   ψOψ = combine_linkinds(ψOψ, combiners)
   pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
-  mts = belief_propagation(
-    pψψ;
-    contract_kwargs=(;
-      alg="density_matrix", output_structure=path_graph_structure, cutoff=1e-12, maxdim
-    ),
-  )
+  my_contract_to_MPS(args...) =
+    ITensorNetworks.contract_to_MPS(args...; cutoff=1e-6, maxdim=4)
+  mts = belief_propagation(pψψ; contractor=my_contract_to_MPS)
 
   env_tensors = environment_tensors(pψψ, mts, [v])
   numerator = contract(vcat(env_tensors, ITensor[ψOψ[v]]))[]
