@@ -13,7 +13,9 @@ function contract_to_MPS(contract_list::Vector{ITensor}; svd_kwargs...)
     contraction_sequence_alg="optimal",
     svd_kwargs...,
   )
-  mts = ITensor(first(contract(ITensorNetwork(contract_list); contract_kwargs...)))
+
+  tn, _ = contract(ITensorNetwork(contract_list); contract_kwargs...)
+  mts = Vector{ITensor}(tn)
   mts = normalize!.(mts)
   return mts
 end
@@ -50,7 +52,7 @@ function update_message_tensor(
 
   contract_list = ITensor[
     incoming_messages
-    ITensor(subgraph(ptn, src(edge)))
+    Vector{ITensor}(subgraph(ptn, src(edge)))
   ]
 
   return contractor(contract_list)
