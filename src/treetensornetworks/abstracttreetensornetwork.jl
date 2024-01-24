@@ -429,7 +429,7 @@ function expect(
 )
   # ToDo: for performance it may be beneficial to also implement expect! and change the orthogonality center in place
   # assuming that the next algorithmic step can make use of the orthogonality center being moved to a different vertex
-  sites=siteinds(state)
+  sites = siteinds(state)
   ordered_vertices = reverse(post_order_dfs_vertices(sites, root_vertex)) #ToDo: Verify that this is indeed the correct order for performance
   ElT = promote_itensor_eltype(state)
   res = Dictionary(vertices, Vector{ElT}(undef, length(vertices)))
