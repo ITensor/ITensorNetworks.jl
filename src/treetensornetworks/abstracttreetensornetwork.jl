@@ -420,3 +420,23 @@ function inner(
   end
   return O[]
 end
+
+function expect(
+  operator::String,
+  state::AbstractTTN;
+  sites=siteinds(state),
+  root_vertex=default_root_vertex(sites), #ToDo: verify that this is a sane default
+)
+  # ToDo: for performance it may be beneficial to also implement expect! and change the orthogonality center in place
+  # assuming that the next algorithmic step can make use of the orthogonality center being moved to a different vertex
+  vertices = reverse(post_order_dfs_vertices(sites, root_vertex)) #ToDo: Verify that this is indeed the correct order for performance
+  ElT = promote_itensor_eltype(state)
+  res = Dictionary(vertices, Vector{ElT}(undef, length(vertices)))
+  for v in vertices
+    state = orthogonalize(state, v)
+    @assert isone(length(sites[v]))
+    Op = ITensors.op(operator, only(sites[v])) #ToDo: Add compatibility with more than a single index per vertex
+    res[v] = scalar(dag(state[v]) * apply(Op, state[v]))
+  end
+  return res
+end
