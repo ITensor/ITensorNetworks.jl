@@ -80,6 +80,10 @@ function contract(P::AbstractProjTTN, v::ITensor)::ITensor
   for it in itensor_map
     Hv *= it
   end
+  if isempty(Hv)
+    Hv = similar(v)
+    Hv .= 0
+  end
   return Hv
 end
 
