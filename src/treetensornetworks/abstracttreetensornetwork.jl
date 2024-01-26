@@ -440,7 +440,7 @@ function expect(
     @assert isone(length(sites[v]))
     #ToDo: Add compatibility with more than a single index per vertex
     op_v = op(operator, only(sites[v]))
-    res[v] = scalar(dag(state[v]) * apply(op_v, state[v]))
+    res[v] = (dag(state[v]) * apply(op_v, state[v]))[]
   end
   return mapreduce(typeof, promote_type, res).(res)
 end
