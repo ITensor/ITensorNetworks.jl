@@ -25,7 +25,7 @@ end
   end
   states = v -> d[v]
   state = TTN(s, states)
-  res = expect("Sz", state)   # just testing that this doesn't go via expect for arbitrary tensor networks.
+  res = expect("Sz", state)
   @test all([isapprox(res[v], magnetization[v]; atol=1e-8) for v in vertices(s)])
 end
 
