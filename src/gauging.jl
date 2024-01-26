@@ -27,7 +27,7 @@ function vidal_gauge(
     vsrc, vdst = src(e), dst(e)
     ψvsrc, ψvdst = ψ_vidal[vsrc], ψ_vidal[vdst]
 
-    pe = partitionedge(pψψ, NamedEdge((vsrc, 1) => (vdst, 1)))
+    pe = partitionedge(pψψ, (vsrc, 1) => (vdst, 1))
     edge_ind = commoninds(ψvsrc, ψvdst)
     edge_ind_sim = sim(edge_ind)
 

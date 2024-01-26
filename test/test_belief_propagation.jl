@@ -66,7 +66,7 @@ ITensors.disable_warn_order()
 
   @test abs.((numerator / denominator) - exact_sz) <= 1e-14
 
-  #Now test two-site expec taking on the partition function of the Ising model. Not exact, but close
+  # #Now test two-site expec taking on the partition function of the Ising model. Not exact, but close
   g_dims = (3, 4)
   g = named_grid(g_dims)
   s = IndsNetwork(g; link_space=2)
@@ -89,7 +89,7 @@ ITensors.disable_warn_order()
 
   @test abs.((numerator / denominator) - actual_szsz) <= 0.05
 
-  #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
+  # #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
   g_dims = (3, 3)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
@@ -114,7 +114,7 @@ ITensors.disable_warn_order()
   @test size(rdm) == (2^length(vs), 2^length(vs))
   @test all(>=(0), real(eigs)) && all(==(0), imag(eigs))
 
-  #Test more advanced block BP with MPS message tensors on a grid 
+  # #Test more advanced block BP with MPS message tensors on a grid 
   g_dims = (4, 3)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
@@ -131,9 +131,11 @@ ITensors.disable_warn_order()
   ψψ = combine_linkinds(ψψ, combiners)
   ψOψ = combine_linkinds(ψOψ, combiners)
   pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
-  my_contract_to_MPS(args...) =
-    ITensorNetworks.contract_to_MPS(args...; cutoff=1e-6, maxdim=4)
-  mts = belief_propagation(pψψ; contractor=my_contract_to_MPS)
+  mts = belief_propagation(
+    pψψ;
+    contractor=ITensorNetworks.contract_density_matrix,
+    contractor_kwargs=(; cutoff=1e-6, maxdim=4),
+  )
 
   env_tensors = environment_tensors(pψψ, mts, [v])
   numerator = contract(vcat(env_tensors, ITensor[ψOψ[v]]))[]
