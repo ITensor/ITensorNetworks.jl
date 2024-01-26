@@ -133,10 +133,10 @@ function position(
 ) where {V}
   # shift position
   P = shift_position(P, pos)
-  # invalidate environments corresponding to internal edges
-  for e in internal_edges(P)
-    unset!(P.environments, e)
-  end
+  # remove internal edges (out of place)
+  ie=internal_edges(P)
+  newenvskeys=filter(!in(ie),keys(P.environments))
+  P=ProjTTN(pos,P.H,getindices(P.environments,newenvskeys))
   # make all environments surrounding new position
   for e in incident_edges(P)
     make_environment!(P, psi, e)
