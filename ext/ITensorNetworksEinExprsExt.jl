@@ -8,14 +8,14 @@ function ITensorNetworks.contraction_sequence(
 )
   tensor_map = IdDict(
     map(pairs(vertex_data(tn))) do (key, tensor)
-      _inds = collect(map(Symbol ∘ id, inds(tensor)))
+      _inds = collect(ITensorNetworks.inds(tensor))
       _size = Dict(_inds .=> size(tensor))
       EinExpr(_inds, _size) => key
     end,
   )
   tensors = collect(keys(tensor_map))
 
-  _openinds = collect(map(Symbol ∘ id, externalinds(tn)))
+  _openinds = collect(ITensorNetworks.externalinds(tn))
   expr = sum(tensors; skip=_openinds)
   path = einexpr(optimizer, expr)
 
