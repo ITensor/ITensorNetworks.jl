@@ -41,3 +41,4 @@ using Test
     ITensors.disable_auto_fermion()
   end
 end
+nothing

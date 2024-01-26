@@ -131,13 +131,43 @@ end
 function position(
   P::AbstractProjTTN{V}, psi::TTN{V}, pos::Union{Vector{<:V},NamedEdge{V}}
 ) where {V}
-  # shift position
   P = shift_position(P, pos)
-  # remove internal edges (out of place)
+  P = invalidate_environments(P)
+  P = make_environments(P, psi)
+  return P
+end
+
+function position!(
+  P::AbstractProjTTN{V}, psi::TTN{V}, pos::Union{Vector{<:V},NamedEdge{V}}
+) where {V}
+  P = shift_position(P, pos)
+  P = invalidate_environments(P)
+  make_environments!(P, psi, e)
+  return P
+end
+
+function invalidate_environments(P::AbstractProjTTN)
   ie = internal_edges(P)
   newenvskeys = filter(!in(ie), keys(P.environments))
-  P = ProjTTN(pos, P.H, getindices(P.environments, newenvskeys))
-  # make all environments surrounding new position
+  P = ProjTTN(P.pos, P.H, getindices(P.environments, newenvskeys))
+  return P
+end
+
+function invalidate_environment(P::AbstractProjTTN{V}, e::NamedEdge{V}) where {V}
+  newenvskeys = filter(isequal(e), keys(P.environments))
+  P = ProjTTN(P.pos, P.H, getindices(P.environments, newenvskeys))
+  return P
+end
+
+function make_environments(P::AbstractProjTTN{V}, psi::TTN{V}) where {V}
+  P = copy(P)
+  for e in incident_edges(P)
+    set!(P.environments, e, make_environment(P, psi, e))
+  end
+  return P
+end
+
+function make_environments!(P::AbstractProjTTN{V}, psi::TTN{V}) where {V}
   for e in incident_edges(P)
     make_environment!(P, psi, e)
   end
