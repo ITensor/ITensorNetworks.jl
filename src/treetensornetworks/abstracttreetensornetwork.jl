@@ -431,14 +431,13 @@ function expect(
   # assuming that the next algorithmic step can make use of the orthogonality center being moved to a different vertex
   sites = siteinds(state)
   ordered_vertices = reverse(post_order_dfs_vertices(sites, root_vertex)) #ToDo: Verify that this is indeed the correct order for performance
-  ElT = promote_itensor_eltype(state)
-  res = Dictionary(vertices, Vector{ElT}(undef, length(vertices)))
+  res = Dictionary(vertices, undef)
   for v in ordered_vertices
-    !(v in vertices) && continue  #only compute expectation values for required vertices
+    !(v in vertices) && continue
     state = orthogonalize(state, v)
     @assert isone(length(sites[v]))
-    Op = ITensors.op(operator, only(sites[v])) #ToDo: Add compatibility with more than a single index per vertex
-    res[v] = scalar(dag(state[v]) * apply(Op, state[v]))
+    op_v = op(operator, only(sites[v])) #ToDo: Add compatibility with more than a single index per vertex
+    res[v] = scalar(dag(state[v]) * apply(op_v, state[v]))
   end
-  return res
+  return mapreduce(typeof, promote_type, res).(res)
 end
