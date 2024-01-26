@@ -32,7 +32,7 @@ end
   end
   tn = ITensorNetwork(vec(tn[:, :, 1]))
   for inds_tree in [binary_tree_structure(tn), path_graph_structure(tn)]
-    par = partition(tn, inds_tree; alg="mincut_recursive_bisection")
+    par = _partition(tn, inds_tree; alg="mincut_recursive_bisection")
     root = _root(inds_tree)
     par_contract_deltas = _contract_deltas_ignore_leaf_partitions(par; root=root)
     @test Set(_noncommoninds(par)) == Set(_noncommoninds(par_contract_deltas))

@@ -297,7 +297,7 @@ end
 #In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
 """Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
 Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site"""
-function ITensors.apply(
+function vidal_apply(
   o::Union{ITensor,NamedEdge},
   ψ::AbstractITensorNetwork,
   bond_tensors::DataGraph;
@@ -336,8 +336,8 @@ function ITensors.apply(
 
     ind_to_replace = commonind(V, S)
     ind_to_replace_with = commonind(U, S)
-    replaceind!(S, ind_to_replace, ind_to_replace_with')
-    replaceind!(V, ind_to_replace, ind_to_replace_with)
+    S = replaceind(S, ind_to_replace => ind_to_replace_with')
+    V = replaceind(V, ind_to_replace => ind_to_replace_with)
 
     ψv1, bond_tensors[e], ψv2 = U * Qᵥ₁, S, V * Qᵥ₂
 

@@ -17,3 +17,30 @@ function contract(
 )
   return approx_itensornetwork(alg, tn, output_structure; kwargs...)
 end
+
+function contract_density_matrix(
+  contract_list::Vector{ITensor}; normalize=true, contractor_kwargs...
+)
+  tn, _ = contract(
+    ITensorNetwork(contract_list); alg="density_matrix", contractor_kwargs...
+  )
+  out = Vector{ITensor}(tn)
+  if normalize
+    out .= normalize!.(copy.(out))
+  end
+  return out
+end
+
+function contract_exact(
+  contract_list::Vector{ITensor};
+  contraction_sequence_alg="optimal",
+  normalize=true,
+  contractor_kwargs...,
+)
+  seq = contraction_sequence(contract_list; alg=contraction_sequence_alg)
+  out = ITensors.contract(contract_list; sequence=seq, contractor_kwargs...)
+  if normalize
+    normalize!(out)
+  end
+  return ITensor[out]
+end

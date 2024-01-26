@@ -1,11 +1,10 @@
 using ITensorNetworks
 using ITensorNetworks:
   belief_propagation,
-  get_environment,
+  environment_tensors,
   contract_inner,
-  message_tensors,
-  nested_graph_leaf_vertices,
   vidal_gauge,
+  vidal_apply,
   vidal_to_symmetric_gauge,
   norm_network
 using Test
@@ -30,24 +29,16 @@ using SplitApplyCombine
   ψψ = norm_network(ψ)
 
   #Simple Belief Propagation Grouping
-  vertex_groupsSBP = nested_graph_leaf_vertices(
-    partition(partition(ψψ, group(v -> v[1], vertices(ψψ))); nvertices_per_partition=1)
-  )
-  Z = partition(ψψ; subgraph_vertices=vertex_groupsSBP)
-  mtsSBP = message_tensors(Z)
-  mtsSBP = belief_propagation(ψψ, mtsSBP; contract_kwargs=(; alg="exact"), niters=50)
-  envsSBP = get_environment(ψψ, mtsSBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
+  pψψ_SBP = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
+  mtsSBP = belief_propagation(pψψ_SBP; niters=20)
+  envsSBP = environment_tensors(pψψ_SBP, mtsSBP, PartitionVertex.([v1, v2]))
 
-  ψ_vidal, bond_tensors = vidal_gauge(ψ, mtsSBP)
+  ψ_vidal, bond_tensors = vidal_gauge(ψ, pψψ_SBP, mtsSBP)
 
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
-  vertex_groupsGBP = nested_graph_leaf_vertices(
-    partition(partition(ψψ, group(v -> v[1][1], vertices(ψψ))); nvertices_per_partition=1)
-  )
-  Z = partition(ψψ; subgraph_vertices=vertex_groupsSBP)
-  mtsGBP = message_tensors(Z)
-  mtsGBP = belief_propagation(ψψ, mtsGBP; contract_kwargs=(; alg="exact"), niters=50)
-  envsGBP = get_environment(ψψ, mtsGBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
+  pψψ_GBP = PartitionedGraph(ψψ, group(v -> v[1][1], vertices(ψψ)))
+  mtsGBP = belief_propagation(pψψ_GBP; niters=20)
+  envsGBP = environment_tensors(pψψ_GBP, mtsGBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
   ngates = 5
 
@@ -64,7 +55,9 @@ using SplitApplyCombine
       print_fidelity_loss=true,
       envisposdef=true,
     )
-    ψOVidal, bond_tensors_t = apply(o, ψ_vidal, bond_tensors; maxdim=χ, normalize=true)
+    ψOVidal, bond_tensors_t = vidal_apply(
+      o, ψ_vidal, bond_tensors; maxdim=χ, normalize=true
+    )
     ψOVidal_symm, _ = vidal_to_symmetric_gauge(ψOVidal, bond_tensors_t)
     ψOGBP = apply(
       o,

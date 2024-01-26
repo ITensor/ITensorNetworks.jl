@@ -1,5 +1,6 @@
 using ITensors, OMEinsumContractionOrders
 using Graphs, NamedGraphs
+using ITensorNetworks
 using ITensors: contract
 using ITensorNetworks:
   _root,
@@ -8,7 +9,9 @@ using ITensorNetworks:
   _is_rooted_directed_binary_tree,
   _contract_deltas_ignore_leaf_partitions,
   _rem_vertex!,
-  _DensityMartrixAlgGraph
+  _DensityMartrixAlgGraph,
+  _partition
+using Test
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")
@@ -61,7 +64,7 @@ end
 @testset "test partition with mincut_recursive_bisection alg of disconnected tn" begin
   inds = [Index(2, "$i") for i in 1:5]
   tn = ITensorNetwork([randomITensor(i) for i in inds])
-  par = partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
+  par = _partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
   networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
   network = vcat(networks...)
   @test isapprox(contract(Vector{ITensor}(tn)), contract(network...))
@@ -80,7 +83,7 @@ end
     out1 = contract(network...)
     tn = ITensorNetwork(network)
     inds_btree = binary_tree_structure(tn)
-    par = partition(tn, inds_btree; alg="mincut_recursive_bisection")
+    par = _partition(tn, inds_btree; alg="mincut_recursive_bisection")
     par = _contract_deltas_ignore_leaf_partitions(par; root=_root(inds_btree))
     networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
     network2 = vcat(networks...)
@@ -113,7 +116,7 @@ end
   M = MPS(T, (i, j, k, l, m); cutoff=1e-5, maxdim=5)
   tn = ITensorNetwork(M[:])
   out_tree = path_graph_structure(tn)
-  input_partition = partition(tn, out_tree; alg="mincut_recursive_bisection")
+  input_partition = _partition(tn, out_tree; alg="mincut_recursive_bisection")
   underlying_tree = underlying_graph(input_partition)
   # Change type of each partition[v] since they will be updated
   # with potential data type chage.

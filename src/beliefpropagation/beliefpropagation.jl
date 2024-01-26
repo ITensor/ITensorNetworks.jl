@@ -1,104 +1,61 @@
-function message_tensors(
-  tn::ITensorNetwork;
-  nvertices_per_partition=nothing,
-  npartitions=nothing,
-  subgraph_vertices=nothing,
-  kwargs...,
-)
-  return message_tensors(
-    partition(tn; nvertices_per_partition, npartitions, subgraph_vertices); kwargs...
-  )
+default_mt_constructor(inds_e) = ITensor[denseblocks(delta(inds_e))]
+default_bp_cache(ptn::PartitionedGraph) = Dict()
+function default_contractor(contract_list::Vector{ITensor}; kwargs...)
+  return contract_exact(contract_list; kwargs...)
 end
+default_contractor_kwargs() = (; normalize=true, contraction_sequence_alg="optimal")
 
-function message_tensors_skeleton(subgraphs::DataGraph)
-  mts = DataGraph{vertextype(subgraphs),vertex_data_type(subgraphs),ITensorNetwork}(
-    directed_graph(underlying_graph(subgraphs))
-  )
-  for v in vertices(mts)
-    mts[v] = subgraphs[v]
-  end
-
-  return mts
-end
-
-function message_tensors(
-  subgraphs::DataGraph;
-  itensor_constructor=inds_e -> ITensor[dense(delta(i)) for i in inds_e],
+function message_tensor(
+  ptn::PartitionedGraph, edge::PartitionEdge; mt_constructor=default_mt_constructor
 )
-  mts = message_tensors_skeleton(subgraphs)
-  for e in edges(subgraphs)
-    inds_e = commoninds(subgraphs[src(e)], subgraphs[dst(e)])
-    itensors = itensor_constructor(inds_e)
-    mts[e] = ITensorNetwork(itensors)
-    mts[reverse(e)] = dag(mts[e])
-  end
-  return mts
+  src_e_itn = subgraph(ptn, src(edge))
+  dst_e_itn = subgraph(ptn, dst(edge))
+  inds_e = commoninds(src_e_itn, dst_e_itn)
+  return mt_constructor(inds_e)
 end
 
 """
-DO a single update of a message tensor using the current subgraph and the incoming mts
+Do a single update of a message tensor using the current subgraph and the incoming mts
 """
 function update_message_tensor(
-  tn::ITensorNetwork,
-  subgraph_vertices::Vector,
-  mts::Vector{ITensorNetwork};
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
+  ptn::PartitionedGraph,
+  edge::PartitionEdge,
+  mts;
+  contractor=default_contractor,
+  contractor_kwargs=default_contractor_kwargs(),
+  mt_constructor=default_mt_constructor,
 )
-  mts_itensors = reduce(vcat, ITensor.(mts); init=ITensor[])
+  pb_edges = partitionedges(ptn, boundary_edges(ptn, vertices(ptn, src(edge)); dir=:in))
 
-  contract_list = ITensor[mts_itensors; ITensor[tn[v] for v in subgraph_vertices]]
-  tn = if isone(length(contract_list))
-    copy(only(contract_list))
-  else
-    ITensorNetwork(contract_list)
-  end
+  incoming_messages = [
+    e_in ∈ keys(mts) ? mts[e_in] : message_tensor(ptn, e_in; mt_constructor) for
+    e_in in setdiff(pb_edges, [reverse(edge)])
+  ]
+  incoming_messages = reduce(vcat, incoming_messages; init=ITensor[])
 
-  if contract_kwargs.alg != "exact"
-    contract_output = contract(tn; contract_kwargs...)
-  else
-    contract_output = contract(tn; sequence=contraction_sequence(tn; alg="optimal"))
-  end
+  contract_list = ITensor[
+    incoming_messages
+    Vector{ITensor}(subgraph(ptn, src(edge)))
+  ]
 
-  itn = if typeof(contract_output) == ITensor
-    ITensorNetwork(contract_output)
-  else
-    first(contract_output)
-  end
-  normalize!.(vertex_data(itn))
-
-  return itn
-end
-
-function update_message_tensor(
-  tn::ITensorNetwork, subgraph::ITensorNetwork, mts::Vector{ITensorNetwork}; kwargs...
-)
-  return update_message_tensor(tn, vertices(subgraph), mts; kwargs...)
+  return contractor(contract_list; contractor_kwargs...)
 end
 
 """
 Do a sequential update of message tensors on `edges` for a given ITensornetwork and its partition into sub graphs
 """
 function belief_propagation_iteration(
-  tn::ITensorNetwork,
-  mts::DataGraph,
-  edges::Vector{<:AbstractEdge};
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  compute_norm=false,
+  ptn::PartitionedGraph, mts, edges::Vector{<:PartitionEdge}; compute_norm=false, kwargs...
 )
   new_mts = copy(mts)
   c = 0
   for e in edges
-    environment_tensornetworks = ITensorNetwork[
-      new_mts[e_in] for
-      e_in in setdiff(boundary_edges(new_mts, [src(e)]; dir=:in), [reverse(e)])
-    ]
-    new_mts[src(e) => dst(e)] = update_message_tensor(
-      tn, new_mts[src(e)], environment_tensornetworks; contract_kwargs
-    )
+    new_mts[e] = update_message_tensor(ptn, e, new_mts; kwargs...)
 
     if compute_norm
-      LHS, RHS = ITensors.contract(ITensor(mts[src(e) => dst(e)])),
-      ITensors.contract(ITensor(new_mts[src(e) => dst(e)]))
+      LHS = e ∈ keys(mts) ? contract(mts[e]) : contract(message_tensor(ptn, e))
+      RHS = contract(new_mts[e])
+      #This line only makes sense if the message tensors are rank 2??? Should fix this.
       LHS /= sum(diag(LHS))
       RHS /= sum(diag(RHS))
       c += 0.5 * norm(denseblocks(LHS) - denseblocks(RHS))
@@ -113,18 +70,12 @@ Currently we send the full message tensor data struct to belief_propagation_iter
 mts relevant to that subgraph.
 """
 function belief_propagation_iteration(
-  tn::ITensorNetwork,
-  mts::DataGraph,
-  edge_groups::Vector{<:Vector{<:AbstractEdge}};
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  compute_norm=false,
+  ptn::PartitionedGraph, mts, edge_groups::Vector{<:Vector{<:PartitionEdge}}; kwargs...
 )
   new_mts = copy(mts)
   c = 0
   for edges in edge_groups
-    updated_mts, ct = belief_propagation_iteration(
-      tn, mts, edges; contract_kwargs, compute_norm
-    )
+    updated_mts, ct = belief_propagation_iteration(ptn, mts, edges; kwargs...)
     for e in edges
       new_mts[e] = updated_mts[e]
     end
@@ -134,30 +85,26 @@ function belief_propagation_iteration(
 end
 
 function belief_propagation_iteration(
-  tn::ITensorNetwork,
-  mts::DataGraph;
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  compute_norm=false,
-  edges=edge_sequence(mts),
+  ptn::PartitionedGraph, mts; edges=default_edge_sequence(ptn), kwargs...
 )
-  return belief_propagation_iteration(tn, mts, edges; contract_kwargs, compute_norm)
+  return belief_propagation_iteration(ptn, mts, edges; kwargs...)
 end
 
 function belief_propagation(
-  tn::ITensorNetwork,
-  mts::DataGraph;
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  niters=default_bp_niters(mts),
+  ptn::PartitionedGraph,
+  mts;
+  niters=default_bp_niters(partitioned_graph(ptn)),
   target_precision=nothing,
-  edges=edge_sequence(mts),
+  edges=default_edge_sequence(ptn),
   verbose=false,
+  kwargs...,
 )
   compute_norm = !isnothing(target_precision)
   if isnothing(niters)
     error("You need to specify a number of iterations for BP!")
   end
   for i in 1:niters
-    mts, c = belief_propagation_iteration(tn, mts, edges; contract_kwargs, compute_norm)
+    mts, c = belief_propagation_iteration(ptn, mts, edges; compute_norm, kwargs...)
     if compute_norm && c <= target_precision
       if verbose
         println("BP converged to desired precision after $i iterations.")
@@ -168,49 +115,29 @@ function belief_propagation(
   return mts
 end
 
-function belief_propagation(
-  tn::ITensorNetwork;
-  contract_kwargs=(; alg="density_matrix", output_structure=path_graph_structure, maxdim=1),
-  nvertices_per_partition=nothing,
-  npartitions=nothing,
-  subgraph_vertices=nothing,
-  niters=default_bp_niters(mts),
-  target_precision=nothing,
-  verbose=false,
-)
-  mts = message_tensors(tn; nvertices_per_partition, npartitions, subgraph_vertices)
-  return belief_propagation(tn, mts; contract_kwargs, niters, target_precision, verbose)
+function belief_propagation(ptn::PartitionedGraph; bp_cache=default_bp_cache, kwargs...)
+  mts = bp_cache(ptn)
+  return belief_propagation(ptn, mts; kwargs...)
+end
+"""
+Given a subet of partitionvertices of a ptn get the incoming message tensors to that region
+"""
+function environment_tensors(ptn::PartitionedGraph, mts, verts::Vector)
+  partition_verts = partitionvertices(ptn, verts)
+  central_verts = vertices(ptn, partition_verts)
+
+  pedges = partitionedges(ptn, boundary_edges(ptn, central_verts; dir=:in))
+  env_tensors = [mts[e] for e in pedges]
+  env_tensors = reduce(vcat, env_tensors; init=ITensor[])
+  central_tensors = ITensor[
+    (unpartitioned_graph(ptn))[v] for v in setdiff(central_verts, verts)
+  ]
+
+  return vcat(env_tensors, central_tensors)
 end
 
-"""
-Given a subet of vertices of a given Tensor Network and the Message Tensors for that network, return a Dictionary with the involved subgraphs as keys and the vector of tensors associated with that subgraph as values
-Specifically, the contraction of the environment tensors and tn[vertices] will be a scalar.
-"""
-function get_environment(tn::ITensorNetwork, mts::DataGraph, verts::Vector; dir=:in)
-  subgraphs = unique([find_subgraph(v, mts) for v in verts])
-
-  if dir == :out
-    return get_environment(tn, mts, setdiff(vertices(tn), verts))
-  end
-
-  env_tns = ITensorNetwork[mts[e] for e in boundary_edges(mts, subgraphs; dir=:in)]
-  central_tn = ITensorNetwork(
-    ITensor[tn[v] for v in setdiff(flatten([vertices(mts[s]) for s in subgraphs]), verts)]
-  )
-  return ITensorNetwork(vcat(env_tns, ITensorNetwork[central_tn]))
-end
-
-"""
-Calculate the contraction of a tensor network centred on the vertices verts. Using message tensors.
-Defaults to using tn[verts] as the local network but can be overriden
-"""
-function approx_network_region(
-  tn::ITensorNetwork,
-  mts::DataGraph,
-  verts::Vector;
-  verts_tn=ITensorNetwork([tn[v] for v in verts]),
+function environment_tensors(
+  ptn::PartitionedGraph, mts, partition_verts::Vector{<:PartitionVertex}
 )
-  environment_tn = get_environment(tn, mts, verts)
-
-  return environment_tn ⊗ verts_tn
+  return environment_tensors(ptn, mts, vertices(ptn, partition_verts))
 end

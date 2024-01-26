@@ -1,4 +1,7 @@
 default_edge_sequence_alg() = "forest_cover"
+function default_edge_sequence(pg::PartitionedGraph)
+  return PartitionEdge.(edge_sequence(partitioned_graph(pg)))
+end
 
 @traitfn default_bp_niters(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
 @traitfn function default_bp_niters(g::::IsDirected)
