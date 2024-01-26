@@ -425,18 +425,21 @@ function expect(
   operator::String,
   state::AbstractTTN;
   vertices=vertices(state),
-  root_vertex=default_root_vertex(siteinds(state)), #ToDo: verify that this is a sane default
+  # ToDo: verify that this is a sane default
+  root_vertex=default_root_vertex(siteinds(state)),
 )
   # ToDo: for performance it may be beneficial to also implement expect! and change the orthogonality center in place
   # assuming that the next algorithmic step can make use of the orthogonality center being moved to a different vertex
+  # ToDo: Verify that this is indeed the correct order for performance
   sites = siteinds(state)
-  ordered_vertices = reverse(post_order_dfs_vertices(sites, root_vertex)) #ToDo: Verify that this is indeed the correct order for performance
+  ordered_vertices = reverse(post_order_dfs_vertices(sites, root_vertex))
   res = Dictionary(vertices, undef)
   for v in ordered_vertices
     !(v in vertices) && continue
     state = orthogonalize(state, v)
     @assert isone(length(sites[v]))
-    op_v = op(operator, only(sites[v])) #ToDo: Add compatibility with more than a single index per vertex
+    #ToDo: Add compatibility with more than a single index per vertex
+    op_v = op(operator, only(sites[v]))
     res[v] = scalar(dag(state[v]) * apply(op_v, state[v]))
   end
   return mapreduce(typeof, promote_type, res).(res)
