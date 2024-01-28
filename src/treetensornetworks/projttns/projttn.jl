@@ -3,15 +3,16 @@ ProjTTN
 """
 struct ProjTTN{V} <: AbstractProjTTN{V}
   pos::Union{Vector{<:V},NamedEdge{V}} # TODO: cleanest way to specify effective Hamiltonian position?
-  H::TTN{V}
+  operator::AbstractTTN{V}
   environments::Dictionary{NamedEdge{V},ITensor}
 end
 
-function ProjTTN(H::TTN)
-  return ProjTTN(vertices(H), H, Dictionary{edgetype(H),ITensor}())
+function ProjTTN(operator::TTN)
+  return ProjTTN(vertices(operator), operator, Dictionary{edgetype(operator),ITensor}())
 end
 
-copy(P::ProjTTN) = ProjTTN(P.pos, copy(P.H), NamedGraphs.copy_keys_values(P.environments))
+copy(P::ProjTTN) = ProjTTN(pos(P), copy(operator(P)), copy_keys_values(environments(P)))
+unsafe_copy(P::ProjTTN) = ProjTTN(pos(P), copy(operator(P)), copy(environments(P)))
 
 # trivial if we choose to specify position as above; only kept to allow using alongside
 # ProjMPO
@@ -20,114 +21,83 @@ function set_nsite(P::ProjTTN, nsite)
 end
 
 function shift_position(P::ProjTTN, pos)
-  return ProjTTN(pos, P.H, P.environments)
+  return ProjTTN(pos, operator(P), environments(P))
 end
 
-set_environments(p::ProjTTN, environments) = ProjTTN(p.pos, p.H, environments)
-function set_environment(p::ProjTTN, env::ITensor, edge)
-  envs=merge( p.environments,Dictionary((edge,),(env,)) )
-  return ProjTTN(p.pos,p.H, envs)
+set_environments(p::ProjTTN, environments) = ProjTTN(pos(p), operator(p), environments)
+function set_environment(p::ProjTTN, edge, env)
+  newenvs = merge(environments(p), Dictionary((edge,), (env,)))
+  return ProjTTN(pos(p), operator(p), newenvs)
 end
+set_environment!(p::ProjTTN, edge, env) = set!(environments(p), edge, env)
 
-function make_environment!(P::ProjTTN{V}, psi::TTN{V}, e::NamedEdge{V})::ITensor where {V}
+function make_environment!(
+  P::ProjTTN{V}, state::AbstractTTN{V}, e::NamedEdge{V}
+)::ITensor where {V}
   # invalidate environment for opposite edge direction if necessary
-  reverse(e) ∈ incident_edges(P) || unset!(P.environments, reverse(e))
+  reverse(e) ∈ incident_edges(P) || unset!(environments(P), reverse(e))
   # do nothing if valid environment already present
-  if haskey(P.environments, e)
+  if haskey(environments(P), e)
     env = environment(P, e)
   else
-    env = _compute_environment!(P, psi, e)
-    set!(P.environments, e, env)
-  end
-  @assert(
-    hascommoninds(environment(P, e), psi[src(e)]),
-    "Something went wrong, probably re-orthogonalized this edge in the same direction twice!"
-  )
-  return env
-end
-
-function make_environment(P::ProjTTN{V}, psi::TTN{V}, e::NamedEdge{V})::ProjTTN{V} where {V}
-  # invalidate environment for opposite edge direction if necessary
-  #P=copy(P)
-  reverse(e) ∈ incident_edges(P) || (P = invalidate_environment(P, reverse(e)))
-  # do nothing if valid environment already present
-  if !haskey(P.environments, e)
     if is_leaf(underlying_graph(P), src(e))
       # leaves are easy
-      env = psi[src(e)] * P.H[src(e)] * dag(prime(psi[src(e)]))
+      env = state[src(e)] * operator(H)[src(e)] * dag(prime(state[src(e)]))
     else
       # construct by contracting neighbors
       neighbor_envs = ITensor[]
       for n in setdiff(neighbors(underlying_graph(P), src(e)), [dst(e)])
-        P = make_environment(P, psi, edgetype(P)(n, src(e)))
-        push!(neighbor_envs,environment(P,edgetype(P)(n, src(e))))
+        push!(neighbor_envs, make_environment!(P, state, edgetype(P)(n, src(e))))
       end
-      #@show typeof.(neighbor_env)
       # manually heuristic for contraction order: two environments, site tensors, then
       # other environments
       frst, scnd, rst = _separate_first_two(neighbor_envs)
-      itensor_map = vcat(psi[src(e)], frst, scnd, P.H[src(e)], dag(prime(psi[src(e)])), rst)
+      itensor_map = vcat(
+        state[src(e)], frst, scnd, operator(H)[src(e)], dag(prime(state[src(e)])), rst
+      )
       # TODO: actually use optimal contraction sequence here
       env = reduce(*, itensor_map)
     end
-    #@assert isa(env, ITensor)
-    #println("returning from _compute_environment")
-    #P=
-    P = set_environment(P, env, e) 
+    set!(environments(P), e, env)
   end
   @assert(
-    hascommoninds(environment(P, e), psi[src(e)]),
+    hascommoninds(environment(P, e), state[src(e)]),
     "Something went wrong, probably re-orthogonalized this edge in the same direction twice!"
   )
-  return P
-end
-
-function _compute_environment!(
-  P::ProjTTN{V}, psi::TTN{V}, e::NamedEdge{V}
-)::ITensor where {V}
-  if is_leaf(underlying_graph(P), src(e))
-    # leaves are easy
-    env = psi[src(e)] * P.H[src(e)] * dag(prime(psi[src(e)]))
-  else
-    # construct by contracting neighbors
-    neighbor_envs = ITensor[]
-    for n in setdiff(neighbors(underlying_graph(P), src(e)), [dst(e)])
-      push!(neighbor_envs, make_environment!(P, psi, edgetype(P)(n, src(e))))
-    end
-    # manually heuristic for contraction order: two environments, site tensors, then
-    # other environments
-    frst, scnd, rst = _separate_first_two(neighbor_envs)
-    itensor_map = vcat(psi[src(e)], frst, scnd, P.H[src(e)], dag(prime(psi[src(e)])), rst)
-    # TODO: actually use optimal contraction sequence here
-    env = reduce(*, itensor_map)
-  end
   return env
 end
 
-
-function _compute_environment(
-  P::ProjTTN{V}, psi::TTN{V}, e::NamedEdge{V}
+function make_environment(
+  P::ProjTTN{V}, state::AbstractTTN{V}, e::NamedEdge{V}
 )::ProjTTN{V} where {V}
-  if is_leaf(underlying_graph(P), src(e))
-    # leaves are easy
-    env = psi[src(e)] * P.H[src(e)] * dag(prime(psi[src(e)]))
-  else
-    # construct by contracting neighbors
-    neighbor_envs = ITensor[]
-    for n in setdiff(neighbors(underlying_graph(P), src(e)), [dst(e)])
-      P = make_environment(P, psi, edgetype(P)(n, src(e)))
-      push!(neighbor_envs,environment(P,edgetype(P)(n, src(e))))
+  # invalidate environment for opposite edge direction if necessary
+  reverse(e) ∈ incident_edges(P) || (P = invalidate_environment(P, reverse(e)))
+  # do nothing if valid environment already present
+  if !haskey(environments(P), e)
+    if is_leaf(underlying_graph(P), src(e))
+      # leaves are easy
+      env = state[src(e)] * operator(P)[src(e)] * dag(prime(state[src(e)]))
+    else
+      # construct by contracting neighbors
+      neighbor_envs = ITensor[]
+      for n in setdiff(neighbors(underlying_graph(P), src(e)), [dst(e)])
+        P = make_environment(P, state, edgetype(P)(n, src(e)))
+        push!(neighbor_envs, environment(P, edgetype(P)(n, src(e))))
+      end
+      # manually heuristic for contraction order: two environments, site tensors, then
+      # other environments
+      frst, scnd, rst = _separate_first_two(neighbor_envs)
+      itensor_map = vcat(
+        state[src(e)], frst, scnd, operator(P)[src(e)], dag(prime(state[src(e)])), rst
+      )
+      # TODO: actually use optimal contraction sequence here
+      env = reduce(*, itensor_map)
     end
-    #@show typeof.(neighbor_env)
-    # manually heuristic for contraction order: two environments, site tensors, then
-    # other environments
-    frst, scnd, rst = _separate_first_two(neighbor_envs)
-    itensor_map = vcat(psi[src(e)], frst, scnd, P.H[src(e)], dag(prime(psi[src(e)])), rst)
-    # TODO: actually use optimal contraction sequence here
-    env = reduce(*, itensor_map)
+    P = set_environment(P, e, env)
   end
-  #@assert isa(env, ITensor)
-  #println("returning from _compute_environment")
-  #P=
-  return set_environment(P, env, e) 
+  @assert(
+    hascommoninds(environment(P, e), state[src(e)]),
+    "Something went wrong, probably re-orthogonalized this edge in the same direction twice!"
+  )
+  return P
 end
