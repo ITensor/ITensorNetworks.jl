@@ -7,6 +7,8 @@ set_nsite(::AbstractProjTTN, nsite) = error("Not implemented")
 # silly constructor wrapper
 shift_position(::AbstractProjTTN, pos) = error("Not implemented")
 
+set_environments(p::AbstractProjTTN, environments) = error("Not implemented")
+set_environment(p::AbstractProjTTN, environment,edge)= error("Not implemented")
 make_environment!(::AbstractProjTTN, psi, e) = error("Not implemented")
 
 underlying_graph(P::AbstractProjTTN) = underlying_graph(P.H)
@@ -149,27 +151,30 @@ end
 function invalidate_environments(P::AbstractProjTTN)
   ie = internal_edges(P)
   newenvskeys = filter(!in(ie), keys(P.environments))
-  P = ProjTTN(P.pos, P.H, getindices(P.environments, newenvskeys))
+  P = set_environments(P, getindices(P.environments, newenvskeys))
   return P
 end
 
 function invalidate_environment(P::AbstractProjTTN{V}, e::NamedEdge{V}) where {V}
-  newenvskeys = filter(isequal(e), keys(P.environments))
-  P = ProjTTN(P.pos, P.H, getindices(P.environments, newenvskeys))
+  #@show keys(P.environments)
+  newenvskeys = filter(!isequal(e), keys(P.environments))
+  #@show newenvskeys
+  P = set_environments(P, getindices(P.environments, newenvskeys))
   return P
 end
 
-function make_environments(P::AbstractProjTTN{V}, psi::TTN{V}) where {V}
-  P = copy(P)
+function make_environments(P::AbstractProjTTN{V}, psi::AbstractTTN{V}) where {V}
+  P2=copy(P)
   for e in incident_edges(P)
-    set!(P.environments, e, make_environment(P, psi, e))
+    P2 = make_environment(P2,psi,e)
   end
-  return P
+  return P2
 end
 
-function make_environments!(P::AbstractProjTTN{V}, psi::TTN{V}) where {V}
+function make_environments!(P::AbstractProjTTN{V}, psi::AbstractTTN{V}) where {V}
   for e in incident_edges(P)
     make_environment!(P, psi, e)
   end
   return P
 end
+
