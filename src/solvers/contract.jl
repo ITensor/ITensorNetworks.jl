@@ -12,7 +12,7 @@ function contract_updater(
   v = ITensor(true)
   projected_operator = projected_operator![]
   for j in sites(projected_operator)
-    v *= projected_operator.psi0[j]
+    v *= init_state(projected_operator)[j]
   end
   vp = contract(projected_operator, v)
   return vp, (;)
