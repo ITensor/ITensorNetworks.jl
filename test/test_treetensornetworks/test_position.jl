@@ -1,6 +1,6 @@
 using ITensors
 using ITensorNetworks
-using ITensorNetworks: position
+using ITensorNetworks: position, environments
 using Test
 
 @testset "ProjTTN position copy-safe" begin
@@ -31,12 +31,41 @@ using Test
   psi = TTN(s, states)
 
   # actual test, verifies that position is copy safe
+  # ToDo: wrap tests so that a failing test does not influence the correctness of the subsequent ones
   vs = vertices(s)
-  PH0 = ProjTTN(H)
-  PH0 = position(PH0, psi, [vs[2]])
-  PH = copy(PH0)
-  PH = position(PH, psi, [vs[2], vs[5]])
-  @test keys(PH.environments) != keys(PH0.environments)
+  PH = ProjTTN(H)
+  PH = position(PH, psi, [vs[2]])
+  original_keys = deepcopy(keys(environments(PH)))
+  # test copy-safety of position
+  PHc = copy(PH)
+  PHc = position(PHc, psi, [vs[2], vs[5]])
+  @test keys(environments(PH)) == original_keys
+  @test keys(environments(PHc)) != original_keys
+  # test copy-safety of position!
+  PHc = copy(PH)
+  PHc = ITensorNetworks.position!(PHc, psi, [vs[2], vs[5]])
+  @test keys(environments(PH)) == original_keys
+  @test keys(environments(PHc)) != original_keys
+  # test out-of-placeness of position
+  PHc = position(PH, psi, [vs[2], vs[5]])
+  @test keys(environments(PH)) == original_keys
+  @test keys(environments(PHc)) != original_keys
+  # test in-placeness of position!
+  PHc = copy(PH)
+  ITensorNetworks.position!(PHc, psi, [vs[2], vs[5]])
+  @test keys(environments(PHc)) != original_keys
+  # test that position is copy, regardless of behaviour of Dictionaries (issue #98 in Dictionaries.jl)
+  PHc = ITensorNetworks.unsafe_copy(PH)
+  PHc = position(PHc, psi, [vs[2], vs[5]])
+  @test keys(environments(PH)) == original_keys
+  @test keys(environments(PHc)) != original_keys
+  # test that position! is itself not copysafe
+  # but that copy-safety is due to use of work around in implementation of copy
+  PHc = ITensorNetworks.unsafe_copy(PH)
+  ITensorNetworks.position!(PHc, psi, [vs[2], vs[5]])
+  @test_broken keys(environments(PH)) == original_keys  # make this a proper test once andyferris/Dictionaries.jl#98 is resolved
+  @test keys(environments(PHc)) != original_keys
+
   if !auto_fermion_enabled
     ITensors.disable_auto_fermion()
   end
