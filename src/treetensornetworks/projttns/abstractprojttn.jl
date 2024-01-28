@@ -160,20 +160,20 @@ function invalidate_environments(P::AbstractProjTTN)
   return P
 end
 
-function invalidate_environment(P::AbstractProjTTN{V}, e::NamedEdge{V}) where {V}
+function invalidate_environment(P::AbstractProjTTN, e::NamedEdge)
   newenvskeys = filter(!isequal(e), keys(environments(P)))
   P = set_environments(P, getindices(environments(P), newenvskeys))
   return P
 end
 
-function make_environments(P::AbstractProjTTN{V}, psi::AbstractTTN{V}) where {V}
+function make_environments(P::AbstractProjTTN, psi::AbstractTTN)
   for e in incident_edges(P)
     P = make_environment(P, psi, e)
   end
   return P
 end
 
-function make_environments!(P::AbstractProjTTN{V}, psi::AbstractTTN{V}) where {V}
+function make_environments!(P::AbstractProjTTN, psi::AbstractTTN)
   for e in incident_edges(P)
     make_environment!(P, psi, e)
   end
