@@ -22,7 +22,7 @@ function ITensorNetworks.contraction_sequence(
     merge!(sizedict, Dict(_inds .=> size(tensor)))
   end
 
-  _openinds = collect(ITensorNetworks.externalinds(tn))
+  _openinds = collect(externalinds(tn))
   expr = SizedEinExpr(sum(tensors; skip=_openinds), sizedict)
   path = einexpr(optimizer, expr)
 
