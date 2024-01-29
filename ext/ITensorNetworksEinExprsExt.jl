@@ -1,27 +1,34 @@
 module ITensorNetworksEinExprsExt
 
 using ITensorNetworks
-using EinExprs: EinExprs, EinExpr, einexpr
+using ITensorNetworks: Index
+using EinExprs: EinExprs, EinExpr, einexpr, SizedEinExpr
 
 function ITensorNetworks.contraction_sequence(
-  ::ITensorNetworks.Algorithm"einexpr", tn; optimizer=EinExprs.Exhaustive()
-)
-  tensor_map = IdDict(
-    map(pairs(vertex_data(tn))) do (key, tensor)
-      _inds = collect(ITensorNetworks.inds(tensor))
-      _size = Dict(_inds .=> size(tensor))
-      EinExpr(_inds, _size) => key
-    end,
-  )
-  tensors = collect(keys(tensor_map))
+  ::ITensorNetworks.Algorithm"einexpr",
+  tn::ITensorNetwork{T};
+  optimizer=EinExprs.Exhaustive(),
+) where {T}
+  IndexType = Any
+
+  tensors = EinExpr{IndexType}[]
+  tensor_map = Dict{Set{IndexType},T}()
+  sizedict = Dict{IndexType,Int}()
+
+  for (key, tensor) in pairs(vertex_data(tn))
+    _inds = collect(ITensorNetworks.inds(tensor))
+    push!(tensors, EinExpr{IndexType}(; head=_inds))
+    tensor_map[Set(_inds)] = key
+    merge!(sizedict, Dict(_inds .=> size(tensor)))
+  end
 
   _openinds = collect(ITensorNetworks.externalinds(tn))
-  expr = sum(tensors; skip=_openinds)
+  expr = SizedEinExpr(sum(tensors; skip=_openinds), sizedict)
   path = einexpr(optimizer, expr)
 
   function _convert_to_contraction_sequence(subpath)
-    length(subpath.args) == 0 && return tensor_map[subpath]
-    return map(_convert_to_contraction_sequence, subpath.args)
+    EinExprs.nargs(subpath) == 0 && return tensor_map[Set(subpath.head)]
+    return map(_convert_to_contraction_sequence, EinExprs.args(subpath))
   end
 
   return _convert_to_contraction_sequence(path)
