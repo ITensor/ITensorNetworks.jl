@@ -30,15 +30,13 @@ function shift_position(P::ProjTTN, pos)
 end
 
 set_environments(p::ProjTTN, environments) = ProjTTN(pos(p), operator(p), environments)
-set_environment(p::ProjTTN, edge, env)=set_environment!(copy(p),edge,env)
+set_environment(p::ProjTTN, edge, env) = set_environment!(copy(p), edge, env)
 function set_environment!(p::ProjTTN, edge, env)
   set!(environments(p), edge, env)
   return p
 end
 
-function make_environment(
-  P::ProjTTN, state::AbstractTTN, e::AbstractEdge
-)
+function make_environment(P::ProjTTN, state::AbstractTTN, e::AbstractEdge)
   # invalidate environment for opposite edge direction if necessary
   reverse(e) ∈ incident_edges(P) || (P = invalidate_environment(P, reverse(e)))
   # do nothing if valid environment already present

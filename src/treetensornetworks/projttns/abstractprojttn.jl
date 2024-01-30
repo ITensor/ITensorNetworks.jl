@@ -133,7 +133,7 @@ function Base.size(P::AbstractProjTTN)::Tuple{Int,Int}
   return (d, d)
 end
 
-function position( P::AbstractProjTTN, psi::AbstractTTN, pos)
+function position(P::AbstractProjTTN, psi::AbstractTTN, pos)
   P = shift_position(P, pos)
   P = invalidate_environments(P)
   P = make_environments(P, psi)

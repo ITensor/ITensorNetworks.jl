@@ -43,9 +43,7 @@ function set_environment!(p::ProjTTNApply, edge, env)
   return p
 end
 
-function make_environment(
-  P::ProjTTNApply, state::AbstractTTN, e::AbstractEdge
-)
+function make_environment(P::ProjTTNApply, state::AbstractTTN, e::AbstractEdge)
   # invalidate environment for opposite edge direction if necessary
   reverse(e) ∈ incident_edges(P) || (P = invalidate_environment(P, reverse(e)))
   # do nothing if valid environment already present
