@@ -33,11 +33,7 @@ function set_environments(p::ProjTTNApply, environments)
   return ProjTTNApply(pos(p), init_state(p), operator(p), environments)
 end
 
-function set_environment(p::ProjTTNApply, edge, env)
-  newenv = merge(p.environments, Dictionary((edge,), (env,)))
-  return ProjTTNApply(pos(p), init_state(p), operator(p), newenv)
-end
-
+set_environment(p::ProjTTNApply, edge, env) = set_environment!(copy(p), edge, env)
 function set_environment!(p::ProjTTNApply, edge, env)
   set!(environments(p), edge, env)
   return p
