@@ -106,15 +106,30 @@ end
 # apart and puts it back into the network.
 #
 
-function extract_local_tensor(state::AbstractTTN, pos::Vector)
-  return state, prod(state[v] for v in pos)
+function extract_prolog(state::AbstractTTN,region)
+  state = orthogonalize(state, current_ortho(region))
 end
 
-function extract_local_tensor(state::AbstractTTN, e::NamedEdge)
+function extract_epilog(state::AbstractTTN,projected_operator,region)
+  #nsites = (region isa AbstractEdge) ? 0 : length(region)
+  #projected_operator = set_nsite(projected_operator, nsites) #not necessary
+  projected_operator = position(projected_operator, state, region)
+  return projected_operator   #should it return only projected_operator
+end
+
+function extract_local_tensor(state::AbstractTTN, projected_operator, pos::Vector;extract_kwargs...)
+  state=extract_prolog(state,pos)
+  projected_operator=extract_epilog(state,projected_operator,pos)
+  return state, projected_operator, prod(state[v] for v in pos)
+end
+
+function extract_local_tensor(state::AbstractTTN, projected_operator, e::AbstractEdge;extract_kwargs...)
+  state=extract_prolog(state,e)
   left_inds = uniqueinds(state, e)
   U, S, V = svd(state[src(e)], left_inds; lefttags=tags(state, e), righttags=tags(state, e))
   state[src(e)] = U
-  return state, S * V
+  projected_operator=extract_epilog(state,projected_operator,e)
+  return state, projected_operator, S * V
 end
 
 # sort of multi-site replacebond!; TODO: use dense TTN constructor instead
@@ -169,6 +184,7 @@ current_ortho(::Type{<:Vector{<:V}}, st) where {V} = first(st)
 current_ortho(::Type{NamedEdge{V}}, st) where {V} = src(st)
 current_ortho(st) = current_ortho(typeof(st), st)
 
+
 function region_update(
   updater,
   projected_operator,
@@ -185,11 +201,7 @@ function region_update(
   updater_kwargs,
 )
   region = first(sweep_plan[which_region_update])
-  state = orthogonalize(state, current_ortho(region))
-  state, phi = extract_local_tensor(state, region;)
-  nsites = (region isa AbstractEdge) ? 0 : length(region) #ToDo move into separate funtion
-  projected_operator = set_nsite(projected_operator, nsites)
-  projected_operator = position(projected_operator, state, region)
+  state, projected_operator, phi = extract_local_tensor(state, projected_operator, region;)
   state! = Ref(state) # create references, in case solver does (out-of-place) modify PH or state
   projected_operator! = Ref(projected_operator)
   phi, info = updater(
