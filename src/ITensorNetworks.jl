@@ -20,7 +20,6 @@ using IterTools
 using KrylovKit: KrylovKit
 using LinearAlgebra
 using NamedGraphs
-
 using Observers
 using Observers.DataFrames: select!
 using Printf
@@ -34,7 +33,6 @@ using TimerOutputs
 
 using DataGraphs: IsUnderlyingGraph, edge_data_type, vertex_data_type
 using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
-using NamedGraphs: copy_keys_values
 using ITensors:
   @Algorithm_str,
   @debug_check,
