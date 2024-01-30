@@ -1,19 +1,3 @@
-
-function default_sweep_regions(nsites, graph::AbstractGraph; kwargs...)  ###move this to a different file, algorithmic level idea
-  return vcat(
-    [
-      half_sweep(
-        direction(half),
-        graph,
-        make_region;
-        nsites,
-        region_args=(; half_sweep=half),
-        kwargs...,
-      ) for half in 1:2
-    ]...,
-  )
-end
-
 function region_update_printer(;
   cutoff,
   maxdim,
@@ -56,7 +40,6 @@ function sweep_update(
   which_sweep::Int,
   sweep_params::NamedTuple,
   sweep_plan,
-  updater_kwargs,
 )
   insert_function!(region_observer!, "region_update_printer" => region_update_printer) #ToDo fix this
 
@@ -72,7 +55,7 @@ function sweep_update(
 
   for which_region_update in eachindex(sweep_plan)
     (region, region_kwargs) = sweep_plan[which_region_update]
-    region_kwargs = merge(region_kwargs, sweep_params)    # sweep params has precedence over step_kwargs
+    #region_kwargs = merge(region_kwargs, sweep_params)    # sweep params has precedence over step_kwargs
     state, projected_operator = region_update(
       solver,
       projected_operator,
@@ -84,7 +67,6 @@ function sweep_update(
       which_region_update,
       region_kwargs,
       region_observer!,
-      updater_kwargs,
     )
   end
 
@@ -221,7 +203,7 @@ function region_update(
     println("Solver returned the following types: $(typeof(phi)), $(typeof(info))")
     error("In alternating_update, solver must return an ITensor and a NamedTuple")
   end
-  normalize && (phi /= norm(phi))
+  haskey(insert_kwargs,:normalize) && ( insert_kwargs.normalize && (phi /= norm(phi)) )
 
   drho = nothing
   ortho = "left"    #i guess with respect to ordered vertices that's valid but may be cleaner to use next_region logic
@@ -234,12 +216,13 @@ function region_update(
     state,
     phi,
     region;
-    eigen_perturbation=drho,
-    ortho,
-    normalize,
-    maxdim=region_kwargs.maxdim,
-    mindim=region_kwargs.mindim,
-    cutoff=region_kwargs.cutoff,
+    insert_kwargs...
+    #eigen_perturbation=drho,
+    #ortho,
+    #normalize,
+    #maxdim=region_kwargs.maxdim,
+    #mindim=region_kwargs.mindim,
+    #cutoff=region_kwargs.cutoff,
   )
 
   update!(

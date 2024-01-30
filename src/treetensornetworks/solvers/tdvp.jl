@@ -30,31 +30,6 @@ function sub_time_steps(order)
   end
 end
 
-function tdvp_sweep_plan(
-  order::Int,
-  nsites::Int,
-  time_step::Number,
-  graph::AbstractGraph;
-  root_vertex=default_root_vertex(graph),
-  reverse_step=true,
-)
-  sweep_plan = []
-  for (substep, fac) in enumerate(sub_time_steps(order))
-    sub_time_step = time_step * fac
-    half = half_sweep(
-      direction(substep),
-      graph,
-      make_region;
-      root_vertex,
-      nsites,
-      region_args=(; substep, time_step=sub_time_step),
-      reverse_args=(; substep, time_step=-sub_time_step),
-      reverse_step,
-    )
-    append!(sweep_plan, half)
-  end
-  return sweep_plan
-end
 
 function tdvp(
   updater,

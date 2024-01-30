@@ -1,43 +1,5 @@
 
-function _extend_sweeps_param(param, nsweeps)
-  if param isa Number
-    eparam = fill(param, nsweeps)
-  else
-    length(param) >= nsweeps && return param[1:nsweeps]
-    eparam = Vector(undef, nsweeps)
-    eparam[1:length(param)] = param
-    eparam[(length(param) + 1):end] .= param[end]
-  end
-  return eparam
-end
-
-function process_sweeps(
-  nsweeps;
-  cutoff=fill(1E-16, nsweeps),
-  maxdim=fill(typemax(Int), nsweeps),
-  mindim=fill(1, nsweeps),
-  noise=fill(0.0, nsweeps),
-  kwargs...,
-)
-  maxdim = _extend_sweeps_param(maxdim, nsweeps)
-  mindim = _extend_sweeps_param(mindim, nsweeps)
-  cutoff = _extend_sweeps_param(cutoff, nsweeps)
-  noise = _extend_sweeps_param(noise, nsweeps)
-  return maxdim, mindim, cutoff, noise, kwargs
-end
-
-function sweep_printer(; outputlevel, state, which_sweep, sw_time)
-  if outputlevel >= 1
-    print("After sweep ", which_sweep, ":")
-    print(" maxlinkdim=", maxlinkdim(state))
-    print(" cpu_time=", round(sw_time; digits=3))
-    println()
-    flush(stdout)
-  end
-end
-
 function alternating_update(
-  updater,
   projected_operator,
   init_state::AbstractTTN;
   checkdone=(; kws...) -> false,
@@ -46,7 +8,7 @@ function alternating_update(
   (sweep_observer!)=observer(),
   sweep_printer=sweep_printer,
   write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
-  updater_kwargs,
+  #updater_kwargs,
   kwargs...,
 )
   maxdim, mindim, cutoff, noise, kwargs = process_sweeps(nsweeps; kwargs...)
@@ -65,21 +27,20 @@ function alternating_update(
       end
       projected_operator = disk(projected_operator)
     end
-    sweep_params = (;
-      maxdim=maxdim[which_sweep],
-      mindim=mindim[which_sweep],
-      cutoff=cutoff[which_sweep],
-      noise=noise[which_sweep],
-    )
+    #sweep_params = (;
+    #  maxdim=maxdim[which_sweep],
+    #  mindim=mindim[which_sweep],
+    #  cutoff=cutoff[which_sweep],
+    #  noise=noise[which_sweep],
+    #)
     sw_time = @elapsed begin
       state, projected_operator = sweep_update(
-        updater,
         projected_operator,
         state;
         outputlevel,
         which_sweep,
-        sweep_params,
-        updater_kwargs,
+        #sweep_params,
+        #updater_kwargs,
         kwargs...,
       )
     end
