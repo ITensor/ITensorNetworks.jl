@@ -1,10 +1,10 @@
 abstract type AbstractProjTTN{V} end
 
-#accessors for fields common to all concrete subtypes
-environments(p::AbstractProjTTN) = p.environments
-operator(p::AbstractProjTTN) = p.operator
-underlying_graph(P::AbstractProjTTN) = underlying_graph(operator(P))
-pos(P::AbstractProjTTN) = P.pos
+environments(::AbstractProjTTN) = error("Not implemented")
+operator(::AbstractProjTTN) = error("Not implemented")
+pos(::AbstractProjTTN) = error("Not implemented")
+
+underlying_graph(P::AbstractProjTTN) = error("Not implemented")
 
 copy(::AbstractProjTTN) = error("Not implemented")
 
@@ -48,7 +48,7 @@ function internal_edges(P::AbstractProjTTN{V})::Vector{NamedEdge{V}} where {V}
 end
 
 environment(P::AbstractProjTTN, edge::Pair) = environment(P, edgetype(P)(edge))
-function environment(P::AbstractProjTTN{V}, edge::NamedEdge{V})::ITensor where {V}
+function environment(P::AbstractProjTTN, edge::AbstractEdge)
   return environments(P)[edge]
 end
 
@@ -133,23 +133,10 @@ function Base.size(P::AbstractProjTTN)::Tuple{Int,Int}
   return (d, d)
 end
 
-function position(
-  P::AbstractProjTTN{V}, psi::AbstractTTN{V}, pos::Union{Vector{<:V},NamedEdge{V}}
-) where {V}
+function position( P::AbstractProjTTN, psi::AbstractTTN, pos)
   P = shift_position(P, pos)
   P = invalidate_environments(P)
   P = make_environments(P, psi)
-  return P
-end
-
-function position!(
-  P::AbstractProjTTN{V}, psi::AbstractTTN{V}, pos::Union{Vector{<:V},NamedEdge{V}}
-) where {V}
-  P = shift_position(P, pos)
-  for e in internal_edges(P)
-    unset!(P.environments, e)
-  end
-  make_environments!(P, psi)
   return P
 end
 
@@ -160,7 +147,7 @@ function invalidate_environments(P::AbstractProjTTN)
   return P
 end
 
-function invalidate_environment(P::AbstractProjTTN, e::NamedEdge)
+function invalidate_environment(P::AbstractProjTTN, e::AbstractEdge)
   newenvskeys = filter(!isequal(e), keys(environments(P)))
   P = set_environments(P, getindices(environments(P), newenvskeys))
   return P
@@ -171,10 +158,4 @@ function make_environments(P::AbstractProjTTN, psi::AbstractTTN)
     P = make_environment(P, psi, e)
   end
   return P
-end
-
-function make_environments!(P::AbstractProjTTN, psi::AbstractTTN)
-  for e in incident_edges(P)
-    make_environment!(P, psi, e)
-  end
 end
