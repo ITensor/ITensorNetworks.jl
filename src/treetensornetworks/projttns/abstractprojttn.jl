@@ -1,5 +1,11 @@
 abstract type AbstractProjTTN{V} end
 
+environments(::AbstractProjTTN) = error("Not implemented")
+operator(::AbstractProjTTN) = error("Not implemented")
+pos(::AbstractProjTTN) = error("Not implemented")
+
+underlying_graph(P::AbstractProjTTN) = error("Not implemented")
+
 copy(::AbstractProjTTN) = error("Not implemented")
 
 set_nsite(::AbstractProjTTN, nsite) = error("Not implemented")
@@ -7,11 +13,10 @@ set_nsite(::AbstractProjTTN, nsite) = error("Not implemented")
 # silly constructor wrapper
 shift_position(::AbstractProjTTN, pos) = error("Not implemented")
 
-make_environment!(::AbstractProjTTN, psi, e) = error("Not implemented")
-
-underlying_graph(P::AbstractProjTTN) = underlying_graph(P.H)
-
-pos(P::AbstractProjTTN) = P.pos
+set_environments(p::AbstractProjTTN, environments) = error("Not implemented")
+set_environment(p::AbstractProjTTN, edge, environment) = error("Not implemented")
+make_environment!(P::AbstractProjTTN, psi, e) = error("Not implemented")
+make_environment(P::AbstractProjTTN, psi, e) = error("Not implemented")
 
 Graphs.edgetype(P::AbstractProjTTN) = edgetype(underlying_graph(P))
 
@@ -43,8 +48,8 @@ function internal_edges(P::AbstractProjTTN{V})::Vector{NamedEdge{V}} where {V}
 end
 
 environment(P::AbstractProjTTN, edge::Pair) = environment(P, edgetype(P)(edge))
-function environment(P::AbstractProjTTN{V}, edge::NamedEdge{V})::ITensor where {V}
-  return P.environments[edge]
+function environment(P::AbstractProjTTN, edge::AbstractEdge)
+  return environments(P)[edge]
 end
 
 # there has to be a better way to do this...
@@ -69,9 +74,9 @@ function contract(P::AbstractProjTTN, v::ITensor)::ITensor
   else
     itensor_map = Union{ITensor,OneITensor}[] # TODO: will a Hamiltonian TTN tensor ever be a OneITensor?
     for s in sites(P)
-      site_envs = filter(hascommoninds(P.H[s]), environments)
+      site_envs = filter(hascommoninds(operator(P)[s]), environments)
       frst, scnd, rst = _separate_first_two(site_envs)
-      site_tensors = vcat(frst, scnd, P.H[s], rst)
+      site_tensors = vcat(frst, scnd, operator(P)[s], rst)
       append!(itensor_map, site_tensors)
     end
   end
@@ -103,9 +108,9 @@ end
 (P::AbstractProjTTN)(v::ITensor) = product(P, v)
 
 function Base.eltype(P::AbstractProjTTN)::Type
-  ElType = eltype(P.H(first(sites(P))))
+  ElType = eltype(operator(P)(first(sites(P))))
   for v in sites(P)
-    ElType = promote_type(ElType, eltype(P.H[v]))
+    ElType = promote_type(ElType, eltype(operator(P)[v]))
   end
   for e in incident_edges(P)
     ElType = promote_type(ElType, eltype(environments(P, e)))
@@ -121,25 +126,36 @@ function Base.size(P::AbstractProjTTN)::Tuple{Int,Int}
     end
   end
   for j in sites(P)
-    for i in inds(P.H[j])
+    for i in inds(operator(P)[j])
       plev(i) > 0 && (d *= dim(i))
     end
   end
   return (d, d)
 end
 
-function position(
-  P::AbstractProjTTN{V}, psi::TTN{V}, pos::Union{Vector{<:V},NamedEdge{V}}
-) where {V}
-  # shift position
+function position(P::AbstractProjTTN, psi::AbstractTTN, pos)
   P = shift_position(P, pos)
-  # invalidate environments corresponding to internal edges
-  for e in internal_edges(P)
-    unset!(P.environments, e)
-  end
-  # make all environments surrounding new position
+  P = invalidate_environments(P)
+  P = make_environments(P, psi)
+  return P
+end
+
+function invalidate_environments(P::AbstractProjTTN)
+  ie = internal_edges(P)
+  newenvskeys = filter(!in(ie), keys(environments(P)))
+  P = set_environments(P, getindices(environments(P), newenvskeys))
+  return P
+end
+
+function invalidate_environment(P::AbstractProjTTN, e::AbstractEdge)
+  newenvskeys = filter(!isequal(e), keys(environments(P)))
+  P = set_environments(P, getindices(environments(P), newenvskeys))
+  return P
+end
+
+function make_environments(P::AbstractProjTTN, psi::AbstractTTN)
   for e in incident_edges(P)
-    make_environment!(P, psi, e)
+    P = make_environment(P, psi, e)
   end
   return P
 end
