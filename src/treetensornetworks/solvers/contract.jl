@@ -6,7 +6,7 @@ function contract(
   init=random_ttn(
     flatten_external_indsnetwork(first(tn1s), first(tn2s));
     link_space=trivial_space(first(tn1s)),
-  ),  ##not generic yet
+  ),
   nsweeps=1,
   nsites=2, # used to be default of call to default_sweep_regions
   updater_kwargs=(;),

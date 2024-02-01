@@ -88,7 +88,7 @@ function contract(P::AbstractProjTTN, v::ITensor)::ITensor
   return Hv
 end
 
-function contract(P::AbstractProjTTN)::ITensor
+function contract(P::AbstractProjTTN)
   return error("Not implemented")
 end
 
@@ -109,7 +109,7 @@ function product(P::AbstractProjTTN, v::ITensor)::ITensor
   return noprime(Pv)
 end
 
-function product(P::AbstractProjTTN)::ITensor
+function product(P::AbstractProjTTN)
   return error("Not implemented")
 end
 

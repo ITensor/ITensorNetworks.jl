@@ -13,7 +13,6 @@ terms(P::ProjTTNSum) = P.terms
 
 copy(P::ProjTTNSum) = ProjTTNSum(copy.(terms(P)))
 
-#ToDo: Should we get rid of this one as well?
 ProjTTNSum(ttnos::Vector{<:TTN}) = ProjTTNSum([ProjTTN(M) for M in ttnos])
 
 on_edge(P::ProjTTNSum) = on_edge(terms(P)[1])
