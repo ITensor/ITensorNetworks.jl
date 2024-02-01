@@ -96,7 +96,7 @@ import ITensors:
   scalartype,
   #adding
   add
-  
+
 import ITensors.LazyApply:
   # extracting terms from a sum
   terms

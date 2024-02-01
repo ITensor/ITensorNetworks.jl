@@ -9,6 +9,6 @@ function contract_updater(
   region_kwargs,
   updater_kwargs,
 )
-  P=projected_operator![]
+  P = projected_operator![]
   return contract(P), (;)
 end

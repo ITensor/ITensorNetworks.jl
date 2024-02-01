@@ -89,7 +89,7 @@ function contract(P::AbstractProjTTN, v::ITensor)::ITensor
 end
 
 function contract(P::AbstractProjTTN)::ITensor
-  error("Not implemented")
+  return error("Not implemented")
 end
 
 function product(P::AbstractProjTTN, v::ITensor)::ITensor
@@ -110,7 +110,7 @@ function product(P::AbstractProjTTN, v::ITensor)::ITensor
 end
 
 function product(P::AbstractProjTTN)::ITensor
-  error("Not implemented")
+  return error("Not implemented")
 end
 
 (P::AbstractProjTTN)(v::ITensor) = product(P, v)

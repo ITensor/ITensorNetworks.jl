@@ -3,8 +3,8 @@ ProjTTNSum
 """
 struct ProjTTNSum{T<:AbstractProjTTN}
   terms::Vector{T}
- 
-  function  ProjTTNSum(terms::Vector{<:AbstractProjTTN})
+
+  function ProjTTNSum(terms::Vector{<:AbstractProjTTN})
     return new{eltype(terms)}(terms)
   end
 end
