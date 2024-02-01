@@ -20,7 +20,7 @@ on_edge(P::ProjTTNSum) = on_edge(terms(P)[1])
 nsite(P::ProjTTNSum) = nsite(terms(P)[1])
 
 function set_nsite(Ps::ProjTTNSum, nsite)
-  return ProjTTNSum(map(M -> set_nsite(M, nsite), Ps.terms))
+  return ProjTTNSum(map(p -> set_nsite(p, nsite), terms(Ps)))
 end
 
 underlying_graph(P::ProjTTNSum) = underlying_graph(terms(P)[1])
