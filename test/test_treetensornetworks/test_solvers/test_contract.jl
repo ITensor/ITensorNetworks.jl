@@ -46,16 +46,16 @@ using Test
     psit[j] *= delta(s[j], t[j])
   end
   # Test with nsweeps=3
-  Hpsi = apply(H, psi; alg="fit", init=psit, nsweeps=3)
+  Hpsi = contract(H, psi; alg="fit", init=psit, nsweeps=3)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
   # Test with less good initial guess MPS not equal to psi
   psi_guess = truncate(psit; maxdim=2)
-  Hpsi = apply(H, psi; alg="fit", nsweeps=4, init=psi_guess)
+  Hpsi = contract(H, psi; alg="fit", nsweeps=4, init=psi_guess)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with nsite=1
   Hpsi_guess = random_mps(t; internal_inds_space=32)
-  Hpsi = apply(H, psi; alg="fit", init=Hpsi_guess, nsites=1, nsweeps=4)
+  Hpsi = contract(H, psi; alg="fit", init=Hpsi_guess, nsites=1, nsweeps=4)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
 end
 
@@ -93,17 +93,17 @@ end
   H = replaceinds(H, prime(s; links=[]) => t)
 
   # Test with nsweeps=2
-  Hpsi = apply(H, psi; alg="fit", init=psit, nsweeps=2)
+  Hpsi = contract(H, psi; alg="fit", init=psit, nsweeps=2)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with less good initial guess MPS not equal to psi
   Hpsi_guess = truncate(psit; maxdim=2)
-  Hpsi = apply(H, psi; alg="fit", nsweeps=4, init=Hpsi_guess)
+  Hpsi = contract(H, psi; alg="fit", nsweeps=4, init=Hpsi_guess)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with nsite=1
   Hpsi_guess = random_ttn(t; link_space=4)
-  Hpsi = apply(H, psi; alg="fit", nsites=1, nsweeps=4, init=Hpsi_guess)
+  Hpsi = contract(H, psi; alg="fit", nsites=1, nsweeps=4, init=Hpsi_guess)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
 end
 
