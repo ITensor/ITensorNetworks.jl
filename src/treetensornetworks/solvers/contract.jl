@@ -1,17 +1,18 @@
 function contract(
   ::Algorithm"fit",
-  tn1s::Vector{<:AbstractTTN},
-  tn2s::Vector{<:AbstractTTN};
-  #ToDo: this default probably doesn't work with QNs?
-  init=random_ttn(
-    flatten_external_indsnetwork(first(tn1s), first(tn2s));
-    link_space=trivial_space(first(tn1s)),
-  ),
+  tns::Vector{<:Tuple{<:AbstractTTN,<:AbstractTTN}};
+  init,
+  #init=random_ttn(
+  #  flatten_external_indsnetwork(first(tn1s), first(tn2s));
+  #  link_space=trivial_space(first(tn1s)),
+  #),
   nsweeps=1,
   nsites=2, # used to be default of call to default_sweep_regions
   updater_kwargs=(;),
   kwargs...,
 )
+  tn1s = first.(tns)
+  tn2s = last.(tns)
   ns = nv.(tn1s)
   n = first(ns)
   any(ns .!= nv.(tn2s)) && throw(
@@ -59,7 +60,7 @@ function contract(
 end
 
 function contract(a::Algorithm"fit", tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
-  return contract(a, [tn1], [tn2]; kwargs...)
+  return contract(a, [(tn1, tn2)]; kwargs...)
 end
 
 """
@@ -69,23 +70,37 @@ function contract(tn1::AbstractTTN, tn2::AbstractTTN; alg="fit", kwargs...)
   return contract(Algorithm(alg), tn1, tn2; kwargs...)
 end
 
-function contract(
-  tn1s::Vector{<:AbstractTTN}, tn2s::Vector{<:AbstractTTN}; alg="fit", kwargs...
-)
-  return contract(Algorithm(alg), tn1s, tn2s; kwargs...)
-end
-
 """
 Overload of `ITensors.apply`.
 """
-function apply(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
-  tn12 = contract(tn1, tn2; kwargs...)
+function apply(tn1::AbstractTTN, tn2::AbstractTTN; init, kwargs...)
+  #plin=plev(first(externalinds(init)))
+  #outputindsnet=
+  #plout=plev(outputindsnet[first(vertices(outputindsnet))])
+  plev_inc = plev_diff(flatten_external_indsnetwork(tn1, tn2), external_indsnetwork(init))
+  init = prime(init, plev_inc)
+  tn12 = contract(tn1, tn2; init, kwargs...)
   return replaceprime(tn12, 1 => 0)
 end
 
-function apply(
-  tn1s::Vector{<:AbstractTTN}, tn2s::Vector{<:AbstractTTN}; alg="fit", kwargs...
+function sum_apply(
+  tns::Vector{<:Tuple{<:AbstractTTN,<:AbstractTTN}}; alg="fit", init, kwargs...
 )
-  tn12 = contract(tn1s, tn2s; alg="fit", kwargs...)
+  #plin=plev(first(externalinds(init)))
+  #outputindsnet = flatten_external_indsnetwork(first(tns), first(tn2s))
+  #plout=plev(outputindsnet[first(vertices(outputindsnet))])
+  plev_inc = plev_diff(
+    flatten_external_indsnetwork(first(first(tns)), last(first(tns))),
+    external_indsnetwork(init),
+  )
+  init = prime(init, plev_inc)
+  alg != "fit" && error("sum_apply not implemented for other algorithms than fit.")
+  tn12 = contract(Algorithm(alg), tns; init, kwargs...)
   return replaceprime(tn12, 1 => 0)
+end
+
+function plev_diff(a::IndsNetwork, b::IndsNetwork)
+  pla = plev(only(a[first(vertices(a))]))
+  plb = plev(only(b[first(vertices(b))]))
+  return pla - plb
 end

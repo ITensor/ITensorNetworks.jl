@@ -22,7 +22,7 @@ using Test
   H = mpo(os, s)
 
   # Test basic usage with default parameters
-  Hpsi = apply(H, psi; alg="fit", init=psi')
+  Hpsi = apply(H, psi; alg="fit", init=psi)
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
 
   # Test basic usage for use with multiple ProjTTNApply with default parameters
@@ -30,7 +30,9 @@ using Test
   os_id = OpSum()
   os_id += -1, "Id", 1, "Id", 2
   minus_identity = mpo(os_id, s)
-  Hpsi = apply([H, minus_identity], [psi, copy(psi)]; alg="fit", init=psi')
+  Hpsi = ITensorNetworks.sum_apply(
+    [(H, psi), (minus_identity, copy(psi))]; alg="fit", init=psi
+  )
   @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1E-5
 
   #
@@ -38,15 +40,14 @@ using Test
   #
   t = siteinds("S=1/2", N)
   psit = deepcopy(psi)
+
   for j in 1:N
     H[j] *= delta(s[j]', t[j])
     psit[j] *= delta(s[j], t[j])
   end
-
   # Test with nsweeps=3
-  Hpsi = apply(H, psi; alg="fit", nsweeps=3)
+  Hpsi = apply(H, psi; alg="fit", init=psit, nsweeps=3)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
-
   # Test with less good initial guess MPS not equal to psi
   psi_guess = truncate(psit; maxdim=2)
   Hpsi = apply(H, psi; alg="fit", nsweeps=4, init=psi_guess)
@@ -70,7 +71,7 @@ end
   H = TTN(os, s)
 
   # Test basic usage with default parameters
-  Hpsi = apply(H, psi; alg="fit")
+  Hpsi = apply(H, psi; alg="fit", init=psi)
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
 
   # Test basic usage for multiple ProjTTNApply with default parameters
@@ -78,7 +79,9 @@ end
   os_id = OpSum()
   os_id += -1, "Id", vertices(s)[1], "Id", vertices(s)[1]
   minus_identity = TTN(os_id, s)
-  Hpsi = apply([H, minus_identity], [psi, copy(psi)]; alg="fit", init=psi')
+  Hpsi = ITensorNetworks.sum_apply(
+    [(H, psi), (minus_identity, copy(psi))]; alg="fit", init=psi
+  )
   @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1E-5
 
   #
@@ -90,7 +93,7 @@ end
   H = replaceinds(H, prime(s; links=[]) => t)
 
   # Test with nsweeps=2
-  Hpsi = apply(H, psi; alg="fit", nsweeps=2)
+  Hpsi = apply(H, psi; alg="fit", init=psit, nsweeps=2)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with less good initial guess MPS not equal to psi

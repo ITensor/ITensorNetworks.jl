@@ -33,35 +33,18 @@ incident_edges(P::ProjTTNSum) = incident_edges(terms(P)[1])
 
 internal_edges(P::ProjTTNSum) = internal_edges(terms(P)[1])
 
-function product(P::ProjTTNSum, v::ITensor)::ITensor
-  Pv = product(terms(P)[1], v)
-  for n in 2:length(terms(P))
-    Pv += product(terms(P)[n], v)
-  end
-  return Pv
-end
+product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
 
-function contract(P::ProjTTNSum, v::ITensor)::ITensor
-  Pv = contract(terms(P)[1], v)
-  for n in 2:length(terms(P))
-    Pv += contract(terms(P)[n], v)
-  end
-  return Pv
-end
+contract(P::ProjTTNSum, v::ITensor)::ITensor = sum(p -> contract(p, v), terms(P))
 
 function Base.eltype(P::ProjTTNSum)
-  elT = eltype(terms(P)[1])
-  for n in 2:length(terms(P))
-    elT = promote_type(elT, eltype(terms(P)[n]))
-  end
-  return elT
+  return mapreduce(eltype, promote_type, terms(P))
 end
 
 (P::ProjTTNSum)(v::ITensor) = product(P, v)
 
 Base.size(P::ProjTTNSum) = size(terms(P)[1])
 
-#ToDo remove parametrization? 
-function position(P::ProjTTNSum, psi::TTN, pos)
+function position(P::ProjTTNSum, psi::AbstractTTN, pos)
   return ProjTTNSum(map(M -> position(M, psi, pos), terms(P)))
 end
