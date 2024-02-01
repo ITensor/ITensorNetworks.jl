@@ -2,7 +2,7 @@
 ProjTTNSum
 """
 struct ProjTTNSum{T<:AbstractProjTTN}
-  pm::Vector{T}  where T
+  pm::Vector{T} where {T}
   function ProjTTNSum(pm::Vector{T}) where {T}
     return new{T}(pm)
   end
@@ -13,12 +13,14 @@ copy(P::ProjTTNSum) = ProjTTNSum(copy.(P.pm))
 
 # The following constructors don't generalize well, maybe require to pass AbstractProjTTN instead of TTN and remove these? 
 ProjTTNSum(ttnos::Vector{<:TTN}) = ProjTTNSum([ProjTTN(M) for M in ttnos])
-function ProjTTNSum(init_states::Vector{<:TTN},ttnos::Vector{<:TTN})
-  return ProjTTNSum([ProjTTNApply(state,operator) for (state,operator) in zip(init_states,ttnos)])
+function ProjTTNSum(init_states::Vector{<:TTN}, ttnos::Vector{<:TTN})
+  return ProjTTNSum([
+    ProjTTNApply(state, operator) for (state, operator) in zip(init_states, ttnos)
+  ])
 end
 
 # This constructor can't differentiate between different concrete AbstractProjTTN, remove?
-ProjTTNSum(Ms::TTN{V}...) where {V} = ProjTTNSum([Ms...]) 
+ProjTTNSum(Ms::TTN{V}...) where {V} = ProjTTNSum([Ms...])
 
 on_edge(P::ProjTTNSum) = on_edge(P.pm[1])
 
@@ -59,8 +61,6 @@ end
 Base.size(P::ProjTTNSum) = size(P.pm[1])
 
 #ToDo remove parametrization? 
-function position(
-  P::ProjTTNSum, psi::TTN, pos
-)
+function position(P::ProjTTNSum, psi::TTN, pos)
   return ProjTTNSum(map(M -> position(M, psi, pos), P.pm))
 end
