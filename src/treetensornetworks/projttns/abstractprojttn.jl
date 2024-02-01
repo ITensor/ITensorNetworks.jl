@@ -88,6 +88,10 @@ function contract(P::AbstractProjTTN, v::ITensor)::ITensor
   return Hv
 end
 
+function contract(P::AbstractProjTTN)::ITensor
+  error("Not implemented")
+end
+
 function product(P::AbstractProjTTN, v::ITensor)::ITensor
   Pv = contract(P, v)
   if order(Pv) != order(v)
@@ -103,6 +107,10 @@ function product(P::AbstractProjTTN, v::ITensor)::ITensor
     )
   end
   return noprime(Pv)
+end
+
+function product(P::AbstractProjTTN)::ITensor
+  error("Not implemented")
 end
 
 (P::AbstractProjTTN)(v::ITensor) = product(P, v)

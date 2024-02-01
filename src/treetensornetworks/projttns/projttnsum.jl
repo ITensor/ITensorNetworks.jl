@@ -48,6 +48,14 @@ function product(P::ProjTTNSum, v::ITensor)::ITensor
   return Pv
 end
 
+function contract(P::ProjTTNSum)::ITensor
+  Pv = contract(P.pm[1])
+  for n in 2:length(P.pm)
+    Pv += contract(P.pm[n])
+  end
+  return Pv
+end
+
 function Base.eltype(P::ProjTTNSum)
   elT = eltype(P.pm[1])
   for n in 2:length(P.pm)

@@ -68,3 +68,11 @@ function make_environment(P::ProjTTN, state::AbstractTTN, e::AbstractEdge)
   )
   return P
 end
+
+function contract(P::ProjTTN)::ITensor
+  error("Not implemented")
+end
+
+function product(P::ProjTTN)::ITensor
+  error("Not implemented")
+end

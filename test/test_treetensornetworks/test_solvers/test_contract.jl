@@ -20,10 +20,18 @@ using Test
     os += "Sz", j, "Sz", j + 2
   end
   H = mpo(os, s)
-
+  
   # Test basic usage with default parameters
   Hpsi = apply(H, psi; alg="fit", init=psi')
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
+
+  # Test basic usage for use with multiple ProjTTNApply with default parameters
+  # BLAS.axpy-like test
+  os_id = OpSum()
+  os_id += -1, "Id", 1, "Id", 2
+  minus_identity = mpo(os_id,s)
+  Hpsi = apply([H,minus_identity], [psi,copy(psi)]; alg="fit", init=psi')
+  @test inner(psi, Hpsi) ≈ (inner(psi', H, psi)-norm(psi)^2) atol = 1E-5
 
   #
   # Change "top" indices of MPO to be a different set
@@ -49,6 +57,7 @@ using Test
   Hpsi = apply(H, psi; alg="fit", init=Hpsi_guess, nsites=1, nsweeps=4)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
 end
+
 
 @testset "Contract TTN" begin
   tooth_lengths = fill(2, 3)

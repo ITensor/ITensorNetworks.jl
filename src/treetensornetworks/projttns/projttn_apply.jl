@@ -71,3 +71,34 @@ function make_environment(P::ProjTTNApply, state::AbstractTTN, e::AbstractEdge)
   )
   return P
 end
+
+function contract(P::ProjTTNApply)::ITensor
+  environments = ITensor[environment(P, edge) for edge in incident_edges(P)]
+  # manual heuristic for contraction order fixing: for each site in ProjTTN, apply up to
+  # two environments, then TTN tensor, then other environments
+  if on_edge(P)
+    itensor_map = environments
+  else
+    itensor_map = Union{ITensor,OneITensor}[] # TODO: will a Hamiltonian TTN tensor ever be a OneITensor?
+    for s in sites(P)
+      site_envs = filter(hascommoninds(operator(P)[s]), environments)
+      frst, scnd, rst = _separate_first_two(site_envs)
+      site_tensors = vcat(frst, scnd, operator(P)[s], rst)
+      append!(itensor_map, site_tensors)
+    end
+  end
+  Hv = ITensor(true)
+  for j in sites(P)
+    Hv *= init_state(P)[j]
+  end
+  # TODO: actually use optimal contraction sequence here
+  for it in itensor_map
+    Hv *= it
+  end
+  return Hv
+end
+
+#ToDo: Is this a good idea?
+function product(P::ProjTTNApply)::ITensor
+  return noprime(contract(P::ProjTTNApply))
+end
