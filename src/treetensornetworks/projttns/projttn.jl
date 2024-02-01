@@ -69,10 +69,20 @@ function make_environment(P::ProjTTN, state::AbstractTTN, e::AbstractEdge)
   return P
 end
 
-function contract(P::ProjTTN)::ITensor
-  return error("Not implemented")
-end
-
-function product(P::ProjTTN)::ITensor
-  return error("Not implemented")
+function projected_operator_tensors(P::ProjTTN)
+  environments = ITensor[environment(P, edge) for edge in incident_edges(P)]
+  # manual heuristic for contraction order fixing: for each site in ProjTTN, apply up to
+  # two environments, then TTN tensor, then other environments
+  if on_edge(P)
+    itensor_map = environments
+  else
+    itensor_map = Union{ITensor,OneITensor}[] # TODO: will a Hamiltonian TTN tensor ever be a OneITensor?
+    for s in sites(P)
+      site_envs = filter(hascommoninds(operator(P)[s]), environments)
+      frst, scnd, rst = _separate_first_two(site_envs)
+      site_tensors = vcat(frst, scnd, operator(P)[s], rst)
+      append!(itensor_map, site_tensors)
+    end
+  end
+  return itensor_map
 end

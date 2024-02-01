@@ -65,31 +65,15 @@ function _separate_first_two(V::Vector)
   return frst, scnd, rst
 end
 
-function contract(P::AbstractProjTTN, v::ITensor)::ITensor
-  environments = ITensor[environment(P, edge) for edge in incident_edges(P)]
-  # manual heuristic for contraction order fixing: for each site in ProjTTN, apply up to
-  # two environments, then TTN tensor, then other environments
-  if on_edge(P)
-    itensor_map = environments
-  else
-    itensor_map = Union{ITensor,OneITensor}[] # TODO: will a Hamiltonian TTN tensor ever be a OneITensor?
-    for s in sites(P)
-      site_envs = filter(hascommoninds(operator(P)[s]), environments)
-      frst, scnd, rst = _separate_first_two(site_envs)
-      site_tensors = vcat(frst, scnd, operator(P)[s], rst)
-      append!(itensor_map, site_tensors)
-    end
-  end
-  # TODO: actually use optimal contraction sequence here
-  Hv = v
-  for it in itensor_map
-    Hv *= it
-  end
-  return Hv
-end
+projected_operator_tensors(P::AbstractProjTTN) = error("Not implemented.")
 
-function contract(P::AbstractProjTTN)
-  return error("Not implemented")
+#contract(P::AbstractProjTTN, v::ITensor)::ITensor = foldl(*,projected_operator_tensors(P);init=v)
+function contract(P::AbstractProjTTN, v::ITensor)::ITensor
+  itensor_map = projected_operator_tensors(P)
+  for t in itensor_map
+    v *= t
+  end
+  return v
 end
 
 function product(P::AbstractProjTTN, v::ITensor)::ITensor
@@ -107,10 +91,6 @@ function product(P::AbstractProjTTN, v::ITensor)::ITensor
     )
   end
   return noprime(Pv)
-end
-
-function product(P::AbstractProjTTN)
-  return error("Not implemented")
 end
 
 (P::AbstractProjTTN)(v::ITensor) = product(P, v)

@@ -41,10 +41,10 @@ function product(P::ProjTTNSum, v::ITensor)::ITensor
   return Pv
 end
 
-function contract(P::ProjTTNSum)::ITensor
-  Pv = contract(terms(P)[1])
+function contract(P::ProjTTNSum, v::ITensor)::ITensor
+  Pv = contract(terms(P)[1], v)
   for n in 2:length(terms(P))
-    Pv += contract(terms(P)[n])
+    Pv += contract(terms(P)[n], v)
   end
   return Pv
 end
