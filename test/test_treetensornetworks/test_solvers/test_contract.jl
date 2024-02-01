@@ -73,6 +73,14 @@ end
   # Test basic usage with default parameters
   Hpsi = apply(H, psi; alg="fit")
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
+  
+  # Test basic usage for multiple ProjTTNApply with default parameters
+  # BLAS.axpy-like test
+  os_id = OpSum()
+  os_id += -1, "Id", vertices(s)[1], "Id", vertices(s)[1]
+  minus_identity = TTN(os_id,s)
+  Hpsi = apply([H,minus_identity], [psi,copy(psi)]; alg="fit", init=psi')
+  @test inner(psi, Hpsi) ≈ (inner(psi', H, psi)-norm(psi)^2) atol = 1E-5
 
   #
   # Change "top" indices of TTN to be a different set
