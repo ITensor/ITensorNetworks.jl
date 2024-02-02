@@ -10,5 +10,5 @@ function contract_updater(
   updater_kwargs,
 )
   P = projected_operator![]
-  return contract_ket(P, ITensor(true)), (;)
+  return contract_ket(P, ITensor(one(Bool))), (;)
 end

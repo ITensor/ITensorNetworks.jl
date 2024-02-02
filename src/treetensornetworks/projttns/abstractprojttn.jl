@@ -101,6 +101,9 @@ function Base.eltype(P::AbstractProjTTN)::Type
   return ElType
 end
 
+vertextype(::Type{<:AbstractProjTTN{V}}) where {V} = V
+vertextype(p::AbstractProjTTN) = typeof(p)
+
 function Base.size(P::AbstractProjTTN)::Tuple{Int,Int}
   d = 1
   for e in incident_edges(P)

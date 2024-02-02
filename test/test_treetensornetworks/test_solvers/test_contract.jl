@@ -28,6 +28,10 @@ using Test
   Hfit = ProjOuterProdTTN(psi', H)
   Hpsi_via_dmrg = dmrg(Hfit, psi; updater_kwargs=(; which_eigval=:LR,), nsweeps=1)
   @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 atol = 1E-4
+  # Test whether the interface works for ProjTTNSum with factors
+  Hfit = ProjTTNSum([ProjOuterProdTTN(psi', H), ProjOuterProdTTN(psi', H)], [0.5, 0.5])
+  Hpsi_via_dmrg = dmrg(Hfit, psi; nsweeps=1, updater_kwargs=(; which_eigval=:LR,))
+  @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 atol = 1E-4
 
   # Test basic usage for use with multiple ProjOuterProdTTN with default parameters
   # BLAS.axpy-like test
@@ -35,9 +39,14 @@ using Test
   os_id += -1, "Id", 1, "Id", 2
   minus_identity = mpo(os_id, s)
   Hpsi = ITensorNetworks.sum_apply(
-    [(H, psi), (minus_identity, copy(psi))]; alg="fit", init=psi, nsweeps=1
+    [(H, psi), (minus_identity, psi)]; alg="fit", init=psi, nsweeps=1
   )
   @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1E-5
+
+  #Hpsi = ITensorNetworks.dmrg(
+  #  [(H, psi), (minus_identity, psi)]; alg="fit", init=psi, nsweeps=1
+  #)
+  #@test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1E-5
 
   #
   # Change "top" indices of MPO to be a different set
@@ -84,7 +93,7 @@ end
   os_id += -1, "Id", vertices(s)[1], "Id", vertices(s)[1]
   minus_identity = TTN(os_id, s)
   Hpsi = ITensorNetworks.sum_apply(
-    [(H, psi), (minus_identity, copy(psi))]; alg="fit", init=psi, nsweeps=1
+    [(H, psi), (minus_identity, psi)]; alg="fit", init=psi, nsweeps=1
   )
   @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1E-5
 

@@ -1,18 +1,25 @@
 """
 ProjTTNSum
 """
-struct ProjTTNSum{V} <: AbstractProjTTN{V}
-  terms::Vector{T} where {T<:AbstractProjTTN{V}}
-  function ProjTTNSum(terms::Vector{T}) where {V,T<:AbstractProjTTN{V}}
-    return new{V}(terms)
+struct ProjTTNSum{V,T<:AbstractProjTTN{V},Z<:Number} <: AbstractProjTTN{V}
+  terms::Vector{T}
+  factors::Vector{Z}
+  function ProjTTNSum(terms::Vector{<:AbstractProjTTN}, factors::Vector{<:Number})
+    return new{vertextype(eltype(terms)),eltype(terms),eltype(factors)}(terms, factors)
   end
 end
 
 terms(P::ProjTTNSum) = P.terms
+factors(P::ProjTTNSum) = P.factors
 
 copy(P::ProjTTNSum) = ProjTTNSum(copy.(terms(P)))
 
-ProjTTNSum(operators::Vector{<:AbstractTTN}) = ProjTTNSum(ProjTTN.(operators))
+function ProjTTNSum(operators::Vector{<:AbstractProjTTN})
+  return ProjTTNSum(operators, fill(1, length(operators)))
+end
+function ProjTTNSum(operators::Vector{<:AbstractTTN})
+  return ProjTTNSum(ProjTTN.(operators), fill(1, length(operators)))
+end
 
 on_edge(P::ProjTTNSum) = on_edge(terms(P)[1])
 
@@ -34,9 +41,15 @@ internal_edges(P::ProjTTNSum) = internal_edges(terms(P)[1])
 
 product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
 
-contract(P::ProjTTNSum, v::ITensor) = sum(p -> contract(p, v), terms(P))
+contract(P::ProjTTNSum, v::ITensor) =
+  mapreduce(+, zip(factors(P), terms(P))) do (f, p)
+    f * contract(p, v)
+  end
 
-contract_ket(P::ProjTTNSum, v::ITensor) = sum(p -> contract_ket(p, v), terms(P))
+contract_ket(P::ProjTTNSum, v::ITensor) =
+  mapreduce(+, zip(factors(P), terms(P))) do (f, p)
+    f * contract_ket(p, v)
+  end
 
 function Base.eltype(P::ProjTTNSum)
   return mapreduce(eltype, promote_type, terms(P))

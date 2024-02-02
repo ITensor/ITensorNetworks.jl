@@ -106,8 +106,8 @@ function contract_ket(P::ProjOuterProdTTN, v::ITensor)
   return v
 end
 
-# ToDo: debug this, not yet working
-# probably 
+# ToDo: verify conjugation etc. with complex AbstractTTN
 function contract(P::ProjOuterProdTTN, x::ITensor)
-  return conj(contract_ket(P, dag(x))) * contract_ket(P, ITensor(true))
+  ket = contract_ket(P, ITensor(one(Bool)))
+  return (dag(ket) * x) * ket
 end
