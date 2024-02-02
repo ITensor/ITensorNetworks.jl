@@ -9,11 +9,6 @@ function contract_updater(
   region_kwargs,
   updater_kwargs,
 )
-  v = ITensor(true)
-  projected_operator = projected_operator![]
-  for j in sites(projected_operator)
-    v *= init_state(projected_operator)[j]
-  end
-  vp = contract(projected_operator, v)
-  return vp, (;)
+  P = projected_operator![]
+  return contract_ket(P, ITensor(one(Bool))), (;)
 end

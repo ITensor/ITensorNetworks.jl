@@ -41,7 +41,7 @@ using Random
     x_c =
       random_mps(s; states, internal_inds_space=4) +
       0.1im * random_mps(s; states, internal_inds_space=2)
-    b = apply(H, x_c; alg="fit", nsweeps=3) #cutoff is unsupported kwarg for apply/contract
+    b = apply(H, x_c; alg="fit", nsweeps=3, init=x_c) #cutoff is unsupported kwarg for apply/contract
 
     x0 = random_mps(s; states, internal_inds_space=10)
     x = @test_broken linsolve(
