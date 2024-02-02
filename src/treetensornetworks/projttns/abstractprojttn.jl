@@ -76,7 +76,7 @@ function contract(P::AbstractProjTTN, v::ITensor)::ITensor
   return v
 end
 
-function product(P::AbstractProjTTN, v::ITensor)::ITensor
+function product(P::AbstractProjTTN, v::ITensor)
   Pv = contract(P, v)
   if order(Pv) != order(v)
     error(

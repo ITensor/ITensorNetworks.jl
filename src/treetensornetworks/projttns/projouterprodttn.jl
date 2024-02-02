@@ -107,6 +107,6 @@ function contract(P::ProjOuterProdTTN, x::ITensor)
   return conj(contract_ket(P, x)) * contract_ket(P, ITensor(true))
 end
 
-function product(P::ProjOuterProdTTN, v::ITensor)::ITensor
+function product(P::ProjOuterProdTTN, v::ITensor)
   return noprime(contract(P, v))
 end
