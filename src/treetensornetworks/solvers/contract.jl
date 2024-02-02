@@ -1,12 +1,8 @@
-function contract(
+function sum_contract(
   ::Algorithm"fit",
   tns::Vector{<:Tuple{<:AbstractTTN,<:AbstractTTN}};
   init,
-  #init=random_ttn(
-  #  flatten_external_indsnetwork(first(tn1s), first(tn2s));
-  #  link_space=trivial_space(first(tn1s)),
-  #),
-  nsweeps=1,
+  nsweeps,
   nsites=2, # used to be default of call to default_sweep_regions
   updater_kwargs=(;),
   kwargs...,
@@ -27,20 +23,19 @@ function contract(
       v = only(vertices(tn2))
       res += tn1[v] * tn2[v]
     end
-    typeof([res])
-    return nothing
+    return typeof(tn2)([res])
   end
 
   # check_hascommoninds(siteinds, tn1, tn2)
 
   # In case `tn1` and `tn2` have the same internal indices
-  PHs = ProjTTNApply{vertextype(first(tn1s))}[]
+  PHs = ProjOuterProdTTN{vertextype(first(tn1s))}[]
   for (tn1, tn2) in zip(tn1s, tn2s)
     tn1 = sim(linkinds, tn1)
 
     # In case `init` and `tn2` have the same internal indices
     init = sim(linkinds, init)
-    push!(PHs, ProjTTNApply(tn2, tn1))
+    push!(PHs, ProjOuterProdTTN(tn2, tn1))
   end
   PH = isone(length(PHs) == 1) ? only(PHs) : ProjTTNSum(PHs)
   # Fix site and link inds of init
@@ -60,7 +55,7 @@ function contract(
 end
 
 function contract(a::Algorithm"fit", tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
-  return contract(a, [(tn1, tn2)]; kwargs...)
+  return sum_contract(a, [(tn1, tn2)]; kwargs...)
 end
 
 """
@@ -99,8 +94,7 @@ function sum_apply(
   end
 
   init = init'
-  alg != "fit" && error("sum_apply not implemented for other algorithms than fit.")
-  tn12 = contract(Algorithm(alg), tns; init, kwargs...)
+  tn12 = sum_contract(Algorithm(alg), tns; init, kwargs...)
   return replaceprime(tn12, 1 => 0)
 end
 

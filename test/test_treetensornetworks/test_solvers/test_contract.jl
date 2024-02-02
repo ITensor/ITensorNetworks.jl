@@ -22,16 +22,16 @@ using Test
   H = mpo(os, s)
 
   # Test basic usage with default parameters
-  Hpsi = apply(H, psi; alg="fit", init=psi)
+  Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=1)
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
 
-  # Test basic usage for use with multiple ProjTTNApply with default parameters
+  # Test basic usage for use with multiple ProjOuterProdTTN with default parameters
   # BLAS.axpy-like test
   os_id = OpSum()
   os_id += -1, "Id", 1, "Id", 2
   minus_identity = mpo(os_id, s)
   Hpsi = ITensorNetworks.sum_apply(
-    [(H, psi), (minus_identity, copy(psi))]; alg="fit", init=psi
+    [(H, psi), (minus_identity, copy(psi))]; alg="fit", init=psi, nsweeps=1
   )
   @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1E-5
 
@@ -71,16 +71,16 @@ end
   H = TTN(os, s)
 
   # Test basic usage with default parameters
-  Hpsi = apply(H, psi; alg="fit", init=psi)
+  Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=1)
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
 
-  # Test basic usage for multiple ProjTTNApply with default parameters
+  # Test basic usage for multiple ProjOuterProdTTN with default parameters
   # BLAS.axpy-like test
   os_id = OpSum()
   os_id += -1, "Id", vertices(s)[1], "Id", vertices(s)[1]
   minus_identity = TTN(os_id, s)
   Hpsi = ITensorNetworks.sum_apply(
-    [(H, psi), (minus_identity, copy(psi))]; alg="fit", init=psi
+    [(H, psi), (minus_identity, copy(psi))]; alg="fit", init=psi, nsweeps=1
   )
   @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1E-5
 
@@ -121,7 +121,7 @@ end
   t2 = TreeTensorNetwork([M2[v] for v in eachindex(M2)])
 
   # Test with good initial guess
-  @test contract(t1, t2; alg="fit", init=t12_ref) ≈ t12_ref rtol = 1e-7
+  @test contract(t1, t2; alg="fit", init=t12_ref, nsweeps=1) ≈ t12_ref rtol = 1e-7
 end
 
 nothing

@@ -1,45 +1,47 @@
-struct ProjTTNApply{V} <: AbstractProjTTN{V}
+struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}
   pos::Union{Vector{<:V},NamedEdge{V}}
   init_state::TTN{V}
   operator::TTN{V}
   environments::Dictionary{NamedEdge{V},ITensor}
 end
 
-environments(p::ProjTTNApply) = p.environments
-operator(p::ProjTTNApply) = p.operator
-underlying_graph(p::ProjTTNApply) = underlying_graph(operator(p))
-pos(p::ProjTTNApply) = p.pos
-init_state(p::ProjTTNApply) = p.init_state
+environments(p::ProjOuterProdTTN) = p.environments
+operator(p::ProjOuterProdTTN) = p.operator
+underlying_graph(p::ProjOuterProdTTN) = underlying_graph(operator(p))
+pos(p::ProjOuterProdTTN) = p.pos
+init_state(p::ProjOuterProdTTN) = p.init_state
 
-function ProjTTNApply(init_state::AbstractTTN, operator::AbstractTTN)
-  return ProjTTNApply(
+function ProjOuterProdTTN(init_state::AbstractTTN, operator::AbstractTTN)
+  return ProjOuterProdTTN(
     vertextype(operator)[], init_state, operator, Dictionary{edgetype(operator),ITensor}()
   )
 end
 
-function copy(P::ProjTTNApply)
-  return ProjTTNApply(P.pos, copy(init_state(P)), copy(operator(P)), copy(environments(P)))
+function copy(P::ProjOuterProdTTN)
+  return ProjOuterProdTTN(
+    P.pos, copy(init_state(P)), copy(operator(P)), copy(environments(P))
+  )
 end
 
-function set_nsite(P::ProjTTNApply, nsite)
+function set_nsite(P::ProjOuterProdTTN, nsite)
   return P
 end
 
-function shift_position(P::ProjTTNApply, pos)
-  return ProjTTNApply(pos, init_state(P), operator(P), environments(P))
+function shift_position(P::ProjOuterProdTTN, pos)
+  return ProjOuterProdTTN(pos, init_state(P), operator(P), environments(P))
 end
 
-function set_environments(p::ProjTTNApply, environments)
-  return ProjTTNApply(pos(p), init_state(p), operator(p), environments)
+function set_environments(p::ProjOuterProdTTN, environments)
+  return ProjOuterProdTTN(pos(p), init_state(p), operator(p), environments)
 end
 
-set_environment(p::ProjTTNApply, edge, env) = set_environment!(copy(p), edge, env)
-function set_environment!(p::ProjTTNApply, edge, env)
+set_environment(p::ProjOuterProdTTN, edge, env) = set_environment!(copy(p), edge, env)
+function set_environment!(p::ProjOuterProdTTN, edge, env)
   set!(environments(p), edge, env)
   return p
 end
 
-function make_environment(P::ProjTTNApply, state::AbstractTTN, e::AbstractEdge)
+function make_environment(P::ProjOuterProdTTN, state::AbstractTTN, e::AbstractEdge)
   # invalidate environment for opposite edge direction if necessary
   reverse(e) ∈ incident_edges(P) || (P = invalidate_environment(P, reverse(e)))
   # do nothing if valid environment already present
@@ -72,7 +74,7 @@ function make_environment(P::ProjTTNApply, state::AbstractTTN, e::AbstractEdge)
   return P
 end
 
-function projected_operator_tensors(P::ProjTTNApply)
+function projected_operator_tensors(P::ProjOuterProdTTN)
   environments = ITensor[environment(P, edge) for edge in incident_edges(P)]
   # manual heuristic for contraction order fixing: for each site in ProjTTN, apply up to
   # two environments, then TTN tensor, then other environments
@@ -93,6 +95,18 @@ function projected_operator_tensors(P::ProjTTNApply)
   return itensor_map
 end
 
-function product(P::ProjTTNApply, v::ITensor)::ITensor
+function contract_ket(P::ProjOuterProdTTN, v::ITensor)
+  itensor_map = projected_operator_tensors(P)
+  for t in itensor_map
+    v *= t
+  end
+  return v
+end
+
+function contract(P::ProjOuterProdTTN, x::ITensor)
+  return conj(contract_ket(P, x)) * contract_ket(P, ITensor(true))
+end
+
+function product(P::ProjOuterProdTTN, v::ITensor)::ITensor
   return noprime(contract(P, v))
 end

@@ -1,11 +1,10 @@
 """
 ProjTTNSum
 """
-struct ProjTTNSum{T<:AbstractProjTTN}
-  terms::Vector{T}
-
-  function ProjTTNSum(terms::Vector{<:AbstractProjTTN})
-    return new{eltype(terms)}(terms)
+struct ProjTTNSum{V} <: AbstractProjTTN{V}
+  terms::Vector{AbstractProjTTN{V}}
+  function ProjTTNSum(terms::Vector{<:AbstractProjTTN{V}}) where {V}
+    return new{V}(terms)
   end
 end
 
@@ -36,6 +35,8 @@ internal_edges(P::ProjTTNSum) = internal_edges(terms(P)[1])
 product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
 
 contract(P::ProjTTNSum, v::ITensor)::ITensor = sum(p -> contract(p, v), terms(P))
+
+contract_ket(P::ProjTTNSum, v::ITensor)::ITensor = sum(p -> contract_ket(p, v), terms(P))
 
 function Base.eltype(P::ProjTTNSum)
   return mapreduce(eltype, promote_type, terms(P))
