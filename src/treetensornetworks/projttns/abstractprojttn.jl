@@ -102,7 +102,7 @@ function Base.eltype(P::AbstractProjTTN)::Type
 end
 
 vertextype(::Type{<:AbstractProjTTN{V}}) where {V} = V
-vertextype(p::AbstractProjTTN) = typeof(p)
+vertextype(p::AbstractProjTTN) = vertextype(typeof(p))
 
 function Base.size(P::AbstractProjTTN)::Tuple{Int,Int}
   d = 1

@@ -12,13 +12,13 @@ end
 terms(P::ProjTTNSum) = P.terms
 factors(P::ProjTTNSum) = P.factors
 
-copy(P::ProjTTNSum) = ProjTTNSum(copy.(terms(P)))
+copy(P::ProjTTNSum) = ProjTTNSum(copy.(terms(P)), copy(factors(P)))
 
 function ProjTTNSum(operators::Vector{<:AbstractProjTTN})
-  return ProjTTNSum(operators, fill(1, length(operators)))
+  return ProjTTNSum(operators, fill(one(Bool), length(operators)))
 end
 function ProjTTNSum(operators::Vector{<:AbstractTTN})
-  return ProjTTNSum(ProjTTN.(operators), fill(1, length(operators)))
+  return ProjTTNSum(ProjTTN.(operators))
 end
 
 on_edge(P::ProjTTNSum) = on_edge(terms(P)[1])
@@ -26,7 +26,7 @@ on_edge(P::ProjTTNSum) = on_edge(terms(P)[1])
 nsite(P::ProjTTNSum) = nsite(terms(P)[1])
 
 function set_nsite(Ps::ProjTTNSum, nsite)
-  return ProjTTNSum(map(p -> set_nsite(p, nsite), terms(Ps)))
+  return ProjTTNSum(map(p -> set_nsite(p, nsite), terms(Ps)), factors(Ps))
 end
 
 underlying_graph(P::ProjTTNSum) = underlying_graph(terms(P)[1])
@@ -41,15 +41,19 @@ internal_edges(P::ProjTTNSum) = internal_edges(terms(P)[1])
 
 product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
 
-contract(P::ProjTTNSum, v::ITensor) =
-  mapreduce(+, zip(factors(P), terms(P))) do (f, p)
+function contract(P::ProjTTNSum, v::ITensor)
+  res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
     f * contract(p, v)
   end
+  return res
+end
 
-contract_ket(P::ProjTTNSum, v::ITensor) =
-  mapreduce(+, zip(factors(P), terms(P))) do (f, p)
+function contract_ket(P::ProjTTNSum, v::ITensor)
+  res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
     f * contract_ket(p, v)
   end
+  return res
+end
 
 function Base.eltype(P::ProjTTNSum)
   return mapreduce(eltype, promote_type, terms(P))
@@ -60,5 +64,8 @@ end
 Base.size(P::ProjTTNSum) = size(terms(P)[1])
 
 function position(P::ProjTTNSum, psi::AbstractTTN, pos)
-  return ProjTTNSum(map(M -> position(M, psi, pos), terms(P)))
+  theterms = map(M -> position(M, psi, pos), terms(P))
+  #@show typeof(theterms)
+  #@show factors(P)
+  return ProjTTNSum(theterms, factors(P))
 end

@@ -29,8 +29,8 @@ using Test
   Hpsi_via_dmrg = dmrg(Hfit, psi; updater_kwargs=(; which_eigval=:LR,), nsweeps=1)
   @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 atol = 1E-4
   # Test whether the interface works for ProjTTNSum with factors
-  Hfit = ProjTTNSum([ProjOuterProdTTN(psi', H), ProjOuterProdTTN(psi', H)], [0.5, 0.5])
-  Hpsi_via_dmrg = dmrg(Hfit, psi; nsweeps=1, updater_kwargs=(; which_eigval=:LR,))
+  Hfit = ProjTTNSum([ProjOuterProdTTN(psi', H), ProjOuterProdTTN(psi', H)], [-0.2, -0.8])
+  Hpsi_via_dmrg = dmrg(Hfit, psi; nsweeps=1, updater_kwargs=(; which_eigval=:SR,))
   @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 atol = 1E-4
 
   # Test basic usage for use with multiple ProjOuterProdTTN with default parameters
@@ -38,15 +38,20 @@ using Test
   os_id = OpSum()
   os_id += -1, "Id", 1, "Id", 2
   minus_identity = mpo(os_id, s)
+  os_id = OpSum()
+  os_id += +1, "Id", 1, "Id", 2
+  identity = mpo(os_id, s)
   Hpsi = ITensorNetworks.sum_apply(
-    [(H, psi), (minus_identity, psi)]; alg="fit", init=psi, nsweeps=1
+    [(H, psi), (minus_identity, psi)]; alg="fit", init=psi, nsweeps=3
   )
   @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1E-5
-
-  #Hpsi = ITensorNetworks.dmrg(
-  #  [(H, psi), (minus_identity, psi)]; alg="fit", init=psi, nsweeps=1
-  #)
-  #@test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1E-5
+  # Test the above via DMRG
+  # ToDo: Investigate why this is broken
+  Hfit = ProjTTNSum([ProjOuterProdTTN(psi', H), ProjOuterProdTTN(psi', identity)], [-1, 1])
+  Hpsi_normalized = ITensorNetworks.dmrg(
+    Hfit, psi; nsweeps=3, updater_kwargs=(; which_eigval=:SR)
+  )
+  @test_broken abs(inner(Hpsi, (Hpsi_normalized) / norm(Hpsi))) ≈ 1 atol = 1E-5
 
   #
   # Change "top" indices of MPO to be a different set
