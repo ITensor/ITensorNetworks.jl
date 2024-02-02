@@ -22,7 +22,7 @@ end
 
 function copy(P::ProjOuterProdTTN)
   return ProjOuterProdTTN(
-    P.pos, copy(internal_state(P)), copy(operator(P)), copy(environments(P))
+    pos(P), copy(internal_state(P)), copy(operator(P)), copy(environments(P))
   )
 end
 
@@ -108,8 +108,4 @@ end
 
 function contract(P::ProjOuterProdTTN, x::ITensor)
   return conj(contract_ket(P, x)) * contract_ket(P, ITensor(true))
-end
-
-function product(P::ProjOuterProdTTN, v::ITensor)
-  return noprime(contract(P, v))
 end
