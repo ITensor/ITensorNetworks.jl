@@ -2,9 +2,9 @@
 ProjTTNSum
 """
 struct ProjTTNSum{V} <: AbstractProjTTN{V}
-  terms::Vector{AbstractProjTTN{V}}
-  function ProjTTNSum(terms::Vector{<:AbstractProjTTN})
-    return new{eltype(terms)}(terms)
+  terms::Vector{T} where {T<:AbstractProjTTN{V}}
+  function ProjTTNSum(terms::Vector{T}) where {V,T<:AbstractProjTTN{V}}
+    return new{V}(terms)
   end
 end
 

@@ -24,6 +24,10 @@ using Test
   # Test basic usage with default parameters
   Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=1)
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
+  # Test variational compression via DMRG
+  Hfit = ProjOuterProdTTN(psi', H)
+  Hpsi_via_dmrg = dmrg(Hfit, psi; updater_kwargs=(; which_eigval=:LR,), nsweeps=1)
+  @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 atol = 1E-4
 
   # Test basic usage for use with multiple ProjOuterProdTTN with default parameters
   # BLAS.axpy-like test

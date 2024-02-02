@@ -106,6 +106,8 @@ function contract_ket(P::ProjOuterProdTTN, v::ITensor)
   return v
 end
 
+# ToDo: debug this, not yet working
+# probably 
 function contract(P::ProjOuterProdTTN, x::ITensor)
-  return conj(contract_ket(P, x)) * contract_ket(P, ITensor(true))
+  return conj(contract_ket(P, dag(x))) * contract_ket(P, ITensor(true))
 end
