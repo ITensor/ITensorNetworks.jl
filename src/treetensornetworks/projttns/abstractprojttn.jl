@@ -67,8 +67,7 @@ end
 
 projected_operator_tensors(P::AbstractProjTTN) = error("Not implemented.")
 
-#contract(P::AbstractProjTTN, v::ITensor)::ITensor = foldl(*,projected_operator_tensors(P);init=v)
-function contract(P::AbstractProjTTN, v::ITensor)::ITensor
+function contract(P::AbstractProjTTN, v::ITensor)
   itensor_map = projected_operator_tensors(P)
   for t in itensor_map
     v *= t
