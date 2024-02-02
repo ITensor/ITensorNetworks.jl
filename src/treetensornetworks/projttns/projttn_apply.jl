@@ -1,6 +1,6 @@
 struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}
   pos::Union{Vector{<:V},NamedEdge{V}}
-  init_state::TTN{V}
+  internal_state::TTN{V}
   operator::TTN{V}
   environments::Dictionary{NamedEdge{V},ITensor}
 end
@@ -9,17 +9,17 @@ environments(p::ProjOuterProdTTN) = p.environments
 operator(p::ProjOuterProdTTN) = p.operator
 underlying_graph(p::ProjOuterProdTTN) = underlying_graph(operator(p))
 pos(p::ProjOuterProdTTN) = p.pos
-init_state(p::ProjOuterProdTTN) = p.init_state
+internal_state(p::ProjOuterProdTTN) = p.internal_state
 
-function ProjOuterProdTTN(init_state::AbstractTTN, operator::AbstractTTN)
+function ProjOuterProdTTN(internal_state::AbstractTTN, operator::AbstractTTN)
   return ProjOuterProdTTN(
-    vertextype(operator)[], init_state, operator, Dictionary{edgetype(operator),ITensor}()
+    vertextype(operator)[], internal_state, operator, Dictionary{edgetype(operator),ITensor}()
   )
 end
 
 function copy(P::ProjOuterProdTTN)
   return ProjOuterProdTTN(
-    P.pos, copy(init_state(P)), copy(operator(P)), copy(environments(P))
+    P.pos, copy(internal_state(P)), copy(operator(P)), copy(environments(P))
   )
 end
 
@@ -28,11 +28,11 @@ function set_nsite(P::ProjOuterProdTTN, nsite)
 end
 
 function shift_position(P::ProjOuterProdTTN, pos)
-  return ProjOuterProdTTN(pos, init_state(P), operator(P), environments(P))
+  return ProjOuterProdTTN(pos, internal_state(P), operator(P), environments(P))
 end
 
 function set_environments(p::ProjOuterProdTTN, environments)
-  return ProjOuterProdTTN(pos(p), init_state(p), operator(p), environments)
+  return ProjOuterProdTTN(pos(p), internal_state(p), operator(p), environments)
 end
 
 set_environment(p::ProjOuterProdTTN, edge, env) = set_environment!(copy(p), edge, env)
@@ -48,7 +48,7 @@ function make_environment(P::ProjOuterProdTTN, state::AbstractTTN, e::AbstractEd
   if !haskey(environments(P), e)
     if is_leaf(underlying_graph(P), src(e))
       # leaves are easy
-      env = init_state(P)[src(e)] * operator(P)[src(e)] * dag(state[src(e)])
+      env = internal_state(P)[src(e)] * operator(P)[src(e)] * dag(state[src(e)])
     else
       # construct by contracting neighbors
       neighbor_envs = ITensor[]
@@ -60,7 +60,7 @@ function make_environment(P::ProjOuterProdTTN, state::AbstractTTN, e::AbstractEd
       # other environments
       frst, scnd, rst = _separate_first_two(neighbor_envs)
       itensor_map = vcat(
-        init_state(P)[src(e)], frst, scnd, operator(P)[src(e)], dag(state[src(e)]), rst
+        internal_state(P)[src(e)], frst, scnd, operator(P)[src(e)], dag(state[src(e)]), rst
       ) # no prime here in comparison to the same routine for Projttn
       # TODO: actually use optimal contraction sequence here
       env = reduce(*, itensor_map)
@@ -80,7 +80,7 @@ function projected_operator_tensors(P::ProjOuterProdTTN)
   # two environments, then TTN tensor, then other environments
   itensor_map = Union{ITensor,OneITensor}[] # TODO: will a Hamiltonian TTN tensor ever be a OneITensor?
   for j in sites(P)
-    push!(itensor_map, init_state(P)[j])
+    push!(itensor_map, internal_state(P)[j])
   end
   if on_edge(P)
     append!(itensor_map, environments)
