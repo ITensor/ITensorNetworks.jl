@@ -13,7 +13,10 @@ internal_state(p::ProjOuterProdTTN) = p.internal_state
 
 function ProjOuterProdTTN(internal_state::AbstractTTN, operator::AbstractTTN)
   return ProjOuterProdTTN(
-    vertextype(operator)[], internal_state, operator, Dictionary{edgetype(operator),ITensor}()
+    vertextype(operator)[],
+    internal_state,
+    operator,
+    Dictionary{edgetype(operator),ITensor}(),
   )
 end
 

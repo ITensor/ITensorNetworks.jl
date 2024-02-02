@@ -34,9 +34,9 @@ internal_edges(P::ProjTTNSum) = internal_edges(terms(P)[1])
 
 product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
 
-contract(P::ProjTTNSum, v::ITensor)::ITensor = sum(p -> contract(p, v), terms(P))
+contract(P::ProjTTNSum, v::ITensor) = sum(p -> contract(p, v), terms(P))
 
-contract_ket(P::ProjTTNSum, v::ITensor)::ITensor = sum(p -> contract_ket(p, v), terms(P))
+contract_ket(P::ProjTTNSum, v::ITensor) = sum(p -> contract_ket(p, v), terms(P))
 
 function Base.eltype(P::ProjTTNSum)
   return mapreduce(eltype, promote_type, terms(P))
