@@ -1,22 +1,21 @@
 module ITensorNetworksEinExprsExt
 
-using ITensors: Index, ITensor
+using ITensors: Index, ITensor, Algorithm
 using ITensorNetworks:
   ITensorNetworks,
   ITensorNetwork,
   vertextype,
   vertex_data,
   externalinds,
-  contraction_sequence,
-  Algorithm
+  contraction_sequence
 using EinExprs: EinExprs, EinExpr, einexpr, SizedEinExpr
 
 function EinExprs.einexpr(tn::ITensorNetwork; optimizer::EinExprs.Optimizer)
   IndexType = Any
-  T = vertextype(tn)
+  VertexType = vertextype(tn)
 
   tensors = EinExpr{IndexType}[]
-  tensor_map = Dict{Set{IndexType},T}()
+  tensor_map = Dict{Set{IndexType},VertexType}()
   sizedict = Dict{IndexType,Int}()
 
   for (key, tensor) in pairs(vertex_data(tn))
@@ -42,10 +41,10 @@ function ITensorNetworks.contraction_sequence(
   ::Algorithm"einexpr", tn::ITensorNetwork{T}; optimizer=EinExprs.Exhaustive()
 )
   IndexType = Any
-  T = vertextype(tn)
+  VertexType = vertextype(tn)
 
   tensors = EinExpr{IndexType}[]
-  tensor_map = Dict{Set{IndexType},T}()
+  tensor_map = Dict{Set{IndexType},VertexType}()
   sizedict = Dict{IndexType,Int}()
 
   for (key, tensor) in pairs(vertex_data(tn))
