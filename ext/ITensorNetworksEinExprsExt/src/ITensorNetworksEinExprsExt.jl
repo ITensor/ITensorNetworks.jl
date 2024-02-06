@@ -46,13 +46,13 @@ end
 function ITensorNetworks.contraction_sequence(
   ::Algorithm"einexpr", tn::ITensorNetwork{T}; optimizer=EinExprs.Exhaustive()
 )
-  path, tensor_inds_to_vertex = prepare_einexpr(tn)
-  return to_contraction_sequence(tensor_inds_to_vertex, path)
+  expr, tensor_inds_to_vertex = to_einexpr(tn)
+  return to_contraction_sequence(tensor_inds_to_vertex, expr)
 end
 
-function to_contraction_sequence(tensor_inds_to_vertex, path)
-  EinExprs.nargs(path) == 0 && return tensor_inds_to_vertex[Set(path.head)]
-  return map(_convert_to_contraction_sequence, EinExprs.args(path))
+function to_contraction_sequence(tensor_inds_to_vertex, expr)
+  EinExprs.nargs(expr) == 0 && return tensor_inds_to_vertex[Set(expr.head)]
+  return map(_convert_to_contraction_sequence, EinExprs.args(expr))
 end
 
 end
