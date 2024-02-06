@@ -47,13 +47,12 @@ function ITensorNetworks.contraction_sequence(
   ::Algorithm"einexpr", tn::ITensorNetwork{T}; optimizer=EinExprs.Exhaustive()
 )
   path, tensor_map = prepare_einexpr(tn)
+  return to_contraction_sequence(tensor_map, path)
+end
 
-  function _convert_to_contraction_sequence(subpath)
-    EinExprs.nargs(subpath) == 0 && return tensor_map[Set(subpath.head)]
-    return map(_convert_to_contraction_sequence, EinExprs.args(subpath))
-  end
-
-  return _convert_to_contraction_sequence(path)
+function to_contraction_sequence(tensor_map, path)
+  EinExprs.nargs(path) == 0 && return tensor_map[Set(path.head)]
+  return map(_convert_to_contraction_sequence, EinExprs.args(path))
 end
 
 end
