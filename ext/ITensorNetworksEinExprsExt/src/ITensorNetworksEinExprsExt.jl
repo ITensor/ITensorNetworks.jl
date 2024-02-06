@@ -10,7 +10,7 @@ using ITensorNetworks:
   contraction_sequence
 using EinExprs: EinExprs, EinExpr, einexpr, SizedEinExpr
 
-function EinExprs.einexpr(tn::ITensorNetwork; optimizer::EinExprs.Optimizer)
+function prepare_einexpr(tn::ITensorNetwork)
   IndexType = Any
   VertexType = vertextype(tn)
 
@@ -29,6 +29,11 @@ function EinExprs.einexpr(tn::ITensorNetwork; optimizer::EinExprs.Optimizer)
   externalinds_tn = collect(externalinds(tn))
   expr = SizedEinExpr(sum(tensors; skip=externalinds_tn), sizedict)
 
+  return expr, tensor_map
+end
+
+function EinExprs.einexpr(tn::ITensorNetwork; optimizer::EinExprs.Optimizer)
+  expr, _ = prepare_einexpr(tn)
   return einexpr(optimizer, expr)
 end
 
@@ -41,25 +46,7 @@ end
 function ITensorNetworks.contraction_sequence(
   ::Algorithm"einexpr", tn::ITensorNetwork{T}; optimizer=EinExprs.Exhaustive()
 )
-  IndexType = Any
-  VertexType = vertextype(tn)
-
-  tensors = EinExpr{IndexType}[]
-  tensor_map = Dict{Set{IndexType},VertexType}()
-  sizedict = Dict{IndexType,Int}()
-
-  for v in vertices(tn)
-    tensor_v = tn[v]
-    inds_v = collect(inds(tensor_v))
-    push!(tensors, EinExpr{IndexType}(; head=inds_v))
-    tensor_map[Set(inds_v)] = key
-    merge!(sizedict, Dict(inds_v .=> size(tensor_v)))
-  end
-
-  externalinds_tn = collect(externalinds(tn))
-  expr = SizedEinExpr(sum(tensors; skip=externalinds_tn), sizedict)
-
-  path = einexpr(optimizer, expr)
+  path, tensor_map = prepare_einexpr(tn)
 
   function _convert_to_contraction_sequence(subpath)
     EinExprs.nargs(subpath) == 0 && return tensor_map[Set(subpath.head)]
