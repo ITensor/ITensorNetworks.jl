@@ -13,7 +13,7 @@ function EinExprs.einexpr(tn::ITensorNetwork{T}; optimizer::EinExprs.Optimizer) 
   sizedict = Dict{IndexType,Int}()
 
   for (key, tensor) in pairs(vertex_data(tn))
-    _inds = collect(ITensorNetworks.inds(tensor))
+    _inds = collect(inds(tensor))
     push!(tensors, EinExpr{IndexType}(; head=_inds))
     tensor_map[Set(_inds)] = key
     merge!(sizedict, Dict(_inds .=> size(tensor)))
@@ -43,7 +43,7 @@ function ITensorNetworks.contraction_sequence(
   sizedict = Dict{IndexType,Int}()
 
   for (key, tensor) in pairs(vertex_data(tn))
-    _inds = collect(ITensorNetworks.inds(tensor))
+    _inds = collect(inds(tensor))
     push!(tensors, EinExpr{IndexType}(; head=_inds))
     tensor_map[Set(_inds)] = key
     merge!(sizedict, Dict(_inds .=> size(tensor)))
