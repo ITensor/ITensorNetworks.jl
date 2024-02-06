@@ -52,7 +52,7 @@ end
 
 function to_contraction_sequence(expr, tensor_inds_to_vertex)
   EinExprs.nargs(expr) == 0 && return tensor_inds_to_vertex[Set(expr.head)]
-  return map(_convert_to_contraction_sequence, EinExprs.args(expr))
+  return map(to_contraction_sequence, EinExprs.args(expr))
 end
 
 end
