@@ -4,11 +4,7 @@ using ITensorNetworks
 using ITensorNetworks: Index
 using EinExprs: EinExprs, EinExpr, einexpr, SizedEinExpr
 
-function ITensorNetworks.contraction_sequence(
-  ::ITensorNetworks.Algorithm"einexpr",
-  tn::ITensorNetwork{T};
-  optimizer=EinExprs.Exhaustive(),
-) where {T}
+function EinExprs.einexpr(tn::ITensorNetwork{T}; optimizer::EinExprs.Optimizer) where {T}
   IndexType = Any
 
   tensors = EinExpr{IndexType}[]
@@ -24,7 +20,16 @@ function ITensorNetworks.contraction_sequence(
 
   _openinds = collect(externalinds(tn))
   expr = SizedEinExpr(sum(tensors; skip=_openinds), sizedict)
-  path = einexpr(optimizer, expr)
+
+  return einexpr(optimizer, expr)
+end
+
+function ITensorNetworks.contraction_sequence(
+  ::ITensorNetworks.Algorithm"einexpr",
+  tn::ITensorNetwork{T};
+  optimizer=EinExprs.Exhaustive(),
+) where {T}
+  path = einexpr(tn; optimizer)
 
   function _convert_to_contraction_sequence(subpath)
     EinExprs.nargs(subpath) == 0 && return tensor_map[Set(subpath.head)]
