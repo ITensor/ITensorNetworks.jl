@@ -5,8 +5,9 @@ using ITensorNetworks
 using ITensorNetworks: Index
 using EinExprs: EinExprs, EinExpr, einexpr, SizedEinExpr
 
-function EinExprs.einexpr(tn::ITensorNetwork{T}; optimizer::EinExprs.Optimizer) where {T}
+function EinExprs.einexpr(tn::ITensorNetwork; optimizer::EinExprs.Optimizer)
   IndexType = Any
+  T = vertextype(tn)
 
   tensors = EinExpr{IndexType}[]
   tensor_map = Dict{Set{IndexType},T}()
