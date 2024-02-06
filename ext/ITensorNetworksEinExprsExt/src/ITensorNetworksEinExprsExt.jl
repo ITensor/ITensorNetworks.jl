@@ -14,20 +14,20 @@ function prepare_einexpr(tn::ITensorNetwork)
   IndexType = Any
   VertexType = vertextype(tn)
 
-  tensors = EinExpr{IndexType}[]
+  tensor_exprs = EinExpr{IndexType}[]
   tensor_map = Dict{Set{IndexType},VertexType}()
   sizedict = Dict{IndexType,Int}()
 
   for v in vertices(tn)
     tensor_v = tn[v]
     inds_v = collect(inds(tensor_v))
-    push!(tensors, EinExpr{IndexType}(; head=inds_v))
+    push!(tensor_exprs, EinExpr{IndexType}(; head=inds_v))
     tensor_map[Set(inds_v)] = key
     merge!(sizedict, Dict(inds_v .=> size(tensor_v)))
   end
 
   externalinds_tn = collect(externalinds(tn))
-  expr = SizedEinExpr(sum(tensors; skip=externalinds_tn), sizedict)
+  expr = SizedEinExpr(sum(tensor_exprs; skip=externalinds_tn), sizedict)
 
   return expr, tensor_map
 end
