@@ -1,5 +1,6 @@
 module ITensorNetworksEinExprsExt
 
+using ITensors
 using ITensorNetworks
 using ITensorNetworks: Index
 using EinExprs: EinExprs, EinExpr, einexpr, SizedEinExpr
@@ -25,10 +26,9 @@ function EinExprs.einexpr(tn::ITensorNetwork{T}; optimizer::EinExprs.Optimizer) 
 end
 
 function ITensorNetworks.contraction_sequence(
-  ::ITensorNetworks.Algorithm"einexpr",
-  tn::ITensorNetwork{T};
-  optimizer=EinExprs.Exhaustive(),
-) where {T}
+  ::ITensorNetworks.Algorithm"einexpr", tn::Vector{ITensor}; optimizer=EinExprs.Exhaustive()
+)
+  tn = ITensorNetwork(tn)
   path = einexpr(tn; optimizer)
 
   function _convert_to_contraction_sequence(subpath)
