@@ -36,8 +36,9 @@ function ITensorNetworks.contraction_sequence(
   ::ITensorNetworks.Algorithm"einexpr",
   tn::ITensorNetwork{T};
   optimizer=EinExprs.Exhaustive(),
-) where {T}
+)
   IndexType = Any
+  T = vertextype(tn)
 
   tensors = EinExpr{IndexType}[]
   tensor_map = Dict{Set{IndexType},T}()
