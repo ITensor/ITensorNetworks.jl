@@ -10,7 +10,7 @@ using ITensorNetworks:
   contraction_sequence
 using EinExprs: EinExprs, EinExpr, einexpr, SizedEinExpr
 
-function prepare_einexpr(tn::ITensorNetwork)
+function to_einexpr(tn::ITensorNetwork)
   IndexType = Any
   VertexType = vertextype(tn)
 
@@ -33,7 +33,7 @@ function prepare_einexpr(tn::ITensorNetwork)
 end
 
 function EinExprs.einexpr(tn::ITensorNetwork; optimizer::EinExprs.Optimizer)
-  expr, _ = prepare_einexpr(tn)
+  expr, _ = to_einexpr(tn)
   return einexpr(optimizer, expr)
 end
 
