@@ -1,8 +1,14 @@
 module ITensorNetworksEinExprsExt
 
-using ITensors
-using ITensorNetworks
-using ITensorNetworks: Index
+using ITensors: Index, ITensor
+using ITensorNetworks:
+  ITensorNetworks,
+  ITensorNetwork,
+  vertextype,
+  vertex_data,
+  externalinds,
+  contraction_sequence,
+  Algorithm
 using EinExprs: EinExprs, EinExpr, einexpr, SizedEinExpr
 
 function EinExprs.einexpr(tn::ITensorNetwork; optimizer::EinExprs.Optimizer)
@@ -27,15 +33,13 @@ function EinExprs.einexpr(tn::ITensorNetwork; optimizer::EinExprs.Optimizer)
 end
 
 function ITensorNetworks.contraction_sequence(
-  alg::ITensorNetworks.Algorithm"einexpr", tn::Vector{ITensor}; kwargs...
+  alg::Algorithm"einexpr", tn::Vector{ITensor}; kwargs...
 )
   return contraction_sequence(alg, ITensorNetwork(tn); kwargs...)
 end
 
 function ITensorNetworks.contraction_sequence(
-  ::ITensorNetworks.Algorithm"einexpr",
-  tn::ITensorNetwork{T};
-  optimizer=EinExprs.Exhaustive(),
+  ::Algorithm"einexpr", tn::ITensorNetwork{T}; optimizer=EinExprs.Exhaustive()
 )
   IndexType = Any
   T = vertextype(tn)
