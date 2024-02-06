@@ -26,9 +26,16 @@ function EinExprs.einexpr(tn::ITensorNetwork{T}; optimizer::EinExprs.Optimizer) 
 end
 
 function ITensorNetworks.contraction_sequence(
-  ::ITensorNetworks.Algorithm"einexpr", tn::Vector{ITensor}; optimizer=EinExprs.Exhaustive()
+  alg::ITensorNetworks.Algorithm"einexpr", tn::Vector{ITensor}; kwargs...
 )
-  tn = ITensorNetwork(tn)
+  return contraction_sequence(alg, ITensorNetwork(tn); kwargs...)
+end
+
+function ITensorNetworks.contraction_sequence(
+  ::ITensorNetworks.Algorithm"einexpr",
+  tn::ITensorNetwork{T};
+  optimizer=EinExprs.Exhaustive(),
+) where {T}
   IndexType = Any
 
   tensors = EinExpr{IndexType}[]
