@@ -17,7 +17,7 @@ function to_einexpr(ts::Vector{ITensor})
     merge!(inds_dims, Dict(inds_v .=> size(tensor_v)))
   end
 
-  externalinds_tn = collect(noncommoninds(ts...))
+  externalinds_tn = reduce(noncommoninds, ts)
   return SizedEinExpr(sum(tensor_exprs; skip=externalinds_tn), inds_dims)
 end
 
