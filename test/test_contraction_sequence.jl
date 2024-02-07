@@ -30,13 +30,12 @@ ITensors.disable_warn_order()
   res_einexprs_greedy = contract(tn; sequence=seq_einexprs_exhaustive)[]
   seq_einexprs_kahypar = contraction_sequence(tn; alg="einexpr", optimizer=HyPar())
   res_einexprs_kahypar = contract(tn; sequence=seq_einexprs_kahypar)[]
-  @test res_optimal ≈
-    res_greedy ≈
-    res_tree_sa ≈
-    res_sa_bipartite ≈
-    res_einexprs_exhaustive ≈
-    res_einexprs_greedy ≈
-    res_einexprs_kahypar
+  @test res_greedy ≈ res_optimal
+  @test res_tree_sa ≈ res_optimal
+  @test res_sa_bipartite ≈ res_optimal
+  @test res_einexprs_exhaustive ≈ res_optimal
+  @test res_einexprs_greedy ≈ res_optimal
+  @test res_einexprs_kahypar ≈ res_optimal
 
   if !Sys.iswindows()
     # KaHyPar doesn't work on Windows
