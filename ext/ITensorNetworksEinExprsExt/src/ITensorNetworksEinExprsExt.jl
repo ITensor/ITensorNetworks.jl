@@ -32,27 +32,19 @@ function tensor_inds_to_vertex(ts::Vector{ITensor})
   return mapping
 end
 
-function EinExprs.einexpr(tn::ITensorNetwork; optimizer::EinExprs.Optimizer)
+function ITensorNetworks.contraction_sequence(
+  ::Algorithm"einexpr", tn::Vector{ITensor}; optimizer=EinExprs.Exhaustive()
+)
   expr = to_einexpr(tn)
-  return einexpr(optimizer, expr)
-end
-
-function ITensorNetworks.contraction_sequence(
-  alg::Algorithm"einexpr", tn::Vector{ITensor}; kwargs...
-)
-  return contraction_sequence(alg, ITensorNetwork(tn); kwargs...)
-end
-
-function ITensorNetworks.contraction_sequence(
-  ::Algorithm"einexpr", tn::ITensorNetwork{T}; optimizer=EinExprs.Exhaustive()
-)
-  expr = einexpr(tn; optimizer)
-  return to_contraction_sequence(expr, tensor_inds_to_vertex(tn))
+  path = einexpr(expr; kwargs...)
+  return to_contraction_sequence(path, tensor_inds_to_vertex(tn))
 end
 
 function to_contraction_sequence(expr, tensor_inds_to_vertex)
   EinExprs.nargs(expr) == 0 && return tensor_inds_to_vertex[Set(expr.head)]
-  return map(expr -> to_contraction_sequence(expr, tensor_inds_to_vertex), EinExprs.args(expr))
+  return map(
+    expr -> to_contraction_sequence(expr, tensor_inds_to_vertex), EinExprs.args(expr)
+  )
 end
 
 end
