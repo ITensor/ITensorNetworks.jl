@@ -1,10 +1,11 @@
-struct QuadraticForm{V,KetMap,BraMap,OperatorMap,SpaceMap} <:
-       AbstractForm{V,KetMap,BraMap,OperatorMap,SpaceMap}
+struct QuadraticForm{V,KetMap,BraMap,OperatorMap,VectorSpaceMap,LinkSpaceMap} <:
+       AbstractForm{V,KetMap,BraMap,OperatorMap,VectorSpaceMap}
   tn::ITensorNetwork{V}
   bra_vs_map::BraMap
   ket_vs_map::KetMap
   operator_vs_map::OperatorMap
-  dual_space_map::SpaceMap
+  dual_space_map::VectorSpaceMap
+  link_space_map::LinkSpaceMap
 end
 
 #Needed for implementation
@@ -17,22 +18,22 @@ data_graph_type(::Type{<:QuadraticForm}) = data_graph_type(tensornetwork(qf))
 data_graph(qf::QuadraticForm) = data_graph(tensornetwork(qf))
 
 function QuadraticForm(
-  bra::ITensorNetwork, operator::ITensorNetwork; link_space_map=default_index_map, kwargs...
+  ket::ITensorNetwork, operator::ITensorNetwork; link_space_map=default_index_map, kwargs...
 )
-  ket = link_space_map(dag(bra); sites=[])
-  return Form(bra, operator, ket; form_type="Quadratic", kwargs...)
+  bra = link_space_map(dag(ket); sites=[])
+  return Form(bra, operator, ket; form_type="Quadratic", link_space_map, kwargs...)
 end
 
 function QuadraticForm(
-  bra::ITensorNetwork;
+  ket::ITensorNetwork;
   dual_space_map=default_index_map,
   tno_constructor=default_tno_constructor,
   kwargs...,
 )
-  s = siteinds(bra)
+  s = siteinds(ket)
   operator_space = union_all_inds(s, dual_space_map(s; links=[]))
   operator = tno_constructor(operator_space)
-  return QuadraticForm(bra, operator; kwargs...)
+  return QuadraticForm(ket, operator; kwargs...)
 end
 
 function bra_ket_vertices(qf::QuadraticForm, state_vertices::Vector)
@@ -58,4 +59,12 @@ function gradient(
   tn_vertices = setdiff(vertices(qf), vcat(qf_bra_vertices, qf_ket_vertices))
   reduced_tn, _ = induced_subgraph(tensornetwork(qf), tn_vertices)
   return contract(reduced_tn, contractor_kwargs...)
+end
+
+function update_qf!(qf::QuadraticForm, state_vertex, state::ITensor)
+  setindex_preserve_graph!(tensornetwork(qf)[ket_map(state_vertex)], state, state_vertex)
+  #Change to be consistent with dual space map and link space map. How can we do this elegantly??
+  return setindex_preserve_graph!(
+    tensornetwork(qf)[bra_map(state_vertex)], prime(dag(state)), state_vertex
+  )
 end

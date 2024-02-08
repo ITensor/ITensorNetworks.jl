@@ -5,12 +5,13 @@ function Form(
   operator::ITensorNetwork,
   ket::ITensorNetwork;
   dual_space_map=default_index_map,
+  link_space_map=default_index_map,
   bra_vertex_map=default_bra_vertex_map,
   ket_vertex_map=default_ket_vertex_map,
   operator_vertex_map=default_operator_vertex_map,
   form_type=default_form_type,
 )
-  dual_map = map(dual_space_map, Indices(externalinds(bra)))
+  dual_map = map(dual_space_map, Indices(externalinds(ket)))
 
   @assert Set(externalinds(bra)) == Set(externalinds(ket))
   @assert Set(externalinds(operator)) ==
@@ -26,14 +27,17 @@ function Form(
   bra_renamed = rename_vertices_itn(bra, bra_vs_map)
   ket_renamed = rename_vertices_itn(ket, ket_vs_map)
   operator_renamed = rename_vertices_itn(operator, operator_vs_map)
-  ket_renamed_dual = map_inds(dual_space_map, ket_renamed; links=[])
+  bra_renamed_dual = map_inds(dual_space_map, bra_renamed; links=[])
 
-  tn = union(union(bra_renamed, operator_renamed), ket_renamed_dual)
+  tn = union(union(bra_renamed_dual, operator_renamed), ket_renamed)
 
   if form_type == "Bilinear"
     return BilinearForm(tn, bra_vs_map, ket_vs_map, operator_vs_map, dual_map)
   elseif form_type == "Quadratic"
-    return QuadraticForm(tn, bra_vs_map, ket_vs_map, operator_vs_map, dual_map)
+    link_map = map(link_space_map, Indices(internalinds(ket)))
+    return QuadraticForm(
+      tn, bra_vs_map, ket_vs_map, operator_vs_map, dual_map, link_space_map
+    )
   else
     return error("Form type not supported")
   end
