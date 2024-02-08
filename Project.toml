@@ -67,6 +67,7 @@ julia = "1.7"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+EinExprs = "b1794770-133b-4de1-afb4-526377e9f4c5"
 
 [targets]
 test = ["Test"]
