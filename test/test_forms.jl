@@ -3,13 +3,7 @@ using Graphs
 using NamedGraphs
 using ITensorNetworks
 using ITensorNetworks:
-  delta_network,
-  gradient,
-  update,
-  tensornetwork,
-  bra_vertex_map,
-  ket_vertex_map,
-  dual_index_map
+  delta_network, update, tensornetwork, bra_vertex_map, ket_vertex_map, dual_index_map
 using Test
 using Random
 
