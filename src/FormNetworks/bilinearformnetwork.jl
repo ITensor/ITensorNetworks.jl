@@ -7,18 +7,18 @@ struct BilinearFormNetwork{
   V,TensorNetwork<:AbstractITensorNetwork{V},BraMap,KetMap,OperatorMap
 } <: AbstractFormNetwork{V}
   tensornetwork::TensorNetwork
+  operator_vertex_map::OperatorMap
   bra_vertex_map::BraMap
   ket_vertex_map::KetMap
-  operator_vertex_map::OperatorMap
 end
 
 function BilinearFormNetwork(
   operator::AbstractITensorNetwork,
   bra::AbstractITensorNetwork,
   ket::AbstractITensorNetwork;
-  bra_vertex_map=default_bra_vertex_map,
-  ket_vertex_map=default_ket_vertex_map,
   operator_vertex_map=default_operator_vertex_map,
+  bra_vertex_map=default_bra_vertex_map,
+  ket_vertex_map=default_ket_vertex_map
 )
 
   # TODO: Reminder to fix `rename_vertices(::AbstractITensorNetwork)`.
