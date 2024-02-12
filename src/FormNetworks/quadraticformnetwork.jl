@@ -1,4 +1,5 @@
 default_index_map = prime
+default_inv_index_map = noprime
 
 struct QuadraticFormNetwork{V,FormNetwork<:BilinearFormNetwork{V},IndexMap} <:
        AbstractFormNetwork{V}
@@ -21,9 +22,9 @@ end
 
 #Needed for implementation, forward from bilinear form
 for f in [
-  :bra_vertex_map,
-  :ket_vertex_map,
-  :operator_vertex_map,
+  :operator_vertex_suffix,
+  :bra_vertex_suffix,
+  :ket_vertex_suffix,
   :tensornetwork,
   :data_graph,
   :data_graph_type,
@@ -51,14 +52,11 @@ function QuadraticFormNetwork(
 end
 
 function QuadraticFormNetwork(
-  ket::AbstractITensorNetwork;
-  dual_index_map=default_index_map,
-  operator_constructor=default_operator_constructor,
-  kwargs...,
+  ket::AbstractITensorNetwork; dual_index_map=default_index_map, kwargs...
 )
   s = siteinds(ket)
-  operator_space = union_all_inds(s, dual_index_map(s; links=[]))
-  operator = operator_constructor(operator_space)
+  operator_inds = union_all_inds(s, dual_index_map(s; links=[]))
+  operator = delta_network(operator_inds)
   return QuadraticFormNetwork(operator, ket; kwargs...)
 end
 

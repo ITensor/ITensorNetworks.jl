@@ -1,14 +1,17 @@
+default_bra_vertex_suffix() = "bra"
+default_ket_vertex_suffix() = "ket"
+default_operator_vertex_suffix() = "operator"
+
 abstract type AbstractFormNetwork{V} <: AbstractITensorNetwork{V} end
 
 #Needed for interface
-bra_vertex_map(f::AbstractFormNetwork) = not_implemented()
-ket_vertex_map(f::AbstractFormNetwork) = not_implemented()
-operator_vertex_map(f::AbstractFormNetwork) = not_implemented()
 dual_index_map(f::AbstractFormNetwork) = not_implemented()
 tensornetwork(f::AbstractFormNetwork) = not_implemented()
 copy(f::AbstractFormNetwork) = not_implemented()
-derivative_vertices(f::AbstractFormNetwork) = not_implemented()
 bra_ket_vertices(f::AbstractFormNetwork, state_vertices::Vector) = not_implemented()
+operator_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
+bra_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
+ket_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
 
 bra(f::AbstractFormNetwork) = induced_subgraph(f, collect(values(bra_vertex_map(f))))
 ket(f::AbstractFormNetwork) = induced_subgraph(f, collect(values(ket_vertex_map(f))))
@@ -34,3 +37,7 @@ function derivative_vertices(f::AbstractFormNetwork, state_vertices::Vector; kwa
     vertices(f), vcat(bra_vertices(f, state_vertices), ket_vertices(f, state_vertices))
   )
 end
+
+operator_vertex_map(f::AbstractFormNetwork) = v -> (v, operator_vertex_suffix(f))
+bra_vertex_map(f::AbstractFormNetwork) = v -> (v, bra_vertex_suffix(f))
+ket_vertex_map(f::AbstractFormNetwork) = v -> (v, ket_vertex_suffix(f))

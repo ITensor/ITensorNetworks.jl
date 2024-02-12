@@ -1,41 +1,35 @@
-default_bra_vertex_map(v) = (v, "bra")
-default_ket_vertex_map(v) = (v, "ket")
-default_operator_vertex_map(v) = (v, "operator")
-default_operator_constructor(s::IndsNetwork) = delta_network(s)
-
 struct BilinearFormNetwork{
-  V,TensorNetwork<:AbstractITensorNetwork{V},BraMap,KetMap,OperatorMap
+  V,
+  TensorNetwork<:AbstractITensorNetwork{V},
+  OperatorVertexSuffix,
+  BraVertexSuffix,
+  KetVertexSuffix,
 } <: AbstractFormNetwork{V}
   tensornetwork::TensorNetwork
-  operator_vertex_map::OperatorMap
-  bra_vertex_map::BraMap
-  ket_vertex_map::KetMap
+  operator_vertex_suffix::OperatorVertexSuffix
+  bra_vertex_suffix::BraVertexSuffix
+  ket_vertex_suffix::KetVertexSuffix
 end
 
 function BilinearFormNetwork(
   operator::AbstractITensorNetwork,
   bra::AbstractITensorNetwork,
   ket::AbstractITensorNetwork;
-  operator_vertex_map=default_operator_vertex_map,
-  bra_vertex_map=default_bra_vertex_map,
-  ket_vertex_map=default_ket_vertex_map,
+  operator_vertex_suffix=default_operator_vertex_suffix,
+  bra_vertex_suffix=default_bra_vertex_suffix,
+  ket_vertex_suffix=default_ket_vertex_suffix,
 )
-
-  # TODO: Reminder to fix `rename_vertices(::AbstractITensorNetwork)`.
-  bra_renamed = rename_vertices_itn(bra, bra_vertex_map)
-  ket_renamed = rename_vertices_itn(ket, ket_vertex_map)
-  operator_renamed = rename_vertices_itn(operator, operator_vertex_map)
-
-  # TODO: Reminder to fix `union` so that `union(bra_renamed, operator_renamed, ket_renamed)` works.
-  tn = union(union(bra_renamed, operator_renamed), ket_renamed)
-
-  return BilinearFormNetwork(tn, bra_vertex_map, ket_vertex_map, operator_vertex_map)
+  tn = disjoint_union(
+    operator_vertex_suffix => operator, bra_vertex_suffix => bra, ket_vertex_suffix => ket
+  )
+  return BilinearFormNetwork(
+    tn, operator_vertex_suffix, bra_vertex_suffix, ket_vertex_suffix
+  )
 end
 
-#Needed for implementation
-bra_vertex_map(blf::BilinearFormNetwork) = blf.bra_vertex_map
-ket_vertex_map(blf::BilinearFormNetwork) = blf.ket_vertex_map
-operator_vertex_map(blf::BilinearFormNetwork) = blf.operator_vertex_map
+operator_vertex_suffix(blf::BilinearFormNetwork) = blf.operator_vertex_suffix
+bra_vertex_suffix(blf::BilinearFormNetwork) = blf.bra_vertex_suffix
+ket_vertex_suffix(blf::BilinearFormNetwork) = blf.ket_vertex_suffix
 tensornetwork(blf::BilinearFormNetwork) = blf.tensornetwork
 data_graph_type(::Type{<:BilinearFormNetwork}) = data_graph_type(tensornetwork(blf))
 data_graph(blf::BilinearFormNetwork) = data_graph(tensornetwork(blf))
@@ -43,19 +37,16 @@ data_graph(blf::BilinearFormNetwork) = data_graph(tensornetwork(blf))
 function copy(blf::BilinearFormNetwork)
   return BilinearFormNetwork(
     copy(tensornetwork(blf)),
-    bra_vertex_map(blf),
-    ket_vertex_map(blf),
-    operator_vertex_map(blf),
+    operator_vertex_suffix(blf),
+    bra_vertex_suffix(blf),
+    ket_vertex_suffix(blf),
   )
 end
 
 function BilinearFormNetwork(
-  bra::AbstractITensorNetwork,
-  ket::AbstractITensorNetwork;
-  operator_constructor=default_operator_constructor,
-  kwargs...,
+  bra::AbstractITensorNetwork, ket::AbstractITensorNetwork; kwargs...
 )
-  operator_space = union_all_inds(siteinds(bra), siteinds(ket))
-  O = tno_constructor(operator_space)
+  operator_inds = union_all_inds(siteinds(bra), siteinds(ket))
+  O = delta_network(operator_inds)
   return BilinearFormNetwork(bra, O, ket; kwargs...)
 end
