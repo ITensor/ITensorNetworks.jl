@@ -15,9 +15,9 @@ function BilinearFormNetwork(
   operator::AbstractITensorNetwork,
   bra::AbstractITensorNetwork,
   ket::AbstractITensorNetwork;
-  operator_vertex_suffix=default_operator_vertex_suffix,
-  bra_vertex_suffix=default_bra_vertex_suffix,
-  ket_vertex_suffix=default_ket_vertex_suffix,
+  operator_vertex_suffix=default_operator_vertex_suffix(),
+  bra_vertex_suffix=default_bra_vertex_suffix(),
+  ket_vertex_suffix=default_ket_vertex_suffix(),
 )
   tn = disjoint_union(
     operator_vertex_suffix => operator, bra_vertex_suffix => bra, ket_vertex_suffix => ket

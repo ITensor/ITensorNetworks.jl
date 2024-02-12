@@ -13,15 +13,14 @@ operator_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
 bra_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
 ket_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
 
-bra(f::AbstractFormNetwork) = induced_subgraph(f, collect(values(bra_vertex_map(f))))
-ket(f::AbstractFormNetwork) = induced_subgraph(f, collect(values(ket_vertex_map(f))))
-function operator(f::AbstractFormNetwork)
-  return induced_subgraph(f, collect(values(operator_vertex_map(f))))
+function operator_vertices(f::AbstractFormNetwork)
+  return filter(v -> last(v) == operator_vertex_suffix(f), vertices(f))
 end
-
-function derivative(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
-  tn_vertices = derivative_vertices(f, state_vertices)
-  return derivative(tensornetwork(f), tn_vertices; kwargs...)
+function bra_vertices(f::AbstractFormNetwork)
+  return filter(v -> last(v) == bra_vertex_suffix(f), vertices(f))
+end
+function ket_vertices(f::AbstractFormNetwork)
+  return filter(v -> last(v) == ket_vertex_suffix(f), vertices(f))
 end
 
 function bra_vertices(f::AbstractFormNetwork, state_vertices::Vector)
@@ -30,6 +29,26 @@ end
 
 function ket_vertices(f::AbstractFormNetwork, state_vertices::Vector)
   return [ket_vertex_map(f)(sv) for sv in state_vertices]
+end
+
+function Graphs.induced_subgraph(f::AbstractFormNetwork, vertices::Vector)
+  return induced_subgraph(tensornetwork(f), vertices)
+end
+function bra(f::AbstractFormNetwork)
+  return rename_vertices(inv_vertex_map(f), first(induced_subgraph(f, bra_vertices(f))))
+end
+function ket(f::AbstractFormNetwork)
+  return rename_vertices(inv_vertex_map(f), first(induced_subgraph(f, ket_vertices(f))))
+end
+function operator(f::AbstractFormNetwork)
+  return rename_vertices(
+    inv_vertex_map(f), first(induced_subgraph(f, operator_vertices(f)))
+  )
+end
+
+function derivative(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
+  tn_vertices = derivative_vertices(f, state_vertices)
+  return derivative(tensornetwork(f), tn_vertices; kwargs...)
 end
 
 function derivative_vertices(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
@@ -41,3 +60,4 @@ end
 operator_vertex_map(f::AbstractFormNetwork) = v -> (v, operator_vertex_suffix(f))
 bra_vertex_map(f::AbstractFormNetwork) = v -> (v, bra_vertex_suffix(f))
 ket_vertex_map(f::AbstractFormNetwork) = v -> (v, ket_vertex_suffix(f))
+inv_vertex_map(f::AbstractFormNetwork) = v -> first(v)
