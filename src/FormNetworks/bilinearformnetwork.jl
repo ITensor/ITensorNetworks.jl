@@ -3,8 +3,9 @@ default_ket_vertex_map(v) = (v, "ket")
 default_operator_vertex_map(v) = (v, "operator")
 default_operator_constructor(s::IndsNetwork) = delta_network(s)
 
-struct BilinearFormNetwork{V,KetMap,BraMap,OperatorMap} <: AbstractFormNetwork{V}
-  tn::AbstractITensorNetwork{V}
+struct BilinearFormNetwork{V,TensorNetwork<:AbstractITensorNetwork{V}
+,BraMap,KetMap,OperatorMap} <: AbstractFormNetwork{V}
+  tensornetwork::TensorNetwork
   bra_vertex_map::BraMap
   ket_vertex_map::KetMap
   operator_vertex_map::OperatorMap
