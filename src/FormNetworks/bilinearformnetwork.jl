@@ -48,5 +48,5 @@ function BilinearFormNetwork(
 )
   operator_inds = union_all_inds(siteinds(bra), siteinds(ket))
   O = delta_network(operator_inds)
-  return BilinearFormNetwork(bra, O, ket; kwargs...)
+  return BilinearFormNetwork(O, bra, ket; kwargs...)
 end

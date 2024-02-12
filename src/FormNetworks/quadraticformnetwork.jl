@@ -1,10 +1,11 @@
 default_index_map = prime
 default_inv_index_map = noprime
 
-struct QuadraticFormNetwork{V,FormNetwork<:BilinearFormNetwork{V},IndexMap} <:
+struct QuadraticFormNetwork{V,FormNetwork<:BilinearFormNetwork{V},IndexMap,InvIndexMap} <:
        AbstractFormNetwork{V}
   formnetwork::FormNetwork
   dual_index_map::IndexMap
+  dual_inv_index_map::InvIndexMap
 end
 
 bilinear_formnetwork(qf::QuadraticFormNetwork) = qf.formnetwork
@@ -13,10 +14,11 @@ function QuadraticFormNetwork(
   bra::AbstractITensorNetwork,
   ket::AbstractITensorNetwork;
   dual_index_map=default_index_map,
+  dual_inv_index_map=default_inv_index_map,
   kwargs...,
 )
   return QuadraticFormNetwork(
-    BilinearFormNetwork(operator, bra, ket; kwargs...), dual_index_map
+    BilinearFormNetwork(operator, bra, ket; kwargs...), dual_index_map, dual_inv_index_map
   )
 end
 
@@ -37,27 +39,37 @@ for f in [
 end
 
 dual_index_map(qf::QuadraticFormNetwork) = qf.dual_index_map
+dual_inv_index_map(qf::QuadraticFormNetwork) = qf.dual_inv_index_map
 function copy(qf::QuadraticFormNetwork)
-  return QuadraticFormNetwork(copy(bilinear_formnetwork(qf)), dual_index_map(qf))
+  return QuadraticFormNetwork(
+    copy(bilinear_formnetwork(qf)), dual_index_map(qf), dual_inv_index_map(qf)
+  )
 end
 
 function QuadraticFormNetwork(
   operator::AbstractITensorNetwork,
   ket::AbstractITensorNetwork;
   dual_index_map=default_index_map,
+  dual_inv_index_map=default_inv_index_map,
   kwargs...,
 )
   bra = map_inds(dual_index_map, dag(ket))
-  return QuadraticFormNetwork(operator, bra, ket; dual_index_map, kwargs...)
+  blf = BilinearFormNetwork(operator, bra, ket; kwargs...)
+  return QuadraticFormNetwork(blf, dual_index_map, dual_inv_index_map)
 end
 
 function QuadraticFormNetwork(
-  ket::AbstractITensorNetwork; dual_index_map=default_index_map, kwargs...
+  ket::AbstractITensorNetwork;
+  dual_index_map=default_index_map,
+  dual_inv_index_map=default_inv_index_map,
+  kwargs...,
 )
   s = siteinds(ket)
   operator_inds = union_all_inds(s, dual_index_map(s; links=[]))
   operator = delta_network(operator_inds)
-  return QuadraticFormNetwork(operator, ket; kwargs...)
+  bra = map_inds(dual_index_map, dag(ket))
+  blf = BilinearFormNetwork(operator, bra, ket; kwargs...)
+  return QuadraticFormNetwork(blf, dual_index_map, dual_inv_index_map)
 end
 
 function bra_ket_vertices(qf::QuadraticFormNetwork, state_vertices::Vector)

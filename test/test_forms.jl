@@ -9,9 +9,9 @@ using ITensorNetworks:
   bra_vertex_map,
   ket_vertex_map,
   dual_index_map,
-  bra,
-  ket,
-  operator
+  bra_network,
+  ket_network,
+  operator_network
 using Test
 using Random
 
@@ -30,9 +30,9 @@ using Random
   @test nv(blf) == nv(ψket) + nv(ψbra) + nv(A)
   @test isempty(externalinds(blf))
 
-  @test underlying_graph(ket(blf)) == underlying_graph(ψket)
-  @test underlying_graph(operator(blf)) == underlying_graph(A)
-  @test underlying_graph(bra(blf)) == underlying_graph(ψbra)
+  @test underlying_graph(ket_network(blf)) == underlying_graph(ψket)
+  @test underlying_graph(operator_network(blf)) == underlying_graph(A)
+  @test underlying_graph(bra_network(blf)) == underlying_graph(ψbra)
 
   qf = QuadraticFormNetwork(A, ψket)
   @test nv(qf) == 2 * nv(ψbra) + nv(A)
@@ -46,6 +46,6 @@ using Random
     dual_index_map(qf_updated)(dag(new_tensor))
   @test tensornetwork(qf_updated)[ket_vertex_map(qf_updated)(v)] ≈ new_tensor
 
-  @test underlying_graph(ket(qf)) == underlying_graph(ψket)
-  @test underlying_graph(operator(qf)) == underlying_graph(A)
+  @test underlying_graph(ket_network(qf)) == underlying_graph(ψket)
+  @test underlying_graph(operator_network(qf)) == underlying_graph(A)
 end

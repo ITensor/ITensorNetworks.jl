@@ -34,13 +34,13 @@ end
 function Graphs.induced_subgraph(f::AbstractFormNetwork, vertices::Vector)
   return induced_subgraph(tensornetwork(f), vertices)
 end
-function bra(f::AbstractFormNetwork)
+function bra_network(f::AbstractFormNetwork)
   return rename_vertices(inv_vertex_map(f), first(induced_subgraph(f, bra_vertices(f))))
 end
-function ket(f::AbstractFormNetwork)
+function ket_network(f::AbstractFormNetwork)
   return rename_vertices(inv_vertex_map(f), first(induced_subgraph(f, ket_vertices(f))))
 end
-function operator(f::AbstractFormNetwork)
+function operator_network(f::AbstractFormNetwork)
   return rename_vertices(
     inv_vertex_map(f), first(induced_subgraph(f, operator_vertices(f)))
   )
