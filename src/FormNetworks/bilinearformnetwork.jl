@@ -25,6 +25,7 @@ function BilinearFormNetwork(
   @assert isempty(findall(in(internalinds(bra)), internalinds(operator)))
   @assert isempty(findall(in(internalinds(ket)), internalinds(operator)))
 
+  # TODO: Reminder to fix `rename_vertices(::AbstractITensorNetwork)`.
   bra_renamed = rename_vertices_itn(bra, bra_vertex_map)
   ket_renamed = rename_vertices_itn(ket, ket_vertex_map)
   operator_renamed = rename_vertices_itn(operator, operator_vertex_map)
