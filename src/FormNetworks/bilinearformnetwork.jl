@@ -29,6 +29,7 @@ function BilinearFormNetwork(
   ket_renamed = rename_vertices_itn(ket, ket_vertex_map)
   operator_renamed = rename_vertices_itn(operator, operator_vertex_map)
 
+  # TODO: Reminder to fix `union` so that `union(bra_renamed, operator_renamed, ket_renamed)` works.
   tn = union(union(bra_renamed, operator_renamed), ket_renamed)
 
   return BilinearFormNetwork(tn, bra_vertex_map, ket_vertex_map, operator_vertex_map)
