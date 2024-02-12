@@ -1,6 +1,6 @@
 module ITensorNetworksEinExprsExt
 
-using ITensors: Index, ITensor, @Algorithm_str, noncommoninds
+using ITensors: Index, ITensor, @Algorithm_str, inds, noncommoninds
 using ITensorNetworks:
   ITensorNetworks, ITensorNetwork, vertextype, vertex_data, contraction_sequence
 using EinExprs: EinExprs, EinExpr, einexpr, SizedEinExpr
