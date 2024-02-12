@@ -19,3 +19,17 @@ function derivative(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
   tn_vertices = derivative_vertices(f, state_vertices)
   return derivative(tensornetwork(f), tn_vertices; kwargs...)
 end
+
+function bra_vertices(f::AbstractFormNetwork, state_vertices::Vector)
+  return [bra_vertex_map(f)(sv) for sv in state_vertices]
+end
+
+function ket_vertices(f::AbstractFormNetwork, state_vertices::Vector)
+  return [ket_vertex_map(f)(sv) for sv in state_vertices]
+end
+
+function derivative_vertices(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
+  return setdiff(
+    vertices(f), vcat(bra_vertices(f, state_vertices), ket_vertices(f, state_vertices))
+  )
+end

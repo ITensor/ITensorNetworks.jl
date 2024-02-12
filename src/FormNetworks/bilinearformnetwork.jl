@@ -3,8 +3,9 @@ default_ket_vertex_map(v) = (v, "ket")
 default_operator_vertex_map(v) = (v, "operator")
 default_operator_constructor(s::IndsNetwork) = delta_network(s)
 
-struct BilinearFormNetwork{V,TensorNetwork<:AbstractITensorNetwork{V}
-,BraMap,KetMap,OperatorMap} <: AbstractFormNetwork{V}
+struct BilinearFormNetwork{
+  V,TensorNetwork<:AbstractITensorNetwork{V},BraMap,KetMap,OperatorMap
+} <: AbstractFormNetwork{V}
   tensornetwork::TensorNetwork
   bra_vertex_map::BraMap
   ket_vertex_map::KetMap
@@ -19,11 +20,6 @@ function BilinearFormNetwork(
   ket_vertex_map=default_ket_vertex_map,
   operator_vertex_map=default_operator_vertex_map,
 )
-  @assert Set(externalinds(operator)) ==
-    union(Set(externalinds(ket)), Set(externalinds(bra)))
-  @assert isempty(findall(in(internalinds(bra)), internalinds(ket)))
-  @assert isempty(findall(in(internalinds(bra)), internalinds(operator)))
-  @assert isempty(findall(in(internalinds(ket)), internalinds(operator)))
 
   # TODO: Reminder to fix `rename_vertices(::AbstractITensorNetwork)`.
   bra_renamed = rename_vertices_itn(bra, bra_vertex_map)
@@ -40,7 +36,7 @@ end
 bra_vertex_map(blf::BilinearFormNetwork) = blf.bra_vertex_map
 ket_vertex_map(blf::BilinearFormNetwork) = blf.ket_vertex_map
 operator_vertex_map(blf::BilinearFormNetwork) = blf.operator_vertex_map
-tensornetwork(blf::BilinearFormNetwork) = blf.tn
+tensornetwork(blf::BilinearFormNetwork) = blf.tensornetwork
 data_graph_type(::Type{<:BilinearFormNetwork}) = data_graph_type(tensornetwork(blf))
 data_graph(blf::BilinearFormNetwork) = data_graph(tensornetwork(blf))
 

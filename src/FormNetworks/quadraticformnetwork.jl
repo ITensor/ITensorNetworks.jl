@@ -62,20 +62,6 @@ function QuadraticFormNetwork(
   return QuadraticFormNetwork(operator, ket; kwargs...)
 end
 
-function bra_vertices(qf::QuadraticFormNetwork, state_vertices::Vector)
-  return [bra_vertex_map(qf)(sv) for sv in state_vertices]
-end
-
-function ket_vertices(qf::QuadraticFormNetwork, state_vertices::Vector)
-  return [ket_vertex_map(qf)(sv) for sv in state_vertices]
-end
-
-function derivative_vertices(qf::QuadraticFormNetwork, state_vertices::Vector; kwargs...)
-  return setdiff(
-    vertices(f), vcat(bra_vertices(qf, state_vertices), ket_vertices(qf, state_vertices))
-  )
-end
-
 function update(qf::QuadraticFormNetwork, state_vertex, state::ITensor)
   qf = copy(qf)
   state_inds = inds(state)
