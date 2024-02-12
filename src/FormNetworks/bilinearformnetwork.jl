@@ -18,7 +18,7 @@ function BilinearFormNetwork(
   ket::AbstractITensorNetwork;
   operator_vertex_map=default_operator_vertex_map,
   bra_vertex_map=default_bra_vertex_map,
-  ket_vertex_map=default_ket_vertex_map
+  ket_vertex_map=default_ket_vertex_map,
 )
 
   # TODO: Reminder to fix `rename_vertices(::AbstractITensorNetwork)`.
