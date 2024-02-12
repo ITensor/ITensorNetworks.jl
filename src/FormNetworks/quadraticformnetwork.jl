@@ -80,6 +80,7 @@ function update(qf::QuadraticFormNetwork, state_vertex, state::ITensor)
   qf = copy(qf)
   state_inds = inds(state)
   state_dag = replaceinds(dag(state), state_inds, dual_index_map(qf).(state_inds))
+  # TODO: Maybe add a check that it really does preserve the graph.
   setindex_preserve_graph!(tensornetwork(qf), state, ket_vertex_map(qf)(state_vertex))
   setindex_preserve_graph!(tensornetwork(qf), state_dag, bra_vertex_map(qf)(state_vertex))
   return qf
