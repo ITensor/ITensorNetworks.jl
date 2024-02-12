@@ -8,6 +8,7 @@ dual_index_map(f::AbstractFormNetwork) = not_implemented()
 tensornetwork(f::AbstractFormNetwork) = not_implemented()
 copy(f::AbstractFormNetwork) = not_implemented()
 derivative_vertices(f::AbstractFormNetwork) = not_implemented()
+bra_ket_vertices(f::AbstractFormNetwork, state_vertices::Vector) = not_implemented()
 
 bra(f::AbstractFormNetwork) = induced_subgraph(f, collect(values(bra_vertex_map(f))))
 ket(f::AbstractFormNetwork) = induced_subgraph(f, collect(values(ket_vertex_map(f))))
