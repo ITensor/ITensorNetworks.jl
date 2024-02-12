@@ -1,59 +1,71 @@
 """
 ProjTTNSum
 """
-struct ProjTTNSum{V}
-  pm::Vector{ProjTTN{V}}
-  function ProjTTNSum(pm::Vector{ProjTTN{V}}) where {V}
-    return new{V}(pm)
+struct ProjTTNSum{V,T<:AbstractProjTTN{V},Z<:Number} <: AbstractProjTTN{V}
+  terms::Vector{T}
+  factors::Vector{Z}
+  function ProjTTNSum(terms::Vector{<:AbstractProjTTN}, factors::Vector{<:Number})
+    return new{vertextype(eltype(terms)),eltype(terms),eltype(factors)}(terms, factors)
   end
 end
 
-copy(P::ProjTTNSum) = ProjTTNSum(copy.(P.pm))
+terms(P::ProjTTNSum) = P.terms
+factors(P::ProjTTNSum) = P.factors
 
-ProjTTNSum(ttnos::Vector{<:TTN}) = ProjTTNSum([ProjTTN(M) for M in ttnos])
+copy(P::ProjTTNSum) = ProjTTNSum(copy.(terms(P)), copy(factors(P)))
 
-ProjTTNSum(Ms::TTN{V}...) where {V} = ProjTTNSum([Ms...])
+function ProjTTNSum(operators::Vector{<:AbstractProjTTN})
+  return ProjTTNSum(operators, fill(one(Bool), length(operators)))
+end
+function ProjTTNSum(operators::Vector{<:AbstractTTN})
+  return ProjTTNSum(ProjTTN.(operators))
+end
 
-on_edge(P::ProjTTNSum) = on_edge(P.pm[1])
+on_edge(P::ProjTTNSum) = on_edge(terms(P)[1])
 
-nsite(P::ProjTTNSum) = nsite(P.pm[1])
+nsite(P::ProjTTNSum) = nsite(terms(P)[1])
 
 function set_nsite(Ps::ProjTTNSum, nsite)
-  return ProjTTNSum(map(M -> set_nsite(M, nsite), Ps.pm))
+  return ProjTTNSum(map(p -> set_nsite(p, nsite), terms(Ps)), factors(Ps))
 end
 
-underlying_graph(P::ProjTTNSum) = underlying_graph(P.pm[1])
+underlying_graph(P::ProjTTNSum) = underlying_graph(terms(P)[1])
 
-Base.length(P::ProjTTNSum) = length(P.pm[1])
+Base.length(P::ProjTTNSum) = length(terms(P)[1])
 
-sites(P::ProjTTNSum) = sites(P.pm[1])
+sites(P::ProjTTNSum) = sites(terms(P)[1])
 
-incident_edges(P::ProjTTNSum) = incident_edges(P.pm[1])
+incident_edges(P::ProjTTNSum) = incident_edges(terms(P)[1])
 
-internal_edges(P::ProjTTNSum) = internal_edges(P.pm[1])
+internal_edges(P::ProjTTNSum) = internal_edges(terms(P)[1])
 
-function product(P::ProjTTNSum, v::ITensor)::ITensor
-  Pv = product(P.pm[1], v)
-  for n in 2:length(P.pm)
-    Pv += product(P.pm[n], v)
+product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
+
+function contract(P::ProjTTNSum, v::ITensor)
+  res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
+    f * contract(p, v)
   end
-  return Pv
+  return res
+end
+
+function contract_ket(P::ProjTTNSum, v::ITensor)
+  res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
+    f * contract_ket(p, v)
+  end
+  return res
 end
 
 function Base.eltype(P::ProjTTNSum)
-  elT = eltype(P.pm[1])
-  for n in 2:length(P.pm)
-    elT = promote_type(elT, eltype(P.pm[n]))
-  end
-  return elT
+  return mapreduce(eltype, promote_type, terms(P))
 end
 
 (P::ProjTTNSum)(v::ITensor) = product(P, v)
 
-Base.size(P::ProjTTNSum) = size(P.pm[1])
+Base.size(P::ProjTTNSum) = size(terms(P)[1])
 
-function position(
-  P::ProjTTNSum{V}, psi::TTN{V}, pos::Union{Vector{<:V},NamedEdge{V}}
-) where {V}
-  return ProjTTNSum(map(M -> position(M, psi, pos), P.pm))
+function position(P::ProjTTNSum, psi::AbstractTTN, pos)
+  theterms = map(M -> position(M, psi, pos), terms(P))
+  #@show typeof(theterms)
+  #@show factors(P)
+  return ProjTTNSum(theterms, factors(P))
 end
