@@ -22,6 +22,7 @@ using LinearAlgebra
 using NamedGraphs
 using Observers
 using Observers.DataFrames: select!
+using PackageExtensionCompat
 using Printf
 using Requires
 using SimpleTraits
@@ -130,6 +131,7 @@ include(joinpath("treetensornetworks", "solvers", "tree_sweeping.jl"))
 include("exports.jl")
 
 function __init__()
+  @require_extensions
   @require OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715" include(
     joinpath("requires", "omeinsumcontractionorders.jl")
   )
