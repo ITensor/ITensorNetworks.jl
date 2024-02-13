@@ -22,6 +22,8 @@ function to_einexpr(ts::Vector{ITensor})
 end
 
 function tensor_inds_to_vertex(ts::Vector{ITensor})
+  IndexType = Any
+
   mapping = Dict{Set{IndexType},VertexType}()
 
   for (v, tensor_v) in enumerate(ts)
