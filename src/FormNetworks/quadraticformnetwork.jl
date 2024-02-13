@@ -52,7 +52,6 @@ function QuadraticFormNetwork(
   dual_inv_index_map=default_inv_index_map,
   kwargs...,
 )
-  s = siteinds(ket)
   bra = map_inds(dual_index_map, dag(ket))
   blf = BilinearFormNetwork(bra, ket; kwargs...)
   return QuadraticFormNetwork(blf, dual_index_map, dual_inv_index_map)
