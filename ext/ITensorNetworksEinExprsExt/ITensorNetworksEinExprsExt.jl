@@ -23,6 +23,7 @@ end
 
 function tensor_inds_to_vertex(ts::Vector{ITensor})
   IndexType = Any
+  VertexType = Int
 
   mapping = Dict{Set{IndexType},VertexType}()
 
