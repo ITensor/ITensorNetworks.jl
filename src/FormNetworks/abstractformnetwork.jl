@@ -8,7 +8,6 @@ abstract type AbstractFormNetwork{V} <: AbstractITensorNetwork{V} end
 dual_index_map(f::AbstractFormNetwork) = not_implemented()
 tensornetwork(f::AbstractFormNetwork) = not_implemented()
 copy(f::AbstractFormNetwork) = not_implemented()
-bra_ket_vertices(f::AbstractFormNetwork, state_vertices::Vector) = not_implemented()
 operator_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
 bra_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
 ket_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
@@ -19,8 +18,13 @@ end
 function bra_vertices(f::AbstractFormNetwork)
   return filter(v -> last(v) == bra_vertex_suffix(f), vertices(f))
 end
+
 function ket_vertices(f::AbstractFormNetwork)
   return filter(v -> last(v) == ket_vertex_suffix(f), vertices(f))
+end
+
+function bra_ket_vertices(f::AbstractFormNetwork)
+  return vcat(bra_vertices(f), ket_vertices(f))
 end
 
 function bra_vertices(f::AbstractFormNetwork, state_vertices::Vector)
@@ -31,15 +35,22 @@ function ket_vertices(f::AbstractFormNetwork, state_vertices::Vector)
   return [ket_vertex_map(f)(sv) for sv in state_vertices]
 end
 
+function bra_ket_vertices(f::AbstractFormNetwork, state_vertices::Vector)
+  return vcat(bra_vertices(f, state_vertices), ket_vertices(f, state_vertices))
+end
+
 function Graphs.induced_subgraph(f::AbstractFormNetwork, vertices::Vector)
   return induced_subgraph(tensornetwork(f), vertices)
 end
+
 function bra_network(f::AbstractFormNetwork)
   return rename_vertices(inv_vertex_map(f), first(induced_subgraph(f, bra_vertices(f))))
 end
+
 function ket_network(f::AbstractFormNetwork)
   return rename_vertices(inv_vertex_map(f), first(induced_subgraph(f, ket_vertices(f))))
 end
+
 function operator_network(f::AbstractFormNetwork)
   return rename_vertices(
     inv_vertex_map(f), first(induced_subgraph(f, operator_vertices(f)))

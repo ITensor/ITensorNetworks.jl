@@ -50,3 +50,13 @@ function BilinearFormNetwork(
   O = delta_network(operator_inds)
   return BilinearFormNetwork(O, bra, ket; kwargs...)
 end
+
+function update(
+  blf::BilinearFormNetwork, state_vertex, bra_state::ITensor, ket_state::ITensor
+)
+  blf = copy(blf)
+  # TODO: Maybe add a check that it really does preserve the graph.
+  setindex_preserve_graph!(tensornetwork(blf), bra_state, bra_vertex_map(blf)(state_vertex))
+  setindex_preserve_graph!(tensornetwork(blf), ket_state, ket_vertex_map(blf)(state_vertex))
+  return blf
+end

@@ -25,12 +25,3 @@ function line_to_tree(line::Vector)
   end
   return [line_to_tree(line[1:(end - 1)]), line[end]]
 end
-
-function Base.union(
-  graph1::AbstractNamedGraph,
-  graph2::AbstractNamedGraph,
-  graph3::AbstractNamedGraph,
-  graph_rest::AbstractNamedGraph...,
-)
-  return union(union(graph1, graph2), graph3, graph_rest...)
-end

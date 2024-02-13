@@ -9,18 +9,6 @@ struct QuadraticFormNetwork{V,FormNetwork<:BilinearFormNetwork{V},IndexMap,InvIn
 end
 
 bilinear_formnetwork(qf::QuadraticFormNetwork) = qf.formnetwork
-function QuadraticFormNetwork(
-  operator::AbstractITensorNetwork,
-  bra::AbstractITensorNetwork,
-  ket::AbstractITensorNetwork;
-  dual_index_map=default_index_map,
-  dual_inv_index_map=default_inv_index_map,
-  kwargs...,
-)
-  return QuadraticFormNetwork(
-    BilinearFormNetwork(operator, bra, ket; kwargs...), dual_index_map, dual_inv_index_map
-  )
-end
 
 #Needed for implementation, forward from bilinear form
 for f in [
@@ -65,23 +53,14 @@ function QuadraticFormNetwork(
   kwargs...,
 )
   s = siteinds(ket)
-  operator_inds = union_all_inds(s, dual_index_map(s; links=[]))
-  operator = delta_network(operator_inds)
   bra = map_inds(dual_index_map, dag(ket))
-  blf = BilinearFormNetwork(operator, bra, ket; kwargs...)
+  blf = BilinearFormNetwork(bra, ket; kwargs...)
   return QuadraticFormNetwork(blf, dual_index_map, dual_inv_index_map)
 end
 
-function bra_ket_vertices(qf::QuadraticFormNetwork, state_vertices::Vector)
-  return vcat(bra_vertices(qf, state_vertices), ket_vertices(qf, state_vertices))
-end
-
-function update(qf::QuadraticFormNetwork, state_vertex, state::ITensor)
-  qf = copy(qf)
-  state_inds = inds(state)
-  state_dag = replaceinds(dag(state), state_inds, dual_index_map(qf).(state_inds))
-  # TODO: Maybe add a check that it really does preserve the graph.
-  setindex_preserve_graph!(tensornetwork(qf), state, ket_vertex_map(qf)(state_vertex))
-  setindex_preserve_graph!(tensornetwork(qf), state_dag, bra_vertex_map(qf)(state_vertex))
-  return qf
+function update(qf::QuadraticFormNetwork, state_vertex, ket_state::ITensor)
+  state_inds = inds(ket_state)
+  bra_state = replaceinds(dag(ket_state), state_inds, dual_index_map(qf).(state_inds))
+  new_blf = update(bilinear_formnetwork(qf), state_vertex, bra_state, ket_state)
+  return QuadraticFormNetwork(new_blf, dual_index_map(qf), dual_index_map(qf))
 end
