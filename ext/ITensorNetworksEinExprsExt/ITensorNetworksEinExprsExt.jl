@@ -36,7 +36,7 @@ function ITensorNetworks.contraction_sequence(
   ::Algorithm"einexpr", tn::Vector{ITensor}; optimizer=EinExprs.Exhaustive()
 )
   expr = to_einexpr(tn)
-  path = einexpr(expr; kwargs...)
+  path = einexpr(optimizer, expr)
   return to_contraction_sequence(path, tensor_inds_to_vertex(tn))
 end
 
