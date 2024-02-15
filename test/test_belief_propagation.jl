@@ -1,11 +1,15 @@
 using ITensorNetworks
 using ITensorNetworks:
   ising_network,
-  belief_propagation,
   split_index,
   contract_inner,
   contract_boundary_mps,
-  environment_tensors
+  BeliefPropagationCache,
+  tensornetwork,
+  update,
+  environment_tensors,
+  message_tensor,
+  message_tensors
 using Test
 using Compat
 using ITensors
@@ -35,13 +39,20 @@ ITensors.disable_warn_order()
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
-  pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
-  mts = belief_propagation(pψψ)
-  env_tensors = environment_tensors(pψψ, mts, [PartitionVertex(v)])
+  bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+  bpc = update(bpc)
+  env_tensors = environment_tensors(bpc, [PartitionVertex(v)])
   numerator = contract(vcat(env_tensors, ITensor[ψ[v], op("Sz", s[v]), dag(prime(ψ[v]))]))[]
   denominator = contract(vcat(env_tensors, ITensor[ψ[v], op("I", s[v]), dag(prime(ψ[v]))]))[]
 
   @test abs.((numerator / denominator) - exact_sz) <= 1e-14
+
+  #Test updating the underlying tensornetwork in the cache
+  v = first(vertices(ψψ))
+  new_tensor = randomITensor(inds(ψψ[v]))
+  bpc = update(bpc, new_tensor, v)
+  ψψ_updated = unpartitioned_graph(tensornetwork(bpc))
+  @test ψψ_updated[v] == new_tensor
 
   #Now test on a tree, should also be exact
   g = named_comb_tree((4, 4))
@@ -58,15 +69,15 @@ ITensors.disable_warn_order()
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
   exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
 
-  pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
-  mts = belief_propagation(pψψ)
-  env_tensors = environment_tensors(pψψ, mts, [PartitionVertex(v)])
+  bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+  bpc = update(bpc)
+  env_tensors = environment_tensors(bpc, [PartitionVertex(v)])
   numerator = contract(vcat(env_tensors, ITensor[ψ[v], op("Sz", s[v]), dag(prime(ψ[v]))]))[]
   denominator = contract(vcat(env_tensors, ITensor[ψ[v], op("I", s[v]), dag(prime(ψ[v]))]))[]
 
   @test abs.((numerator / denominator) - exact_sz) <= 1e-14
 
-  # #Now test two-site expec taking on the partition function of the Ising model. Not exact, but close
+  # # #Now test two-site expec taking on the partition function of the Ising model. Not exact, but close
   g_dims = (3, 4)
   g = named_grid(g_dims)
   s = IndsNetwork(g; link_space=2)
@@ -80,16 +91,16 @@ ITensors.disable_warn_order()
     ITensors.contract(ψOψ; sequence=contract_seq)[] /
     ITensors.contract(ψψ; sequence=contract_seq)[]
 
-  pψψ = PartitionedGraph(ψψ; nvertices_per_partition=2, backend="Metis")
-  mts = belief_propagation(pψψ; niters=20)
+  bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+  bpc = update(bpc; niters=20)
 
-  env_tensors = environment_tensors(pψψ, mts, vs)
+  env_tensors = environment_tensors(bpc, vs)
   numerator = contract(vcat(env_tensors, ITensor[ψOψ[v] for v in vs]))[]
   denominator = contract(vcat(env_tensors, ITensor[ψψ[v] for v in vs]))[]
 
   @test abs.((numerator / denominator) - actual_szsz) <= 0.05
 
-  # #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
+  # # #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
   g_dims = (3, 3)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
@@ -98,11 +109,11 @@ ITensors.disable_warn_order()
   ψ = randomITensorNetwork(s; link_space=χ)
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
-  pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
-  mts = belief_propagation(pψψ; niters=20)
+  bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+  bpc = update(bpc; niters=20)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
-  env_tensors = environment_tensors(pψψ, mts, [(v, 2) for v in vs])
+  env_tensors = environment_tensors(bpc, [(v, 2) for v in vs])
   rdm = ITensors.contract(
     vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]])
   )
@@ -114,7 +125,7 @@ ITensors.disable_warn_order()
   @test size(rdm) == (2^length(vs), 2^length(vs))
   @test all(>=(0), real(eigs)) && all(==(0), imag(eigs))
 
-  # #Test more advanced block BP with MPS message tensors on a grid 
+  # # #Test more advanced block BP with MPS message tensors on a grid 
   g_dims = (4, 3)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
@@ -130,14 +141,15 @@ ITensors.disable_warn_order()
   combiners = linkinds_combiners(ψψ)
   ψψ = combine_linkinds(ψψ, combiners)
   ψOψ = combine_linkinds(ψOψ, combiners)
-  pψψ = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
-  mts = belief_propagation(
-    pψψ;
+
+  bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+  bpc = update(
+    bpc;
     contractor=ITensorNetworks.contract_density_matrix,
     contractor_kwargs=(; cutoff=1e-6, maxdim=4),
   )
 
-  env_tensors = environment_tensors(pψψ, mts, [v])
+  env_tensors = environment_tensors(bpc, [v])
   numerator = contract(vcat(env_tensors, ITensor[ψOψ[v]]))[]
   denominator = contract(vcat(env_tensors, ITensor[ψψ[v]]))[]
 
