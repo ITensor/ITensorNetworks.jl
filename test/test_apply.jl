@@ -1,7 +1,7 @@
 using ITensorNetworks
 using ITensorNetworks:
-  belief_propagation,
   environment_tensors,
+  update,
   contract_inner,
   vidal_gauge,
   vidal_apply,
@@ -29,16 +29,16 @@ using SplitApplyCombine
   ψψ = norm_network(ψ)
 
   #Simple Belief Propagation Grouping
-  pψψ_SBP = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
-  mtsSBP = belief_propagation(pψψ_SBP; niters=20)
-  envsSBP = environment_tensors(pψψ_SBP, mtsSBP, PartitionVertex.([v1, v2]))
+  bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+  bpc = update(bpc; niters=20)
+  envsSBP = environment_tensors(bpc, PartitionVertex.([v1, v2]))
 
-  ψ_vidal, bond_tensors = vidal_gauge(ψ, pψψ_SBP, mtsSBP)
+  ψ_vidal, bond_tensors = vidal_gauge(ψ, bpc)
 
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
-  pψψ_GBP = PartitionedGraph(ψψ, group(v -> v[1][1], vertices(ψψ)))
-  mtsGBP = belief_propagation(pψψ_GBP; niters=20)
-  envsGBP = environment_tensors(pψψ_GBP, mtsGBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
+  bpc = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
+  bpc = update(bpc; niters=20)
+  envsGBP = environment_tensors(bpc, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
 
   ngates = 5
 
