@@ -64,8 +64,15 @@ function half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
   )
 end
 
+function default_region_args_func(half_sweep,pre_region_args)
+  return merge(pre_region_args,(;half_sweep))
+end
 
-function default_sweep_plan(nsites, graph::AbstractGraph; kwargs...)  ###move this to a different file, algorithmic level idea
+function default_sweep_plan(nsites, graph::AbstractGraph;
+  region_args_func = default_region_args_func,
+  reverse_args_func = default_region_args_func,
+  pre_region_args = (;),
+  kwargs...)  ###move this to a different file, algorithmic level idea
   return vcat(
     [
       half_sweep(
@@ -73,7 +80,8 @@ function default_sweep_plan(nsites, graph::AbstractGraph; kwargs...)  ###move th
         graph,
         make_region;
         nsites,
-        region_args=(; half_sweep=half),
+        region_args=region_args_func(half,pre_region_args),
+        reverse_args=reverse_args_func(half,pre_region_args),
         kwargs...,
       ) for half in 1:2
     ]...,
@@ -87,6 +95,7 @@ function tdvp_sweep_plan(
   time_step::Number,
   graph::AbstractGraph;
   root_vertex=default_root_vertex(graph),
+  pre_region_args=(;),
   reverse_step=true,
 )
   sweep_plan = []
@@ -98,8 +107,8 @@ function tdvp_sweep_plan(
       make_region;
       root_vertex,
       nsites,
-      region_args=(; substep, time_step=sub_time_step),
-      reverse_args=(; substep, time_step=-sub_time_step),
+      region_args=merge(pre_region_args, (; substep, time_step=sub_time_step)),
+      reverse_args=merge(pre_region_args, (; substep, time_step=-sub_time_step)),
       reverse_step,
     )
     append!(sweep_plan, half)
@@ -107,9 +116,9 @@ function tdvp_sweep_plan(
   return sweep_plan
 end
 
-
+# ToDo: Make this generic
 function _extend_sweeps_param(param, nsweeps)
-  if param isa Number
+  if param isa Number || param isa String || param isa NamedTuple || param isa Function || param isa typeof(observer())
     eparam = fill(param, nsweeps)
   else
     length(param) >= nsweeps && return param[1:nsweeps]
@@ -120,20 +129,20 @@ function _extend_sweeps_param(param, nsweeps)
   return eparam
 end
 
+
+#this version returns a list of named tuples
 function process_sweeps(
   nsweeps;
-  cutoff=fill(1E-16, nsweeps),
-  maxdim=fill(typemax(Int), nsweeps),
-  mindim=fill(1, nsweeps),
-  noise=fill(0.0, nsweeps),
   kwargs...,
-)
-  maxdim = _extend_sweeps_param(maxdim, nsweeps)
-  mindim = _extend_sweeps_param(mindim, nsweeps)
-  cutoff = _extend_sweeps_param(cutoff, nsweeps)
-  noise = _extend_sweeps_param(noise, nsweeps)
-  return maxdim, mindim, cutoff, noise, kwargs
+) 
+  lists_of_vals= [_extend_sweeps_param(val,nsweeps) for val in values(kwargs)]
+  list_of_nts=Vector{NamedTuple}(undef,nsweeps)
+  for i in 1:nsweeps
+    list_of_nts[i]=(;zip(keys(kwargs), [l[i] for l in lists_of_vals])...)
+  end
+  return list_of_nts
 end
+
 
 function sweep_printer(; outputlevel, state, which_sweep, sw_time)
   if outputlevel >= 1

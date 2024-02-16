@@ -31,56 +31,6 @@ function sub_time_steps(order)
 end
 
 
-function tdvp(
-  updater,
-  operator,
-  t::Number,
-  init_state::AbstractTTN;
-  time_step::Number=t,
-  nsites=2,
-  nsteps=nothing,
-  order::Integer=2,
-  (sweep_observer!)=observer(),
-  root_vertex=default_root_vertex(init_state),
-  reverse_step=true,
-  updater_kwargs=(;),
-  kwargs...,
-)
-  nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
-  sweep_plan = tdvp_sweep_plan(
-    order, nsites, time_step, init_state; root_vertex, reverse_step
-  )
-
-  function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
-    if outputlevel >= 1
-      sweeps_per_step = order ÷ 2
-      if sweep % sweeps_per_step == 0
-        current_time = (which_sweep / sweeps_per_step) * time_step
-        println("Current time (sweep $which_sweep) = ", round(current_time; digits=3))
-      end
-    end
-    return nothing
-  end
-
-  insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
-
-  state = alternating_update(
-    updater,
-    operator,
-    init_state;
-    nsweeps,
-    sweep_observer!,
-    sweep_plan,
-    updater_kwargs,
-    kwargs...,
-  )
-
-  # remove sweep_time_printer from sweep_observer!
-  select!(sweep_observer!, Observers.DataFrames.Not("sweep_time_printer"))
-
-  return state
-end
-
 """
     tdvp(operator::TTN, t::Number, init_state::TTN; kwargs...)
 
@@ -100,7 +50,56 @@ Optional keyword arguments:
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
 function tdvp(
-  operator, t::Number, init_state::AbstractTTN; updater=exponentiate_updater, kwargs...
-)
-  return tdvp(updater, operator, t, init_state; kwargs...)
+  operator,
+  t::Number,
+  init_state::AbstractTTN;
+  time_step::Number=t,
+  nsites=2,
+  nsteps=nothing,
+  order::Integer=2,
+  outputlevel=0,
+  (sweep_observer!)=observer(),
+  root_vertex=default_root_vertex(init_state),
+  reverse_step=true,
+  updater_kwargs=(;),
+  updater=exponentiate_updater,
+  kwargs...,
+) 
+  kwargs=merge((;outputlevel),kwargs) # lookup precedence again, i think kwargs precede)
+  nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
+  processed_kwarg_list = process_sweeps(nsweeps;updater_kwargs,updater,kwargs...)  # make everything a list of length nsweeps
+  sweep_plans=[]
+  for i in 1:nsweeps
+    sweep_plan = tdvp_sweep_plan(
+      order, nsites, time_step, init_state; root_vertex, reverse_step, pre_region_args=processed_kwarg_list[i]
+    )
+    push!(sweep_plans,sweep_plan)
+  end
+  
+  function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
+    if outputlevel >= 1
+      sweeps_per_step = order ÷ 2
+      if sweep % sweeps_per_step == 0
+        current_time = (which_sweep / sweeps_per_step) * time_step
+        println("Current time (sweep $which_sweep) = ", round(current_time; digits=3))
+      end
+    end
+    return nothing
+  end
+
+  insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
+
+  state = alternating_update(
+    operator,
+    init_state;
+    outputlevel,
+    sweep_observer!,
+    sweep_plans,
+  )
+
+  # remove sweep_time_printer from sweep_observer!
+  select!(sweep_observer!, Observers.DataFrames.Not("sweep_time_printer"))
+
+  return state
 end
+

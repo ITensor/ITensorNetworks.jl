@@ -1,4 +1,4 @@
-function region_update_printer(;
+function default_region_update_printer(;
   cutoff,
   maxdim,
   mindim,
@@ -30,21 +30,16 @@ function region_update_printer(;
 end
 
 function sweep_update(
-  solver,
   projected_operator,
   state::AbstractTTN;
-  normalize::Bool=false,      # ToDo: think about where to put the default, probably this default is best defined at algorithmic level
   outputlevel,
-  region_update_printer=region_update_printer,
-  (region_observer!)=observer(),  # ToDo: change name to region_observer! ?
   which_sweep::Int,
-  sweep_params::NamedTuple,
   sweep_plan,
 )
-  insert_function!(region_observer!, "region_update_printer" => region_update_printer) #ToDo fix this
-
+  
   # Append empty namedtuple to each element if not already present
   # (Needed to handle user-provided region_updates)
+  # todo: Hopefully not needed anymore
   sweep_plan = append_missing_namedtuple.(to_tuple.(sweep_plan))
 
   if nv(state) == 1
@@ -54,25 +49,17 @@ function sweep_update(
   end
 
   for which_region_update in eachindex(sweep_plan)
-    (region, region_kwargs) = sweep_plan[which_region_update]
+   # (region, region_kwargs) = sweep_plan[which_region_update]
     #region_kwargs = merge(region_kwargs, sweep_params)    # sweep params has precedence over step_kwargs
     state, projected_operator = region_update(
-      solver,
       projected_operator,
       state;
-      normalize,
-      outputlevel,
       which_sweep,
       sweep_plan,
       which_region_update,
-      region_kwargs,
-      region_observer!,
+      outputlevel, # ToDo      
     )
   end
-
-  select!(region_observer!, Observers.DataFrames.Not("region_update_printer")) # remove update_printer
-  # Just to be sure:
-  normalize && normalize!(state)
 
   return state, projected_operator
 end
@@ -127,6 +114,7 @@ function insert_local_tensor(
   which_decomp=nothing,
   eigen_perturbation=nothing,
   ortho=nothing,
+  kwargs...,
 )
   spec = nothing
   for (v, vnext) in IterTools.partition(pos, 2, 1)
@@ -168,20 +156,20 @@ current_ortho(st) = current_ortho(typeof(st), st)
 
 
 function region_update(
-  updater,
   projected_operator,
   state;
-  normalize,
   outputlevel,
   which_sweep,
   sweep_plan,
   which_region_update,
-  region_kwargs,
-  region_observer!,
-  #insertion_kwargs,  #ToDo: later
-  #extraction_kwargs, #ToDo: implement later with possibility to pass custom extraction/insertion func (or code into func)
-  updater_kwargs,
-)
+  )
+  (region, region_kwargs) = sweep_plan[which_region_update]
+  (;updater_kwargs)= region_kwargs   #extract updater_kwargs, could in principle also be done at the level of updater
+  (;updater)= region_kwargs   #extract updater_kwargs, could in principle also be done at the level of updater
+  
+  #(;insert_kwargs) = region_kwargs
+  #(;extract_kwrags) = region_kwargs
+  
   region = first(sweep_plan[which_region_update])
   state, projected_operator, phi = extract_local_tensor(state, projected_operator, region;)
   state! = Ref(state) # create references, in case solver does (out-of-place) modify PH or state
@@ -203,10 +191,10 @@ function region_update(
     println("Solver returned the following types: $(typeof(phi)), $(typeof(info))")
     error("In alternating_update, solver must return an ITensor and a NamedTuple")
   end
-  haskey(insert_kwargs,:normalize) && ( insert_kwargs.normalize && (phi /= norm(phi)) )
-
-  drho = nothing
-  ortho = "left"    #i guess with respect to ordered vertices that's valid but may be cleaner to use next_region logic
+  haskey(region_kwargs,:normalize) && ( region_kwargs.normalize && (phi /= norm(phi)) )
+  # ToDo: implement noise term as updater
+  #drho = nothing
+  #ortho = "left"    #i guess with respect to ordered vertices that's valid but may be cleaner to use next_region logic
   #if noise > 0.0 && isforward(direction)
   #  drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
   # so noiseterm is a solver
@@ -216,7 +204,7 @@ function region_update(
     state,
     phi,
     region;
-    insert_kwargs...
+    region_kwargs...
     #eigen_perturbation=drho,
     #ortho,
     #normalize,
@@ -224,8 +212,9 @@ function region_update(
     #mindim=region_kwargs.mindim,
     #cutoff=region_kwargs.cutoff,
   )
-
-  update!(
+  !haskey(region_kwargs,:region_printer) && (printer=default_region_update_printer)
+  # only perform update! if region_observer actually passed as kwarg
+  haskey(region_kwargs,:region_observer) &&  update!(
     region_observer!;
     cutoff,
     maxdim,
@@ -242,5 +231,21 @@ function region_update(
     info...,
     region_kwargs...,
   )
+
+  printer(;
+  cutoff,
+  maxdim,
+  mindim,
+  which_region_update,
+  sweep_plan,
+  total_sweep_steps=length(sweep_plan),
+  end_of_sweep=(which_region_update == length(sweep_plan)),
+  state,
+  region,
+  which_sweep,
+  spec,
+  outputlevel,
+  info...,
+  region_kwargs...,)
   return state, projected_operator
 end

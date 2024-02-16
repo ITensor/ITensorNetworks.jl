@@ -2,23 +2,16 @@
 function alternating_update(
   projected_operator,
   init_state::AbstractTTN;
-  checkdone=(; kws...) -> false,
-  outputlevel::Integer=0,
-  nsweeps::Integer=1,
+  sweep_plans,  #this is really the only one beig pass all the way down
+  outputlevel, # we probably want to extract this one indeed for passing to observer etc.
+  checkdone=(; kws...) -> false,  ### move outside
   (sweep_observer!)=observer(),
   sweep_printer=sweep_printer,
-  write_when_maxdim_exceeds::Union{Int,Nothing}=nothing,
-  #updater_kwargs,
-  kwargs...,
+  write_when_maxdim_exceeds::Union{Int,Nothing}=nothing, ### move outside
 )
-  maxdim, mindim, cutoff, noise, kwargs = process_sweeps(nsweeps; kwargs...)
-
   state = copy(init_state)
-
-  insert_function!(sweep_observer!, "sweep_printer" => sweep_printer) # FIX THIS
-
-  for which_sweep in 1:nsweeps
-    if !isnothing(write_when_maxdim_exceeds) &&
+  for (which_sweep, sweep_plan) in enumerate(sweep_plans)
+    if !isnothing(write_when_maxdim_exceeds) && #fix passing this
       maxdim[which_sweep] > write_when_maxdim_exceeds
       if outputlevel >= 2
         println(
@@ -27,40 +20,31 @@ function alternating_update(
       end
       projected_operator = disk(projected_operator)
     end
-    #sweep_params = (;
-    #  maxdim=maxdim[which_sweep],
-    #  mindim=mindim[which_sweep],
-    #  cutoff=cutoff[which_sweep],
-    #  noise=noise[which_sweep],
-    #)
     sw_time = @elapsed begin
       state, projected_operator = sweep_update(
         projected_operator,
         state;
         outputlevel,
         which_sweep,
-        #sweep_params,
-        #updater_kwargs,
-        kwargs...,
+        sweep_plan
       )
     end
 
     update!(sweep_observer!; state, which_sweep, sw_time, outputlevel)
-
-    checkdone(; state, which_sweep, outputlevel, kwargs...) && break
+    sweep_printer(;state, which_sweep, sw_time, outputlevel)
+    checkdone(; state, which_sweep, outputlevel, sweep_plan) && break
   end
-  select!(sweep_observer!, Observers.DataFrames.Not("sweep_printer"))
   return state
 end
 
-function alternating_update(updater, H::AbstractTTN, init_state::AbstractTTN; kwargs...)
+function alternating_update(H::AbstractTTN, init_state::AbstractTTN; kwargs...)
   check_hascommoninds(siteinds, H, init_state)
   check_hascommoninds(siteinds, H, init_state')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
   projected_operator = ProjTTN(H)
-  return alternating_update(updater, projected_operator, init_state; kwargs...)
+  return alternating_update(projected_operator, init_state; kwargs...)
 end
 
 """
@@ -83,7 +67,7 @@ Returns:
 * `state::MPS` - time-evolved MPS
 """
 function alternating_update(
-  updater, Hs::Vector{<:AbstractTTN}, init_state::AbstractTTN; kwargs...
+  Hs::Vector{<:AbstractTTN}, init_state::AbstractTTN; kwargs...
 )
   for H in Hs
     check_hascommoninds(siteinds, H, init_state)
@@ -91,5 +75,5 @@ function alternating_update(
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
   projected_operators = ProjTTNSum(Hs)
-  return alternating_update(updater, projected_operators, init_state; kwargs...)
+  return alternating_update(projected_operators, init_state; kwargs...)
 end
