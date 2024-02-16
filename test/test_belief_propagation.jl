@@ -7,9 +7,7 @@ using ITensorNetworks:
   BeliefPropagationCache,
   tensornetwork,
   update,
-  environment_tensors,
-  message_tensor,
-  message_tensors
+  environment_tensors
 using Test
 using Compat
 using ITensors
@@ -51,7 +49,7 @@ ITensors.disable_warn_order()
   v = first(vertices(ψψ))
   new_tensor = randomITensor(inds(ψψ[v]))
   bpc = update(bpc, new_tensor, v)
-  ψψ_updated = unpartitioned_graph(tensornetwork(bpc))
+  ψψ_updated = tensornetwork(bpc)
   @test ψψ_updated[v] == new_tensor
 
   #Now test on a tree, should also be exact

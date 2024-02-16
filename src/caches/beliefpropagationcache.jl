@@ -30,13 +30,19 @@ function BeliefPropagationCache(tn::ITensorNetwork, partitioned_vertices; kwargs
   return BeliefPropagationCache(ptn; kwargs...)
 end
 
-tensornetwork(bpc::BeliefPropagationCache) = bpc.partitioned_itensornetwork
+partitioned_itensornetwork(bpc::BeliefPropagationCache) = bpc.partitioned_itensornetwork
 message_tensors(bpc::BeliefPropagationCache) = bpc.message_tensors
+function tensornetwork(bpc::BeliefPropagationCache)
+  return unpartitioned_graph(partitioned_itensornetwork(bpc))
+end
+function NamedGraphs.partitioned_graph(bpc::BeliefPropagationCache)
+  return partitioned_graph(partitioned_itensornetwork(bpc))
+end
 
 function initial_message_tensor(
   bpc::BeliefPropagationCache, edge::PartitionEdge; mt_constructor=default_mt_constructor
 )
-  ptn = tensornetwork(bpc)
+  ptn = partitioned_itensornetwork(bpc)
   src_e_itn = subgraph(ptn, src(edge))
   dst_e_itn = subgraph(ptn, dst(edge))
   inds_e = commoninds(src_e_itn, dst_e_itn)
@@ -56,14 +62,16 @@ function message_tensors(
 end
 
 function copy(bpc::BeliefPropagationCache)
-  return BeliefPropagationCache(copy(tensornetwork(bpc)), copy(message_tensors(bpc)))
+  return BeliefPropagationCache(
+    copy(partitioned_itensornetwork(bpc)), copy(message_tensors(bpc))
+  )
 end
 
 function default_bp_niters(bpc::BeliefPropagationCache)
-  return default_bp_niters(partitioned_graph(tensornetwork(bpc)))
+  return default_bp_niters(partitioned_graph(bpc))
 end
 function default_edge_sequence(bpc::BeliefPropagationCache)
-  return default_edge_sequence(tensornetwork(bpc))
+  return default_edge_sequence(partitioned_itensornetwork(bpc))
 end
 
 """
@@ -76,7 +84,7 @@ function updated_message_tensor(
   contractor_kwargs=default_contractor_kwargs(),
   mt_constructor=default_mt_constructor,
 )
-  ptn = tensornetwork(bpc)
+  ptn = partitioned_itensornetwork(bpc)
   pb_edges = partitionedges(ptn, boundary_edges(ptn, vertices(ptn, src(edge)); dir=:in))
 
   incoming_messages = [
@@ -138,10 +146,13 @@ function update(
     end
     c += ct
   end
-  return BeliefPropagationCache(copy(tensornetwork(bpc)), new_mts),
+  return BeliefPropagationCache(copy(partitioned_itensornetwork(bpc)), new_mts),
   c / (length(edge_groups))
 end
 
+"""
+More generic interface for update, with default params
+"""
 function update(
   bpc::BeliefPropagationCache;
   edges=default_edge_sequence(bpc),
@@ -166,9 +177,12 @@ function update(
   return bpc
 end
 
+"""
+Update the tensornetwork inside the cache
+"""
 function update(bpc::BeliefPropagationCache, states::Vector{ITensor}, vertices::Vector)
   bpc = copy(bpc)
-  tn = unpartitioned_graph(tensornetwork(bpc))
+  tn = tensornetwork(bpc)
 
   for (state, vertex) in zip(states, vertices)
     setindex_preserve_graph!(tn, state, vertex)
@@ -180,8 +194,11 @@ function update(bpc, state, vertex)
   return update(bpc, ITensor[state], [vertex])
 end
 
+"""
+Get the relevant message tensors coming on to the vertices (of the underlying itensornetwork in the cache)
+"""
 function environment_tensors(bpc::BeliefPropagationCache, verts::Vector)
-  ptn = tensornetwork(bpc)
+  ptn = partitioned_itensornetwork(bpc)
   partition_verts = partitionvertices(ptn, verts)
   central_verts = vertices(ptn, partition_verts)
 
@@ -198,5 +215,7 @@ end
 function environment_tensors(
   bpc::BeliefPropagationCache, partition_verts::Vector{<:PartitionVertex}
 )
-  return environment_tensors(bpc, vertices(tensornetwork(bpc), partition_verts))
+  return environment_tensors(
+    bpc, vertices(partitioned_itensornetwork(bpc), partition_verts)
+  )
 end

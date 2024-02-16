@@ -26,7 +26,7 @@ function vidal_gauge(
     vsrc, vdst = src(e), dst(e)
     ψvsrc, ψvdst = ψ_vidal[vsrc], ψ_vidal[vdst]
 
-    pe = partitionedge(tensornetwork(bpc), (vsrc, 1) => (vdst, 1))
+    pe = partitionedge(partitioned_itensornetwork(bpc), (vsrc, 1) => (vdst, 1))
     edge_ind = commoninds(ψvsrc, ψvdst)
     edge_ind_sim = sim(edge_ind)
 
@@ -119,7 +119,7 @@ function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
 
   for e in edges(ψsymm)
     vsrc, vdst = src(e), dst(e)
-    pe = partitionedge(tensornetwork(bpc), NamedEdge((vsrc, 1) => (vdst, 1)))
+    pe = partitionedge(partitioned_itensornetwork(bpc), NamedEdge((vsrc, 1) => (vdst, 1)))
     root_S = sqrt_diag(bond_tensors[e])
     setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vsrc]), vsrc)
     setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vdst]), vdst)
@@ -167,7 +167,7 @@ function symmetric_to_vidal_gauge(
 
   for e in edges(ψ)
     vsrc, vdst = src(e), dst(e)
-    pe = partitionedge(tensornetwork(bpc), NamedEdge((vsrc, 1) => (vdst, 1)))
+    pe = partitionedge(partitioned_itensornetwork(bpc), NamedEdge((vsrc, 1) => (vdst, 1)))
     bond_tensors[e], bond_tensors[reverse(e)] = only(message_tensor(bpc, pe)),
     only(message_tensor(bpc, pe))
     invroot_S = invsqrt_diag(map_diag(x -> x + regularization, bond_tensors[e]))
