@@ -7,7 +7,8 @@ using ITensorNetworks:
   BeliefPropagationCache,
   tensornetwork,
   update,
-  environment_tensors
+  update_factor,
+  incoming_messages
 using Test
 using Compat
 using ITensors
@@ -39,7 +40,7 @@ ITensors.disable_warn_order()
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bpc = update(bpc)
-  env_tensors = environment_tensors(bpc, [PartitionVertex(v)])
+  env_tensors = incoming_messages(bpc, [PartitionVertex(v)])
   numerator = contract(vcat(env_tensors, ITensor[ψ[v], op("Sz", s[v]), dag(prime(ψ[v]))]))[]
   denominator = contract(vcat(env_tensors, ITensor[ψ[v], op("I", s[v]), dag(prime(ψ[v]))]))[]
 
@@ -48,7 +49,7 @@ ITensors.disable_warn_order()
   #Test updating the underlying tensornetwork in the cache
   v = first(vertices(ψψ))
   new_tensor = randomITensor(inds(ψψ[v]))
-  bpc = update(bpc, new_tensor, v)
+  bpc = update_factor(bpc, v, new_tensor)
   ψψ_updated = tensornetwork(bpc)
   @test ψψ_updated[v] == new_tensor
 
@@ -69,7 +70,7 @@ ITensors.disable_warn_order()
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bpc = update(bpc)
-  env_tensors = environment_tensors(bpc, [PartitionVertex(v)])
+  env_tensors = incoming_messages(bpc, [PartitionVertex(v)])
   numerator = contract(vcat(env_tensors, ITensor[ψ[v], op("Sz", s[v]), dag(prime(ψ[v]))]))[]
   denominator = contract(vcat(env_tensors, ITensor[ψ[v], op("I", s[v]), dag(prime(ψ[v]))]))[]
 
@@ -90,9 +91,9 @@ ITensors.disable_warn_order()
     ITensors.contract(ψψ; sequence=contract_seq)[]
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
-  bpc = update(bpc; niters=20)
+  bpc = update(bpc; maxiters=20)
 
-  env_tensors = environment_tensors(bpc, vs)
+  env_tensors = incoming_messages(bpc, vs)
   numerator = contract(vcat(env_tensors, ITensor[ψOψ[v] for v in vs]))[]
   denominator = contract(vcat(env_tensors, ITensor[ψψ[v] for v in vs]))[]
 
@@ -108,10 +109,10 @@ ITensors.disable_warn_order()
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
-  bpc = update(bpc; niters=20)
+  bpc = update(bpc; maxiters=20)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
-  env_tensors = environment_tensors(bpc, [(v, 2) for v in vs])
+  env_tensors = incoming_messages(bpc, [(v, 2) for v in vs])
   rdm = ITensors.contract(
     vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]])
   )
@@ -143,11 +144,11 @@ ITensors.disable_warn_order()
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bpc = update(
     bpc;
-    contractor=ITensorNetworks.contract_density_matrix,
-    contractor_kwargs=(; cutoff=1e-6, maxdim=4),
+    message_update=ITensorNetworks.contract_density_matrix,
+    message_update_kwargs=(; cutoff=1e-6, maxdim=4),
   )
 
-  env_tensors = environment_tensors(bpc, [v])
+  env_tensors = incoming_messages(bpc, [v])
   numerator = contract(vcat(env_tensors, ITensor[ψOψ[v]]))[]
   denominator = contract(vcat(env_tensors, ITensor[ψψ[v]]))[]
 

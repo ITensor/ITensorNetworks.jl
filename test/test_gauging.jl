@@ -8,7 +8,8 @@ using ITensorNetworks:
   vidal_gauge,
   symmetric_itn_canonicalness,
   update,
-  message_tensors
+  messages,
+  BeliefPropagationCache
 using NamedGraphs
 using Test
 using Compat
@@ -24,7 +25,7 @@ using SplitApplyCombine
 
   Random.seed!(5467)
   ψ = randomITensorNetwork(s; link_space=χ)
-  ψ_symm, bpc = symmetric_gauge(ψ; niters=50)
+  ψ_symm, bpc = symmetric_gauge(ψ)
 
   @test symmetric_itn_canonicalness(ψ_symm, bpc) < 1e-5
 
@@ -34,16 +35,16 @@ using SplitApplyCombine
 
   ψψ_symm_V2 = ψ_symm ⊗ prime(dag(ψ_symm); sites=[])
   bpc_V2 = BeliefPropagationCache(ψψ_symm_V2, group(v -> v[1], vertices(ψψ_symm_V2)))
-  bpc_V2 = update(bpc_V2; niters=50)
+  bpc_V2 = update(bpc_V2; maxiters=50)
 
-  for m_e in collect(values(message_tensors(bpc_V2)))
+  for m_e in values(messages(bpc_V2))
     #Test all message tensors are approximately diagonal
     @test diagITensor(vector(diag(only(m_e))), inds(only(m_e))) ≈ only(m_e) atol = 1e-8
   end
 
-  ψ_vidal, bond_tensors = vidal_gauge(ψ; target_canonicalness=1e-6)
-  @test vidal_itn_canonicalness(ψ_vidal, bond_tensors) < 1e-5
+  Γ, Λ = vidal_gauge(ψ)
+  @test vidal_itn_canonicalness(Γ, Λ) < 1e-5
 
-  ψ_vidal, bond_tensors = symmetric_to_vidal_gauge(ψ_symm, bpc)
-  @test vidal_itn_canonicalness(ψ_vidal, bond_tensors) < 1e-5
+  Γ, Λ = symmetric_to_vidal_gauge(ψ_symm, bpc)
+  @test vidal_itn_canonicalness(Γ, Λ) < 1e-5
 end

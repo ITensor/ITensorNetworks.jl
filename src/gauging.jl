@@ -1,3 +1,9 @@
+function default_cache(ψ::ITensorNetwork)
+  ψψ = norm_network(ψ)
+  return BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+end
+default_cache_update_kwargs(cache) = (; maxiters=20, tol=1e-5)
+
 """initialize bond tensors of an ITN to identity matrices"""
 function initialize_bond_tensors(ψ::ITensorNetwork; index_map=prime)
   bond_tensors = DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))
@@ -13,9 +19,9 @@ end
 """Use an ITensorNetwork ψ, its bond tensors and belief propagation cache to put ψ into the vidal gauge, return the bond tensors and ψ_vidal."""
 function vidal_gauge(
   ψ::ITensorNetwork,
-  bpc::BeliefPropagationCache,
-  bond_tensors::DataGraph;
-  eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
+  bond_tensors::DataGraph,
+  bp_cache::BeliefPropagationCache;
+  message_cutoff=10 * eps(real(scalartype(ψ))),
   regularization=10 * eps(real(scalartype(ψ))),
   edges=NamedGraphs.edges(ψ),
   svd_kwargs...,
@@ -26,17 +32,13 @@ function vidal_gauge(
     vsrc, vdst = src(e), dst(e)
     ψvsrc, ψvdst = ψ_vidal[vsrc], ψ_vidal[vdst]
 
-    pe = partitionedge(partitioned_itensornetwork(bpc), (vsrc, 1) => (vdst, 1))
+    pe = partitionedge(bp_cache, (vsrc, 1) => (vdst, 1))
     edge_ind = commoninds(ψvsrc, ψvdst)
     edge_ind_sim = sim(edge_ind)
 
-    X_D, X_U = eigen(
-      only(message_tensor(bpc, pe)); ishermitian=true, cutoff=eigen_message_tensor_cutoff
-    )
+    X_D, X_U = eigen(only(message(bp_cache, pe)); ishermitian=true, cutoff=message_cutoff)
     Y_D, Y_U = eigen(
-      only(message_tensor(bpc, reverse(pe)));
-      ishermitian=true,
-      cutoff=eigen_message_tensor_cutoff,
+      only(message(bp_cache, reverse(pe))); ishermitian=true, cutoff=message_cutoff
     )
     X_D, Y_D = map_diag(x -> x + regularization, X_D),
     map_diag(x -> x + regularization, Y_D)
@@ -76,37 +78,26 @@ function vidal_gauge(
   return ψ_vidal, bond_tensors
 end
 
-"""Use an ITensorNetwork ψ in the symmetric gauge and its belief propagation cache to put ψ into the vidal gauge. Return the bond tensors and ψ_vidal."""
 function vidal_gauge(
   ψ::ITensorNetwork,
-  bpc::BeliefPropagationCache;
-  eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
-  regularization=10 * eps(real(scalartype(ψ))),
-  edges=NamedGraphs.edges(ψ),
-  svd_kwargs...,
+  bond_tensors;
+  (cache!)=nothing,
+  cache_update_kwargs=default_cache_update_kwargs(cache!),
+  kwargs...,
 )
-  bond_tensors = initialize_bond_tensors(ψ)
-  return vidal_gauge(
-    ψ, bpc, bond_tensors; eigen_message_tensor_cutoff, regularization, edges, svd_kwargs...
-  )
+  if isnothing(cache!)
+    cache! = Ref(default_cache(ψ))
+  end
+
+  cache![] = update(cache![]; cache_update_kwargs...)
+
+  return vidal_gauge(ψ, bond_tensors, cache![]; kwargs...)
 end
 
 """Put an ITensorNetwork into the vidal gauge (by computing the message tensors), return the network and the bond tensors."""
-function vidal_gauge(
-  ψ::ITensorNetwork;
-  eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
-  regularization=10 * eps(real(scalartype(ψ))),
-  niters=30,
-  target_canonicalness::Union{Nothing,Float64}=nothing,
-  verbose=false,
-  svd_kwargs...,
-)
-  ψψ = norm_network(ψ)
-
-  bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
-  bpc = update(bpc; niters, target_precision=target_canonicalness, verbose)
-
-  return vidal_gauge(ψ, bpc; eigen_message_tensor_cutoff, regularization, svd_kwargs...)
+function vidal_gauge(ψ::ITensorNetwork; kwargs...)
+  bond_tensors = initialize_bond_tensors(ψ)
+  return vidal_gauge(ψ, bond_tensors; kwargs...)
 end
 
 """Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (partitionedgraph, message tensors)"""
@@ -114,43 +105,31 @@ function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
   ψsymm = copy(ψ)
   ψψsymm = norm_network(ψsymm)
 
-  bpc = BeliefPropagationCache(ψψsymm, group(v -> v[1], vertices(ψψsymm)))
-  mts = message_tensors(bpc)
+  bp_cache = BeliefPropagationCache(ψψsymm, group(v -> v[1], vertices(ψψsymm)))
+  mts = messages(bp_cache)
 
   for e in edges(ψsymm)
     vsrc, vdst = src(e), dst(e)
-    pe = partitionedge(partitioned_itensornetwork(bpc), NamedEdge((vsrc, 1) => (vdst, 1)))
+    pe = partitionedge(bp_cache, (vsrc, 1) => (vdst, 1))
     root_S = sqrt_diag(bond_tensors[e])
     setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vsrc]), vsrc)
     setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vdst]), vdst)
 
-    mts[pe], mts[reverse(pe)] = copy(ITensor[dense(bond_tensors[e])]),
-    copy(ITensor[dense(bond_tensors[e])])
+    haskey(mts, pe) && delete!(mts, pe)
+    haskey(mts, reverse(pe)) && delete!(mts, reverse(pe))
+    insert!(mts, pe, copy(ITensor[dense(bond_tensors[e])]))
+    insert!(mts, reverse(pe), copy(ITensor[dense(bond_tensors[e])]))
   end
 
   ψψsymm = norm_network(ψsymm)
   pψψsymm = PartitionedGraph(ψψsymm, group(v -> v[1], vertices(ψψsymm)))
 
-  return ψsymm, BeliefPropagationCache(pψψsymm, mts)
+  return ψsymm, BeliefPropagationCache(pψψsymm, mts, default_message(bp_cache))
 end
 
 """Put an ITensorNetwork into the symmetric gauge and also return the message tensors (which are the diagonal bond matrices from the Vidal Gauge)"""
-function symmetric_gauge(
-  ψ::ITensorNetwork;
-  eigen_message_tensor_cutoff=10 * eps(real(scalartype(ψ))),
-  regularization=10 * eps(real(scalartype(ψ))),
-  niters=30,
-  target_canonicalness::Union{Nothing,Float64}=nothing,
-  svd_kwargs...,
-)
-  ψ_vidal, bond_tensors = vidal_gauge(
-    ψ;
-    eigen_message_tensor_cutoff,
-    regularization,
-    niters,
-    target_canonicalness,
-    svd_kwargs...,
-  )
+function symmetric_gauge(ψ::ITensorNetwork; kwargs...)
+  ψ_vidal, bond_tensors = vidal_gauge(ψ; kwargs...)
 
   return vidal_to_symmetric_gauge(ψ_vidal, bond_tensors)
 end
@@ -158,7 +137,7 @@ end
 """Transform from the Symmetric Gauge (message tensors) to the Vidal Gauge (bond tensors)"""
 function symmetric_to_vidal_gauge(
   ψ::ITensorNetwork,
-  bpc::BeliefPropagationCache;
+  bp_cache::BeliefPropagationCache;
   regularization=10 * eps(real(scalartype(ψ))),
 )
   bond_tensors = DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))
@@ -167,9 +146,9 @@ function symmetric_to_vidal_gauge(
 
   for e in edges(ψ)
     vsrc, vdst = src(e), dst(e)
-    pe = partitionedge(partitioned_itensornetwork(bpc), NamedEdge((vsrc, 1) => (vdst, 1)))
-    bond_tensors[e], bond_tensors[reverse(e)] = only(message_tensor(bpc, pe)),
-    only(message_tensor(bpc, pe))
+    pe = partitionedge(bp_cache, (vsrc, 1) => (vdst, 1))
+    bond_tensors[e], bond_tensors[reverse(e)] = only(message(bp_cache, pe)),
+    only(message(bp_cache, pe))
     invroot_S = invsqrt_diag(map_diag(x -> x + regularization, bond_tensors[e]))
     setindex_preserve_graph!(ψ_vidal, noprime(invroot_S * ψ_vidal[vsrc]), vsrc)
     setindex_preserve_graph!(ψ_vidal, noprime(invroot_S * ψ_vidal[vdst]), vdst)
@@ -204,22 +183,18 @@ end
 """Function to measure the 'canonicalness' of a state in the Vidal Gauge"""
 function vidal_itn_canonicalness(ψ::ITensorNetwork, bond_tensors::DataGraph)
   f = 0
-
   isometries = vidal_itn_isometries(ψ, bond_tensors)
-
   for e in keys(isometries)
-    LHS = isometries[e] / sum(diag(isometries[e]))
-    id = dense(delta(inds(LHS)))
-    id /= sum(diag(id))
-    f += 0.5 * norm(id - LHS)
+    lhs = isometries[e]
+    f += message_diff(ITensor[lhs], ITensor[dense(delta(inds(lhs)))])
   end
 
   return f / (length(keys(isometries)))
 end
 
 """Function to measure the 'canonicalness' of a state in the Symmetric Gauge"""
-function symmetric_itn_canonicalness(ψ::ITensorNetwork, bpc::BeliefPropagationCache)
-  ψ_vidal, bond_tensors = symmetric_to_vidal_gauge(ψ, bpc)
+function symmetric_itn_canonicalness(ψ::ITensorNetwork, bp_cache::BeliefPropagationCache)
+  ψ_vidal, bond_tensors = symmetric_to_vidal_gauge(ψ, bp_cache)
 
   return vidal_itn_canonicalness(ψ_vidal, bond_tensors)
 end
