@@ -23,9 +23,9 @@ using SplitApplyCombine
 
   Random.seed!(5467)
   ψ = randomITensorNetwork(s; link_space=χ)
-  ψ_symm, bpc = symmetric_gauge(ψ)
+  ψ_symm, bp_cache = symmetric_gauge(ψ)
 
-  @test gauge_error(ψ_symm, bpc) < 1e-5
+  @test gauge_error(ψ_symm, bp_cache) < 1e-5
 
   #Test we just did a gauge transform and didn't change the overall network
   @test contract_inner(ψ_symm, ψ) /
@@ -43,6 +43,6 @@ using SplitApplyCombine
   Γ, Λ = vidal_gauge(ψ)
   @test gauge_error(Γ, Λ) < 1e-5
 
-  Γ, Λ = vidal_gauge(ψ_symm, bpc)
+  Γ, Λ = vidal_gauge(ψ_symm; (cache!)=Ref(bp_cache))
   @test gauge_error(Γ, Λ) < 1e-5
 end

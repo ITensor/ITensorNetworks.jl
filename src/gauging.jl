@@ -132,29 +132,6 @@ function symmetric_gauge(ψ::ITensorNetwork; kwargs...)
   return symmetric_gauge(ψ_vidal, bond_tensors)
 end
 
-"""Transform from the Symmetric Gauge (message tensors) to the Vidal Gauge (bond tensors)"""
-function vidal_gauge(
-  ψ::ITensorNetwork,
-  bp_cache::BeliefPropagationCache;
-  regularization=10 * eps(real(scalartype(ψ))),
-)
-  bond_tensors = DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))
-
-  ψ_vidal = copy(ψ)
-
-  for e in edges(ψ)
-    vsrc, vdst = src(e), dst(e)
-    pe = partitionedge(bp_cache, (vsrc, 1) => (vdst, 1))
-    bond_tensors[e], bond_tensors[reverse(e)] = only(message(bp_cache, pe)),
-    only(message(bp_cache, pe))
-    invroot_S = invsqrt_diag(map_diag(x -> x + regularization, bond_tensors[e]))
-    setindex_preserve_graph!(ψ_vidal, noprime(invroot_S * ψ_vidal[vsrc]), vsrc)
-    setindex_preserve_graph!(ψ_vidal, noprime(invroot_S * ψ_vidal[vdst]), vdst)
-  end
-
-  return ψ_vidal, bond_tensors
-end
-
 """Function to measure the 'isometries' of a state in the Vidal Gauge"""
 function vidal_itn_isometries(
   ψ::ITensorNetwork,
@@ -191,6 +168,6 @@ function gauge_error(ψ::ITensorNetwork, bond_tensors::DataGraph)
 end
 
 function gauge_error(ψ::ITensorNetwork, bp_cache::BeliefPropagationCache)
-  Γ, Λ = vidal_gauge(ψ, bp_cache)
+  Γ, Λ = vidal_gauge(ψ; (cache!)=Ref(bp_cache))
   return gauge_error(Γ, Λ)
 end
