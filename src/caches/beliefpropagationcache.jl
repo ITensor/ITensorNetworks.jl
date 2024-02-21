@@ -1,12 +1,12 @@
-default_initial_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
+default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   return contract_exact(contract_list; kwargs...)
 end
 default_message_update_kwargs() = (; normalize=true, contraction_sequence_alg="optimal")
-@traitfn default_bp_maxiters(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
-@traitfn function default_bp_maxiters(g::::IsDirected)
-  return default_bp_maxiters(undirected_graph(underlying_graph(g)))
+@traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
+@traitfn function default_bp_maxiter(g::::IsDirected)
+  return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
@@ -22,9 +22,7 @@ end
 
 #Constructors...
 function BeliefPropagationCache(
-  ptn::PartitionedGraph;
-  messages=default_messages(ptn),
-  default_message=default_initial_message,
+  ptn::PartitionedGraph; messages=default_messages(ptn), default_message=default_message
 )
   return BeliefPropagationCache(ptn, messages, default_message)
 end
@@ -38,7 +36,7 @@ function partitioned_itensornetwork(bp_cache::BeliefPropagationCache)
   return bp_cache.partitioned_itensornetwork
 end
 messages(bp_cache::BeliefPropagationCache) = bp_cache.messages
-default_message(bp_cache) = bp_cache.default_message
+default_message(bp_cache::BeliefPropagationCache) = bp_cache.default_message
 function tensornetwork(bp_cache::BeliefPropagationCache)
   return unpartitioned_graph(partitioned_itensornetwork(bp_cache))
 end
@@ -50,19 +48,13 @@ for f in [
   :(NamedGraphs.partitionvertices),
   :(NamedGraphs.vertices),
   :(NamedGraphs.boundary_partitionedges),
+  :linkinds,
 ]
   @eval begin
     function $f(bp_cache::BeliefPropagationCache, args...; kwargs...)
       return $f(partitioned_itensornetwork(bp_cache), args...; kwargs...)
     end
   end
-end
-
-function linkinds(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
-  ptn = partitioned_itensornetwork(bp_cache)
-  src_e_itn = subgraph(ptn, src(edge))
-  dst_e_itn = subgraph(ptn, dst(edge))
-  return commoninds(src_e_itn, dst_e_itn)
 end
 
 function default_message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
@@ -87,8 +79,8 @@ function copy(bp_cache::BeliefPropagationCache)
   )
 end
 
-function default_bp_maxiters(bp_cache::BeliefPropagationCache)
-  return default_bp_maxiters(partitioned_graph(bp_cache))
+function default_bp_maxiter(bp_cache::BeliefPropagationCache)
+  return default_bp_maxiter(partitioned_graph(bp_cache))
 end
 function default_edge_sequence(bp_cache::BeliefPropagationCache)
   return default_edge_sequence(partitioned_itensornetwork(bp_cache))
@@ -100,8 +92,8 @@ function incoming_messages(
   ignore_edges=PartitionEdge[],
 )
   bpes = boundary_partitionedges(bp_cache, partition_vertices; dir=:in)
-  messages = [message(bp_cache, e_in) for e_in in setdiff(bpes, ignore_edges)]
-  return reduce(vcat, messages; init=ITensor[])
+  ms = messages(bp_cache, setdiff(bpes, ignore_edges))
+  return reduce(vcat, ms; init=[])
 end
 
 function incoming_messages(
@@ -156,8 +148,7 @@ function update(
   bp_cache_updated = copy(bp_cache)
   mts = messages(bp_cache_updated)
   for e in edges
-    haskey(mts, e) && delete!(mts, e)
-    insert!(mts, e, update_message(bp_cache_updated, e; kwargs...))
+    set!(mts, e, update_message(bp_cache_updated, e; kwargs...))
     if !isnothing(update_diff!)
       update_diff![] += message_diff(message(bp_cache, e), mts[e])
     end
@@ -198,17 +189,17 @@ More generic interface for update, with default params
 function update(
   bp_cache::BeliefPropagationCache;
   edges=default_edge_sequence(bp_cache),
-  maxiters=default_bp_maxiters(bp_cache),
+  maxiter=default_bp_maxiter(bp_cache),
   tol=nothing,
   verbose=false,
   kwargs...,
 )
   compute_error = !isnothing(tol)
   diff = compute_error ? Ref(0.0) : nothing
-  if isnothing(maxiters)
+  if isnothing(maxiter)
     error("You need to specify a number of iterations for BP!")
   end
-  for i in 1:maxiters
+  for i in 1:maxiter
     bp_cache = update(bp_cache, edges; (update_diff!)=diff, kwargs...)
     if compute_error && (diff.x / length(edges)) <= tol
       if verbose

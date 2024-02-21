@@ -91,7 +91,7 @@ ITensors.disable_warn_order()
     ITensors.contract(ψψ; sequence=contract_seq)[]
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
-  bpc = update(bpc; maxiters=20)
+  bpc = update(bpc; maxiter=20)
 
   env_tensors = incoming_messages(bpc, vs)
   numerator = contract(vcat(env_tensors, ITensor[ψOψ[v] for v in vs]))[]
@@ -109,7 +109,7 @@ ITensors.disable_warn_order()
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
-  bpc = update(bpc; maxiters=20)
+  bpc = update(bpc; maxiter=20)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   env_tensors = incoming_messages(bpc, [(v, 2) for v in vs])

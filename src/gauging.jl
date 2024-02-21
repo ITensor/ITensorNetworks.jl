@@ -2,7 +2,7 @@ function default_cache(ψ::ITensorNetwork)
   ψψ = norm_network(ψ)
   return BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
 end
-default_cache_update_kwargs(cache) = (; maxiters=20, tol=1e-5)
+default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
 
 """initialize bond tensors of an ITN to identity matrices"""
 function initialize_bond_tensors(ψ::ITensorNetwork; index_map=prime)
@@ -101,7 +101,7 @@ function vidal_gauge(ψ::ITensorNetwork; kwargs...)
 end
 
 """Transform from an ITensor in the Vidal Gauge (bond tensors) to the Symmetric Gauge (partitionedgraph, message tensors)"""
-function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
+function symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
   ψsymm = copy(ψ)
   ψψsymm = norm_network(ψsymm)
 
@@ -115,10 +115,8 @@ function vidal_to_symmetric_gauge(ψ::ITensorNetwork, bond_tensors::DataGraph)
     setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vsrc]), vsrc)
     setindex_preserve_graph!(ψsymm, noprime(root_S * ψsymm[vdst]), vdst)
 
-    haskey(mts, pe) && delete!(mts, pe)
-    haskey(mts, reverse(pe)) && delete!(mts, reverse(pe))
-    insert!(mts, pe, copy(ITensor[dense(bond_tensors[e])]))
-    insert!(mts, reverse(pe), copy(ITensor[dense(bond_tensors[e])]))
+    set!(mts, pe, copy(ITensor[dense(bond_tensors[e])]))
+    set!(mts, reverse(pe), copy(ITensor[dense(bond_tensors[e])]))
   end
 
   ψψsymm = norm_network(ψsymm)
@@ -131,11 +129,11 @@ end
 function symmetric_gauge(ψ::ITensorNetwork; kwargs...)
   ψ_vidal, bond_tensors = vidal_gauge(ψ; kwargs...)
 
-  return vidal_to_symmetric_gauge(ψ_vidal, bond_tensors)
+  return symmetric_gauge(ψ_vidal, bond_tensors)
 end
 
 """Transform from the Symmetric Gauge (message tensors) to the Vidal Gauge (bond tensors)"""
-function symmetric_to_vidal_gauge(
+function vidal_gauge(
   ψ::ITensorNetwork,
   bp_cache::BeliefPropagationCache;
   regularization=10 * eps(real(scalartype(ψ))),
@@ -180,8 +178,8 @@ function vidal_itn_isometries(
   return isometries
 end
 
-"""Function to measure the 'canonicalness' of a state in the Vidal Gauge"""
-function vidal_itn_canonicalness(ψ::ITensorNetwork, bond_tensors::DataGraph)
+"""Function to measure the 'distance' of a state from the Vidal Gauge"""
+function gauge_error(ψ::ITensorNetwork, bond_tensors::DataGraph)
   f = 0
   isometries = vidal_itn_isometries(ψ, bond_tensors)
   for e in keys(isometries)
@@ -192,9 +190,7 @@ function vidal_itn_canonicalness(ψ::ITensorNetwork, bond_tensors::DataGraph)
   return f / (length(keys(isometries)))
 end
 
-"""Function to measure the 'canonicalness' of a state in the Symmetric Gauge"""
-function symmetric_itn_canonicalness(ψ::ITensorNetwork, bp_cache::BeliefPropagationCache)
-  ψ_vidal, bond_tensors = symmetric_to_vidal_gauge(ψ, bp_cache)
-
-  return vidal_itn_canonicalness(ψ_vidal, bond_tensors)
+function gauge_error(ψ::ITensorNetwork, bp_cache::BeliefPropagationCache)
+  Γ, Λ = vidal_gauge(ψ, bp_cache)
+  return gauge_error(Γ, Λ)
 end
