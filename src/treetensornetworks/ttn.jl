@@ -66,8 +66,8 @@ end
 # TODO: Implement `random_circuit_ttn` for non-trivial
 # bond dimensions and correlations.
 # TODO: Implement random_ttn for QN-Index
-function random_ttn(args...; kwargs...)
-  T = TTN(args...; kwargs...)
+function random_ttn(args...; link_space=1,kwargs...)
+  T = TTN(args...; link_space,kwargs...)
   randn!.(vertex_data(T))
   normalize!.(vertex_data(T))
   return T
