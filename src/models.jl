@@ -93,7 +93,7 @@ function heisenberg(g::AbstractGraph; J1=1, J2=0, h=0)
   end
   for (i, v) in enumerate(vertices(g))
     if !iszero(h[i])
-      ℋ += h[i], "Sz", maybe_only(v)
+      ℋ += h[i], "Sz", v
     end
   end
   return ℋ
