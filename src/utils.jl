@@ -22,3 +22,10 @@ function line_to_tree(line::Vector)
   end
   return [line_to_tree(line[1:(end - 1)]), line[end]]
 end
+
+function getindices_narrow_keytype(d::Dictionary, indices)
+  T = typeof(d)
+  d_at_indices = getindices(d, indices)
+  T != typeof(d_at_indices) && (d_at_indices = T(d_at_indices))
+  return d_at_indices
+end
