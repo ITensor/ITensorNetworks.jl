@@ -389,7 +389,7 @@ end
 
     H = TTN(os, s)
 
-    ψ0 = normalize!(random_ttn(s; link_space=10))
+    ψ0 = normalize!(random_ttn(s))
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)

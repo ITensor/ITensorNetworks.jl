@@ -45,8 +45,8 @@ function TTN(g::AbstractGraph, args...; kwargs...)
   return TTN(Float64, g, args...; kwargs...)
 end
 
-function TTN(eltype::Type{<:Number}, graph::AbstractGraph, args...; kwargs...)
-  itensor_network = ITensorNetwork(eltype, graph; kwargs...)
+function TTN(eltype::Type{<:Number}, graph::AbstractGraph, args...; link_space=1, kwargs...)
+  itensor_network = ITensorNetwork(eltype, graph; link_space, kwargs...)
   return TTN(itensor_network, args...)
 end
 
@@ -66,8 +66,8 @@ end
 # TODO: Implement `random_circuit_ttn` for non-trivial
 # bond dimensions and correlations.
 # TODO: Implement random_ttn for QN-Index
-function random_ttn(args...; link_space=1, kwargs...)
-  T = TTN(args...; link_space, kwargs...)
+function random_ttn(args...; kwargs...)
+  T = TTN(args...; kwargs...)
   randn!.(vertex_data(T))
   normalize!.(vertex_data(T))
   return T
