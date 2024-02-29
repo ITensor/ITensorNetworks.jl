@@ -3,6 +3,7 @@ using ITensorNetworks
 using OMEinsumContractionOrders
 using Random
 using Test
+using EinExprs: Exhaustive, Greedy, HyPar
 
 Random.seed!(1234)
 
@@ -23,7 +24,15 @@ ITensors.disable_warn_order()
   res_tree_sa = contract(tn; sequence=seq_tree_sa)[]
   seq_sa_bipartite = contraction_sequence(tn; alg="sa_bipartite")
   res_sa_bipartite = contract(tn; sequence=seq_sa_bipartite)[]
-  @test res_optimal ≈ res_greedy ≈ res_tree_sa ≈ res_sa_bipartite
+  seq_einexprs_exhaustive = contraction_sequence(tn; alg="einexpr", optimizer=Exhaustive())
+  res_einexprs_exhaustive = contract(tn; sequence=seq_einexprs_exhaustive)[]
+  seq_einexprs_greedy = contraction_sequence(tn; alg="einexpr", optimizer=Greedy())
+  res_einexprs_greedy = contract(tn; sequence=seq_einexprs_exhaustive)[]
+  @test res_greedy ≈ res_optimal
+  @test res_tree_sa ≈ res_optimal
+  @test res_sa_bipartite ≈ res_optimal
+  @test res_einexprs_exhaustive ≈ res_optimal
+  @test res_einexprs_greedy ≈ res_optimal
 
   if !Sys.iswindows()
     # KaHyPar doesn't work on Windows
@@ -34,5 +43,8 @@ ITensors.disable_warn_order()
     seq_kahypar_bipartite = contraction_sequence(tn; alg="kahypar_bipartite", sc_target=200)
     res_kahypar_bipartite = contract(tn; sequence=seq_kahypar_bipartite)[]
     @test res_optimal ≈ res_kahypar_bipartite
+    seq_einexprs_kahypar = contraction_sequence(tn; alg="einexpr", optimizer=HyPar())
+    res_einexprs_kahypar = contract(tn; sequence=seq_einexprs_kahypar)[]
+    @test res_einexprs_kahypar ≈ res_optimal
   end
 end

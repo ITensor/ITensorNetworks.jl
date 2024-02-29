@@ -22,6 +22,7 @@ using LinearAlgebra
 using NamedGraphs
 using Observers
 using Observers.DataFrames: select!
+using PackageExtensionCompat
 using Printf
 using Requires
 using SimpleTraits
@@ -70,7 +71,6 @@ include("observers.jl")
 include("visualize.jl")
 include("graphs.jl")
 include("itensors.jl")
-include("lattices.jl")
 include("abstractindsnetwork.jl")
 include("indextags.jl")
 include("indsnetwork.jl")
@@ -94,10 +94,12 @@ include(joinpath("approx_itensornetwork", "binary_tree_partition.jl"))
 include("contract.jl")
 include("utility.jl")
 include("specialitensornetworks.jl")
-include("renameitensornetwork.jl")
 include("boundarymps.jl")
 include(joinpath("beliefpropagation", "beliefpropagation.jl"))
 include(joinpath("beliefpropagation", "beliefpropagation_schedule.jl"))
+include(joinpath("formnetworks", "abstractformnetwork.jl"))
+include(joinpath("formnetworks", "bilinearformnetwork.jl"))
+include(joinpath("formnetworks", "quadraticformnetwork.jl"))
 include("contraction_tree_to_graph.jl")
 include("gauging.jl")
 include("utils.jl")
@@ -130,6 +132,7 @@ include(joinpath("treetensornetworks", "solvers", "tree_sweeping.jl"))
 include("exports.jl")
 
 function __init__()
+  @require_extensions
   @require OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715" include(
     joinpath("requires", "omeinsumcontractionorders.jl")
   )

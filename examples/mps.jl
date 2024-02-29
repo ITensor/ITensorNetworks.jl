@@ -3,10 +3,11 @@ using ITensors
 using ITensorNetworks
 using ITensorUnicodePlots
 using Random
+using NamedGraphs
 
 Random.seed!(1234)
 
-g = chain_lattice_graph(4)
+g = named_path_graph(4)
 
 s = siteinds("S=1/2", g)
 

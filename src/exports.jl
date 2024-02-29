@@ -71,6 +71,8 @@ export AbstractITensorNetwork,
   mps,
   ortho_center,
   set_ortho_center,
+  BilinearFormNetwork,
+  QuadraticFormNetwork,
   TreeTensorNetwork,
   TTN,
   random_ttn,
@@ -106,10 +108,6 @@ export path_graph_structure, binary_tree_structure
 
 # ITensorNetworks: approx_itensornetwork.jl
 export approx_itensornetwork
-
-# ITensorNetworks: lattices.jl
-# TODO: DELETE
-export hypercubic_lattice_graph, square_lattice_graph, chain_lattice_graph
 
 # ITensorNetworks: partition.jl
 export partition, partition_vertices, subgraphs, subgraph_vertices
