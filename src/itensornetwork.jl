@@ -82,21 +82,21 @@ end
 function ITensorNetwork{V}(
   eltype::Type, undef::UndefInitializer, graph::AbstractNamedGraph; kwargs...
 ) where {V}
-  return ITensorNetwork{V}(eltype, undef, IndsNetwork{V}(graph; kwargs...); kwargs...)
+  return ITensorNetwork{V}(eltype, undef, IndsNetwork{V}(graph; kwargs...))
 end
 
 function ITensorNetwork{V}(eltype::Type, graph::AbstractNamedGraph; kwargs...) where {V}
-  return ITensorNetwork{V}(eltype, IndsNetwork{V}(graph; kwargs...); kwargs...)
+  return ITensorNetwork{V}(eltype, IndsNetwork{V}(graph; kwargs...))
 end
 
 function ITensorNetwork{V}(
   undef::UndefInitializer, graph::AbstractNamedGraph; kwargs...
 ) where {V}
-  return ITensorNetwork{V}(undef, IndsNetwork{V}(graph; kwargs...); kwargs...)
+  return ITensorNetwork{V}(undef, IndsNetwork{V}(graph; kwargs...))
 end
 
 function ITensorNetwork{V}(graph::AbstractNamedGraph; kwargs...) where {V}
-  return ITensorNetwork{V}(IndsNetwork{V}(graph; kwargs...); kwargs...)
+  return ITensorNetwork{V}(IndsNetwork{V}(graph; kwargs...))
 end
 
 function ITensorNetwork(
@@ -191,7 +191,7 @@ function ITensorNetwork{V}(
   inds_network_merge = typeof(inds_network)(
     underlying_graph(inds_network); link_space, kwargs...
   )
-  inds_network = union(inds_network, inds_network_merge)
+  inds_network = union(inds_network_merge, inds_network)
   tn = ITensorNetwork{V}()
   for v in vertices(inds_network)
     add_vertex!(tn, v)
