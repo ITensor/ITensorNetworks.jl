@@ -56,6 +56,10 @@ using Test
     @test sequence isa Vector
     inner_res = contract(inner_tn; sequence)[]
     @test inner_res isa Float64
+
+    # test that by default vertices are linked by bond-dimension 1 index
+    tn = ITensorNetwork(s)
+    @test isone(ITensors.dim(commonind(tn[(1,)], tn[(2,)])))
   end
 
   @testset "Constructors from ITensors" begin
