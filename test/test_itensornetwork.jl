@@ -185,7 +185,6 @@ using Test
     @test w[(1, 2)] ≈ log2(3)
     @test w[(2, 3)] ≈ log2(3)
     @test w[(3, 4)] ≈ log2(3)
-    #@show w[(3, 4)] ≈ log2(3)
     p1, p2, wc = GraphsFlows.mincut(tn, 2, 3)
     @test issetequal(p1, [1, 2])
     @test issetequal(p2, [3, 4])
