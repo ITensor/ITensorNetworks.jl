@@ -91,6 +91,7 @@ function default_sweep_plan(
   )
 end
 
+#ToDo: This is currently coupled with the updater signature, which is undesirable.
 function tdvp_sweep_plan(
   order::Int,
   nsites::Int,
@@ -145,21 +146,11 @@ function _extend_sweeps_param(param, nsweeps)
   return eparam
 end
 
-#function _extend_sweeps_param(param::NamedTuple, nsweeps)
-#  eparam=(;)
-#  for key in keys(param)
-#    eparam[key]=_extend_sweeps_param(param[key],nsweeps)
-#  end
-#  return eparam
-#end
-
+#ToDo: refactor, this is very cumbersome currently
 function process_kwargs_for_sweeps(nsweeps; kwargs...)
   @assert all([isa(val, NamedTuple) for val in values(kwargs)])
   extended_kwargs = (;)
   for (key, subkwargs) in zip(keys(kwargs), values(kwargs))
-    #@show key, subkwargs
-    #@show [_extend_sweeps_param(val,nsweeps) for val in values(subkwargs)]
-    #@show keys(subkwargs)
     extended_subkwargs = (;
       zip(
         keys(subkwargs), [_extend_sweeps_param(val, nsweeps) for val in values(subkwargs)]
@@ -177,7 +168,6 @@ function process_kwargs_for_sweeps(nsweeps; kwargs...)
       )
     end
     kwargs_per_sweep[i] = this_sweeps_kwargs
-    #@show this_sweeps_kwargs
   end
   return kwargs_per_sweep
 end
