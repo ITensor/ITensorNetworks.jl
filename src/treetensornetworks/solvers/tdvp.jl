@@ -61,17 +61,40 @@ function tdvp(
   (sweep_observer!)=observer(),
   root_vertex=default_root_vertex(init_state),
   reverse_step=true,
+  extracter_kwargs=(;),
+  extracter=default_extractor(), # ToDo: extracter could be inside extracter_kwargs, at the cost of having to extract it in region_update
   updater_kwargs=(;),
   updater=exponentiate_updater,
+  inserter_kwargs=(;),
+  inserter=default_inserter(),
   kwargs...,
 ) 
-  kwargs=merge((;outputlevel),kwargs) # lookup precedence again, i think kwargs precede)
+  # slurp unbound kwargs into inserter
+  ### if unbound kwargs are required in e.g. updater, they will have to be explicitly listed inside e.g. updater_kwargs
+  ### if non-standard inserter (with different kwarg signature) is used, it is up to the user to not pass unsupported kwargs
+  inserter_kwargs = (; inserter_kwargs..., kwargs...) # slurp unbound kwargs into inserter
+  # move inserter etc. into the respective kwargs
+  inserter_kwargs = merge((;inserter), inserter_kwargs)
+  updater_kwargs = merge((;updater), updater_kwargs)
+  extracter_kwargs = merge((;extracter),extracter_kwargs)
+  
   nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
-  processed_kwarg_list = process_sweeps(nsweeps;updater_kwargs,updater,kwargs...)  # make everything a list of length nsweeps
+  # process kwargs into a list of namedtuples of length nsweeps
+  processed_kwarg_list = process_kwargs_for_sweeps(nsweeps;
+  extracter_kwargs,
+  updater_kwargs,
+  inserter_kwargs,
+  )
+  # make everything a list of length nsweeps, with simple NamedTuples per sweep
   sweep_plans=[]
   for i in 1:nsweeps
     sweep_plan = tdvp_sweep_plan(
-      order, nsites, time_step, init_state; root_vertex, reverse_step, pre_region_args=processed_kwarg_list[i]
+      order, nsites, time_step, init_state;
+      root_vertex,
+      reverse_step,
+      extracter_kwargs=processed_kwarg_list[i].extracter_kwargs,
+      updater_kwargs=processed_kwarg_list[i].updater_kwargs,
+      inserter_kwargs=processed_kwarg_list[i].inserter_kwargs,
     )
     push!(sweep_plans,sweep_plan)
   end
@@ -79,7 +102,7 @@ function tdvp(
   function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
     if outputlevel >= 1
       sweeps_per_step = order ÷ 2
-      if sweep % sweeps_per_step == 0
+      if which_sweep % sweeps_per_step == 0
         current_time = (which_sweep / sweeps_per_step) * time_step
         println("Current time (sweep $which_sweep) = ", round(current_time; digits=3))
       end

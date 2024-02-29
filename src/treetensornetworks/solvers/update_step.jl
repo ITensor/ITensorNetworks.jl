@@ -1,3 +1,7 @@
+#ToDo: Move elsewhere
+default_extractor() = extract_local_tensor
+default_inserter() = insert_local_tensor
+
 function default_region_update_printer(;
   cutoff,
   maxdim,
@@ -49,8 +53,6 @@ function sweep_update(
   end
 
   for which_region_update in eachindex(sweep_plan)
-   # (region, region_kwargs) = sweep_plan[which_region_update]
-    #region_kwargs = merge(region_kwargs, sweep_params)    # sweep params has precedence over step_kwargs
     state, projected_operator = region_update(
       projected_operator,
       state;
@@ -100,6 +102,7 @@ function extract_local_tensor(state::AbstractTTN, projected_operator, e::Abstrac
   projected_operator=extract_epilog(state,projected_operator,e)
   return state, projected_operator, S * V
 end
+
 
 # sort of multi-site replacebond!; TODO: use dense TTN constructor instead
 function insert_local_tensor(
@@ -164,14 +167,13 @@ function region_update(
   which_region_update,
   )
   (region, region_kwargs) = sweep_plan[which_region_update]
-  (;updater_kwargs)= region_kwargs   #extract updater_kwargs, could in principle also be done at the level of updater
-  (;updater)= region_kwargs   #extract updater_kwargs, could in principle also be done at the level of updater
-  
-  #(;insert_kwargs) = region_kwargs
-  #(;extract_kwrags) = region_kwargs
+  (;extracter_kwargs,updater_kwargs,inserter_kwargs)= region_kwargs   #extract updater_kwargs, could in principle also be done at the level of updater
+  (;extracter)= extracter_kwargs
+  (;updater)= updater_kwargs   #extract updater from  updater_kwargs
+  (;inserter)= inserter_kwargs
   
   region = first(sweep_plan[which_region_update])
-  state, projected_operator, phi = extract_local_tensor(state, projected_operator, region;)
+  state, projected_operator, phi = extract_local_tensor(state, projected_operator, region;extracter_kwargs...)
   state! = Ref(state) # create references, in case solver does (out-of-place) modify PH or state
   projected_operator! = Ref(projected_operator)
   phi, info = updater(
@@ -182,7 +184,6 @@ function region_update(
     which_sweep,
     sweep_plan,
     which_region_update,
-    region_kwargs,
     updater_kwargs,
   )  # args passed by reference are supposed to be modified out of place
   state = state![] # dereference
@@ -191,7 +192,7 @@ function region_update(
     println("Solver returned the following types: $(typeof(phi)), $(typeof(info))")
     error("In alternating_update, solver must return an ITensor and a NamedTuple")
   end
-  haskey(region_kwargs,:normalize) && ( region_kwargs.normalize && (phi /= norm(phi)) )
+  #haskey(region_kwargs,:normalize) && ( region_kwargs.normalize && (phi /= norm(phi)) )
   # ToDo: implement noise term as updater
   #drho = nothing
   #ortho = "left"    #i guess with respect to ordered vertices that's valid but may be cleaner to use next_region logic
@@ -204,7 +205,7 @@ function region_update(
     state,
     phi,
     region;
-    region_kwargs...
+    inserter_kwargs...
     #eigen_perturbation=drho,
     #ortho,
     #normalize,

@@ -95,20 +95,26 @@ function tdvp_sweep_plan(
   time_step::Number,
   graph::AbstractGraph;
   root_vertex=default_root_vertex(graph),
-  pre_region_args=(;),
+  extracter_kwargs=(;),
+  updater_kwargs=(;),
+  inserter_kwargs=(;),
   reverse_step=true,
 )
   sweep_plan = []
   for (substep, fac) in enumerate(sub_time_steps(order))
     sub_time_step = time_step * fac
+    updater_kwargs_forward=merge(updater_kwargs, (; substep, time_step=sub_time_step))
+    updater_kwargs_reverse=merge(updater_kwargs, (; substep, time_step=-sub_time_step))
+    #@show updater_kwargs_forward
+    
     half = half_sweep(
       direction(substep),
       graph,
       make_region;
       root_vertex,
       nsites,
-      region_args=merge(pre_region_args, (; substep, time_step=sub_time_step)),
-      reverse_args=merge(pre_region_args, (; substep, time_step=-sub_time_step)),
+      region_args=(;extracter_kwargs,updater_kwargs=updater_kwargs_forward,inserter_kwargs),
+      reverse_args=(;extracter_kwargs,updater_kwargs=updater_kwargs_reverse,inserter_kwargs),
       reverse_step,
     )
     append!(sweep_plan, half)
@@ -130,17 +136,38 @@ function _extend_sweeps_param(param, nsweeps)
 end
 
 
-#this version returns a list of named tuples
-function process_sweeps(
+#function _extend_sweeps_param(param::NamedTuple, nsweeps)
+#  eparam=(;)
+#  for key in keys(param)
+#    eparam[key]=_extend_sweeps_param(param[key],nsweeps)
+#  end
+#  return eparam
+#end
+
+
+function process_kwargs_for_sweeps(
   nsweeps;
   kwargs...,
 ) 
-  lists_of_vals= [_extend_sweeps_param(val,nsweeps) for val in values(kwargs)]
-  list_of_nts=Vector{NamedTuple}(undef,nsweeps)
-  for i in 1:nsweeps
-    list_of_nts[i]=(;zip(keys(kwargs), [l[i] for l in lists_of_vals])...)
+  @assert all([isa(val,NamedTuple) for val in values(kwargs)])
+  extended_kwargs=(;)
+  for (key,subkwargs) in zip(keys(kwargs),values(kwargs))
+    #@show key, subkwargs
+    #@show [_extend_sweeps_param(val,nsweeps) for val in values(subkwargs)]
+    #@show keys(subkwargs)
+    extended_subkwargs=(;zip(keys(subkwargs),[_extend_sweeps_param(val,nsweeps) for val in values(subkwargs)])...)
+    extended_kwargs=(;extended_kwargs...,zip([key],[extended_subkwargs])...)
   end
-  return list_of_nts
+  kwargs_per_sweep=Vector{NamedTuple}(undef,nsweeps)
+  for i in 1:nsweeps
+    this_sweeps_kwargs=(;)
+    for (key,subkwargs) in zip(keys(extended_kwargs),values(extended_kwargs))
+      this_sweeps_kwargs=(;this_sweeps_kwargs...,zip([key], [(;zip(keys(subkwargs),[val[i] for val in values(subkwargs)])...)])... )
+    end
+    kwargs_per_sweep[i]=this_sweeps_kwargs
+    #@show this_sweeps_kwargs
+  end
+  return kwargs_per_sweep
 end
 
 
