@@ -64,15 +64,18 @@ function half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
   )
 end
 
-function default_region_args_func(half_sweep,pre_region_args)
-  return merge(pre_region_args,(;half_sweep))
+function default_region_args_func(half_sweep, pre_region_args)
+  return merge(pre_region_args, (; half_sweep))
 end
 
-function default_sweep_plan(nsites, graph::AbstractGraph;
-  region_args_func = default_region_args_func,
-  reverse_args_func = default_region_args_func,
-  pre_region_args = (;),
-  kwargs...)  ###move this to a different file, algorithmic level idea
+function default_sweep_plan(
+  nsites,
+  graph::AbstractGraph;
+  region_args_func=default_region_args_func,
+  reverse_args_func=default_region_args_func,
+  pre_region_args=(;),
+  kwargs...,
+)  ###move this to a different file, algorithmic level idea
   return vcat(
     [
       half_sweep(
@@ -80,14 +83,13 @@ function default_sweep_plan(nsites, graph::AbstractGraph;
         graph,
         make_region;
         nsites,
-        region_args=region_args_func(half,pre_region_args),
-        reverse_args=reverse_args_func(half,pre_region_args),
+        region_args=region_args_func(half, pre_region_args),
+        reverse_args=reverse_args_func(half, pre_region_args),
         kwargs...,
       ) for half in 1:2
     ]...,
   )
 end
-
 
 function tdvp_sweep_plan(
   order::Int,
@@ -103,18 +105,22 @@ function tdvp_sweep_plan(
   sweep_plan = []
   for (substep, fac) in enumerate(sub_time_steps(order))
     sub_time_step = time_step * fac
-    updater_kwargs_forward=merge(updater_kwargs, (; substep, time_step=sub_time_step))
-    updater_kwargs_reverse=merge(updater_kwargs, (; substep, time_step=-sub_time_step))
+    updater_kwargs_forward = merge(updater_kwargs, (; substep, time_step=sub_time_step))
+    updater_kwargs_reverse = merge(updater_kwargs, (; substep, time_step=-sub_time_step))
     #@show updater_kwargs_forward
-    
+
     half = half_sweep(
       direction(substep),
       graph,
       make_region;
       root_vertex,
       nsites,
-      region_args=(;extracter_kwargs,updater_kwargs=updater_kwargs_forward,inserter_kwargs),
-      reverse_args=(;extracter_kwargs,updater_kwargs=updater_kwargs_reverse,inserter_kwargs),
+      region_args=(;
+        extracter_kwargs, updater_kwargs=updater_kwargs_forward, inserter_kwargs
+      ),
+      reverse_args=(;
+        extracter_kwargs, updater_kwargs=updater_kwargs_reverse, inserter_kwargs
+      ),
       reverse_step,
     )
     append!(sweep_plan, half)
@@ -124,7 +130,11 @@ end
 
 # ToDo: Make this generic
 function _extend_sweeps_param(param, nsweeps)
-  if param isa Number || param isa String || param isa NamedTuple || param isa Function || param isa typeof(observer())
+  if param isa Number ||
+    param isa String ||
+    param isa NamedTuple ||
+    param isa Function ||
+    param isa typeof(observer())
     eparam = fill(param, nsweeps)
   else
     length(param) >= nsweeps && return param[1:nsweeps]
@@ -135,7 +145,6 @@ function _extend_sweeps_param(param, nsweeps)
   return eparam
 end
 
-
 #function _extend_sweeps_param(param::NamedTuple, nsweeps)
 #  eparam=(;)
 #  for key in keys(param)
@@ -144,32 +153,34 @@ end
 #  return eparam
 #end
 
-
-function process_kwargs_for_sweeps(
-  nsweeps;
-  kwargs...,
-) 
-  @assert all([isa(val,NamedTuple) for val in values(kwargs)])
-  extended_kwargs=(;)
-  for (key,subkwargs) in zip(keys(kwargs),values(kwargs))
+function process_kwargs_for_sweeps(nsweeps; kwargs...)
+  @assert all([isa(val, NamedTuple) for val in values(kwargs)])
+  extended_kwargs = (;)
+  for (key, subkwargs) in zip(keys(kwargs), values(kwargs))
     #@show key, subkwargs
     #@show [_extend_sweeps_param(val,nsweeps) for val in values(subkwargs)]
     #@show keys(subkwargs)
-    extended_subkwargs=(;zip(keys(subkwargs),[_extend_sweeps_param(val,nsweeps) for val in values(subkwargs)])...)
-    extended_kwargs=(;extended_kwargs...,zip([key],[extended_subkwargs])...)
+    extended_subkwargs = (;
+      zip(
+        keys(subkwargs), [_extend_sweeps_param(val, nsweeps) for val in values(subkwargs)]
+      )...
+    )
+    extended_kwargs = (; extended_kwargs..., zip([key], [extended_subkwargs])...)
   end
-  kwargs_per_sweep=Vector{NamedTuple}(undef,nsweeps)
+  kwargs_per_sweep = Vector{NamedTuple}(undef, nsweeps)
   for i in 1:nsweeps
-    this_sweeps_kwargs=(;)
-    for (key,subkwargs) in zip(keys(extended_kwargs),values(extended_kwargs))
-      this_sweeps_kwargs=(;this_sweeps_kwargs...,zip([key], [(;zip(keys(subkwargs),[val[i] for val in values(subkwargs)])...)])... )
+    this_sweeps_kwargs = (;)
+    for (key, subkwargs) in zip(keys(extended_kwargs), values(extended_kwargs))
+      this_sweeps_kwargs = (;
+        this_sweeps_kwargs...,
+        zip([key], [(; zip(keys(subkwargs), [val[i] for val in values(subkwargs)])...)])...,
+      )
     end
-    kwargs_per_sweep[i]=this_sweeps_kwargs
+    kwargs_per_sweep[i] = this_sweeps_kwargs
     #@show this_sweeps_kwargs
   end
   return kwargs_per_sweep
 end
-
 
 function sweep_printer(; outputlevel, state, which_sweep, sw_time)
   if outputlevel >= 1

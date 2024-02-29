@@ -18,13 +18,11 @@ function exponentiate_updater(
     eager=true,
   )
   # extract time_step and substep
-  (;time_step,substep)=updater_kwargs
+  (; time_step, substep) = updater_kwargs
   # remove these from updater_kwargs
-  updater_kwargs=Base.structdiff((;time_step,substep),updater_kwargs)
+  updater_kwargs = Base.structdiff((; time_step, substep), updater_kwargs)
   # set defaults for unspecified kwargs
   updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedence
-  result, exp_info = exponentiate(
-    projected_operator![], time_step, init; updater_kwargs...
-  )
+  result, exp_info = exponentiate(projected_operator![], time_step, init; updater_kwargs...)
   return result, (; info=exp_info)
 end

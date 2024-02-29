@@ -22,16 +22,12 @@ function alternating_update(
     end
     sw_time = @elapsed begin
       state, projected_operator = sweep_update(
-        projected_operator,
-        state;
-        outputlevel,
-        which_sweep,
-        sweep_plan
+        projected_operator, state; outputlevel, which_sweep, sweep_plan
       )
     end
 
     update!(sweep_observer!; state, which_sweep, sw_time, outputlevel)
-    sweep_printer(;state, which_sweep, sw_time, outputlevel)
+    sweep_printer(; state, which_sweep, sw_time, outputlevel)
     checkdone(; state, which_sweep, outputlevel, sweep_plan) && break
   end
   return state
@@ -66,9 +62,7 @@ each step of the algorithm when optimizing the MPS.
 Returns:
 * `state::MPS` - time-evolved MPS
 """
-function alternating_update(
-  Hs::Vector{<:AbstractTTN}, init_state::AbstractTTN; kwargs...
-)
+function alternating_update(Hs::Vector{<:AbstractTTN}, init_state::AbstractTTN; kwargs...)
   for H in Hs
     check_hascommoninds(siteinds, H, init_state)
     check_hascommoninds(siteinds, H, init_state')

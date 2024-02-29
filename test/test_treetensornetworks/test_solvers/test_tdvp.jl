@@ -592,7 +592,6 @@ end
     @test norm(En1 - En2) < 5e-3
     @test abs.(last(Sz1) - last(obs.Sz)) .< 5e-3
     @test abs.(last(Sz2) - last(obs.Sz)) .< 5e-3
-    
   end
 
   @testset "Imaginary Time Evolution" for reverse_step in [true, false]

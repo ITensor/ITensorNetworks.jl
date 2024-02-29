@@ -34,13 +34,9 @@ function default_region_update_printer(;
 end
 
 function sweep_update(
-  projected_operator,
-  state::AbstractTTN;
-  outputlevel,
-  which_sweep::Int,
-  sweep_plan,
+  projected_operator, state::AbstractTTN; outputlevel, which_sweep::Int, sweep_plan
 )
-  
+
   # Append empty namedtuple to each element if not already present
   # (Needed to handle user-provided region_updates)
   # todo: Hopefully not needed anymore
@@ -77,32 +73,35 @@ end
 # apart and puts it back into the network.
 #
 
-function extract_prolog(state::AbstractTTN,region)
-  state = orthogonalize(state, current_ortho(region))
+function extract_prolog(state::AbstractTTN, region)
+  return state = orthogonalize(state, current_ortho(region))
 end
 
-function extract_epilog(state::AbstractTTN,projected_operator,region)
+function extract_epilog(state::AbstractTTN, projected_operator, region)
   #nsites = (region isa AbstractEdge) ? 0 : length(region)
   #projected_operator = set_nsite(projected_operator, nsites) #not necessary
   projected_operator = position(projected_operator, state, region)
   return projected_operator   #should it return only projected_operator
 end
 
-function extract_local_tensor(state::AbstractTTN, projected_operator, pos::Vector;extract_kwargs...)
-  state=extract_prolog(state,pos)
-  projected_operator=extract_epilog(state,projected_operator,pos)
+function extract_local_tensor(
+  state::AbstractTTN, projected_operator, pos::Vector; extract_kwargs...
+)
+  state = extract_prolog(state, pos)
+  projected_operator = extract_epilog(state, projected_operator, pos)
   return state, projected_operator, prod(state[v] for v in pos)
 end
 
-function extract_local_tensor(state::AbstractTTN, projected_operator, e::AbstractEdge;extract_kwargs...)
-  state=extract_prolog(state,e)
+function extract_local_tensor(
+  state::AbstractTTN, projected_operator, e::AbstractEdge; extract_kwargs...
+)
+  state = extract_prolog(state, e)
   left_inds = uniqueinds(state, e)
   U, S, V = svd(state[src(e)], left_inds; lefttags=tags(state, e), righttags=tags(state, e))
   state[src(e)] = U
-  projected_operator=extract_epilog(state,projected_operator,e)
+  projected_operator = extract_epilog(state, projected_operator, e)
   return state, projected_operator, S * V
 end
-
 
 # sort of multi-site replacebond!; TODO: use dense TTN constructor instead
 function insert_local_tensor(
@@ -157,23 +156,19 @@ current_ortho(::Type{<:Vector{<:V}}, st) where {V} = first(st)
 current_ortho(::Type{NamedEdge{V}}, st) where {V} = src(st)
 current_ortho(st) = current_ortho(typeof(st), st)
 
-
 function region_update(
-  projected_operator,
-  state;
-  outputlevel,
-  which_sweep,
-  sweep_plan,
-  which_region_update,
-  )
+  projected_operator, state; outputlevel, which_sweep, sweep_plan, which_region_update
+)
   (region, region_kwargs) = sweep_plan[which_region_update]
-  (;extracter_kwargs,updater_kwargs,inserter_kwargs)= region_kwargs   #extract updater_kwargs, could in principle also be done at the level of updater
-  (;extracter)= extracter_kwargs
-  (;updater)= updater_kwargs   #extract updater from  updater_kwargs
-  (;inserter)= inserter_kwargs
-  
+  (; extracter_kwargs, updater_kwargs, inserter_kwargs) = region_kwargs   #extract updater_kwargs, could in principle also be done at the level of updater
+  (; extracter) = extracter_kwargs
+  (; updater) = updater_kwargs   #extract updater from  updater_kwargs
+  (; inserter) = inserter_kwargs
+
   region = first(sweep_plan[which_region_update])
-  state, projected_operator, phi = extract_local_tensor(state, projected_operator, region;extracter_kwargs...)
+  state, projected_operator, phi = extract_local_tensor(
+    state, projected_operator, region; extracter_kwargs...
+  )
   state! = Ref(state) # create references, in case solver does (out-of-place) modify PH or state
   projected_operator! = Ref(projected_operator)
   phi, info = updater(
@@ -205,7 +200,7 @@ function region_update(
     state,
     phi,
     region;
-    inserter_kwargs...
+    inserter_kwargs...,
     #eigen_perturbation=drho,
     #ortho,
     #normalize,
@@ -213,9 +208,9 @@ function region_update(
     #mindim=region_kwargs.mindim,
     #cutoff=region_kwargs.cutoff,
   )
-  !haskey(region_kwargs,:region_printer) && (printer=default_region_update_printer)
+  !haskey(region_kwargs, :region_printer) && (printer = default_region_update_printer)
   # only perform update! if region_observer actually passed as kwarg
-  haskey(region_kwargs,:region_observer) &&  update!(
+  haskey(region_kwargs, :region_observer) && update!(
     region_observer!;
     cutoff,
     maxdim,
@@ -234,19 +229,20 @@ function region_update(
   )
 
   printer(;
-  cutoff,
-  maxdim,
-  mindim,
-  which_region_update,
-  sweep_plan,
-  total_sweep_steps=length(sweep_plan),
-  end_of_sweep=(which_region_update == length(sweep_plan)),
-  state,
-  region,
-  which_sweep,
-  spec,
-  outputlevel,
-  info...,
-  region_kwargs...,)
+    cutoff,
+    maxdim,
+    mindim,
+    which_region_update,
+    sweep_plan,
+    total_sweep_steps=length(sweep_plan),
+    end_of_sweep=(which_region_update == length(sweep_plan)),
+    state,
+    region,
+    which_sweep,
+    spec,
+    outputlevel,
+    info...,
+    region_kwargs...,
+  )
   return state, projected_operator
 end

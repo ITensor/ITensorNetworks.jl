@@ -30,7 +30,6 @@ function sub_time_steps(order)
   end
 end
 
-
 """
     tdvp(operator::TTN, t::Number, init_state::TTN; kwargs...)
 
@@ -68,37 +67,38 @@ function tdvp(
   inserter_kwargs=(;),
   inserter=default_inserter(),
   kwargs...,
-) 
+)
   # slurp unbound kwargs into inserter
   ### if unbound kwargs are required in e.g. updater, they will have to be explicitly listed inside e.g. updater_kwargs
   ### if non-standard inserter (with different kwarg signature) is used, it is up to the user to not pass unsupported kwargs
   inserter_kwargs = (; inserter_kwargs..., kwargs...) # slurp unbound kwargs into inserter
   # move inserter etc. into the respective kwargs
-  inserter_kwargs = merge((;inserter), inserter_kwargs)
-  updater_kwargs = merge((;updater), updater_kwargs)
-  extracter_kwargs = merge((;extracter),extracter_kwargs)
-  
+  inserter_kwargs = merge((; inserter), inserter_kwargs)
+  updater_kwargs = merge((; updater), updater_kwargs)
+  extracter_kwargs = merge((; extracter), extracter_kwargs)
+
   nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
   # process kwargs into a list of namedtuples of length nsweeps
-  processed_kwarg_list = process_kwargs_for_sweeps(nsweeps;
-  extracter_kwargs,
-  updater_kwargs,
-  inserter_kwargs,
+  processed_kwarg_list = process_kwargs_for_sweeps(
+    nsweeps; extracter_kwargs, updater_kwargs, inserter_kwargs
   )
   # make everything a list of length nsweeps, with simple NamedTuples per sweep
-  sweep_plans=[]
+  sweep_plans = []
   for i in 1:nsweeps
     sweep_plan = tdvp_sweep_plan(
-      order, nsites, time_step, init_state;
+      order,
+      nsites,
+      time_step,
+      init_state;
       root_vertex,
       reverse_step,
       extracter_kwargs=processed_kwarg_list[i].extracter_kwargs,
       updater_kwargs=processed_kwarg_list[i].updater_kwargs,
       inserter_kwargs=processed_kwarg_list[i].inserter_kwargs,
     )
-    push!(sweep_plans,sweep_plan)
+    push!(sweep_plans, sweep_plan)
   end
-  
+
   function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
     if outputlevel >= 1
       sweeps_per_step = order ÷ 2
@@ -113,11 +113,7 @@ function tdvp(
   insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
 
   state = alternating_update(
-    operator,
-    init_state;
-    outputlevel,
-    sweep_observer!,
-    sweep_plans,
+    operator, init_state; outputlevel, sweep_observer!, sweep_plans
   )
 
   # remove sweep_time_printer from sweep_observer!
@@ -125,4 +121,3 @@ function tdvp(
 
   return state
 end
-
