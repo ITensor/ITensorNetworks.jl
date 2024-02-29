@@ -9,9 +9,6 @@ end
 maybe_real(x::Real) = x
 maybe_real(x::Complex) = iszero(imag(x)) ? real(x) : x
 
-maybe_only(x) = x
-maybe_only(x::Tuple{T}) where {T} = only(x)
-
 front(itr, n=1) = Iterators.take(itr, length(itr) - n)
 tail(itr) = Iterators.drop(itr, 1)
 
@@ -24,4 +21,8 @@ function line_to_tree(line::Vector)
     return line
   end
   return [line_to_tree(line[1:(end - 1)]), line[end]]
+end
+
+function getindices_narrow_keytype(d::Dictionary, indices)
+  return convert(typeof(d), getindices(d, indices))
 end

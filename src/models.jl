@@ -13,21 +13,21 @@ function tight_binding(g::AbstractGraph; t=1, tp=0, h=0)
   ℋ = OpSum()
   if !iszero(t)
     for e in edges(g)
-      ℋ -= t, "Cdag", maybe_only(src(e)), "C", maybe_only(dst(e))
-      ℋ -= t, "Cdag", maybe_only(dst(e)), "C", maybe_only(src(e))
+      ℋ -= t, "Cdag", src(e), "C", dst(e)
+      ℋ -= t, "Cdag", dst(e), "C", src(e)
     end
   end
   if !iszero(t')
     for (i, v) in enumerate(vertices(g))
       for nn in next_nearest_neighbors(g, v)
-        ℋ -= tp, "Cdag", maybe_only(v), "C", maybe_only(nn)
-        ℋ -= tp, "Cdag", maybe_only(nn), "C", maybe_only(v)
+        ℋ -= tp, "Cdag", v, "C", nn
+        ℋ -= tp, "Cdag", nn, "C", v
       end
     end
   end
   for (i, v) in enumerate(vertices(g))
     if !iszero(h[i])
-      ℋ -= h[i], "N", maybe_only(v)
+      ℋ -= h[i], "N", v
     end
   end
   return ℋ
@@ -41,29 +41,29 @@ function hubbard(g::AbstractGraph; U=0, t=1, tp=0, h=0)
   ℋ = OpSum()
   if !iszero(t)
     for e in edges(g)
-      ℋ -= t, "Cdagup", maybe_only(src(e)), "Cup", maybe_only(dst(e))
-      ℋ -= t, "Cdagup", maybe_only(dst(e)), "Cup", maybe_only(src(e))
-      ℋ -= t, "Cdagdn", maybe_only(src(e)), "Cdn", maybe_only(dst(e))
-      ℋ -= t, "Cdagdn", maybe_only(dst(e)), "Cdn", maybe_only(src(e))
+      ℋ -= t, "Cdagup", src(e), "Cup", dst(e)
+      ℋ -= t, "Cdagup", dst(e), "Cup", src(e)
+      ℋ -= t, "Cdagdn", src(e), "Cdn", dst(e)
+      ℋ -= t, "Cdagdn", dst(e), "Cdn", src(e)
     end
   end
   if !iszero(tp)
     # TODO, more clever way of looping over next to nearest neighbors?
     for (i, v) in enumerate(vertices(g))
       for nn in next_nearest_neighbors(g, v)
-        ℋ -= tp, "Cdagup", maybe_only(v), "Cup", maybe_only(nn)
-        ℋ -= tp, "Cdagup", maybe_only(nn), "Cup", maybe_only(v)
-        ℋ -= tp, "Cdagdn", maybe_only(v), "Cdn", maybe_only(nn)
-        ℋ -= tp, "Cdagdn", maybe_only(nn), "Cdn", maybe_only(v)
+        ℋ -= tp, "Cdagup", v, "Cup", nn
+        ℋ -= tp, "Cdagup", nn, "Cup", v
+        ℋ -= tp, "Cdagdn", v, "Cdn", nn
+        ℋ -= tp, "Cdagdn", nn, "Cdn", v
       end
     end
   end
   for (i, v) in enumerate(vertices(g))
     if !iszero(h[i])
-      ℋ -= h[i], "Sz", maybe_only(v)
+      ℋ -= h[i], "Sz", v
     end
     if !iszero(U)
-      ℋ += U, "Nupdn", maybe_only(v)
+      ℋ += U, "Nupdn", v
     end
   end
   return ℋ
@@ -77,23 +77,23 @@ function heisenberg(g::AbstractGraph; J1=1, J2=0, h=0)
   ℋ = OpSum()
   if !iszero(J1)
     for e in edges(g)
-      ℋ += J1 / 2, "S+", maybe_only(src(e)), "S-", maybe_only(dst(e))
-      ℋ += J1 / 2, "S-", maybe_only(src(e)), "S+", maybe_only(dst(e))
-      ℋ += J1, "Sz", maybe_only(src(e)), "Sz", maybe_only(dst(e))
+      ℋ += J1 / 2, "S+", src(e), "S-", dst(e)
+      ℋ += J1 / 2, "S-", src(e), "S+", dst(e)
+      ℋ += J1, "Sz", src(e), "Sz", dst(e)
     end
   end
   if !iszero(J2)
     for (i, v) in enumerate(vertices(g))
       for nn in next_nearest_neighbors(g, v)
-        ℋ += J2 / 2, "S+", maybe_only(v), "S-", maybe_only(nn)
-        ℋ += J2 / 2, "S-", maybe_only(v), "S+", maybe_only(nn)
-        ℋ += J2, "Sz", maybe_only(v), "Sz", maybe_only(nn)
+        ℋ += J2 / 2, "S+", v, "S-", nn
+        ℋ += J2 / 2, "S-", v, "S+", nn
+        ℋ += J2, "Sz", v, "Sz", nn
       end
     end
   end
   for (i, v) in enumerate(vertices(g))
     if !iszero(h[i])
-      ℋ += h[i], "Sz", maybe_only(v)
+      ℋ += h[i], "Sz", v
     end
   end
   return ℋ
@@ -107,19 +107,19 @@ function ising(g::AbstractGraph; J1=-1, J2=0, h=0)
   ℋ = OpSum()
   if !iszero(J1)
     for e in edges(g)
-      ℋ += J1, "Sz", maybe_only(src(e)), "Sz", maybe_only(dst(e))
+      ℋ += J1, "Sz", src(e), "Sz", dst(e)
     end
   end
   if !iszero(J2)
     for (i, v) in enumerate(vertices(g))
       for nn in next_nearest_neighbors(g, v)
-        ℋ += J2, "Sz", maybe_only(v), "Sz", maybe_only(nn)
+        ℋ += J2, "Sz", v, "Sz", nn
       end
     end
   end
   for (i, v) in enumerate(vertices(g))
     if !iszero(h[i])
-      ℋ += h[i], "Sx", maybe_only(v)
+      ℋ += h[i], "Sx", v
     end
   end
   return ℋ

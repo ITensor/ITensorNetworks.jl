@@ -12,7 +12,6 @@ using Test
     cutoff = 1e-12
 
     s = siteinds("S=1/2", N)
-
     os = OpSum()
     for j in 1:(N - 1)
       os += 0.5, "S+", j, "S-", j + 1
@@ -381,19 +380,16 @@ using Test
 end
 
 @testset "Tree TDVP" begin
-  @testset "Basic TDVP" begin
+  @testset "Basic TDVP" for c in [named_comb_tree(fill(2, 3)), named_binary_tree(3)]
     cutoff = 1e-12
 
-    tooth_lengths = fill(2, 3)
-    root_vertex = (3, 2)
-    c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
     os = ITensorNetworks.heisenberg(c)
 
     H = TTN(os, s)
 
-    ψ0 = normalize!(random_ttn(s; link_space=10))
+    ψ0 = normalize!(random_ttn(s))
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)

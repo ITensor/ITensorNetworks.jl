@@ -129,13 +129,14 @@ end
 function invalidate_environments(P::AbstractProjTTN)
   ie = internal_edges(P)
   newenvskeys = filter(!in(ie), keys(environments(P)))
-  P = set_environments(P, getindices(environments(P), newenvskeys))
+  P = set_environments(P, getindices_narrow_keytype(environments(P), newenvskeys))
   return P
 end
 
 function invalidate_environment(P::AbstractProjTTN, e::AbstractEdge)
+  T = typeof(environments(P))
   newenvskeys = filter(!isequal(e), keys(environments(P)))
-  P = set_environments(P, getindices(environments(P), newenvskeys))
+  P = set_environments(P, getindices_narrow_keytype(environments(P), newenvskeys))
   return P
 end
 
