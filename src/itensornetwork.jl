@@ -82,21 +82,21 @@ end
 function ITensorNetwork{V}(
   eltype::Type, undef::UndefInitializer, graph::AbstractNamedGraph; kwargs...
 ) where {V}
-  return ITensorNetwork{V}(eltype, undef, IndsNetwork{V}(graph; kwargs...))
+  return ITensorNetwork{V}(eltype, undef, IndsNetwork{V}(graph; kwargs...); kwargs...)
 end
 
 function ITensorNetwork{V}(eltype::Type, graph::AbstractNamedGraph; kwargs...) where {V}
-  return ITensorNetwork{V}(eltype, IndsNetwork{V}(graph; kwargs...))
+  return ITensorNetwork{V}(eltype, IndsNetwork{V}(graph; kwargs...); kwargs...)
 end
 
 function ITensorNetwork{V}(
   undef::UndefInitializer, graph::AbstractNamedGraph; kwargs...
 ) where {V}
-  return ITensorNetwork{V}(undef, IndsNetwork{V}(graph; kwargs...))
+  return ITensorNetwork{V}(undef, IndsNetwork{V}(graph; kwargs...); kwargs...)
 end
 
 function ITensorNetwork{V}(graph::AbstractNamedGraph; kwargs...) where {V}
-  return ITensorNetwork{V}(IndsNetwork{V}(graph; kwargs...))
+  return ITensorNetwork{V}(IndsNetwork{V}(graph; kwargs...); kwargs...)
 end
 
 function ITensorNetwork(
