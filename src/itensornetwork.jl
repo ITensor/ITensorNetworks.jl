@@ -184,11 +184,13 @@ function ITensorNetwork{V}(inds_network::IndsNetwork; kwargs...) where {V}
 end
 
 function ITensorNetwork{V}(
-  itensor_constructor::Function, inds_network::IndsNetwork; kwargs...
+  itensor_constructor::Function, inds_network::IndsNetwork; link_space=1, kwargs...
 ) where {V}
   # Graphs.jl uses `zero` to create a graph of the same type
   # without any vertices or edges.
-  inds_network_merge = typeof(inds_network)(underlying_graph(inds_network); kwargs...)
+  inds_network_merge = typeof(inds_network)(
+    underlying_graph(inds_network); link_space, kwargs...
+  )
   inds_network = union(inds_network, inds_network_merge)
   tn = ITensorNetwork{V}()
   for v in vertices(inds_network)

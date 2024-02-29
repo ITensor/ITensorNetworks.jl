@@ -45,8 +45,8 @@ function TTN(g::AbstractGraph, args...; kwargs...)
   return TTN(Float64, g, args...; kwargs...)
 end
 
-function TTN(eltype::Type{<:Number}, graph::AbstractGraph, args...; link_space=1, kwargs...)
-  itensor_network = ITensorNetwork(eltype, graph; link_space, kwargs...)
+function TTN(eltype::Type{<:Number}, graph::AbstractGraph, args...; kwargs...)
+  itensor_network = ITensorNetwork(eltype, graph; kwargs...)
   return TTN(itensor_network, args...)
 end
 
