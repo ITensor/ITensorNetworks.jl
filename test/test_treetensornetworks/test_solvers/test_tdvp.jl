@@ -37,7 +37,9 @@ using Test
     @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
     # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(
+      H, +0.1im, ψ1; nsteps=1, cutoff, updater_kwargs=(; krylovdim=20, maxiter=20, tol=1e-8)
+    )
 
     @test norm(ψ2) ≈ 1.0
 
@@ -312,7 +314,7 @@ using Test
         nsites,
         reverse_step,
         normalize=true,
-        updater_kwargs=(; krylovdim=15),
+        updater_kwargs=(; krylovdim=15, ishermitian=false),
       )
     end
 
