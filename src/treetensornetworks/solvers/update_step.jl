@@ -160,14 +160,19 @@ function region_update(
   projected_operator, state; outputlevel, which_sweep, sweep_plan, which_region_update
 )
   (region, region_kwargs) = sweep_plan[which_region_update]
-  (; extracter_kwargs, updater_kwargs, inserter_kwargs) = region_kwargs   #extract updater_kwargs, could in principle also be done at the level of updater
+  (; extracter_kwargs, updater_kwargs, inserter_kwargs, internal_kwargs) = region_kwargs
+
+  # these are equivalent to pop!(collection,key)
   (; extracter) = extracter_kwargs
+  extracter_kwargs = Base.structdiff((; extracter), extracter_kwargs)
   (; updater) = updater_kwargs   #extract updater from  updater_kwargs
+  updater_kwargs = Base.structdiff((; updater), updater_kwargs)
   (; inserter) = inserter_kwargs
+  inserter_kwargs = Base.structdiff((; inserter), inserter_kwargs)
 
   region = first(sweep_plan[which_region_update])
   state, projected_operator, phi = extract_local_tensor(
-    state, projected_operator, region; extracter_kwargs...
+    state, projected_operator, region; extracter_kwargs..., internal_kwargs
   )
   state! = Ref(state) # create references, in case solver does (out-of-place) modify PH or state
   projected_operator! = Ref(projected_operator)
@@ -180,6 +185,7 @@ function region_update(
     sweep_plan,
     which_region_update,
     updater_kwargs,
+    internal_kwargs,
   )  # args passed by reference are supposed to be modified out of place
   state = state![] # dereference
   projected_operator = projected_operator![]
@@ -196,18 +202,8 @@ function region_update(
   # so noiseterm is a solver
   #end
 
-  state, spec = insert_local_tensor(
-    state,
-    phi,
-    region;
-    inserter_kwargs...,
-    #eigen_perturbation=drho,
-    #ortho,
-    #normalize,
-    #maxdim=region_kwargs.maxdim,
-    #mindim=region_kwargs.mindim,
-    #cutoff=region_kwargs.cutoff,
-  )
+  state, spec = insert_local_tensor(state, phi, region; inserter_kwargs..., internal_kwargs)
+
   !haskey(region_kwargs, :region_printer) && (printer = default_region_update_printer)
   # only perform update! if region_observer actually passed as kwarg
   haskey(region_kwargs, :region_observer) && update!(

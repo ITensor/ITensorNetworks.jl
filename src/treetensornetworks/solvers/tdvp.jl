@@ -85,6 +85,7 @@ function tdvp(
   # make everything a list of length nsweeps, with simple NamedTuples per sweep
   sweep_plans = []
   for i in 1:nsweeps
+    #@show processed_kwarg_list[i]
     sweep_plan = tdvp_sweep_plan(
       order,
       nsites,
@@ -92,9 +93,7 @@ function tdvp(
       init_state;
       root_vertex,
       reverse_step,
-      extracter_kwargs=processed_kwarg_list[i].extracter_kwargs,
-      updater_kwargs=processed_kwarg_list[i].updater_kwargs,
-      inserter_kwargs=processed_kwarg_list[i].inserter_kwargs,
+      pre_region_args=processed_kwarg_list[i],
     )
     push!(sweep_plans, sweep_plan)
   end

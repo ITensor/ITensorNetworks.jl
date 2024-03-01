@@ -64,8 +64,10 @@ function half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
   )
 end
 
-function default_region_args_func(half_sweep, pre_region_args)
-  return merge(pre_region_args, (; half_sweep))
+function default_region_args_func(internal_kwargs::NamedTuple, pre_region_args::NamedTuple)
+  #wrap args in another NamedTuple
+  internal_kwargs = merge(get(pre_region_args, :internal_kwargs, (;)), internal_kwargs)
+  return merge(pre_region_args, (; internal_kwargs))
 end
 
 function default_sweep_plan(
@@ -83,8 +85,8 @@ function default_sweep_plan(
         graph,
         make_region;
         nsites,
-        region_args=region_args_func(half, pre_region_args),
-        reverse_args=reverse_args_func(half, pre_region_args),
+        region_args=region_args_func((; half), pre_region_args),
+        reverse_args=reverse_args_func((; half), pre_region_args),
         kwargs...,
       ) for half in 1:2
     ]...,
@@ -98,29 +100,23 @@ function tdvp_sweep_plan(
   time_step::Number,
   graph::AbstractGraph;
   root_vertex=default_root_vertex(graph),
-  extracter_kwargs=(;),
-  updater_kwargs=(;),
-  inserter_kwargs=(;),
+  pre_region_args,
   reverse_step=true,
 )
   sweep_plan = []
   for (substep, fac) in enumerate(sub_time_steps(order))
     sub_time_step = time_step * fac
-    updater_kwargs_forward = merge(updater_kwargs, (; substep, time_step=sub_time_step))
-    updater_kwargs_reverse = merge(updater_kwargs, (; substep, time_step=-sub_time_step))
-    #@show updater_kwargs_forward
-
     half = half_sweep(
       direction(substep),
       graph,
       make_region;
       root_vertex,
       nsites,
-      region_args=(;
-        extracter_kwargs, updater_kwargs=updater_kwargs_forward, inserter_kwargs
+      region_args=default_region_args_func(
+        (; substep, time_step=sub_time_step), pre_region_args
       ),
-      reverse_args=(;
-        extracter_kwargs, updater_kwargs=updater_kwargs_reverse, inserter_kwargs
+      reverse_args=default_region_args_func(
+        (; substep, time_step=-sub_time_step), pre_region_args
       ),
       reverse_step,
     )
