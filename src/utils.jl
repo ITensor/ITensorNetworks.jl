@@ -50,28 +50,28 @@ function extend_columns_recursive(nt::NamedTuple, length::Int)
   end
 end
 
-nrows(nt::NamedTuple) = length(first(nt))
+#ToDo: remove
+#nrows(nt::NamedTuple) = isempty(nt) ? 0 : length(first(nt))
 
 function row(nt::NamedTuple, i::Int)
-  return map(x -> x[i], nt)
+  isempty(nt) ? (return nt) : (return map(x -> x[i], nt))
 end
 
 # Similar to `Tables.rowtable(x)`
 
-function rows(nt::NamedTuple)
-  return [row(nt, i) for i in 1:nrows(nt)]
+function rows(nt::NamedTuple, length::Int)
+  return [row(nt, i) for i in 1:length]
 end
 
-function rows_recursive(nt::NamedTuple)
+function rows_recursive(nt::NamedTuple, length::Int)
   return postwalk(AbstractArrayLeafStyle(), nt) do x
     !(x isa NamedTuple) && return x
 
-    return rows(x)
+    return rows(x, length)
   end
 end
 
 function expand(nt::NamedTuple, length::Int)
   nt_padded = extend_columns_recursive(nt, length)
-
-  return rows_recursive(nt_padded)
+  return rows_recursive(nt_padded, length)
 end
