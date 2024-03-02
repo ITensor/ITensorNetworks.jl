@@ -1,5 +1,6 @@
 direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
 
+#ToDo: refactor
 function make_region(
   edge;
   last_edge=false,
@@ -41,7 +42,7 @@ function append_missing_namedtuple(t::Tuple)
   return reverse(prepend_missing_namedtuple(reverse(t)))
 end
 
-function half_sweep(
+function forward_sweep(
   dir::Base.ForwardOrdering,
   graph::AbstractGraph,
   region_function;
@@ -57,27 +58,15 @@ function half_sweep(
   return steps
 end
 
-function half_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
+#ToDo: is there a better name for this? unidirectional_sweep? traversal?
+function forward_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
   return map(
     region -> (reverse(region[1]), region[2:end]...),
-    reverse(half_sweep(Base.Forward, args...; kwargs...)),
+    reverse(forward_sweep(Base.Forward, args...; kwargs...)),
   )
 end
 
-function default_region_args_func(internal_kwargs::NamedTuple, pre_region_args::NamedTuple)
-  #wrap args in another NamedTuple
-  internal_kwargs = merge(get(pre_region_args, :internal_kwargs, (;)), internal_kwargs)
-  return merge(pre_region_args, (; internal_kwargs))
-end
-
-function default_sweep_plan(
-  nsites,
-  graph::AbstractGraph;
-  region_args_func=default_region_args_func,
-  reverse_args_func=default_region_args_func,
-  pre_region_args=(;),
-  kwargs...,
-)  ###move this to a different file, algorithmic level idea
+function default_sweep_plan(nsites, graph::AbstractGraph; pre_region_args=(;), kwargs...)  ###move this to a different file, algorithmic level idea
   return vcat(
     [
       half_sweep(
@@ -85,12 +74,52 @@ function default_sweep_plan(
         graph,
         make_region;
         nsites,
-        region_args=region_args_func((; half), pre_region_args),
-        reverse_args=reverse_args_func((; half), pre_region_args),
+        region_args=(; internal_kwargs=(; half), pre_region_args...),
+        reverse_args=region_args,
         kwargs...,
       ) for half in 1:2
     ]...,
   )
+end
+
+function tdvp_sweep_plans(
+  nsteps,
+  t,
+  time_step,
+  order,
+  nsites,
+  init_state;
+  root_vertex,
+  reverse_step,
+  extracter,
+  extracter_kwargs,
+  updater,
+  updater_kwargs,
+  inserter,
+  inserter_kwargs,
+)
+  nsweeps, time_step = _compute_nsweeps(nsteps, t, time_step)
+  order, nsites, time_step, reverse_step = extend.((order, nsites, reverse_step), nsweeps)
+  extracter, updater, inserter = extend.((extracter, updater, inserter), nsweeps)
+  inserter_kwargs, updater_kwargs, extracter_kwargs =
+    expand.((inserter_kwargs, updater_kwargs, extracter_kwargs), nsweeps)
+  sweep_plans = []
+  for i in 1:nsweeps
+    sweep_plan = tdvp_sweep_plan(
+      order[i],
+      nsites[i],
+      time_step[i],
+      init_state;
+      root_vertex,
+      reverse_step=reverse_step[i],
+      pre_region_args=(;
+        insert=(inserter[i], inserter_kwargs[i]),
+        update=(updater[i], updater_kwargs[i]),
+        extract=(extracter[i], extracter_kwargs[i]),
+      ),
+    )
+    push!(sweep_plans, sweep_plan)
+  end
 end
 
 #ToDo: This is currently coupled with the updater signature, which is undesirable.
@@ -112,11 +141,11 @@ function tdvp_sweep_plan(
       make_region;
       root_vertex,
       nsites,
-      region_args=default_region_args_func(
-        (; substep, time_step=sub_time_step), pre_region_args
+      region_args=(;
+        internal_kwargs=(; substep, time_step=sub_time_step), pre_region_args...
       ),
-      reverse_args=default_region_args_func(
-        (; substep, time_step=-sub_time_step), pre_region_args
+      reverse_args=(;
+        internal_kwargs=(; substep, time_step=-sub_time_step), pre_region_args...
       ),
       reverse_step,
     )
@@ -125,54 +154,11 @@ function tdvp_sweep_plan(
   return sweep_plan
 end
 
-# ToDo: Make this generic
-function _extend_sweeps_param(param, nsweeps)
-  if param isa Number ||
-    param isa String ||
-    param isa NamedTuple ||
-    param isa Function ||
-    param isa typeof(observer())
-    eparam = fill(param, nsweeps)
-  else
-    length(param) >= nsweeps && return param[1:nsweeps]
-    eparam = Vector(undef, nsweeps)
-    eparam[1:length(param)] = param
-    eparam[(length(param) + 1):end] .= param[end]
-  end
-  return eparam
-end
-
-#ToDo: refactor, this is very cumbersome currently
-function process_kwargs_for_sweeps(nsweeps; kwargs...)
-  @assert all([isa(val, NamedTuple) for val in values(kwargs)])
-  extended_kwargs = (;)
-  for (key, subkwargs) in zip(keys(kwargs), values(kwargs))
-    extended_subkwargs = (;
-      zip(
-        keys(subkwargs), [_extend_sweeps_param(val, nsweeps) for val in values(subkwargs)]
-      )...
-    )
-    extended_kwargs = (; extended_kwargs..., zip([key], [extended_subkwargs])...)
-  end
-  kwargs_per_sweep = Vector{NamedTuple}(undef, nsweeps)
-  for i in 1:nsweeps
-    this_sweeps_kwargs = (;)
-    for (key, subkwargs) in zip(keys(extended_kwargs), values(extended_kwargs))
-      this_sweeps_kwargs = (;
-        this_sweeps_kwargs...,
-        zip([key], [(; zip(keys(subkwargs), [val[i] for val in values(subkwargs)])...)])...,
-      )
-    end
-    kwargs_per_sweep[i] = this_sweeps_kwargs
-  end
-  return kwargs_per_sweep
-end
-
-function sweep_printer(; outputlevel, state, which_sweep, sw_time)
+function default_sweep_printer(; outputlevel, state, which_sweep, sweep_time)
   if outputlevel >= 1
     print("After sweep ", which_sweep, ":")
     print(" maxlinkdim=", maxlinkdim(state))
-    print(" cpu_time=", round(sw_time; digits=3))
+    print(" cpu_time=", round(sweep_time; digits=3))
     println()
     flush(stdout)
   end

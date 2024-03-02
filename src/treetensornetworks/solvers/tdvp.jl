@@ -1,11 +1,45 @@
-function _compute_nsweeps(nsteps, t, time_step, order)
-  nsweeps_per_step = order / 2
-  nsweeps = 1
-  if !isnothing(nsteps) && time_step != t
-    error("Cannot specify both nsteps and time_step in tdvp")
-  elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsteps)
-    nsweeps = convert(Int, nsweeps_per_step * ceil(abs(t / time_step)))
-    if !(nsweeps / nsweeps_per_step * time_step ≈ t)
+default_outputlevel() = 0
+
+#ToDo: Cleanup _compute_nsweeps, maybe restrict flexibility to simplify code
+function _compute_nsweeps(nsweeps::Int, t::Number, time_step::Number)
+  return error("Cannot specify both nsweeps and time_step in tdvp")
+end
+
+function _compute_nsweeps(nsweeps::Nothing, t::Number, time_step::Number)
+  @assert isfinite(time_step) && abs(time_step) > 0.0
+  nsweeps = convert(Int, nsweeps_per_step * ceil(abs(t / time_step)))
+  if !(nsweeps / nsweeps_per_step * time_step ≈ t)
+    println(
+      "Time that will be reached = nsweeps/nsweeps_per_step * time_step = ",
+      nsweeps / nsweeps_per_step * time_step,
+    )
+    println("Requested total time t = ", t)
+    error("Time step $time_step not commensurate with total time t=$t")
+  end
+  return nsweeps, extend(time_step, nsweeps)
+end
+
+function _compute_nsweeps(nsweeps::Int, t::Number, time_step::Nothing)
+  time_step = extend(t / nsweeps, nsweeps)
+  return nsweeps, time_step
+end
+
+function _compute_nsweeps(nsweeps, t::Number, time_step::Vector)
+  diff_time = t - sum(time_step)
+  if diff_time < eps()
+    if length(time_step) != nsweeps
+      error(
+        "A vector of timesteps that sums up to total time t=$t was supplied,
+  but its length (=$(length(time_step))) does not agree with supplied number of sweeps (=$(nsweeps)).",
+      )
+    end
+    return time_step, nsweeps
+  end
+  if isnothing(nsweeps)
+    #extend time_step to reach final time t
+    last_time_step = last(time_step)
+    nsweepstopad = ceil(abs(diff_time / last_time_step))
+    if !(sum(time_step) + nsweepstopad * last_time_step ≈ t)
       println(
         "Time that will be reached = nsweeps/nsweeps_per_step * time_step = ",
         nsweeps / nsweeps_per_step * time_step,
@@ -13,8 +47,14 @@ function _compute_nsweeps(nsteps, t, time_step, order)
       println("Requested total time t = ", t)
       error("Time step $time_step not commensurate with total time t=$t")
     end
+    time_step = extend(time_step, length(time_step) + nsweepstopad)
+    nsweeps = length(time_step)
+  else
+    nsweepstopad = nsweeps - length(time_step)
+    remaining_time_step = diff_time / nsweepstopad
+    append!(time_step, extend(remaining_time_step, nsweepstopad))
   end
-  return nsweeps
+  return time_step, nsweeps
 end
 
 function sub_time_steps(order)
@@ -52,12 +92,15 @@ function tdvp(
   operator,
   t::Number,
   init_state::AbstractTTN;
-  time_step::Number=t,
+  time_step::Number=nothing,
   nsites=2,
-  nsteps=nothing,
+  nsweeps=nothing,
   order::Integer=2,
-  outputlevel=0,
-  (sweep_observer!)=observer(),
+  outputlevel=default_outputlevel,
+  region_printer=nothing,
+  sweep_printer=nothing,
+  (sweep_observer!)=nothing,
+  (region_observer!)=nothing,
   root_vertex=default_root_vertex(init_state),
   reverse_step=true,
   extracter_kwargs=(;),
@@ -68,36 +111,27 @@ function tdvp(
   inserter=default_inserter(),
   kwargs...,
 )
-  # slurp unbound kwargs into inserter
-  ### if unbound kwargs are required in e.g. updater, they will have to be explicitly listed inside e.g. updater_kwargs
-  ### if non-standard inserter (with different kwarg signature) is used, it is up to the user to not pass unsupported kwargs
+  # move slurped kwargs into inserter
   inserter_kwargs = (; inserter_kwargs..., kwargs...) # slurp unbound kwargs into inserter
-  # move inserter etc. into the respective kwargs
-  inserter_kwargs = merge((; inserter), inserter_kwargs)
-  updater_kwargs = merge((; updater), updater_kwargs)
-  extracter_kwargs = merge((; extracter), extracter_kwargs)
 
-  nsweeps = _compute_nsweeps(nsteps, t, time_step, order)
-  # process kwargs into a list of namedtuples of length nsweeps
-  processed_kwarg_list = process_kwargs_for_sweeps(
-    nsweeps; extracter_kwargs, updater_kwargs, inserter_kwargs
+  sweep_plans = tdvp_sweep_plans(
+    nsteps,
+    t,
+    time_step,
+    order,
+    nsites,
+    init_state;
+    root_vertex,
+    reverse_step,
+    extracter,
+    extracter_kwargs,
+    updater,
+    updater_kwargs,
+    inserter,
+    inserter_kwargs,
   )
-  # make everything a list of length nsweeps, with simple NamedTuples per sweep
-  sweep_plans = []
-  for i in 1:nsweeps
-    #@show processed_kwarg_list[i]
-    sweep_plan = tdvp_sweep_plan(
-      order,
-      nsites,
-      time_step,
-      init_state;
-      root_vertex,
-      reverse_step,
-      pre_region_args=processed_kwarg_list[i],
-    )
-    push!(sweep_plans, sweep_plan)
-  end
 
+  #=
   function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
     if outputlevel >= 1
       sweeps_per_step = order ÷ 2
@@ -108,15 +142,15 @@ function tdvp(
     end
     return nothing
   end
-
-  insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
+  =#
+  #insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
 
   state = alternating_update(
     operator, init_state; outputlevel, sweep_observer!, sweep_plans
   )
 
   # remove sweep_time_printer from sweep_observer!
-  select!(sweep_observer!, Observers.DataFrames.Not("sweep_time_printer"))
+  #select!(sweep_observer!, Observers.DataFrames.Not("sweep_time_printer"))
 
   return state
 end
