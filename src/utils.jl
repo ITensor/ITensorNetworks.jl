@@ -25,3 +25,53 @@ function line_to_tree(line::Vector)
   end
   return [line_to_tree(line[1:(end - 1)]), line[end]]
 end
+
+# Pad with last value to length.
+# If it is a single value (non-Vector), fill with
+# that value to the length.
+extend(x::Vector, length::Int) = [x; fill(last(x), length - Base.length(x))]
+extend(x, length::Int) = extend([x], length)
+
+# Treat `AbstractArray` as leaves.
+
+struct AbstractArrayLeafStyle <: WalkStyle end
+
+StructWalk.children(::AbstractArrayLeafStyle, x::AbstractArray) = ()
+
+function extend_columns(nt::NamedTuple, length::Int)
+  return map(x -> extend(x, length), nt)
+end
+
+function extend_columns_recursive(nt::NamedTuple, length::Int)
+  return postwalk(AbstractArrayLeafStyle(), nt) do x
+    x isa NamedTuple && return x
+
+    return extend(x, length)
+  end
+end
+
+nrows(nt::NamedTuple) = length(first(nt))
+
+function row(nt::NamedTuple, i::Int)
+  return map(x -> x[i], nt)
+end
+
+# Similar to `Tables.rowtable(x)`
+
+function rows(nt::NamedTuple)
+  return [row(nt, i) for i in 1:nrows(nt)]
+end
+
+function rows_recursive(nt::NamedTuple)
+  return postwalk(AbstractArrayLeafStyle(), nt) do x
+    !(x isa NamedTuple) && return x
+
+    return rows(x)
+  end
+end
+
+function expand(nt::NamedTuple, length::Int)
+  nt_padded = extend_columns_recursive(nt, length)
+
+  return rows_recursive(nt_padded)
+end
