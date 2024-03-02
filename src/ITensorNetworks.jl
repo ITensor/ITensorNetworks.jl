@@ -31,6 +31,7 @@ using SplitApplyCombine
 using StaticArrays
 using Suppressor
 using TimerOutputs
+using StructWalk: StructWalk, WalkStyle, postwalk
 
 using DataGraphs: IsUnderlyingGraph, edge_data_type, vertex_data_type
 using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
