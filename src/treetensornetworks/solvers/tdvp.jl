@@ -1,18 +1,18 @@
 default_outputlevel() = 0
-
 #ToDo: Cleanup _compute_nsweeps, maybe restrict flexibility to simplify code
 function _compute_nsweeps(nsweeps::Int, t::Number, time_step::Number)
   return error("Cannot specify both nsweeps and time_step in tdvp")
 end
 
+function _compute_nsweeps(nsweeps::Nothing, t::Number, time_step::Nothing)
+  return 1, [t]
+end
+
 function _compute_nsweeps(nsweeps::Nothing, t::Number, time_step::Number)
   @assert isfinite(time_step) && abs(time_step) > 0.0
-  nsweeps = convert(Int, nsweeps_per_step * ceil(abs(t / time_step)))
-  if !(nsweeps / nsweeps_per_step * time_step ≈ t)
-    println(
-      "Time that will be reached = nsweeps/nsweeps_per_step * time_step = ",
-      nsweeps / nsweeps_per_step * time_step,
-    )
+  nsweeps = convert(Int, ceil(abs(t / time_step)))
+  if !(nsweeps * time_step ≈ t)
+    println("Time that will be reached = nsweeps * time_step = ", nsweeps * time_step)
     println("Requested total time t = ", t)
     error("Time step $time_step not commensurate with total time t=$t")
   end
@@ -33,17 +33,14 @@ function _compute_nsweeps(nsweeps, t::Number, time_step::Vector)
   but its length (=$(length(time_step))) does not agree with supplied number of sweeps (=$(nsweeps)).",
       )
     end
-    return time_step, nsweeps
+    return nsweeps, time_step
   end
   if isnothing(nsweeps)
     #extend time_step to reach final time t
     last_time_step = last(time_step)
     nsweepstopad = ceil(abs(diff_time / last_time_step))
     if !(sum(time_step) + nsweepstopad * last_time_step ≈ t)
-      println(
-        "Time that will be reached = nsweeps/nsweeps_per_step * time_step = ",
-        nsweeps / nsweeps_per_step * time_step,
-      )
+      println("Time that will be reached = nsweeps * time_step = ", nsweeps * time_step)
       println("Requested total time t = ", t)
       error("Time step $time_step not commensurate with total time t=$t")
     end
@@ -54,7 +51,7 @@ function _compute_nsweeps(nsweeps, t::Number, time_step::Vector)
     remaining_time_step = diff_time / nsweepstopad
     append!(time_step, extend(remaining_time_step, nsweepstopad))
   end
-  return time_step, nsweeps
+  return nsweeps, time_step
 end
 
 function sub_time_steps(order)
@@ -92,11 +89,11 @@ function tdvp(
   operator,
   t::Number,
   init_state::AbstractTTN;
-  time_step::Number=nothing,
+  time_step=nothing,
   nsites=2,
   nsweeps=nothing,
   order::Integer=2,
-  outputlevel=default_outputlevel,
+  outputlevel=default_outputlevel(),
   region_printer=nothing,
   sweep_printer=nothing,
   (sweep_observer!)=nothing,
@@ -115,7 +112,7 @@ function tdvp(
   inserter_kwargs = (; inserter_kwargs..., kwargs...) # slurp unbound kwargs into inserter
 
   sweep_plans = tdvp_sweep_plans(
-    nsteps,
+    nsweeps,
     t,
     time_step,
     order,

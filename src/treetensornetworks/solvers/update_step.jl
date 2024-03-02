@@ -2,11 +2,11 @@
 default_extractor() = extract_local_tensor
 default_inserter() = insert_local_tensor
 
-function default_region_update_printer(;
+function default_region_printer(;
   cutoff,
   maxdim,
   mindim,
-  outputlevel::Int=0,
+  outputlevel,
   state,
   sweep_plan,
   spec,
@@ -34,7 +34,13 @@ function default_region_update_printer(;
 end
 
 function sweep_update(
-  projected_operator, state::AbstractTTN; outputlevel, which_sweep::Int, sweep_plan
+  projected_operator,
+  state::AbstractTTN;
+  outputlevel,
+  which_sweep::Int,
+  sweep_plan,
+  region_printer,
+  (region_observer!),
 )
 
   # Append empty namedtuple to each element if not already present
@@ -54,6 +60,8 @@ function sweep_update(
       state;
       which_sweep,
       sweep_plan,
+      region_printer,
+      (region_observer!),
       which_region_update,
       outputlevel, # ToDo      
     )
@@ -157,19 +165,20 @@ current_ortho(::Type{NamedEdge{V}}, st) where {V} = src(st)
 current_ortho(st) = current_ortho(typeof(st), st)
 
 function region_update(
-  projected_operator, state; outputlevel, which_sweep, sweep_plan, which_region_update
+  projected_operator,
+  state;
+  outputlevel,
+  which_sweep,
+  sweep_plan,
+  which_region_update,
+  region_printer,
+  (region_observer!),
 )
   (region, region_kwargs) = sweep_plan[which_region_update]
-  (; extracter_kwargs, updater_kwargs, inserter_kwargs, internal_kwargs) = region_kwargs
-
-  # these are equivalent to pop!(collection,key)
-  (; extracter) = extracter_kwargs
-  extracter_kwargs = Base.structdiff((; extracter), extracter_kwargs)
-  (; updater) = updater_kwargs   #extract updater from  updater_kwargs
-  updater_kwargs = Base.structdiff((; updater), updater_kwargs)
-  (; inserter) = inserter_kwargs
-  inserter_kwargs = Base.structdiff((; inserter), inserter_kwargs)
-
+  (; extract, update, insert, internal_kwargs) = region_kwargs
+  extracter, extracter_kwargs = extract
+  updater, updater_kwargs = update
+  inserter, inserter_kwargs = insert
   region = first(sweep_plan[which_region_update])
   state, projected_operator, phi = extract_local_tensor(
     state, projected_operator, region; extracter_kwargs..., internal_kwargs
@@ -204,10 +213,7 @@ function region_update(
 
   state, spec = insert_local_tensor(state, phi, region; inserter_kwargs..., internal_kwargs)
 
-  !haskey(region_kwargs, :region_printer) && (printer = default_region_update_printer)
-  # only perform update! if region_observer actually passed as kwarg
-  haskey(region_kwargs, :region_observer) && update!(
-    region_observer!;
+  all_kwargs = (;
     cutoff,
     maxdim,
     mindim,
@@ -223,22 +229,8 @@ function region_update(
     info...,
     region_kwargs...,
   )
+  !(isnothing(region_observer!)) && update!(region_observer!; all_kwargs...)
 
-  printer(;
-    cutoff,
-    maxdim,
-    mindim,
-    which_region_update,
-    sweep_plan,
-    total_sweep_steps=length(sweep_plan),
-    end_of_sweep=(which_region_update == length(sweep_plan)),
-    state,
-    region,
-    which_sweep,
-    spec,
-    outputlevel,
-    info...,
-    region_kwargs...,
-  )
+  !(isnothing(region_printer)) && region(; all_kwargs...)
   return state, projected_operator
 end

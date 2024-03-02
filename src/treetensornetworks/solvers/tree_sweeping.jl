@@ -1,6 +1,5 @@
 direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
 
-#ToDo: refactor
 function make_region(
   edge;
   last_edge=false,
@@ -83,7 +82,7 @@ function default_sweep_plan(nsites, graph::AbstractGraph; pre_region_args=(;), k
 end
 
 function tdvp_sweep_plans(
-  nsteps,
+  nsweeps,
   t,
   time_step,
   order,
@@ -98,8 +97,8 @@ function tdvp_sweep_plans(
   inserter,
   inserter_kwargs,
 )
-  nsweeps, time_step = _compute_nsweeps(nsteps, t, time_step)
-  order, nsites, time_step, reverse_step = extend.((order, nsites, reverse_step), nsweeps)
+  nsweeps, time_step = _compute_nsweeps(nsweeps, t, time_step)
+  order, nsites, reverse_step = extend.((order, nsites, reverse_step), nsweeps)
   extracter, updater, inserter = extend.((extracter, updater, inserter), nsweeps)
   inserter_kwargs, updater_kwargs, extracter_kwargs =
     expand.((inserter_kwargs, updater_kwargs, extracter_kwargs), nsweeps)
@@ -118,8 +117,10 @@ function tdvp_sweep_plans(
         extract=(extracter[i], extracter_kwargs[i]),
       ),
     )
+    #@show sweep_plan
     push!(sweep_plans, sweep_plan)
   end
+  return sweep_plans
 end
 
 #ToDo: This is currently coupled with the updater signature, which is undesirable.
@@ -135,7 +136,7 @@ function tdvp_sweep_plan(
   sweep_plan = []
   for (substep, fac) in enumerate(sub_time_steps(order))
     sub_time_step = time_step * fac
-    half = half_sweep(
+    half = forward_sweep(
       direction(substep),
       graph,
       make_region;
