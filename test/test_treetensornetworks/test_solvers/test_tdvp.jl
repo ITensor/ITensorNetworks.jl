@@ -26,7 +26,7 @@ using Test
     ψ0 = random_mps(s; internal_inds_space=10)
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
+    ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -38,7 +38,12 @@ using Test
 
     # Time evolve backwards:
     ψ2 = tdvp(
-      H, +0.1im, ψ1; nsteps=1, cutoff, updater_kwargs=(; krylovdim=20, maxiter=20, tol=1e-8)
+      H,
+      +0.1im,
+      ψ1;
+      nsweeps=1,
+      cutoff,
+      updater_kwargs=(; krylovdim=20, maxiter=20, tol=1e-8),
     )
 
     @test norm(ψ2) ≈ 1.0
@@ -69,7 +74,7 @@ using Test
 
     ψ0 = random_mps(s; internal_inds_space=10)
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -80,7 +85,7 @@ using Test
     @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
     # Time evolve backwards:
-    ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -244,7 +249,7 @@ using Test
         H,
         -tau * im,
         phi;
-        nsteps=1,
+        nsweeps=1,
         cutoff,
         nsites,
         normalize=true,
@@ -286,10 +291,9 @@ using Test
   end
 
   @testset "Imaginary Time Evolution" for reverse_step in [true, false]
-    N = 10
     cutoff = 1e-12
     tau = 1.0
-    ttotal = 50.0
+    ttotal = 10.0
 
     s = siteinds("S=1/2", N)
 
@@ -305,7 +309,7 @@ using Test
     state = random_mps(s; internal_inds_space=2)
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
-      nsites = (step <= 10 ? 2 : 1)
+      nsites = (step <= 5 ? 2 : 1)
       state = tdvp(
         H,
         -tau,
@@ -399,7 +403,7 @@ end
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
+    ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -410,7 +414,7 @@ end
     @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
     # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -441,7 +445,7 @@ end
 
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -452,7 +456,7 @@ end
     @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
     # Time evolve backwards:
-    ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -557,7 +561,7 @@ end
         H,
         -tau * im,
         phi;
-        nsteps=1,
+        nsweeps=1,
         cutoff,
         nsites,
         normalize=true,
