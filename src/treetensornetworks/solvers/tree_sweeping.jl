@@ -1,33 +1,62 @@
 direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
 
-function make_region(
-  edge;
-  last_edge=false,
-  nsites=1,
-  region_args=(;),
-  reverse_args=region_args,
-  reverse_step=false,
-)
+function interleave(a::Vector, b::Vector)
+  ab = flatten(collect(zip(a, b)))
+  if length(a) == length(b)
+    return ab
+  elseif length(a) == length(b) + 1
+    return append!(ab, [last(a)])
+  else
+    error(
+      "Trying to interleave vectors of length $(length(a)) and $(length(b)), not implemented.",
+    )
+  end
+end
+
+function overlap(edge_a::AbstractEdge, edge_b::AbstractEdge)
+  return intersect([src(edge_a), dst(edge_a)], [src(edge_b), dst(edge_b)])
+end
+
+function reverse_region(edges, which_edge; nsites=1, region_args=(;))
+  current_edge = edges[which_edge]
   if nsites == 1
-    site = ([src(edge)], region_args)
-    bond = (edge, reverse_args)
-    region = reverse_step ? (site, bond) : (site,)
-    if last_edge
-      return (region..., ([dst(edge)], region_args))
+    return [(current_edge, region_args)]
+  elseif nsites == 2
+    if last(edges) == current_edge
+      return ()
+    end
+    future_edges = edges[(which_edge + 1):end]
+    future_edges = isa(future_edges, AbstractEdge) ? [future_edges] : future_edges
+    #error if more than single vertex overlap
+    overlapping_vertex = only(union([overlap(e, current_edge) for e in future_edges]...))
+    return [([overlapping_vertex], region_args)]
+  end
+end
+
+function forward_region(edges, which_edge; nsites=1, region_args=(;))
+  if nsites == 1
+    current_edge = edges[which_edge]
+    #handle edge case
+    if current_edge == last(edges)
+      overlapping_vertex = only(
+        union([overlap(e, current_edge) for e in edges[1:(which_edge - 1)]]...)
+      ) #union(overlap.(edges[1:(which_edge-1)],current_edge))
+      nonoverlapping_vertex = only(
+        setdiff([src(current_edge), dst(current_edge)], [overlapping_vertex])
+      )
+      return [([overlapping_vertex], region_args), ([nonoverlapping_vertex], region_args)]
     else
-      return region
+      future_edges = edges[(which_edge + 1):end]
+      future_edges = isa(future_edges, AbstractEdge) ? [future_edges] : future_edges
+      overlapping_vertex = only(union([overlap(e, current_edge) for e in future_edges]...))
+      nonoverlapping_vertex = only(
+        setdiff([src(current_edge), dst(current_edge)], [overlapping_vertex])
+      )
+      return [([nonoverlapping_vertex], region_args)]
     end
   elseif nsites == 2
-    sites_two = ([src(edge), dst(edge)], region_args)
-    sites_one = ([dst(edge)], reverse_args)
-    region = reverse_step ? (sites_two, sites_one) : (sites_two,)
-    if last_edge
-      return (sites_two,)
-    else
-      return region
-    end
-  else
-    error("nsites=$nsites not supported in alternating_update / update_step")
+    current_edge = edges[which_edge]
+    return [([src(current_edge), dst(current_edge)], region_args)]
   end
 end
 
@@ -43,15 +72,30 @@ end
 
 function forward_sweep(
   dir::Base.ForwardOrdering,
-  graph::AbstractGraph,
-  region_function;
+  graph::AbstractGraph;
   root_vertex=default_root_vertex(graph),
+  region_args,
+  reverse_args,
+  reverse_step,
   kwargs...,
 )
   edges = post_order_dfs_edges(graph, root_vertex)
-  steps = collect(
-    flatten(map(e -> region_function(e; last_edge=(e == edges[end]), kwargs...), edges))
+  forward_steps = collect(
+    flatten(map(i -> forward_region(edges, i; region_args, kwargs...), eachindex(edges)))
   )
+  if reverse_step
+    reverse_steps = collect(
+      flatten(
+        map(
+          i -> reverse_region(edges, i; region_args=reverse_args, kwargs...),
+          eachindex(edges),
+        ),
+      ),
+    )
+    steps = interleave(forward_steps, reverse_steps)
+  else
+    steps = forward_steps
+  end
   # Append empty namedtuple to each element if not already present
   steps = append_missing_namedtuple.(to_tuple.(steps))
   return steps
@@ -138,8 +182,7 @@ function tdvp_sweep_plan(
     sub_time_step = time_step * fac
     half = forward_sweep(
       direction(substep),
-      graph,
-      make_region;
+      graph;
       root_vertex,
       nsites,
       region_args=(;
