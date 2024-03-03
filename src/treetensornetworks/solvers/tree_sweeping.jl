@@ -40,7 +40,7 @@ function forward_region(edges, which_edge; nsites=1, region_args=(;))
     if current_edge == last(edges)
       overlapping_vertex = only(
         union([overlap(e, current_edge) for e in edges[1:(which_edge - 1)]]...)
-      ) #union(overlap.(edges[1:(which_edge-1)],current_edge))
+      )
       nonoverlapping_vertex = only(
         setdiff([src(current_edge), dst(current_edge)], [overlapping_vertex])
       )
