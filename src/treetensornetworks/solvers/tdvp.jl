@@ -1,4 +1,3 @@
-default_outputlevel() = 0
 #ToDo: Cleanup _compute_nsweeps, maybe restrict flexibility to simplify code
 function _compute_nsweeps(nsweeps::Int, t::Number, time_step::Number)
   return error("Cannot specify both nsweeps and time_step in tdvp")
