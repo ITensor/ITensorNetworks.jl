@@ -294,7 +294,7 @@ using Test
     cutoff = 1e-12
     tau = 1.0
     ttotal = 10.0
-
+    N = 10
     s = siteinds("S=1/2", N)
 
     os = OpSum()
