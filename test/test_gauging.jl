@@ -25,7 +25,9 @@ using SplitApplyCombine
   ψ = randomITensorNetwork(s; link_space=χ)
   ψ_symm, bp_cache = symmetric_gauge(ψ)
 
-  @test gauge_error(ψ_symm, bp_cache) < 1e-5
+  ψ_vidal = VidalITensorNetwork(ψ_symm)
+  ψ_vidal = update(ψ_vidal, bp_cache)
+  @test gauge_error(ψ_vidal) < 1e-5
 
   #Test we just did a gauge transform and didn't change the overall network
   @test contract_inner(ψ_symm, ψ) /
@@ -42,9 +44,5 @@ using SplitApplyCombine
 
   ψ_vidal = VidalITensorNetwork(ψ)
   ψ_vidal = update(ψ_vidal)
-  @test gauge_error(ψ_vidal) < 1e-5
-
-  ψ_vidal = VidalITensorNetwork(ψ_symm)
-  ψ_vidal = update(ψ_vidal, bp_cache)
   @test gauge_error(ψ_vidal) < 1e-5
 end

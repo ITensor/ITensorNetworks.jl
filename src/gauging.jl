@@ -179,9 +179,3 @@ function gauge_error(ψv::VidalITensorNetwork)
 
   return f / (length(keys(isometries)))
 end
-
-function gauge_error(ψ::ITensorNetwork, bp_cache::BeliefPropagationCache)
-  ψv = VidalITensorNetwork(ψ)
-  ψv = update(ψv, bp_cache)
-  return gauge_error(ψv)
-end
