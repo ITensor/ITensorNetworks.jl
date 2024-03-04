@@ -3,11 +3,11 @@ using ITensorNetworks
 using ITensorNetworks:
   contract_inner,
   symmetric_gauge,
-  vidal_gauge,
   gauge_error,
   update,
   messages,
-  BeliefPropagationCache
+  BeliefPropagationCache,
+  VidalITensorNetwork
 using NamedGraphs
 using Test
 using Compat
@@ -40,9 +40,11 @@ using SplitApplyCombine
     @test diagITensor(vector(diag(only(m_e))), inds(only(m_e))) ≈ only(m_e) atol = 1e-8
   end
 
-  Γ, Λ = vidal_gauge(ψ)
-  @test gauge_error(Γ, Λ) < 1e-5
+  ψ_vidal = VidalITensorNetwork(ψ)
+  ψ_vidal = update(ψ_vidal)
+  @test gauge_error(ψ_vidal) < 1e-5
 
-  Γ, Λ = vidal_gauge(ψ_symm; (cache!)=Ref(bp_cache))
-  @test gauge_error(Γ, Λ) < 1e-5
+  ψ_vidal = VidalITensorNetwork(ψ_symm)
+  ψ_vidal = update(ψ_vidal, bp_cache)
+  @test gauge_error(ψ_vidal) < 1e-5
 end

@@ -86,6 +86,12 @@ function default_edge_sequence(bp_cache::BeliefPropagationCache)
   return default_edge_sequence(partitioned_itensornetwork(bp_cache))
 end
 
+function set_messages(cache::BeliefPropagationCache, messages)
+  return BeliefPropagationCache(
+    partitioned_itensornetwork(cache), messages, default_message(cache)
+  )
+end
+
 function incoming_messages(
   bp_cache::BeliefPropagationCache,
   partition_vertices::Vector{<:PartitionVertex};
@@ -109,10 +115,6 @@ function incoming_messages(bp_cache::BeliefPropagationCache, verts::Vector)
     tensornetwork(bp_cache)[v] for v in setdiff(vertices(bp_cache, partition_verts), verts)
   ]
   return vcat(messages, central_tensors)
-end
-
-function incoming_messages(bp_cache::BeliefPropagationCache, vertex)
-  return incoming_messages(bp_cache, [vertex])
 end
 
 function factor(bp_cache::BeliefPropagationCache, vertex::PartitionVertex)
@@ -180,7 +182,7 @@ function update(
       new_mts[e] = message(bp_cache_t, e)
     end
   end
-  return BeliefPropagationCache(copy(partitioned_itensornetwork(bp_cache)), new_mts)
+  return set_messages(bp_cache, new_mts)
 end
 
 """
@@ -221,6 +223,7 @@ function update_factors(
   tn = tensornetwork(bp_cache)
 
   for (vertex, factor) in zip(vertices, factors)
+    # TODO: Add a check that this preserves the graph structure.
     setindex_preserve_graph!(tn, factor, vertex)
   end
   return bp_cache

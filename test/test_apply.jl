@@ -1,12 +1,6 @@
 using ITensorNetworks
 using ITensorNetworks:
-  incoming_messages,
-  update,
-  contract_inner,
-  vidal_gauge,
-  vidal_apply,
-  symmetric_gauge,
-  norm_network
+  incoming_messages, update, contract_inner, vidal_apply, symmetric_gauge, norm_network
 using Test
 using Compat
 using ITensors
@@ -32,7 +26,8 @@ using SplitApplyCombine
   bp_cache = update(bp_cache; maxiter=20)
   envsSBP = incoming_messages(bp_cache, PartitionVertex.([v1, v2]))
 
-  ψ_vidal, bond_tensors = vidal_gauge(ψ; (cache!)=Ref(bp_cache))
+  ψv = VidalITensorNetwork(ψ)
+  ψv = update(ψv, bp_cache)
 
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
   bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
@@ -54,10 +49,8 @@ using SplitApplyCombine
       print_fidelity_loss=true,
       envisposdef=true,
     )
-    ψOVidal, bond_tensors_t = vidal_apply(
-      o, ψ_vidal, bond_tensors; maxdim=χ, normalize=true
-    )
-    ψOVidal_symm, _ = symmetric_gauge(ψOVidal, bond_tensors_t)
+    ψOv = vidal_apply(o, ψv; maxdim=χ, normalize=true)
+    ψOVidal_symm, _ = symmetric_gauge(ψOv)
     ψOGBP = apply(
       o,
       ψ;

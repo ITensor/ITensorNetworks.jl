@@ -298,33 +298,29 @@ end
 """Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
 Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site"""
 function vidal_apply(
-  o::Union{ITensor,NamedEdge},
-  ψ::AbstractITensorNetwork,
-  bond_tensors::DataGraph;
-  normalize=false,
-  apply_kwargs...,
+  o::Union{ITensor,NamedEdge}, ψv::VidalITensorNetwork; normalize=false, apply_kwargs...
 )
-  ψ = copy(ψ)
-  bond_tensors = copy(bond_tensors)
-  v⃗ = _gate_vertices(o, ψ)
+  updated_ψ = copy(itensornetwork(ψv))
+  updated_bond_tensors = copy(bond_tensors(ψv))
+  v⃗ = _gate_vertices(o, ψv)
   if length(v⃗) == 2
     e = NamedEdge(v⃗[1] => v⃗[2])
-    ψv1, ψv2 = ψ[src(e)], ψ[dst(e)]
+    ψv1, ψv2 = ψv[src(e)], ψv[dst(e)]
     e_ind = commonind(ψv1, ψv2)
 
-    for vn in neighbors(ψ, src(e))
+    for vn in neighbors(ψv, src(e))
       if (vn != dst(e))
-        ψv1 = noprime(ψv1 * bond_tensors[vn => src(e)])
+        ψv1 = noprime(ψv1 * bond_tensor(ψv, vn => src(e)))
       end
     end
 
-    for vn in neighbors(ψ, dst(e))
+    for vn in neighbors(ψv, dst(e))
       if (vn != src(e))
-        ψv2 = noprime(ψv2 * bond_tensors[vn => dst(e)])
+        ψv2 = noprime(ψv2 * bond_tensor(ψv, vn => dst(e)))
       end
     end
 
-    Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta = _contract_gate(o, ψv1, bond_tensors[e], ψv2)
+    Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta = _contract_gate(o, ψv1, bond_tensor(ψv, e), ψv2)
 
     U, S, V = ITensors.svd(
       theta,
@@ -339,34 +335,34 @@ function vidal_apply(
     S = replaceind(S, ind_to_replace => ind_to_replace_with')
     V = replaceind(V, ind_to_replace => ind_to_replace_with)
 
-    ψv1, bond_tensors[e], ψv2 = U * Qᵥ₁, S, V * Qᵥ₂
+    ψv1, updated_bond_tensors[e], ψv2 = U * Qᵥ₁, S, V * Qᵥ₂
 
-    for vn in neighbors(ψ, src(e))
+    for vn in neighbors(ψv, src(e))
       if (vn != dst(e))
-        ψv1 = noprime(ψv1 * inv_diag(bond_tensors[vn => src(e)]))
+        ψv1 = noprime(ψv1 * inv_diag(bond_tensor(ψv, vn => src(e))))
       end
     end
 
-    for vn in neighbors(ψ, dst(e))
+    for vn in neighbors(ψv, dst(e))
       if (vn != src(e))
-        ψv2 = noprime(ψv2 * inv_diag(bond_tensors[vn => dst(e)]))
+        ψv2 = noprime(ψv2 * inv_diag(bond_tensor(ψv, vn => dst(e))))
       end
     end
 
     if normalize
       ψv1 /= norm(ψv1)
       ψv2 /= norm(ψv2)
-      normalize!(bond_tensors[e])
+      normalize!(updated_bond_tensors[e])
     end
 
-    setindex_preserve_graph!(ψ, ψv1, src(e))
-    setindex_preserve_graph!(ψ, ψv2, dst(e))
+    setindex_preserve_graph!(updated_ψ, ψv1, src(e))
+    setindex_preserve_graph!(updated_ψ, ψv2, dst(e))
 
-    return ψ, bond_tensors
+    return VidalITensorNetwork(updated_ψ, updated_bond_tensors)
 
   else
-    ψ = ITensors.apply(o, ψ; normalize)
-    return ψ, bond_tensors
+    updated_ψ = ITensors.apply(o, updated_ψ; normalize)
+    return VidalITensorNetwork(ψ, updated_bond_tensors)
   end
 end
 
