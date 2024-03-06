@@ -247,7 +247,6 @@ end
         Tttno = contract(Hsvd)
       end
       @test Tttno ≈ Tmpo rtol = 1e-6
-
       Hsvd_lr = TTN(
         Hlr, is_missing_site; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10
       )
@@ -257,6 +256,10 @@ end
         Tmpo_lr = contract(Hsvd_lr)
       end
       @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
+      # ToDo: move to a more appropriate file, since this is not related to OpSum to TTN conversion
+      # test whether Hamiltonian contracts with itself (used to error due to missing siteindices)
+      @test isa(inner(Hsvd, Hsvd), Number)
     end
   end
 end
+return nothing
