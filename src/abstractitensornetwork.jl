@@ -820,7 +820,9 @@ function check_hascommoninds(
   end
   for v in vertices(A)
     if isempty(siteinds(A, v))
-      !(isempty(siteinds(B, v))) && return false
+      !(isempty(siteinds(B, v))) && error(
+        "$(typeof(A)) A and $(typeof(B)) B must share site indices. On vertex $v, A has no site indices while B has site indices $(siteinds(B, v)).",
+      )
     else
       !hascommoninds(siteinds(A, v), siteinds(B, v)) && error(
         "$(typeof(A)) A and $(typeof(B)) B must share site indices. On vertex $v, A has site indices $(siteinds(A, v)) while B has site indices $(siteinds(B, v)).",
