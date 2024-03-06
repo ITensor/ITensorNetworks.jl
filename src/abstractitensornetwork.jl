@@ -798,7 +798,11 @@ function hascommoninds(
   ::typeof(siteinds), A::AbstractITensorNetwork{V}, B::AbstractITensorNetwork{V}
 ) where {V}
   for v in vertices(A)
-    !hascommoninds(siteinds(A, v), siteinds(B, v)) && return false
+    if isempty(siteinds(A, v))
+      !isempty(siteinds(B, v)) && return false
+    else
+      !hascommoninds(siteinds(A, v), siteinds(B, v)) && return false
+    end
   end
   return true
 end
@@ -815,9 +819,13 @@ function check_hascommoninds(
     )
   end
   for v in vertices(A)
-    !hascommoninds(siteinds(A, v), siteinds(B, v)) && error(
-      "$(typeof(A)) A and $(typeof(B)) B must share site indices. On vertex $v, A has site indices $(siteinds(A, v)) while B has site indices $(siteinds(B, v)).",
-    )
+    if isempty(siteinds(A, v))
+      !(isempty(siteinds(B, v))) && return false
+    else
+      !hascommoninds(siteinds(A, v), siteinds(B, v)) && error(
+        "$(typeof(A)) A and $(typeof(B)) B must share site indices. On vertex $v, A has site indices $(siteinds(A, v)) while B has site indices $(siteinds(B, v)).",
+      )
+    end
   end
   return nothing
 end
