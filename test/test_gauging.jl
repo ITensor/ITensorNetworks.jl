@@ -24,7 +24,7 @@ using SplitApplyCombine
 
   # Move to symmetric gauge
   cache_ref = Ref{BeliefPropagationCache}()
-  ψ_symm = ITensorNetwork(ψ_vidal; (bp_cache!)=cache_ref)
+  ψ_symm = ITensorNetwork(ψ_vidal; (cache!)=cache_ref)
   bp_cache = cache_ref[]
 
   # Test we just did a gauge transform and didn't change the overall network

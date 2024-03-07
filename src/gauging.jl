@@ -26,7 +26,7 @@ end
 default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
 
 function ITensorNetwork(
-  ψ_vidal::VidalITensorNetwork; (bp_cache!)=nothing, update_gauge=false, update_kwargs...
+  ψ_vidal::VidalITensorNetwork; (cache!)=nothing, update_gauge=false, update_kwargs...
 )
   if update_gauge
     ψ_vidal = update(ψ_vidal; update_kwargs...)
@@ -41,7 +41,7 @@ function ITensorNetwork(
     setindex_preserve_graph!(ψ, noprime(root_S * ψ[vdst]), vdst)
   end
 
-  if !isnothing(bp_cache!)
+  if !isnothing(cache!)
     bp_cache = default_norm_cache(ψ)
     mts = messages(bp_cache)
 
@@ -53,7 +53,7 @@ function ITensorNetwork(
     end
 
     bp_cache = set_messages(bp_cache, mts)
-    bp_cache![] = bp_cache
+    cache![] = bp_cache
   end
 
   return ψ
@@ -139,25 +139,29 @@ function update(ψ::VidalITensorNetwork; kwargs...)
   return VidalITensorNetwork(ITensorNetwork(ψ; update_gauge=false); kwargs...)
 end
 
-"""Function to measure the 'isometries' of a state in the Vidal Gauge"""
-function vidal_gauge_isometries(
-  ψ::VidalITensorNetwork; edges=vcat(NamedGraphs.edges(ψ), reverse.(NamedGraphs.edges(ψ)))
-)
-  isometries = Dict()
+"""Function to construct the 'isometry' of a state in the Vidal Gauge on the given edge"""
+function vidal_gauge_isometry(ψ::VidalITensorNetwork, edge)
+  vsrc, vdst = src(edge), dst(edge)
+  ψ_vsrc = copy(ψ[vsrc])
 
-  for e in edges
-    vsrc, vdst = src(e), dst(e)
-    ψ_vsrc = copy(ψ[vsrc])
-    for vn in setdiff(neighbors(ψ, vsrc), [vdst])
-      ψ_vsrc = noprime(ψ_vsrc * bond_tensor(ψ, vn => vsrc))
-    end
-
-    ψ_vsrcdag = dag(ψ_vsrc)
-    replaceind!(ψ_vsrcdag, commonind(ψ_vsrc, ψ[vdst]), commonind(ψ_vsrc, ψ[vdst])')
-    isometries[e] = ψ_vsrcdag * ψ_vsrc
+  for vn in setdiff(neighbors(ψ, vsrc), [vdst])
+    ψ_vsrc = noprime(ψ_vsrc * bond_tensor(ψ, vn => vsrc))
   end
 
-  return isometries
+  ψ_vsrcdag = dag(ψ_vsrc)
+  replaceind!(ψ_vsrcdag, commonind(ψ_vsrc, ψ[vdst]), commonind(ψ_vsrc, ψ[vdst])')
+
+  return ψ_vsrcdag * ψ_vsrc
+end
+
+function vidal_gauge_isometries(ψ::VidalITensorNetwork, edges::Vector)
+  return Dict([e => vidal_gauge_isometry(ψ, e) for e in edges])
+end
+
+function vidal_gauge_isometries(ψ::VidalITensorNetwork)
+  return vidal_gauge_isometries(
+    ψ, vcat(NamedGraphs.edges(ψ), reverse.(NamedGraphs.edges(ψ)))
+  )
 end
 
 """Function to measure the 'distance' of a state from the Vidal Gauge"""
