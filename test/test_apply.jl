@@ -3,7 +3,6 @@ using ITensorNetworks:
   incoming_messages,
   update,
   contract_inner,
-  symmetric_gauge,
   norm_network,
   BeliefPropagationCache,
   VidalITensorNetwork
@@ -55,7 +54,7 @@ using SplitApplyCombine
       envisposdef=true,
     )
     ψOv = apply(o, ψv; maxdim=χ, normalize=true)
-    ψOVidal_symm, _ = symmetric_gauge(ψOv)
+    ψOVidal_symm = ITensorNetwork(ψOv)
     ψOGBP = apply(
       o,
       ψ;
