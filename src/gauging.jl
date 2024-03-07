@@ -11,7 +11,9 @@ site_tensors(ψ::VidalITensorNetwork) = ψ.itensornetwork
 bond_tensors(ψ::VidalITensorNetwork) = ψ.bond_tensors
 bond_tensor(ψ::VidalITensorNetwork, e) = bond_tensors(ψ)[e]
 
-data_graph_type(TN::Type{VidalITensorNetwork}) = data_graph_type(site_tensors(TN))
+function data_graph_type(TN::Type{<:VidalITensorNetwork})
+  return data_graph_type(fieldtype(TN, :itensornetwork))
+end
 data_graph(ψ::VidalITensorNetwork) = data_graph(site_tensors(ψ))
 function copy(ψ::VidalITensorNetwork)
   return VidalITensorNetwork(copy(site_tensors(ψ)), copy(bond_tensors(ψ)))
