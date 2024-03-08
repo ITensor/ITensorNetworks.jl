@@ -1,4 +1,4 @@
-function default_bond_tensor_cache(ψ::ITensorNetwork)
+function default_bond_tensors(ψ::ITensorNetwork)
   return DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))
 end
 
@@ -62,27 +62,27 @@ end
 """Use an ITensorNetwork ψ, its bond tensors and belief propagation cache to put ψ into the vidal gauge, return the bond tensors and updated_ψ."""
 function vidalitensornetwork_preserve_cache(
   ψ::ITensorNetwork;
-  bp_cache::BeliefPropagationCache=default_norm_cache(ψ),
-  bond_tensors_cache=default_bond_tensor_cache,
+  cache=default_norm_cache(ψ),
+  bond_tensors=default_bond_tensors,
   message_cutoff=10 * eps(real(scalartype(ψ))),
   regularization=10 * eps(real(scalartype(ψ))),
   edges=NamedGraphs.edges(ψ),
   svd_kwargs...,
 )
   ψ_vidal_site_tensors = copy(ψ)
-  bond_tensors = bond_tensors_cache(ψ)
+  ψ_vidal_bond_tensors = bond_tensors(ψ)
 
   for e in edges
     vsrc, vdst = src(e), dst(e)
     ψvsrc, ψvdst = ψ_vidal_site_tensors[vsrc], ψ_vidal_site_tensors[vdst]
 
-    pe = partitionedge(bp_cache, (vsrc, 1) => (vdst, 1))
+    pe = partitionedge(cache, (vsrc, 1) => (vdst, 1))
     edge_ind = commoninds(ψvsrc, ψvdst)
     edge_ind_sim = sim(edge_ind)
 
-    X_D, X_U = eigen(only(message(bp_cache, pe)); ishermitian=true, cutoff=message_cutoff)
+    X_D, X_U = eigen(only(message(cache, pe)); ishermitian=true, cutoff=message_cutoff)
     Y_D, Y_U = eigen(
-      only(message(bp_cache, reverse(pe))); ishermitian=true, cutoff=message_cutoff
+      only(message(cache, reverse(pe))); ishermitian=true, cutoff=message_cutoff
     )
     X_D, Y_D = map_diag(x -> x + regularization, X_D),
     map_diag(x -> x + regularization, Y_D)
@@ -115,10 +115,10 @@ function vidalitensornetwork_preserve_cache(
       [commoninds(S, U)..., commoninds(S, V)...] =>
         [new_edge_ind..., prime(new_edge_ind)...],
     )
-    bond_tensors[e] = S
+    ψ_vidal_bond_tensors[e] = S
   end
 
-  return VidalITensorNetwork(ψ_vidal_site_tensors, bond_tensors)
+  return VidalITensorNetwork(ψ_vidal_site_tensors, ψ_vidal_bond_tensors)
 end
 
 function VidalITensorNetwork(
@@ -132,7 +132,7 @@ function VidalITensorNetwork(
     cache! = Ref(default_norm_cache(ψ))
   end
   cache![] = update(cache![]; cache_update_kwargs...)
-  return vidalitensornetwork_preserve_cache(ψ; bp_cache=cache![], kwargs...)
+  return vidalitensornetwork_preserve_cache(ψ; cache=cache![], kwargs...)
 end
 
 function update(ψ::VidalITensorNetwork; kwargs...)
@@ -149,7 +149,7 @@ function vidal_gauge_isometry(ψ::VidalITensorNetwork, edge)
   end
 
   ψ_vsrcdag = dag(ψ_vsrc)
-  replaceind!(ψ_vsrcdag, commonind(ψ_vsrc, ψ[vdst]), commonind(ψ_vsrc, ψ[vdst])')
+  ψ_vsrcdag = replaceind(ψ_vsrcdag, commonind(ψ_vsrc, ψ[vdst]), commonind(ψ_vsrc, ψ[vdst])')
 
   return ψ_vsrcdag * ψ_vsrc
 end
