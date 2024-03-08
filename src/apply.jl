@@ -169,8 +169,8 @@ function simple_update_bp(o, ψ, v⃗; envs, (observer!)=nothing, apply_kwargs..
 end
 
 function ITensors.apply(
-  o::ITensor,
-  ψ::Union{ITensorNetwork,TreeTensorNetwork};
+  o,
+  ψ::AbstractITensorNetwork;
   envs=ITensor[],
   normalize=false,
   ortho=false,
@@ -297,9 +297,7 @@ end
 #In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
 """Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
 Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site"""
-function ITensors.apply(
-  o::Union{ITensor,NamedEdge}, ψ::VidalITensorNetwork; normalize=false, apply_kwargs...
-)
+function ITensors.apply(o, ψ::VidalITensorNetwork; normalize=false, apply_kwargs...)
   updated_ψ = copy(site_tensors(ψ))
   updated_bond_tensors = copy(bond_tensors(ψ))
   v⃗ = _gate_vertices(o, ψ)
