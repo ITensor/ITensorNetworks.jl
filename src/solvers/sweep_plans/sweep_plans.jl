@@ -52,6 +52,25 @@ function reverse_region(edges, which_edge; nsites=1, region_args=(;))
   end
 end
 
+#ToDo: Fix the logic here, currently broken for trees
+#Similar to current_ortho, we need to look forward to the next overlapping region
+#(which is not necessarily the next region)
+function insert_region_intersections(steps;region_args=(;))
+  regions=first.(steps)
+  intersecting_steps=Any[]
+  for i in eachindex(regions)
+    i==length(regions) && continue
+    intersecting_region=intersect(support(regions[i]),support(regions[i+1]))
+    if isempty(intersecting_region)
+      intersecting_region=NamedGraphs.NamedEdge(only(regions[i]),only(regions[i+1]))
+    end
+    push!(intersecting_steps,(intersecting_region,region_args),)
+  end
+  return interleave(steps, intersecting_steps)
+end
+
+
+
 function forward_region(edges, which_edge; nsites=1, region_args=(;))
   if nsites == 1
     current_edge = edges[which_edge]
@@ -99,25 +118,21 @@ function forward_sweep(
   kwargs...,
 )
   edges = post_order_dfs_edges(graph, root_vertex)
-  forward_steps = collect(
+  regions = collect(
     flatten(map(i -> forward_region(edges, i; region_args, kwargs...), eachindex(edges)))
   )
+  
   if reverse_step
-    reverse_steps = collect(
-      flatten(
-        map(
-          i -> reverse_region(edges, i; region_args=reverse_args, kwargs...),
-          eachindex(edges),
-        ),
-      ),
+    reverse_regions = collect(
+      flatten(map(i -> reverse_region(edges, i; region_args=reverse_args, kwargs...), eachindex(edges)))
     )
-    steps = interleave(forward_steps, reverse_steps)
-  else
-    steps = forward_steps
+    regions = interleave(regions,reverse_regions)
+    #regions=insert_region_intersections(regions;region_args=reverse_args)
   end
   # Append empty namedtuple to each element if not already present
-  steps = append_missing_namedtuple.(to_tuple.(steps))
-  return steps
+  # ToDo: Probably not necessary anymore, remove?
+  regions = append_missing_namedtuple.(to_tuple.(regions))
+  return regions
 end
 
 #ToDo: is there a better name for this? unidirectional_sweep? traversal?
