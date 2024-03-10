@@ -75,3 +75,16 @@ function expand(nt::NamedTuple, length::Int)
   nt_padded = extend_columns_recursive(nt, length)
   return rows_recursive(nt_padded, length)
 end
+
+function interleave(a::Vector, b::Vector)
+  ab = flatten(collect(zip(a, b)))
+  if length(a) == length(b)
+    return ab
+  elseif length(a) == length(b) + 1
+    return append!(ab, [last(a)])
+  else
+    error(
+      "Trying to interleave vectors of length $(length(a)) and $(length(b)), not implemented.",
+    )
+  end
+end
