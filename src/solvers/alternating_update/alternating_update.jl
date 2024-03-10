@@ -1,4 +1,3 @@
-default_outputlevel() = 0
 function alternating_update(
   projected_operator,
   init_state::AbstractTTN;
@@ -15,6 +14,10 @@ function alternating_update(
   @assert !isnothing(sweep_plans)
   for which_sweep in eachindex(sweep_plans)
     sweep_plan = sweep_plans[which_sweep]
+
+  #ToDo: Hopefully not needed anymore, remove.
+    sweep_plan = append_missing_namedtuple.(to_tuple.(sweep_plan))
+
     if !isnothing(write_when_maxdim_exceeds) && #fix passing this
       maxdim[which_sweep] > write_when_maxdim_exceeds
       if outputlevel >= 2
@@ -25,15 +28,18 @@ function alternating_update(
       projected_operator = disk(projected_operator)
     end
     sweep_time = @elapsed begin
-      state, projected_operator = sweep_update(
-        projected_operator,
-        state;
-        outputlevel,
-        which_sweep,
-        sweep_plan,
-        region_printer,
-        region_observer!,
-      )
+      for which_region_update in eachindex(sweep_plan)
+        state, projected_operator = region_update(
+          projected_operator,
+          state;
+          which_sweep,
+          sweep_plan,
+          region_printer,
+          (region_observer!),
+          which_region_update,
+          outputlevel, # ToDo      
+        )
+      end
     end
 
     update!(sweep_observer!; state, which_sweep, sweep_time, outputlevel)
@@ -83,3 +89,4 @@ function alternating_update(
   projected_operators = ProjTTNSum(operators)
   return alternating_update(projected_operators, init_state; kwargs...)
 end
+
