@@ -1,21 +1,40 @@
 direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
 
-function interleave(a::Vector, b::Vector)
-  ab = flatten(collect(zip(a, b)))
-  if length(a) == length(b)
-    return ab
-  elseif length(a) == length(b) + 1
-    return append!(ab, [last(a)])
-  else
-    error(
-      "Trying to interleave vectors of length $(length(a)) and $(length(b)), not implemented.",
-    )
-  end
+function overlap(edge_a::AbstractEdge, edge_b::AbstractEdge)
+  return intersect(support(edge_a), support(edge_b))
 end
 
-function overlap(edge_a::AbstractEdge, edge_b::AbstractEdge)
-  return intersect([src(edge_a), dst(edge_a)], [src(edge_b), dst(edge_b)])
+function support(edge::AbstractEdge)
+  return [src(edge),dst(edge)]
 end
+
+support(r) = r
+
+#######
+#ToDo:  Define these functions for vertices etc.
+#Dispatching on vectors of vertices is tricky, since they can themselves be vectors.
+#Will probably require to make use of knowledge in context, and define a separate function with different name
+#or something similar to this pattern
+#current_ortho(::Type{<:Vector{<:V}}, st) where {V} = first(st)
+#current_ortho(::Type{NamedEdge{V}}, st) where {V} = src(st)
+#current_ortho(st) = current_ortho(typeof(st), st)
+########
+#function overlap(edge::AbstractEdge, regions::Vector{Vector})
+#function overlap(region_a::Vector,region_b::Vector)
+#
+#end
+
+#are these legal dispatches? they assume vertextype can't be vector
+#function support(verts::Vector) 
+#  return support.(verts)
+#end
+
+#make this more restrictive, supposed to handle single vertex only
+#should work as is, through more restrictive dispatch for edges
+#function support(vert)
+#  return vert
+#end
+########
 
 function reverse_region(edges, which_edge; nsites=1, region_args=(;))
   current_edge = edges[which_edge]
