@@ -15,7 +15,7 @@ function alternating_update(
   for which_sweep in eachindex(sweep_plans)
     sweep_plan = sweep_plans[which_sweep]
 
-  #ToDo: Hopefully not needed anymore, remove.
+    #ToDo: Hopefully not needed anymore, remove.
     sweep_plan = append_missing_namedtuple.(to_tuple.(sweep_plan))
 
     if !isnothing(write_when_maxdim_exceeds) && #fix passing this
