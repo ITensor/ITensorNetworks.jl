@@ -6,7 +6,7 @@ function current_ortho(sweep_plan, which_region_update)
   if !isa(region,AbstractEdge) && length(region)==1
     return only(current_verts)
   end
-  if region == last(regions)
+  if which_region_update == length(regions)
     # look back by one should be sufficient, but maybe brittle?
     overlapping_vertex=only(intersect(current_verts,support(regions[which_region_update-1])))
     return overlapping_vertex

@@ -122,10 +122,7 @@ end
 
 #ToDo: is there a better name for this? unidirectional_sweep? traversal?
 function forward_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
-  return map(
-    region -> (reverse(region[1]), region[2:end]...),
-    reverse(forward_sweep(Base.Forward, args...; kwargs...)),
-  )
+  return reverse(forward_sweep(Base.Forward, args...; kwargs...))
 end
 
 function default_sweep_plan(nsites, graph::AbstractGraph; pre_region_args=(;), kwargs...)  ###move this to a different file, algorithmic level idea
