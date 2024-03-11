@@ -1,34 +1,42 @@
 #ToDo: generalize beyond 2-site
 function current_ortho(sweep_plan, which_region_update)
   region = first(sweep_plan[which_region_update])
-  current_verts=support(region)
+  current_verts = support(region)
   regions = first.(sweep_plan)
-  if !isa(region,AbstractEdge) && length(region)==1
+  if !isa(region, AbstractEdge) && length(region) == 1
     return only(current_verts)
   end
   if which_region_update == length(regions)
     # look back by one should be sufficient, but maybe brittle?
-    overlapping_vertex=only(intersect(current_verts,support(regions[which_region_update-1])))
+    overlapping_vertex = only(
+      intersect(current_verts, support(regions[which_region_update - 1]))
+    )
     return overlapping_vertex
   else
     # look forward
-    other_regions=filter(x -> !(issetequal(x,current_verts)), support.(regions[which_region_update+1:end]))
+    other_regions = filter(
+      x -> !(issetequal(x, current_verts)), support.(regions[(which_region_update + 1):end])
+    )
     # find the first region that has overlapping support with current region 
-    ind=findfirst(x -> !isempty(intersect(support(x),support(region))),other_regions)
+    ind = findfirst(x -> !isempty(intersect(support(x), support(region))), other_regions)
     if isnothing(ind)
       # look backward
-      other_regions=reverse(filter(x -> !(issetequal(x,current_verts)), support.(regions[1:which_region_update-1])))
-      ind=findfirst(x -> !isempty(intersect(support(x),support(region))),other_regions)
+      other_regions = reverse(
+        filter(
+          x -> !(issetequal(x, current_verts)),
+          support.(regions[1:(which_region_update - 1)]),
+        ),
+      )
+      ind = findfirst(x -> !isempty(intersect(support(x), support(region))), other_regions)
     end
     @assert !isnothing(ind)
-    future_verts=union(support(other_regions[ind]))
+    future_verts = union(support(other_regions[ind]))
     # return ortho_ceter as the vertex in current region that does not overlap with following one
-    overlapping_vertex=intersect(current_verts,future_verts)
-    nonoverlapping_vertex = only(setdiff(current_verts,overlapping_vertex))
+    overlapping_vertex = intersect(current_verts, future_verts)
+    nonoverlapping_vertex = only(setdiff(current_verts, overlapping_vertex))
     return nonoverlapping_vertex
   end
 end
-
 
 function region_update(
   projected_operator,
@@ -41,7 +49,7 @@ function region_update(
   (region_observer!),
 )
   (region, region_kwargs) = sweep_plan[which_region_update]
-  ortho=current_ortho(sweep_plan,which_region_update)
+  ortho = current_ortho(sweep_plan, which_region_update)
   (; extract, update, insert, internal_kwargs) = region_kwargs
   extracter, extracter_kwargs = extract
   updater, updater_kwargs = update
@@ -77,7 +85,9 @@ function region_update(
   # so noiseterm is a solver
   #end
 
-  state, spec = insert_local_tensor(state, phi, region, ortho; inserter_kwargs..., internal_kwargs)
+  state, spec = insert_local_tensor(
+    state, phi, region, ortho; inserter_kwargs..., internal_kwargs
+  )
 
   all_kwargs = (;
     cutoff,

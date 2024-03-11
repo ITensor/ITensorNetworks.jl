@@ -89,4 +89,3 @@ function alternating_update(
   projected_operators = ProjTTNSum(operators)
   return alternating_update(projected_operators, init_state; kwargs...)
 end
-

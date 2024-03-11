@@ -403,9 +403,9 @@ end
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; root_vertex,nsweeps=1, cutoff, nsites=2)
+    ψ1 = tdvp(H, -0.1im, ψ0; root_vertex, nsweeps=1, cutoff, nsites=2)
     @test norm(ψ1) ≈ 1.0
-    
+
     ## Should lose fidelity:
     #@test abs(inner(ψ0,ψ1)) < 0.9
 
