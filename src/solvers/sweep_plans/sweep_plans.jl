@@ -10,32 +10,6 @@ end
 
 support(r) = r
 
-#######
-#ToDo:  Define these functions for vertices etc.
-#Dispatching on vectors of vertices is tricky, since they can themselves be vectors.
-#Will probably require to make use of knowledge in context, and define a separate function with different name
-#or something similar to this pattern
-#current_ortho(::Type{<:Vector{<:V}}, st) where {V} = first(st)
-#current_ortho(::Type{NamedEdge{V}}, st) where {V} = src(st)
-#current_ortho(st) = current_ortho(typeof(st), st)
-########
-#function overlap(edge::AbstractEdge, regions::Vector{Vector})
-#function overlap(region_a::Vector,region_b::Vector)
-#
-#end
-
-#are these legal dispatches? they assume vertextype can't be vector
-#function support(verts::Vector) 
-#  return support.(verts)
-#end
-
-#make this more restrictive, supposed to handle single vertex only
-#should work as is, through more restrictive dispatch for edges
-#function support(vert)
-#  return vert
-#end
-########
-
 function reverse_region(edges, which_edge; nsites=1, region_args=(;))
   current_edge = edges[which_edge]
   if nsites == 1
@@ -55,14 +29,18 @@ end
 #ToDo: Fix the logic here, currently broken for trees
 #Similar to current_ortho, we need to look forward to the next overlapping region
 #(which is not necessarily the next region)
-function insert_region_intersections(steps;region_args=(;))
+function insert_region_intersections(steps,graph;region_args=(;))
   regions=first.(steps)
   intersecting_steps=Any[]
   for i in eachindex(regions)
     i==length(regions) && continue
+    region=regions[i]
     intersecting_region=intersect(support(regions[i]),support(regions[i+1]))
     if isempty(intersecting_region)
       intersecting_region=NamedGraphs.NamedEdge(only(regions[i]),only(regions[i+1]))
+      if !has_edge(graph,intersecting_region)
+        error("Edge not in graph")
+      end
     end
     push!(intersecting_steps,(intersecting_region,region_args),)
   end
@@ -126,8 +104,10 @@ function forward_sweep(
     reverse_regions = collect(
       flatten(map(i -> reverse_region(edges, i; region_args=reverse_args, kwargs...), eachindex(edges)))
     )
+    _check_reverse_sweeps(regions,reverse_regions,graph;kwargs...)
     regions = interleave(regions,reverse_regions)
-    #regions=insert_region_intersections(regions;region_args=reverse_args)
+    #println("insert regions")
+    #regions=insert_region_intersections(regions,graph;region_args=reverse_args)
   end
   # Append empty namedtuple to each element if not already present
   # ToDo: Probably not necessary anymore, remove?
@@ -237,4 +217,26 @@ function default_sweep_printer(; outputlevel, state, which_sweep, sweep_time)
     println()
     flush(stdout)
   end
+end
+
+function _check_reverse_sweeps(forward_sweep,reverse_sweep,graph;nsites,kwargs...)
+  fw_regions=first.(forward_sweep)
+  bw_regions=first.(reverse_sweep)
+  if nsites==2      
+    fw_verts=flatten(fw_regions)
+    bw_verts=flatten(bw_regions)  
+    for v in vertices(graph)
+      @assert isone(count(isequal(v),fw_verts)-count(isequal(v),bw_verts))
+    end
+  elseif nsites==1
+    fw_verts=flatten(fw_regions)
+    bw_edges=bw_regions
+    for v in vertices(graph)
+      @assert isone(count(isequal(v),fw_verts))
+    end
+    for e in edges(graph)
+      @assert isone(count( x ->  (isequal(x,e) || isequal(x,reverse(e))),bw_edges))
+    end
+  end
+  return true
 end
