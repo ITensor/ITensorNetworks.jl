@@ -391,8 +391,8 @@ end
   @testset "Basic TDVP" begin
     cutoff = 1e-12
 
-    tooth_lengths = fill(2, 3)
-    root_vertex = (3, 2)
+    tooth_lengths = fill(4, 4)
+    root_vertex = (1, 4)
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
@@ -403,10 +403,9 @@ end
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
-
+    ψ1 = tdvp(H, -0.1im, ψ0; root_vertex,nsweeps=1, cutoff, nsites=2)
     @test norm(ψ1) ≈ 1.0
-
+    
     ## Should lose fidelity:
     #@test abs(inner(ψ0,ψ1)) < 0.9
 
