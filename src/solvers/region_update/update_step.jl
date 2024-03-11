@@ -15,6 +15,12 @@ function current_ortho(sweep_plan, which_region_update)
     other_regions=filter(x -> !(issetequal(x,current_verts)), support.(regions[which_region_update+1:end]))
     # find the first region that has overlapping support with current region 
     ind=findfirst(x -> !isempty(intersect(support(x),support(region))),other_regions)
+    if isnothing(ind)
+      # look backward
+      other_regions=reverse(filter(x -> !(issetequal(x,current_verts)), support.(regions[1:which_region_update-1])))
+      ind=findfirst(x -> !isempty(intersect(support(x),support(region))),other_regions)
+    end
+    @assert !isnothing(ind)
     future_verts=union(support(other_regions[ind]))
     # return ortho_ceter as the vertex in current region that does not overlap with following one
     overlapping_vertex=intersect(current_verts,future_verts)
