@@ -4,6 +4,7 @@
 #
 
 # sort of 2-site replacebond!; TODO: use dense TTN constructor instead
+# ToDo: remove slurping of kwargs, fix kwargs
 function insert_local_tensor(
   state::AbstractTTN,
   phi::ITensor,
@@ -18,6 +19,7 @@ function insert_local_tensor(
   eigen_perturbation=nothing,
   ortho=nothing,
   kwargs...,
+  internal_kwargs,
 )
   spec = nothing
   other_vertex = setdiff(support(region), [ortho_vert])
@@ -48,8 +50,9 @@ function insert_local_tensor(
   return state, spec
 end
 
+# ToDo: remove slurping of kwargs, fix kwargs
 function insert_local_tensor(
-  state::AbstractTTN, phi::ITensor, region::NamedEdge, ortho; kwargs...
+  state::AbstractTTN, phi::ITensor, region::NamedEdge, ortho; kwargs...,internal_kwargs,
 )
   v = only(setdiff(support(region), [ortho]))
   state[v] *= phi
