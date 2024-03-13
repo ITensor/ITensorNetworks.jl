@@ -18,8 +18,8 @@ function insert_local_tensor(
   which_decomp=nothing,
   eigen_perturbation=nothing,
   ortho=nothing,
-  kwargs...,
   internal_kwargs,
+  kwargs...,
 )
   spec = nothing
   other_vertex = setdiff(support(region), [ortho_vert])
@@ -52,7 +52,7 @@ end
 
 # ToDo: remove slurping of kwargs, fix kwargs
 function insert_local_tensor(
-  state::AbstractTTN, phi::ITensor, region::NamedEdge, ortho; kwargs...,internal_kwargs,
+  state::AbstractTTN, phi::ITensor, region::NamedEdge, ortho; internal_kwargs, kwargs...
 )
   v = only(setdiff(support(region), [ortho]))
   state[v] *= phi

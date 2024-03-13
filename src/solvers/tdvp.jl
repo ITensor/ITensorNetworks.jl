@@ -105,6 +105,8 @@ function tdvp(
   updater=exponentiate_updater,
   inserter_kwargs=(;),
   inserter=default_inserter(),
+  transform_operator_kwargs=(;),
+  transform_operator=default_transform_operator(),
   kwargs...,
 )
   # move slurped kwargs into inserter
@@ -125,28 +127,12 @@ function tdvp(
     updater_kwargs,
     inserter,
     inserter_kwargs,
+    transform_operator,
+    transform_operator_kwargs
   )
-
-  #=
-  function sweep_time_printer(; outputlevel, which_sweep, kwargs...)
-    if outputlevel >= 1
-      sweeps_per_step = order ÷ 2
-      if which_sweep % sweeps_per_step == 0
-        current_time = (which_sweep / sweeps_per_step) * time_step
-        println("Current time (sweep $which_sweep) = ", round(current_time; digits=3))
-      end
-    end
-    return nothing
-  end
-  =#
-  #insert_function!(sweep_observer!, "sweep_time_printer" => sweep_time_printer)
-
+  
   state = alternating_update(
     operator, init_state; outputlevel, sweep_observer!, sweep_plans
   )
-
-  # remove sweep_time_printer from sweep_observer!
-  #select!(sweep_observer!, Observers.DataFrames.Not("sweep_time_printer"))
-
   return state
 end

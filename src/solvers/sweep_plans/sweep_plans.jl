@@ -154,12 +154,18 @@ function tdvp_sweep_plans(
   updater_kwargs,
   inserter,
   inserter_kwargs,
+  transform_operator,
+  transform_operator_kwargs,
 )
   nsweeps, time_step = _compute_nsweeps(nsweeps, t, time_step)
   order, nsites, reverse_step = extend.((order, nsites, reverse_step), nsweeps)
-  extracter, updater, inserter = extend.((extracter, updater, inserter), nsweeps)
-  inserter_kwargs, updater_kwargs, extracter_kwargs =
-    expand.((inserter_kwargs, updater_kwargs, extracter_kwargs), nsweeps)
+  #also for transform_operator?
+  extracter, updater, inserter, transform_operator = extend.((extracter, updater, inserter, transform_operator), nsweeps)
+  
+  extracter, updater, inserter, transform_operator = extend.((extracter, updater, inserter, transform_operator), nsweeps)
+  
+  inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs =
+    expand.((inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs), nsweeps)
   sweep_plans = []
   for i in 1:nsweeps
     sweep_plan = tdvp_sweep_plan(
@@ -173,6 +179,7 @@ function tdvp_sweep_plans(
         insert=(inserter[i], inserter_kwargs[i]),
         update=(updater[i], updater_kwargs[i]),
         extract=(extracter[i], extracter_kwargs[i]),
+        transform_operator=(transform_operator[i],transform_operator_kwargs[i])
       ),
     )
     #@show sweep_plan
