@@ -8,6 +8,10 @@ default_message_update_kwargs() = (; normalize=true, contraction_sequence_alg="o
 @traitfn function default_bp_maxiter(g::::IsDirected)
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end
+default_cache(ψ::ITensorNetwork) = BeliefPropagationCache(ψ, [[v] for v in vertices(tn)])
+default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
+
+
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
   return 0.5 *

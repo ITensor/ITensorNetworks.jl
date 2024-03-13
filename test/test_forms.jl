@@ -11,11 +11,14 @@ using ITensorNetworks:
   dual_index_map,
   bra_network,
   ket_network,
-  operator_network
+  operator_network,
+  derivative,
+  BeliefPropagationCache
 using Test
 using Random
+using SplitApplyCombine
 
-@testset "FormNetworkss" begin
+@testset "FormNetworks" begin
   g = named_grid((1, 4))
   s_ket = siteinds("S=1/2", g)
   s_bra = prime(s_ket; links=[])
@@ -48,4 +51,11 @@ using Random
 
   @test underlying_graph(ket_network(qf)) == underlying_graph(ψket)
   @test underlying_graph(operator_network(qf)) == underlying_graph(A)
+
+  ∂qf_∂v = only(derivative(qf, [v]))
+  @test (∂qf_∂v)*(qf[ket_vertex_map(qf)(v)]*qf[bra_vertex_map(qf)(v)]) ≈ ITensors.contract(qf)
+
+  partition_vertices= group(v -> first(v), vertices(qf))
+  qf_cache = BeliefPropagationCache(tensornetwork(qf), partition_vertices)
+  ∂qf_∂v = derivative(qf, [v]; alg = "bp", (bp_cache!) = Ref(qf_cache))
 end

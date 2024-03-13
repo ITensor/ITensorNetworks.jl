@@ -31,6 +31,7 @@ function contract_density_matrix(
   return out
 end
 
+#This should probably just be removed in favour of the second function above
 function contract_exact(
   contract_list::Vector{ITensor};
   contraction_sequence_alg="optimal",
