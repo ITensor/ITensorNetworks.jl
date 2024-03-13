@@ -111,7 +111,7 @@ function region_update(
     region_kwargs...,
     internal_kwargs...,
   )
-  !(isnothing(region_observer!)) && update!(region_observer!; all_kwargs...)
+  update!(region_observer!; all_kwargs...)
   !(isnothing(region_printer)) && region_printer(; all_kwargs...)
   
   return state, projected_operator
