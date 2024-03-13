@@ -47,3 +47,13 @@ function default_sweep_time_printer(; outputlevel, which_sweep, kwargs...)
   end
   return nothing
 end
+
+function default_sweep_printer(; outputlevel, state, which_sweep, sweep_time, kwargs...)
+  if outputlevel >= 1
+    print("After sweep ", which_sweep, ":")
+    print(" maxlinkdim=", maxlinkdim(state))
+    print(" cpu_time=", round(sweep_time; digits=3))
+    println()
+    flush(stdout)
+  end
+end

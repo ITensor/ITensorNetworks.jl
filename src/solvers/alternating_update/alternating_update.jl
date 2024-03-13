@@ -5,7 +5,7 @@ function alternating_update(
   outputlevel=default_outputlevel(),
   checkdone=default_checkdone(),  # 
   (sweep_observer!)=nothing,
-  sweep_printer=nothing,#?
+  sweep_printer=default_sweep_printer,#?
   (region_observer!)=nothing,
   region_printer=nothing,
 )
