@@ -25,21 +25,14 @@ end
 
 function _compute_nsweeps(nsweeps, t::Number, time_step::Vector)
   diff_time = t - sum(time_step)
-  if diff_time < eps()
-    if length(time_step) != nsweeps
-      error(
-        "A vector of timesteps that sums up to total time t=$t was supplied,
-  but its length (=$(length(time_step))) does not agree with supplied number of sweeps (=$(nsweeps)).",
-      )
-    end
-    return nsweeps, time_step
-  end
+  
+  isnothing(nsweeps)
   if isnothing(nsweeps)
     #extend time_step to reach final time t
     last_time_step = last(time_step)
-    nsweepstopad = ceil(abs(diff_time / last_time_step))
+    nsweepstopad = Int(ceil(abs(diff_time / last_time_step)))
     if !(sum(time_step) + nsweepstopad * last_time_step ≈ t)
-      println("Time that will be reached = nsweeps * time_step = ", nsweeps * time_step)
+      println("Time that will be reached = nsweeps * time_step = ", sum(time_step) + nsweepstopad * last_time_step)
       println("Requested total time t = ", t)
       error("Time step $time_step not commensurate with total time t=$t")
     end
@@ -47,6 +40,11 @@ function _compute_nsweeps(nsweeps, t::Number, time_step::Vector)
     nsweeps = length(time_step)
   else
     nsweepstopad = nsweeps - length(time_step)
+    if abs(diff_time) < eps() && !iszero(nsweepstopad)
+      warn("A vector of timesteps that sums up to total time t=$t was supplied,
+      but its length (=$(length(time_step))) does not agree with supplied number of sweeps (=$(nsweeps)).",)
+      return length(time_step), time_step
+    end
     remaining_time_step = diff_time / nsweepstopad
     append!(time_step, extend(remaining_time_step, nsweepstopad))
   end

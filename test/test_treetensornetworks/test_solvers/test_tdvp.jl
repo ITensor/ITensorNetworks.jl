@@ -27,8 +27,8 @@ using Test
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
-
     @test norm(ψ1) ≈ 1.0
+
 
     ## Should lose fidelity:
     #@test abs(inner(ψ0,ψ1)) < 0.9
@@ -50,6 +50,15 @@ using Test
 
     # Should rotate back to original state:
     @test abs(inner(ψ0, ψ2)) > 0.99
+
+    # test different ways to specify time-step specifications
+    ψa = tdvp(H, -0.1im, ψ0; nsweeps=4, cutoff, nsites=1)
+    ψb = tdvp(H, -0.1im, ψ0; time_step=-0.025im, cutoff, nsites=1)
+    ψc = tdvp(H, -0.1im, ψ0; time_step=[-0.02im,-0.03im,-0.015im,-0.035im], cutoff, nsites=1)
+    ψd = tdvp(H, -0.1im, ψ0; nsweeps=4, time_step=[-0.02im,-0.03im,-0.025im], cutoff, nsites=1)
+    @test inner(ψa,ψb) ≈ 1.0 rtol=1e-7
+    @test inner(ψa,ψc) ≈ 1.0 rtol=1e-7
+    @test inner(ψa,ψd) ≈ 1.0 rtol=1e-7
   end
 
   @testset "TDVP: Sum of Hamiltonians" begin
