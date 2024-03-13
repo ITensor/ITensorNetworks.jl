@@ -123,31 +123,11 @@ function forward_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
   return reverse(forward_sweep(Base.Forward, args...; kwargs...))
 end
 
-function default_sweep_plan(nsites, graph::AbstractGraph; pre_region_args=(;), kwargs...)  ###move this to a different file, algorithmic level idea
-  return vcat(
-    [
-      half_sweep(
-        direction(half),
-        graph,
-        make_region;
-        nsites,
-        region_args=(; internal_kwargs=(; half), pre_region_args...),
-        reverse_args=region_args,
-        kwargs...,
-      ) for half in 1:2
-    ]...,
-  )
-end
-
-function tdvp_sweep_plans(
+function default_sweep_plans(
   nsweeps,
-  t,
-  time_step,
-  order,
-  nsites,
   init_state;
+  sweep_plan_func=default_sweep_plan,
   root_vertex,
-  reverse_step,
   extracter,
   extracter_kwargs,
   updater,
@@ -156,54 +136,65 @@ function tdvp_sweep_plans(
   inserter_kwargs,
   transform_operator,
   transform_operator_kwargs,
+  kwargs...
 )
-  nsweeps, time_step = _compute_nsweeps(nsweeps, t, time_step)
-  order, nsites, reverse_step = extend.((order, nsites, reverse_step), nsweeps)
-  #also for transform_operator?
   extracter, updater, inserter, transform_operator = extend.((extracter, updater, inserter, transform_operator), nsweeps)
-  
-  extracter, updater, inserter, transform_operator = extend.((extracter, updater, inserter, transform_operator), nsweeps)
-  
-  inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs =
-    expand.((inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs), nsweeps)
+  inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs, kwargs =
+    expand.((inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs, NamedTuple(kwargs)), nsweeps)
   sweep_plans = []
   for i in 1:nsweeps
-    sweep_plan = tdvp_sweep_plan(
-      order[i],
-      nsites[i],
-      time_step[i],
+    sweep_plan = sweep_plan_func(
       init_state;
       root_vertex,
-      reverse_step=reverse_step[i],
       pre_region_args=(;
         insert=(inserter[i], inserter_kwargs[i]),
         update=(updater[i], updater_kwargs[i]),
         extract=(extracter[i], extracter_kwargs[i]),
         transform_operator=(transform_operator[i],transform_operator_kwargs[i])
       ),
+      kwargs[i]...
     )
-    #@show sweep_plan
     push!(sweep_plans, sweep_plan)
   end
   return sweep_plans
 end
 
-#ToDo: This is currently coupled with the updater signature, which is undesirable.
-function tdvp_sweep_plan(
-  order::Int,
+function default_sweep_plan(
+  graph::AbstractGraph;
+  root_vertex=default_root_vertex(graph),
+  pre_region_args,
   nsites::Int,
-  time_step::Number,
+  reverse_step=false,
+)
+  return vcat(
+  [
+    forward_sweep(
+      direction(half),
+      graph;
+      root_vertex,
+      nsites,
+      region_args=(; internal_kwargs=(; half), pre_region_args...),
+      reverse_args=region_args,
+      reverse_step,
+    ) for half in 1:2
+  ]...,
+  )
+end
+
+function tdvp_sweep_plan(
   graph::AbstractGraph;
   root_vertex=default_root_vertex(graph),
   pre_region_args,
   reverse_step=true,
+  order::Int,
+  nsites::Int,
+  time_step::Number,
 )
   sweep_plan = []
   for (substep, fac) in enumerate(sub_time_steps(order))
     sub_time_step = time_step * fac
-    half = forward_sweep(
-      direction(substep),
-      graph;
+    append!(sweep_plan,
+      forward_sweep(direction(substep), graph;
       root_vertex,
       nsites,
       region_args=(;
@@ -213,21 +204,13 @@ function tdvp_sweep_plan(
         internal_kwargs=(; substep, time_step=-sub_time_step), pre_region_args...
       ),
       reverse_step,
+      )
     )
-    append!(sweep_plan, half)
   end
   return sweep_plan
 end
 
-function default_sweep_printer(; outputlevel, state, which_sweep, sweep_time)
-  if outputlevel >= 1
-    print("After sweep ", which_sweep, ":")
-    print(" maxlinkdim=", maxlinkdim(state))
-    print(" cpu_time=", round(sweep_time; digits=3))
-    println()
-    flush(stdout)
-  end
-end
+
 
 function _check_reverse_sweeps(forward_sweep, reverse_sweep, graph; nsites, kwargs...)
   fw_regions = first.(forward_sweep)

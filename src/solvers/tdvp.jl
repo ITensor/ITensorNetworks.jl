@@ -111,14 +111,13 @@ function tdvp(
 )
   # move slurped kwargs into inserter
   inserter_kwargs = (; inserter_kwargs..., kwargs...) # slurp unbound kwargs into inserter
+  # process nsweeps and time_step
+  nsweeps, time_step = _compute_nsweeps(nsweeps, t, time_step)
 
-  sweep_plans = tdvp_sweep_plans(
+  sweep_plans = default_sweep_plans(
     nsweeps,
-    t,
-    time_step,
-    order,
-    nsites,
     init_state;
+    sweep_plan_func=tdvp_sweep_plan,
     root_vertex,
     reverse_step,
     extracter,
@@ -128,7 +127,10 @@ function tdvp(
     inserter,
     inserter_kwargs,
     transform_operator,
-    transform_operator_kwargs
+    transform_operator_kwargs,
+    time_step,
+    order,
+    nsites,
   )
   
   state = alternating_update(
