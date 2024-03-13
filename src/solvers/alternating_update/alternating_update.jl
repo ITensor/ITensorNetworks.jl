@@ -14,9 +14,6 @@ function alternating_update(
   for which_sweep in eachindex(sweep_plans)
     sweep_plan = sweep_plans[which_sweep]
 
-    #ToDo: Hopefully not needed anymore, remove.
-    sweep_plan = append_missing_namedtuple.(to_tuple.(sweep_plan))
-
     sweep_time = @elapsed begin
       for which_region_update in eachindex(sweep_plan)
         state, projected_operator = region_update(

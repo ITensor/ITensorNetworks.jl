@@ -26,27 +26,6 @@ function reverse_region(edges, which_edge; nsites=1, region_args=(;))
   end
 end
 
-#ToDo: Fix the logic here, currently broken for trees
-#Similar to current_ortho, we need to look forward to the next overlapping region
-#(which is not necessarily the next region)
-function insert_region_intersections(steps, graph; region_args=(;))
-  regions = first.(steps)
-  intersecting_steps = Any[]
-  for i in eachindex(regions)
-    i == length(regions) && continue
-    region = regions[i]
-    intersecting_region = intersect(support(regions[i]), support(regions[i + 1]))
-    if isempty(intersecting_region)
-      intersecting_region = NamedGraphs.NamedEdge(only(regions[i]), only(regions[i + 1]))
-      if !has_edge(graph, intersecting_region)
-        error("Edge not in graph")
-      end
-    end
-    push!(intersecting_steps, (intersecting_region, region_args))
-  end
-  return interleave(steps, intersecting_steps)
-end
-
 function forward_region(edges, which_edge; nsites=1, region_args=(;))
   if nsites == 1
     current_edge = edges[which_edge]
@@ -74,15 +53,27 @@ function forward_region(edges, which_edge; nsites=1, region_args=(;))
   end
 end
 
-#
-# Helper functions to take a tuple like ([1],[2])
-# and append an empty named tuple to it, giving ([1],[2],(;))
-#
-prepend_missing_namedtuple(t::Tuple) = ((;), t...)
-prepend_missing_namedtuple(t::Tuple{<:NamedTuple,Vararg}) = t
-function append_missing_namedtuple(t::Tuple)
-  return reverse(prepend_missing_namedtuple(reverse(t)))
+#ToDo: Move towards this in the future. The logic here is currently broken for treetensornetworks.
+#=
+function insert_region_intersections(steps, graph; region_args=(;))
+  regions = first.(steps)
+  intersecting_steps = Any[]
+  for i in eachindex(regions)
+    i == length(regions) && continue
+    region = regions[i]
+    intersecting_region = intersect(support(regions[i]), support(regions[i + 1]))
+    if isempty(intersecting_region)
+      intersecting_region = NamedGraphs.NamedEdge(only(regions[i]), only(regions[i + 1]))
+      if !has_edge(graph, intersecting_region)
+        error("Edge not in graph")
+      end
+    end
+    push!(intersecting_steps, (intersecting_region, region_args))
+  end
+  return interleave(steps, intersecting_steps)
 end
+=#
+
 
 function forward_sweep(
   dir::Base.ForwardOrdering,
@@ -109,12 +100,8 @@ function forward_sweep(
     )
     _check_reverse_sweeps(regions, reverse_regions, graph; kwargs...)
     regions = interleave(regions, reverse_regions)
-    #println("insert regions")
-    #regions=insert_region_intersections(regions,graph;region_args=reverse_args)
   end
-  # Append empty namedtuple to each element if not already present
-  # ToDo: Probably not necessary anymore, remove?
-  regions = append_missing_namedtuple.(to_tuple.(regions))
+
   return regions
 end
 
