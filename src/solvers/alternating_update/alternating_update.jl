@@ -24,14 +24,23 @@ function alternating_update(
           region_printer,
           (region_observer!),
           which_region_update,
-          outputlevel,  
+          outputlevel,
         )
       end
     end
 
     update!(sweep_observer!; state, which_sweep, sweep_time, outputlevel, sweep_plans)
-    !isnothing(sweep_printer) && sweep_printer(; state, which_sweep, sweep_time, outputlevel, sweep_plans)
-    checkdone(; state, which_sweep, outputlevel, sweep_plan, sweep_plans, sweep_observer!,region_observer!) && break
+    !isnothing(sweep_printer) &&
+      sweep_printer(; state, which_sweep, sweep_time, outputlevel, sweep_plans)
+    checkdone(;
+      state,
+      which_sweep,
+      outputlevel,
+      sweep_plan,
+      sweep_plans,
+      sweep_observer!,
+      region_observer!,
+    ) && break
   end
   return state
 end

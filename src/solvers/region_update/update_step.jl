@@ -49,7 +49,7 @@ function region_update(
   (region_observer!),
 )
   (region, region_kwargs) = sweep_plan[which_region_update]
-  (; extract, update, insert, transform_operator,internal_kwargs) = region_kwargs
+  (; extract, update, insert, transform_operator, internal_kwargs) = region_kwargs
   extracter, extracter_kwargs = extract
   updater, updater_kwargs = update
   inserter, inserter_kwargs = insert
@@ -57,13 +57,15 @@ function region_update(
 
   ortho_vertex = current_ortho(sweep_plan, which_region_update)
   if !isnothing(transform_operator)
-    projected_operator=transform_operator(projected_operator; which_sweep, maxdim, outputlevel, transform_operator_kwargs...)
+    projected_operator = transform_operator(
+      projected_operator; which_sweep, maxdim, outputlevel, transform_operator_kwargs...
+    )
   end
   state, projected_operator, phi = extract_local_tensor(
-  state, projected_operator, region, ortho_vertex; extracter_kwargs..., internal_kwargs
+    state, projected_operator, region, ortho_vertex; extracter_kwargs..., internal_kwargs
   )
   # create references, in case solver does (out-of-place) modify PH or state
-  state! = Ref(state) 
+  state! = Ref(state)
   projected_operator! = Ref(projected_operator)
   # args passed by reference are supposed to be modified out of place
   phi, info = updater(
@@ -76,7 +78,7 @@ function region_update(
     which_region_update,
     updater_kwargs,
     internal_kwargs,
-  )  
+  )
   state = state![]
   projected_operator = projected_operator![]
   if !(phi isa ITensor && info isa NamedTuple)
@@ -113,6 +115,6 @@ function region_update(
   )
   update!(region_observer!; all_kwargs...)
   !(isnothing(region_printer)) && region_printer(; all_kwargs...)
-  
+
   return state, projected_operator
 end

@@ -74,7 +74,6 @@ function insert_region_intersections(steps, graph; region_args=(;))
 end
 =#
 
-
 function forward_sweep(
   dir::Base.ForwardOrdering,
   graph::AbstractGraph;
@@ -123,11 +122,21 @@ function default_sweep_plans(
   inserter_kwargs,
   transform_operator,
   transform_operator_kwargs,
-  kwargs...
+  kwargs...,
 )
-  extracter, updater, inserter, transform_operator = extend.((extracter, updater, inserter, transform_operator), nsweeps)
+  extracter, updater, inserter, transform_operator =
+    extend.((extracter, updater, inserter, transform_operator), nsweeps)
   inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs, kwargs =
-    expand.((inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs, NamedTuple(kwargs)), nsweeps)
+    expand.(
+      (
+        inserter_kwargs,
+        updater_kwargs,
+        extracter_kwargs,
+        transform_operator_kwargs,
+        NamedTuple(kwargs),
+      ),
+      nsweeps,
+    )
   sweep_plans = []
   for i in 1:nsweeps
     sweep_plan = sweep_plan_func(
@@ -137,9 +146,9 @@ function default_sweep_plans(
         insert=(inserter[i], inserter_kwargs[i]),
         update=(updater[i], updater_kwargs[i]),
         extract=(extracter[i], extracter_kwargs[i]),
-        transform_operator=(transform_operator[i],transform_operator_kwargs[i])
+        transform_operator=(transform_operator[i], transform_operator_kwargs[i]),
       ),
-      kwargs[i]...
+      kwargs[i]...,
     )
     push!(sweep_plans, sweep_plan)
   end
@@ -154,17 +163,17 @@ function default_sweep_plan(
   reverse_step=false,
 )
   return vcat(
-  [
-    forward_sweep(
-      direction(half),
-      graph;
-      root_vertex,
-      nsites,
-      region_args=(; internal_kwargs=(; half), pre_region_args...),
-      reverse_args=region_args,
-      reverse_step,
-    ) for half in 1:2
-  ]...,
+    [
+      forward_sweep(
+        direction(half),
+        graph;
+        root_vertex,
+        nsites,
+        region_args=(; internal_kwargs=(; half), pre_region_args...),
+        reverse_args=region_args,
+        reverse_step,
+      ) for half in 1:2
+    ]...,
   )
 end
 
@@ -180,24 +189,25 @@ function tdvp_sweep_plan(
   sweep_plan = []
   for (substep, fac) in enumerate(sub_time_steps(order))
     sub_time_step = time_step * fac
-    append!(sweep_plan,
-      forward_sweep(direction(substep), graph;
-      root_vertex,
-      nsites,
-      region_args=(;
-        internal_kwargs=(; substep, time_step=sub_time_step), pre_region_args...
+    append!(
+      sweep_plan,
+      forward_sweep(
+        direction(substep),
+        graph;
+        root_vertex,
+        nsites,
+        region_args=(;
+          internal_kwargs=(; substep, time_step=sub_time_step), pre_region_args...
+        ),
+        reverse_args=(;
+          internal_kwargs=(; substep, time_step=-sub_time_step), pre_region_args...
+        ),
+        reverse_step,
       ),
-      reverse_args=(;
-        internal_kwargs=(; substep, time_step=-sub_time_step), pre_region_args...
-      ),
-      reverse_step,
-      )
     )
   end
   return sweep_plan
 end
-
-
 
 function _check_reverse_sweeps(forward_sweep, reverse_sweep, graph; nsites, kwargs...)
   fw_regions = first.(forward_sweep)

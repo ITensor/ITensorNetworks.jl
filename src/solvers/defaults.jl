@@ -1,7 +1,7 @@
 default_outputlevel() = 0
 default_extractor() = extract_local_tensor
 default_inserter() = insert_local_tensor
-default_checkdone()=(; kws...) -> false
+default_checkdone() = (; kws...) -> false
 default_transform_operator() = nothing
 function default_region_printer(;
   cutoff,
@@ -34,9 +34,9 @@ function default_region_printer(;
   end
 end
 
- #ToDo: Implement sweep_time_printer more generally
- #ToDo: Implement more printers
- #ToDo: Move to another file?
+#ToDo: Implement sweep_time_printer more generally
+#ToDo: Implement more printers
+#ToDo: Move to another file?
 function default_sweep_time_printer(; outputlevel, which_sweep, kwargs...)
   if outputlevel >= 1
     sweeps_per_step = order ÷ 2

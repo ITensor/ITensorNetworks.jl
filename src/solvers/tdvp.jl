@@ -132,7 +132,7 @@ function tdvp(
     order,
     nsites,
   )
-  
+
   state = alternating_update(
     operator, init_state; outputlevel, sweep_observer!, sweep_plans
   )
