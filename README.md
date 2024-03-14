@@ -1,8 +1,18 @@
+> [!WARNING]
+> This is a pre-release software. There are no guarantees that functionality won't break
+> from version to version, though we will try our best to indicate breaking changes
+> following [semantic versioning](https://semver.org/) (semver) by bumping the minor
+> version of the package. We are biasing heavily towards "moving fast and breaking things"
+> during this stage of development, which will allow us to more quickly develop the package
+> and bring it to a point where we have enough features and are happy enough with the external
+> interface to officially release it for general public use.
+>
+> In short, use this package with caution, and don't expect the interface to be stable
+> or for us to clearly announce parts of the code we are changing.
+
 # ITensorNetworks
 
 A package to provide general network data structures and tools to use with ITensors.jl.
-
-
 
 ## Installation
 
