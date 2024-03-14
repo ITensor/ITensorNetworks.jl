@@ -29,7 +29,15 @@ end
 # Pad with last value to length.
 # If it is a single value (non-Vector), fill with
 # that value to the length.
-extend(x::Vector, length::Int) = [x; fill(last(x), length - Base.length(x))]
+function extend(x::Vector, length::Int)
+  l = Base.length(x)
+  if l<=length
+    return [x; fill(last(x), length - Base.length(x))]
+  else
+    error("Trying to extend a vector to a length shorter than its current length.")
+  end
+end
+
 extend(x, length::Int) = extend([x], length)
 
 # Treat `AbstractArray` as leaves.
