@@ -2,9 +2,10 @@ function sum_contract(
   ::Algorithm"fit",
   tns::Vector{<:Tuple{<:AbstractTTN,<:AbstractTTN}};
   init,
-  nsweeps,
-  nsites=2, # used to be default of call to default_sweep_regions
-  updater_kwargs=(;),
+  nsites=2,
+  nsweeps=1,
+  cutoff=eps(),
+  updater=contract_updater,
   kwargs...,
 )
   tn1s = first.(tns)
@@ -29,15 +30,16 @@ function sum_contract(
   # check_hascommoninds(siteinds, tn1, tn2)
 
   # In case `tn1` and `tn2` have the same internal indices
-  PHs = ProjOuterProdTTN{vertextype(first(tn1s))}[]
+  operator = ProjOuterProdTTN{vertextype(first(tn1s))}[]
   for (tn1, tn2) in zip(tn1s, tn2s)
     tn1 = sim(linkinds, tn1)
 
     # In case `init` and `tn2` have the same internal indices
     init = sim(linkinds, init)
-    push!(PHs, ProjOuterProdTTN(tn2, tn1))
+    push!(operator, ProjOuterProdTTN(tn2, tn1))
   end
-  PH = isone(length(PHs) == 1) ? only(PHs) : ProjTTNSum(PHs)
+  operator = isone(length(operator)) ? only(operator) : ProjTTNSum(operator)
+  #ToDo: remove?
   # Fix site and link inds of init
   ## init = deepcopy(init)
   ## init = sim(linkinds, init)
@@ -46,12 +48,13 @@ function sum_contract(
   ##     init[v], siteinds(init, v), uniqueinds(siteinds(tn1, v), siteinds(tn2, v))
   ##   )
   ## end
-  sweep_plan = default_sweep_regions(nsites, init; kwargs...)
-  psi = alternating_update(
-    contract_updater, PH, init; nsweeps, sweep_plan, updater_kwargs, kwargs...
-  )
 
-  return psi
+  return default_alternating_updates(operator, init;
+    nsweeps,
+    nsites,
+    updater,
+    cutoff,
+    kwargs...)
 end
 
 function contract(a::Algorithm"fit", tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)

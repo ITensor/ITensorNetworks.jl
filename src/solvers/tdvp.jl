@@ -86,6 +86,7 @@ function tdvp(
   operator,
   t::Number,
   init_state::AbstractTTN;
+  t_start=0.0,
   time_step=nothing,
   nsites=2,
   nsweeps=nothing,
@@ -108,10 +109,10 @@ function tdvp(
   kwargs...,
 )
   # move slurped kwargs into inserter
-  inserter_kwargs = (; inserter_kwargs..., kwargs...) # slurp unbound kwargs into inserter
+  inserter_kwargs = (; inserter_kwargs..., kwargs...)
   # process nsweeps and time_step
   nsweeps, time_step = _compute_nsweeps(nsweeps, t, time_step)
-
+  t_evolved = t_start .+ cumsum(time_step)
   sweep_plans = default_sweep_plans(
     nsweeps,
     init_state;
@@ -129,10 +130,17 @@ function tdvp(
     time_step,
     order,
     nsites,
+    t_evolved
   )
 
-  state = alternating_update(
-    operator, init_state; outputlevel, sweep_observer!, sweep_plans
+  return alternating_update(
+    operator, init_state;
+    outputlevel,
+    sweep_plans,
+    sweep_observer!,
+    region_observer!,
+    sweep_printer,
+    region_printer,
   )
   return state
 end
