@@ -185,6 +185,7 @@ function tdvp_sweep_plan(
   order::Int,
   nsites::Int,
   time_step::Number,
+  t_evolved::Number,
 )
   sweep_plan = []
   for (substep, fac) in enumerate(sub_time_steps(order))
@@ -197,10 +198,10 @@ function tdvp_sweep_plan(
         root_vertex,
         nsites,
         region_kwargs=(;
-          internal_kwargs=(; substep, time_step=sub_time_step), region_kwargs...
+          internal_kwargs=(; substep, time_step=sub_time_step, t=t_evolved), region_kwargs...
         ),
         reverse_kwargs=(;
-          internal_kwargs=(; substep, time_step=-sub_time_step), region_kwargs...
+          internal_kwargs=(; substep, time_step=-sub_time_step, t=t_evolved), region_kwargs...
         ),
         reverse_step,
       ),
