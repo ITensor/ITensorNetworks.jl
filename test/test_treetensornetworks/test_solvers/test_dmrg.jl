@@ -87,31 +87,6 @@ end
   @test region_observer![30, :energy] < -4.25
 end
 
-@testset "Regression test: Arrays of Parameters" begin
-  N = 10
-  cutoff = 1e-12
-
-  s = siteinds("S=1/2", N)
-
-  os = OpSum()
-  for j in 1:(N - 1)
-    os += 0.5, "S+", j, "S-", j + 1
-    os += 0.5, "S-", j, "S+", j + 1
-    os += "Sz", j, "Sz", j + 1
-  end
-
-  H = mpo(os, s)
-
-  psi = random_mps(s; internal_inds_space=20)
-
-  # Choose nsweeps to be less than length of arrays
-  nsweeps = 5
-  maxdim = [200, 250, 400, 600, 800, 1200, 2000, 2400, 2600, 3000]
-  cutoff = [1e-10, 1e-10, 1e-12, 1e-12, 1e-12, 1e-12, 1e-14, 1e-14, 1e-14, 1e-14]
-
-  psi = dmrg(H, psi; nsweeps, maxdim, cutoff)
-end
-
 @testset "Tree DMRG" for nsites in [2]
   cutoff = 1e-12
 

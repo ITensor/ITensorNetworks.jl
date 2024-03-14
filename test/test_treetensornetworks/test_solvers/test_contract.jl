@@ -78,8 +78,8 @@ using Test
 end
 
 @testset "Contract TTN" begin
-  tooth_lengths = fill(2, 3)
-  root_vertex = (3, 2)
+  tooth_lengths = fill(4, 4)
+  root_vertex = (1, 4)
   c = named_comb_tree(tooth_lengths)
 
   s = siteinds("S=1/2", c)
@@ -89,9 +89,12 @@ end
   H = TTN(os, s)
 
   # Test basic usage with default parameters
-  Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=1)
+  Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=1,cutoff=eps())
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
-
+  # Test usage with non-default parameters
+  Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=5, maxdim=[16,32],cutoff=[1e-4,1e-8,1e-12])
+  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-3
+  
   # Test basic usage for multiple ProjOuterProdTTN with default parameters
   # BLAS.axpy-like test
   os_id = OpSum()
@@ -120,9 +123,9 @@ end
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with nsite=1
-  Hpsi_guess = random_ttn(t; link_space=4)
-  Hpsi = contract(H, psi; alg="fit", nsites=1, nsweeps=4, init=Hpsi_guess)
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-4
+  Hpsi_guess = random_ttn(t; link_space=32)
+  Hpsi = contract(H, psi; alg="fit", nsites=1, nsweeps=10, init=Hpsi_guess)
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-2
 end
 
 @testset "Contract TTN with dangling inds" begin

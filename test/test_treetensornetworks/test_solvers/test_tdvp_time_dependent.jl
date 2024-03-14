@@ -33,11 +33,12 @@ function ode_updater(
   which_sweep,
   sweep_plan,
   which_region_update,
-  region_kwargs,
-  updater_kwargs,
+  internal_kwargs,
+  ode_kwargs,
+  solver_alg,
+  f⃗,
 )
-  time_step = region_kwargs.time_step
-  f⃗ = updater_kwargs.f
+  (;time_step) = internal_kwargs
   ode_kwargs = updater_kwargs.ode_kwargs
   solver_alg = updater_kwargs.solver_alg
   H⃗₀ = projected_operator![]
@@ -77,17 +78,14 @@ function krylov_updater(
   which_sweep,
   sweep_plan,
   which_region_update,
-  region_kwargs,
-  updater_kwargs,
+  internal_kwargs,
+  ishermitian=false,
+  issymmetric=false,
+  f⃗,
+  krylov_kwargs,
 )
-  default_updater_kwargs = (; ishermitian=false, issymmetric=false)
-
-  updater_kwargs = merge(default_updater_kwargs, updater_kwargs)  #last collection has precedenc
+  
   time_step = region_kwargs.time_step
-  f⃗ = updater_kwargs.f
-  krylov_kwargs = updater_kwargs.krylov_kwargs
-  ishermitian = updater_kwargs.ishermitian
-  issymmetric = updater_kwargs.issymmetric
   H⃗₀ = projected_operator![]
 
   result, info = krylov_solver(
