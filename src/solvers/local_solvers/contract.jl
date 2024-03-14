@@ -6,8 +6,7 @@ function contract_updater(
   which_sweep,
   sweep_plan,
   which_region_update,
-  region_kwargs,
-  updater_kwargs,
+  internal_kwargs,
 )
   P = projected_operator![]
   return contract_ket(P, ITensor(one(Bool))), (;)

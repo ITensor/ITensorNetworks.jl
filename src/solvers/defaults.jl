@@ -1,4 +1,6 @@
 default_outputlevel() = 0
+default_nsites() = 2
+default_nsweeps() = 1 #? or nothing?
 default_extracter() = default_extracter
 default_inserter() = default_inserter
 default_checkdone() = (; kws...) -> false
@@ -56,4 +58,51 @@ function default_sweep_printer(; outputlevel, state, which_sweep, sweep_time, kw
     println()
     flush(stdout)
   end
+end
+
+function default_alternating_updates(
+  operator,
+  init_state::AbstractTTN;
+  nsweeps=default_nsweeps(),
+  nsites=default_nsites(),
+  outputlevel=default_outputlevel(),
+  region_printer=nothing,
+  sweep_printer=nothing,
+  (sweep_observer!)=nothing,
+  (region_observer!)=nothing,
+  root_vertex=default_root_vertex(init_state),
+  extracter_kwargs=(;),
+  extracter=default_extracter(),
+  updater_kwargs=(;),
+  updater,  # this specifies the update performed locally
+  inserter_kwargs=(;),
+  inserter=default_inserter(),
+  transform_operator_kwargs=(;),
+  transform_operator=default_transform_operator(),
+  kwargs...,
+)
+  inserter_kwargs = (; inserter_kwargs..., kwargs...)
+  sweep_plans = default_sweep_plans(
+    nsweeps,
+    init_state;
+    root_vertex,
+    extracter,
+    extracter_kwargs,
+    updater,
+    updater_kwargs,
+    inserter,
+    inserter_kwargs,
+    transform_operator,
+    transform_operator_kwargs,
+    nsites,
+  )
+  return alternating_update(
+    operator, init_state;
+    outputlevel,
+    sweep_plans,
+    sweep_observer!,
+    region_observer!,
+    sweep_printer,
+    region_printer,
+  )
 end

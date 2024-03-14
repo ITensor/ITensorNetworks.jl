@@ -6,12 +6,9 @@ function dmrg_x_updater(
   which_sweep,
   sweep_plan,
   which_region_update,
-  region_kwargs,
-  updater_kwargs,
+  internal_kwargs,
 )
-  # this updater does not seem to accept any kwargs?
-  default_updater_kwargs = (;)
-  updater_kwargs = merge(default_updater_kwargs, updater_kwargs)
+  #ToDo: Implement this via KrylovKit or similar for better scaling
   H = contract(projected_operator![], ITensor(true))
   D, U = eigen(H; ishermitian=true)
   u = uniqueind(U, H)
