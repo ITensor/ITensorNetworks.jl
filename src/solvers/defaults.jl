@@ -1,6 +1,6 @@
 default_outputlevel() = 0
-default_extractor() = extract_local_tensor
-default_inserter() = insert_local_tensor
+default_extracter() = default_extracter
+default_inserter() = default_inserter
 default_checkdone() = (; kws...) -> false
 default_transform_operator() = nothing
 function default_region_printer(;

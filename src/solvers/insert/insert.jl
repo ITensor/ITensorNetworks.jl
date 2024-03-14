@@ -1,25 +1,18 @@
 # Here extract_local_tensor and insert_local_tensor
 # are essentially inverse operations, adapted for different kinds of 
 # algorithms and networks.
-#
 
 # sort of 2-site replacebond!; TODO: use dense TTN constructor instead
-# ToDo: remove slurping of kwargs, fix kwargs
-function insert_local_tensor(
+function default_inserter(
   state::AbstractTTN,
   phi::ITensor,
   region,
   ortho_vert;
   normalize=false,
-  # factorize kwargs
   maxdim=nothing,
   mindim=nothing,
   cutoff=nothing,
-  which_decomp=nothing,
-  eigen_perturbation=nothing,
-  ortho=nothing,
   internal_kwargs,
-  kwargs...,
 )
   spec = nothing
   other_vertex = setdiff(support(region), [ortho_vert])
@@ -34,9 +27,6 @@ function insert_local_tensor(
       maxdim,
       mindim,
       cutoff,
-      which_decomp,
-      eigen_perturbation,
-      ortho,
     )
     state[ortho_vert] = L
 
@@ -50,9 +40,13 @@ function insert_local_tensor(
   return state, spec
 end
 
-# ToDo: remove slurping of kwargs, fix kwargs
-function insert_local_tensor(
-  state::AbstractTTN, phi::ITensor, region::NamedEdge, ortho; internal_kwargs, kwargs...
+function default_inserter(
+  state::AbstractTTN, phi::ITensor, region::NamedEdge, ortho;
+  normalize=false,
+  maxdim=nothing,
+  mindim=nothing,
+  cutoff=nothing,
+  internal_kwargs,
 )
   v = only(setdiff(support(region), [ortho]))
   state[v] *= phi

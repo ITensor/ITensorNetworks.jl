@@ -98,7 +98,7 @@ function tdvp(
   root_vertex=default_root_vertex(init_state),
   reverse_step=true,
   extracter_kwargs=(;),
-  extracter=default_extractor(), # ToDo: extracter could be inside extracter_kwargs, at the cost of having to extract it in region_update
+  extracter=default_extracter(), # ToDo: extracter could be inside extracter_kwargs, at the cost of having to extract it in region_update
   updater_kwargs=(;),
   updater=exponentiate_updater,
   inserter_kwargs=(;),

@@ -1,4 +1,5 @@
 #ToDo: generalize beyond 2-site
+#ToDo: remove concept of orthogonality center for generality
 function current_ortho(sweep_plan, which_region_update)
   regions = first.(sweep_plan)
   region = regions[which_region_update]
@@ -49,19 +50,21 @@ function region_update(
   (region_observer!),
 )
   (region, region_kwargs) = sweep_plan[which_region_update]
-  (; extract, update, insert, transform_operator, internal_kwargs) = region_kwargs
-  extracter, extracter_kwargs = extract
-  updater, updater_kwargs = update
-  inserter, inserter_kwargs = insert
-  transform_operator, transform_operator_kwargs = transform_operator
-
+  (; extracter, extracter_kwargs,
+  updater, updater_kwargs,
+  inserter, inserter_kwargs,
+  transform_operator, transform_operator_kwargs,
+  internal_kwargs) = region_kwargs
+  
+  # ToDo: remove orthogonality center on vertex for generality
+  # region carries same information 
   ortho_vertex = current_ortho(sweep_plan, which_region_update)
   if !isnothing(transform_operator)
     projected_operator = transform_operator(
       projected_operator; which_sweep, maxdim, outputlevel, transform_operator_kwargs...
     )
   end
-  state, projected_operator, phi = extract_local_tensor(
+  state, projected_operator, phi = extracter(
     state, projected_operator, region, ortho_vertex; extracter_kwargs..., internal_kwargs
   )
   # create references, in case solver does (out-of-place) modify PH or state
@@ -76,7 +79,7 @@ function region_update(
     which_sweep,
     sweep_plan,
     which_region_update,
-    updater_kwargs,
+    updater_kwargs...,
     internal_kwargs,
   )
   state = state![]
@@ -92,7 +95,7 @@ function region_update(
   #  drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
   # so noiseterm is a solver
   #end
-  state, spec = insert_local_tensor(
+  state, spec = inserter(
     state, phi, region, ortho_vertex; inserter_kwargs..., internal_kwargs
   )
 

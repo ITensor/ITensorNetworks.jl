@@ -7,7 +7,7 @@
 # insert_local_tensors takes that tensor and factorizes it back
 # apart and puts it back into the network.
 #
-function extract_local_tensor(state, projected_operator, region, ortho; internal_kwargs)
+function default_extracter(state, projected_operator, region, ortho; internal_kwargs)
   state = orthogonalize(state, ortho)
   if isa(region, AbstractEdge)
     other_vertex = only(setdiff(support(region), [ortho]))
