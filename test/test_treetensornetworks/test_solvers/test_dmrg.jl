@@ -102,10 +102,17 @@ end
 
   nsweeps = 4
   maxdim = [10, 20, 40, 80]
-  
-  @test_broken psi = dmrg(H, psi; nsweeps, maxdim, cutoff, outputlevel=2,
-  transform_operator=ITensorNetworks.cache_operator_to_disk,
-  transform_operator_kwargs=(;write_when_maxdim_exceeds=11))
+
+  @test_broken psi = dmrg(
+    H,
+    psi;
+    nsweeps,
+    maxdim,
+    cutoff,
+    outputlevel=2,
+    transform_operator=ITensorNetworks.cache_operator_to_disk,
+    transform_operator_kwargs=(; write_when_maxdim_exceeds=11),
+  )
 end
 
 @testset "Regression test: Arrays of Parameters" begin

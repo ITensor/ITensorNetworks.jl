@@ -88,6 +88,7 @@ function interleave(a::Vector, b::Vector)
       "Trying to interleave vectors of length $(length(a)) and $(length(b)), not implemented.",
     )
   end
+end
 
 function getindices_narrow_keytype(d::Dictionary, indices)
   return convert(typeof(d), getindices(d, indices))

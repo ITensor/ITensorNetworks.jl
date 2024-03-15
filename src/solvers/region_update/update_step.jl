@@ -67,7 +67,7 @@ function region_update(
   ortho_vertex = current_ortho(sweep_plan, which_region_update)
   if !isnothing(transform_operator)
     projected_operator = transform_operator(
-      state,projected_operator; outputlevel, transform_operator_kwargs...
+      state, projected_operator; outputlevel, transform_operator_kwargs...
     )
   end
   state, projected_operator, phi = extracter(

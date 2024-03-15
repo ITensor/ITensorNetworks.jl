@@ -75,7 +75,7 @@ function cache_operator_to_disk(
   write_when_maxdim_exceeds,
 )
   isnothing(write_when_maxdim_exceeds) && return operator
-  m=maximum(edge_data(linkdims(state)))
+  m = maximum(edge_data(linkdims(state)))
   if m > write_when_maxdim_exceeds
     if outputlevel >= 2
       println(
