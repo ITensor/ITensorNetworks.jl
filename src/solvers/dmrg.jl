@@ -4,10 +4,12 @@ Overload of `ITensors.dmrg`.
 
 function dmrg(operator, init_state;
 nsweeps,
+nsites=2,
 updater=eigsolve_updater,
 kwargs...)
-  return default_alternating_updates(operator, init_state;
+  return alternating_update(operator, init_state;
   nsweeps,
+  nsites,
   updater,
   kwargs...)
 end

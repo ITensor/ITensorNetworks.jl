@@ -49,7 +49,7 @@ function sum_contract(
   ##   )
   ## end
 
-  return default_alternating_updates(operator, init;
+  return alternating_update(operator, init;
     nsweeps,
     nsites,
     updater,

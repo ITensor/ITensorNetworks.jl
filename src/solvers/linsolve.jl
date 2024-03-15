@@ -39,10 +39,9 @@ function linsolve(
   updater_kwargs = (; a₀, a₁, updater_kwargs...)
   error("`linsolve` for TTN not yet implemented.")
 
-  sweep_plan = default_sweep_regions(nsites, x0)
   # TODO: Define `itensornetwork_cache`
   # TODO: Define `linsolve_cache`
 
   P = linsolve_cache(itensornetwork_cache(x₀', A, x₀), itensornetwork_cache(x₀', b))
-  return alternating_update(linsolve_updater, P, x₀; sweep_plan, updater_kwargs, kwargs...)
+  return alternating_update(P, x₀; nsweeps, updater=linsolve_updater, updater_kwargs, kwargs...)
 end
