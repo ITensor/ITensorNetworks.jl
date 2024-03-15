@@ -7,16 +7,18 @@ function linsolve_updater(
   sweep_plan,
   which_region_update,
   region_kwargs,
-  updater_kwargs,
+  ishermitian=false,
+  tol=1E-14,
+  krylovdim=30,
+  maxiter=100,
+  verbosity=0,
+  a₀,
+  a₁,
 )
-  default_updater_kwargs = (;
-    ishermitian=false, tol=1E-14, krylovdim=30, maxiter=100, verbosity=0, a₀, a₁
-  )
-  updater_kwargs = merge(default_updater_kwargs, updater_kwargs)
   P = projected_operator![]
-  (; a₀, a₁) = updater_kwargs
-  updater_kwargs = Base.structdiff(updater_kwargs, (; a₀=nothing, a₁=nothing))
   b = dag(only(proj_mps(P)))
-  x, info = KrylovKit.linsolve(P, b, init, a₀, a₁; updater_kwargs...)
+  x, info = KrylovKit.linsolve(
+    P, b, init, a₀, a₁; ishermitian=false, tol, krylovdim, maxiter, verbosity
+  )
   return x, (;)
 end

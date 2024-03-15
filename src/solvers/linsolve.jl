@@ -29,10 +29,8 @@ function linsolve(
   a₀::Number=0,
   a₁::Number=1;
   updater=linsolve_updater,
-  nsweeps,  #it makes sense to require this to be defined
   nsites=2,
-  (sweep_observer!)=observer(),
-  root_vertex=default_root_vertex(init),
+  nsweeps,  #it makes sense to require this to be defined
   updater_kwargs=(;),
   kwargs...,
 )
@@ -44,6 +42,6 @@ function linsolve(
 
   P = linsolve_cache(itensornetwork_cache(x₀', A, x₀), itensornetwork_cache(x₀', b))
   return alternating_update(
-    P, x₀; nsweeps, updater=linsolve_updater, updater_kwargs, kwargs...
+    P, x₀; nsweeps, nsites, updater=linsolve_updater, updater_kwargs, kwargs...
   )
 end
