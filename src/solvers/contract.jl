@@ -49,12 +49,7 @@ function sum_contract(
   ##   )
   ## end
 
-  return alternating_update(operator, init;
-    nsweeps,
-    nsites,
-    updater,
-    cutoff,
-    kwargs...)
+  return alternating_update(operator, init; nsweeps, nsites, updater, cutoff, kwargs...)
 end
 
 function contract(a::Algorithm"fit", tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)

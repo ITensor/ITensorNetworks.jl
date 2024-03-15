@@ -35,7 +35,9 @@ function alternating_update(
     nsites,
   )
   return alternating_update(
-    operator, init_state, sweep_plans;
+    operator,
+    init_state,
+    sweep_plans;
     outputlevel,
     sweep_observer!,
     region_observer!,
@@ -43,7 +45,6 @@ function alternating_update(
     region_printer,
   )
 end
-
 
 function alternating_update(
   projected_operator,
@@ -102,7 +103,9 @@ function alternating_update(operator::AbstractTTN, init_state::AbstractTTN; kwar
   return alternating_update(projected_operator, init_state; kwargs...)
 end
 
-function alternating_update(operator::AbstractTTN, init_state::AbstractTTN, sweep_plans; kwargs...)
+function alternating_update(
+  operator::AbstractTTN, init_state::AbstractTTN, sweep_plans; kwargs...
+)
   check_hascommoninds(siteinds, operator, init_state)
   check_hascommoninds(siteinds, operator, init_state')
   # Permute the indices to have a better memory layout

@@ -2,16 +2,8 @@
 Overload of `ITensors.dmrg`.
 """
 
-function dmrg(operator, init_state;
-nsweeps,
-nsites=2,
-updater=eigsolve_updater,
-kwargs...)
-  return alternating_update(operator, init_state;
-  nsweeps,
-  nsites,
-  updater,
-  kwargs...)
+function dmrg(operator, init_state; nsweeps, nsites=2, updater=eigsolve_updater, kwargs...)
+  return alternating_update(operator, init_state; nsweeps, nsites, updater, kwargs...)
 end
 
 """

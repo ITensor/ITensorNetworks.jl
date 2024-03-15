@@ -87,7 +87,6 @@ end
   @test region_observer![30, :energy] < -4.25
 end
 
-
 @testset "Regression test: Arrays of Parameters" begin
   N = 10
   cutoff = 1e-12

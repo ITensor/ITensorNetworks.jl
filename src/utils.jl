@@ -30,8 +30,8 @@ end
 # If it is a single value (non-Vector), fill with
 # that value to the length.
 function extend_or_truncate(x::Vector, length::Int)
-  l = length-Base.length(x)
-  return l>=0 ? [x;  fill(last(x),l)] : x[1:length]
+  l = length - Base.length(x)
+  return l >= 0 ? [x; fill(last(x), l)] : x[1:length]
 end
 
 extend_or_truncate(x, length::Int) = extend_or_truncate([x], length)

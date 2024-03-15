@@ -89,12 +89,14 @@ end
   H = TTN(os, s)
 
   # Test basic usage with default parameters
-  Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=1,cutoff=eps())
+  Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=1, cutoff=eps())
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
   # Test usage with non-default parameters
-  Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=5, maxdim=[16,32],cutoff=[1e-4,1e-8,1e-12])
+  Hpsi = apply(
+    H, psi; alg="fit", init=psi, nsweeps=5, maxdim=[16, 32], cutoff=[1e-4, 1e-8, 1e-12]
+  )
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-3
-  
+
   # Test basic usage for multiple ProjOuterProdTTN with default parameters
   # BLAS.axpy-like test
   os_id = OpSum()

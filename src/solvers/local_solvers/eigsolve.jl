@@ -17,13 +17,16 @@ function eigsolve_updater(
 )
   howmany = 1
   vals, vecs, info = eigsolve(
-    projected_operator![], init, howmany, which_eigval;
+    projected_operator![],
+    init,
+    howmany,
+    which_eigval;
     ishermitian,
     tol,
     krylovdim,
     maxiter,
     verbosity,
-    eager
+    eager,
   )
   return vecs[1], (; info, eigvals=vals)
 end

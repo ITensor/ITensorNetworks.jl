@@ -20,14 +20,7 @@ function default_inserter(
     v = only(other_vertex)
     e = edgetype(state)(ortho_vert, v)
     indsTe = inds(state[ortho_vert])
-    L, phi, spec = factorize(
-      phi,
-      indsTe;
-      tags=tags(state, e),
-      maxdim,
-      mindim,
-      cutoff,
-    )
+    L, phi, spec = factorize(phi, indsTe; tags=tags(state, e), maxdim, mindim, cutoff)
     state[ortho_vert] = L
 
   else
@@ -41,7 +34,10 @@ function default_inserter(
 end
 
 function default_inserter(
-  state::AbstractTTN, phi::ITensor, region::NamedEdge, ortho;
+  state::AbstractTTN,
+  phi::ITensor,
+  region::NamedEdge,
+  ortho;
   normalize=false,
   maxdim=nothing,
   mindim=nothing,

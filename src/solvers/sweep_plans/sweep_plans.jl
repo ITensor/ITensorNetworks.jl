@@ -37,7 +37,9 @@ function forward_region(edges, which_edge; nsites=1, region_kwargs=(;))
       nonoverlapping_vertex = only(
         setdiff([src(current_edge), dst(current_edge)], [overlapping_vertex])
       )
-      return [([overlapping_vertex], region_kwargs), ([nonoverlapping_vertex], region_kwargs)]
+      return [
+        ([overlapping_vertex], region_kwargs), ([nonoverlapping_vertex], region_kwargs)
+      ]
     else
       future_edges = edges[(which_edge + 1):end]
       future_edges = isa(future_edges, AbstractEdge) ? [future_edges] : future_edges
@@ -150,7 +152,8 @@ function default_sweep_plans(
         extracter=extracter[i],
         extracter_kwargs=extracter_kwargs[i],
         transform_operator=transform_operator[i],
-        transform_operator_kwargs=transform_operator_kwargs[i],),
+        transform_operator_kwargs=transform_operator_kwargs[i],
+      ),
       kwargs[i]...,
     )
     push!(sweep_plans, sweep_plan)
@@ -159,10 +162,7 @@ function default_sweep_plans(
 end
 
 function default_sweep_plan(
-  graph::AbstractGraph;
-  root_vertex=default_root_vertex(graph),
-  region_kwargs,
-  nsites::Int,
+  graph::AbstractGraph; root_vertex=default_root_vertex(graph), region_kwargs, nsites::Int
 )
   return vcat(
     [
@@ -198,10 +198,12 @@ function tdvp_sweep_plan(
         root_vertex,
         nsites,
         region_kwargs=(;
-          internal_kwargs=(; substep, time_step=sub_time_step, t=t_evolved), region_kwargs...
+          internal_kwargs=(; substep, time_step=sub_time_step, t=t_evolved),
+          region_kwargs...,
         ),
         reverse_kwargs=(;
-          internal_kwargs=(; substep, time_step=-sub_time_step, t=t_evolved), region_kwargs...
+          internal_kwargs=(; substep, time_step=-sub_time_step, t=t_evolved),
+          region_kwargs...,
         ),
         reverse_step,
       ),

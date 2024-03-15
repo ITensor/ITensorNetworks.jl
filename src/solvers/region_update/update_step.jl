@@ -50,12 +50,18 @@ function region_update(
   (region_observer!),
 )
   (region, region_kwargs) = sweep_plan[which_region_update]
-  (; extracter, extracter_kwargs,
-  updater, updater_kwargs,
-  inserter, inserter_kwargs,
-  transform_operator, transform_operator_kwargs,
-  internal_kwargs) = region_kwargs
-  
+  (;
+    extracter,
+    extracter_kwargs,
+    updater,
+    updater_kwargs,
+    inserter,
+    inserter_kwargs,
+    transform_operator,
+    transform_operator_kwargs,
+    internal_kwargs,
+  ) = region_kwargs
+
   # ToDo: remove orthogonality center on vertex for generality
   # region carries same information 
   ortho_vertex = current_ortho(sweep_plan, which_region_update)

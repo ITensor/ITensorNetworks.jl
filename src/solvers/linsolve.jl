@@ -43,5 +43,7 @@ function linsolve(
   # TODO: Define `linsolve_cache`
 
   P = linsolve_cache(itensornetwork_cache(x₀', A, x₀), itensornetwork_cache(x₀', b))
-  return alternating_update(P, x₀; nsweeps, updater=linsolve_updater, updater_kwargs, kwargs...)
+  return alternating_update(
+    P, x₀; nsweeps, updater=linsolve_updater, updater_kwargs, kwargs...
+  )
 end

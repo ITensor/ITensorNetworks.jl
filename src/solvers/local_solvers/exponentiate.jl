@@ -16,12 +16,16 @@ function exponentiate_updater(
   eager=true,
 )
   (; time_step) = internal_kwargs
-  result, exp_info = exponentiate(projected_operator![], time_step, init;
-  krylovdim,
-  maxiter,
-  verbosity,
-  tol,
-  ishermitian,
-  issymmetric)
+  result, exp_info = exponentiate(
+    projected_operator![],
+    time_step,
+    init;
+    krylovdim,
+    maxiter,
+    verbosity,
+    tol,
+    ishermitian,
+    issymmetric,
+  )
   return result, (; info=exp_info)
 end
