@@ -1,7 +1,54 @@
 function alternating_update(
-  projected_operator,
+  operator,
   init_state::AbstractTTN;
-  sweep_plans,
+  nsweeps,  # define default for each solver implementation
+  nsites, # define default for each level of solver implementation
+  updater,  # this specifies the update performed locally
+  outputlevel=default_outputlevel(),
+  region_printer=nothing,
+  sweep_printer=nothing,
+  (sweep_observer!)=nothing,
+  (region_observer!)=nothing,
+  root_vertex=default_root_vertex(init_state),
+  extracter_kwargs=(;),
+  extracter=default_extracter(),
+  updater_kwargs=(;),
+  inserter_kwargs=(;),
+  inserter=default_inserter(),
+  transform_operator_kwargs=(;),
+  transform_operator=default_transform_operator(),
+  kwargs...,
+)
+  inserter_kwargs = (; inserter_kwargs..., kwargs...)
+  sweep_plans = default_sweep_plans(
+    nsweeps,
+    init_state;
+    root_vertex,
+    extracter,
+    extracter_kwargs,
+    updater,
+    updater_kwargs,
+    inserter,
+    inserter_kwargs,
+    transform_operator,
+    transform_operator_kwargs,
+    nsites,
+  )
+  return alternating_update(
+    operator, init_state, sweep_plans;
+    outputlevel,
+    sweep_observer!,
+    region_observer!,
+    sweep_printer,
+    region_printer,
+  )
+end
+
+
+function alternating_update(
+  projected_operator,
+  init_state::AbstractTTN,
+  sweep_plans;
   outputlevel=default_outputlevel(),
   checkdone=default_checkdone(),  # 
   (sweep_observer!)=nothing,
@@ -55,6 +102,16 @@ function alternating_update(operator::AbstractTTN, init_state::AbstractTTN; kwar
   return alternating_update(projected_operator, init_state; kwargs...)
 end
 
+function alternating_update(operator::AbstractTTN, init_state::AbstractTTN, sweep_plans; kwargs...)
+  check_hascommoninds(siteinds, operator, init_state)
+  check_hascommoninds(siteinds, operator, init_state')
+  # Permute the indices to have a better memory layout
+  # and minimize permutations
+  operator = ITensors.permute(operator, (linkind, siteinds, linkind))
+  projected_operator = ProjTTN(operator)
+  return alternating_update(projected_operator, init_state, sweep_plans; kwargs...)
+end
+
 #ToDo: Fix docstring.
 """
     tdvp(Hs::Vector{MPO},init_state::MPS,t::Number; kwargs...)
@@ -85,4 +142,16 @@ function alternating_update(
   operators .= ITensors.permute.(operators, Ref((linkind, siteinds, linkind)))
   projected_operators = ProjTTNSum(operators)
   return alternating_update(projected_operators, init_state; kwargs...)
+end
+
+function alternating_update(
+  operators::Vector{<:AbstractTTN}, init_state::AbstractTTN, sweep_plans; kwargs...
+)
+  for operator in operators
+    check_hascommoninds(siteinds, operator, init_state)
+    check_hascommoninds(siteinds, operator, init_state')
+  end
+  operators .= ITensors.permute.(operators, Ref((linkind, siteinds, linkind)))
+  projected_operators = ProjTTNSum(operators)
+  return alternating_update(projected_operators, init_state, sweep_plans; kwargs...)
 end

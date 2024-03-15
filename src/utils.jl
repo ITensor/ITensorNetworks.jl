@@ -29,16 +29,12 @@ end
 # Pad with last value to length.
 # If it is a single value (non-Vector), fill with
 # that value to the length.
-function extend(x::Vector, length::Int)
-  l = Base.length(x)
-  if l<=length
-    return [x; fill(last(x), length - Base.length(x))]
-  else
-    error("Trying to extend a vector to a length shorter than its current length.")
-  end
+function extend_or_truncate(x::Vector, length::Int)
+  l = length-Base.length(x)
+  return [x; l>=0 ? fill(last(x),l) : typeof(x)()][1:length]
 end
 
-extend(x, length::Int) = extend([x], length)
+extend_or_truncate(x, length::Int) = extend_or_truncate([x], length)
 
 # Treat `AbstractArray` as leaves.
 
@@ -46,15 +42,15 @@ struct AbstractArrayLeafStyle <: WalkStyle end
 
 StructWalk.children(::AbstractArrayLeafStyle, x::AbstractArray) = ()
 
-function extend_columns(nt::NamedTuple, length::Int)
-  return map(x -> extend(x, length), nt)
+function extend_or_truncate_columns(nt::NamedTuple, length::Int)
+  return map(x -> extend_or_truncate(x, length), nt)
 end
 
-function extend_columns_recursive(nt::NamedTuple, length::Int)
+function extend_or_truncate_columns_recursive(nt::NamedTuple, length::Int)
   return postwalk(AbstractArrayLeafStyle(), nt) do x
     x isa NamedTuple && return x
 
-    return extend(x, length)
+    return extend_or_truncate(x, length)
   end
 end
 
@@ -80,7 +76,7 @@ function rows_recursive(nt::NamedTuple, length::Int)
 end
 
 function expand(nt::NamedTuple, length::Int)
-  nt_padded = extend_columns_recursive(nt, length)
+  nt_padded = extend_or_truncate_columns_recursive(nt, length)
   return rows_recursive(nt_padded, length)
 end
 

@@ -15,11 +15,11 @@ function _compute_nsweeps(nsweeps::Nothing, t::Number, time_step::Number)
     println("Requested total time t = ", t)
     error("Time step $time_step not commensurate with total time t=$t")
   end
-  return nsweeps, extend(time_step, nsweeps)
+  return nsweeps, extend_or_truncate(time_step, nsweeps)
 end
 
 function _compute_nsweeps(nsweeps::Int, t::Number, time_step::Nothing)
-  time_step = extend(t / nsweeps, nsweeps)
+  time_step = extend_or_truncate(t / nsweeps, nsweeps)
   return nsweeps, time_step
 end
 
@@ -28,7 +28,7 @@ function _compute_nsweeps(nsweeps, t::Number, time_step::Vector)
   
   isnothing(nsweeps)
   if isnothing(nsweeps)
-    #extend time_step to reach final time t
+    #extend_or_truncate time_step to reach final time t
     last_time_step = last(time_step)
     nsweepstopad = Int(ceil(abs(diff_time / last_time_step)))
     if !(sum(time_step) + nsweepstopad * last_time_step ≈ t)
@@ -36,7 +36,7 @@ function _compute_nsweeps(nsweeps, t::Number, time_step::Vector)
       println("Requested total time t = ", t)
       error("Time step $time_step not commensurate with total time t=$t")
     end
-    time_step = extend(time_step, length(time_step) + nsweepstopad)
+    time_step = extend_or_truncate(time_step, length(time_step) + nsweepstopad)
     nsweeps = length(time_step)
   else
     nsweepstopad = nsweeps - length(time_step)
@@ -46,7 +46,7 @@ function _compute_nsweeps(nsweeps, t::Number, time_step::Vector)
       return length(time_step), time_step
     end
     remaining_time_step = diff_time / nsweepstopad
-    append!(time_step, extend(remaining_time_step, nsweepstopad))
+    append!(time_step, extend_or_truncate(remaining_time_step, nsweepstopad))
   end
   return nsweeps, time_step
 end
@@ -134,9 +134,8 @@ function tdvp(
   )
 
   return alternating_update(
-    operator, init_state;
+    operator, init_state,sweep_plans;
     outputlevel,
-    sweep_plans,
     sweep_observer!,
     region_observer!,
     sweep_printer,
