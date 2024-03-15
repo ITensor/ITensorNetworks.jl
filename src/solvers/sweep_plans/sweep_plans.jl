@@ -125,7 +125,7 @@ function default_sweep_plans(
   kwargs...,
 )
   extracter, updater, inserter, transform_operator =
-    extend.((extracter, updater, inserter, transform_operator), nsweeps)
+    extend_or_truncate.((extracter, updater, inserter, transform_operator), nsweeps)
   inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs, kwargs =
     expand.(
       (
