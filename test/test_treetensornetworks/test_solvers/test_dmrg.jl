@@ -87,6 +87,27 @@ end
   @test region_observer![30, :energy] < -4.25
 end
 
+@testset "Cache to Disk" begin
+  N = 10
+  cutoff = 1e-12
+  s = siteinds("S=1/2", N)
+  os = OpSum()
+  for j in 1:(N - 1)
+    os += 0.5, "S+", j, "S-", j + 1
+    os += 0.5, "S-", j, "S+", j + 1
+    os += "Sz", j, "Sz", j + 1
+  end
+  H = mpo(os, s)
+  psi = random_mps(s; internal_inds_space=10)
+
+  nsweeps = 4
+  maxdim = [10, 20, 40, 80]
+  
+  @test_broken psi = dmrg(H, psi; nsweeps, maxdim, cutoff, outputlevel=2,
+  transform_operator=ITensorNetworks.cache_operator_to_disk,
+  transform_operator_kwargs=(;write_when_maxdim_exceeds=11))
+end
+
 @testset "Regression test: Arrays of Parameters" begin
   N = 10
   cutoff = 1e-12
