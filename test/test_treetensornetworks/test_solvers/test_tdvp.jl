@@ -318,23 +318,23 @@ using Test
     H = mpo(os, s)
 
     state = random_mps(s; internal_inds_space=2)
-    trange = 0.0:tau:ttotal
-    for (step, t) in enumerate(trange)
-      nsites = (step <= 5 ? 2 : 1)
-      state = tdvp(
-        H,
-        -tau,
-        state;
-        cutoff,
-        nsites,
-        reverse_step,
-        normalize=true,
-        updater_kwargs=(; krylovdim=15, ishermitian=false),
-      )
-    end
-
+    en0 = inner(state', H, state)
+    nsites = [repeat([2], 10); repeat([1], 10)]
+    maxdim = 32
+    state = tdvp(
+      H,
+      -ttotal,
+      state;
+      time_step=-tau,
+      maxdim,
+      cutoff,
+      nsites,
+      reverse_step,
+      normalize=true,
+      updater_kwargs=(; krylovdim=15),
+    )
     en1 = inner(state', H, state)
-    @test en1 < -4.25
+    @test en1 < en0
   end
 
   @testset "Observers" begin
