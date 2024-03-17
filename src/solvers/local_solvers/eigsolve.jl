@@ -30,7 +30,3 @@ function eigsolve_updater(
   )
   return vecs[1], (; info, eigvals=vals)
 end
-
-function _pop_which_eigenvalue(; which_eigenvalue, kwargs...)
-  return which_eigenvalue, NamedTuple(kwargs)
-end
