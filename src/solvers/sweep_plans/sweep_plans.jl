@@ -55,27 +55,6 @@ function forward_region(edges, which_edge; nsites=1, region_kwargs=(;))
   end
 end
 
-#ToDo: Move towards this in the future. The logic here is currently broken for treetensornetworks.
-#=
-function insert_region_intersections(steps, graph; region_kwargs=(;))
-  regions = first.(steps)
-  intersecting_steps = Any[]
-  for i in eachindex(regions)
-    i == length(regions) && continue
-    region = regions[i]
-    intersecting_region = intersect(support(regions[i]), support(regions[i + 1]))
-    if isempty(intersecting_region)
-      intersecting_region = NamedGraphs.NamedEdge(only(regions[i]), only(regions[i + 1]))
-      if !has_edge(graph, intersecting_region)
-        error("Edge not in graph")
-      end
-    end
-    push!(intersecting_steps, (intersecting_region, region_kwargs))
-  end
-  return interleave(steps, intersecting_steps)
-end
-=#
-
 function forward_sweep(
   dir::Base.ForwardOrdering,
   graph::AbstractGraph;
