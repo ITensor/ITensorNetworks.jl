@@ -1,16 +1,20 @@
 default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
-  return contract_exact(contract_list; kwargs...)
+  sequence = optimal_contraction_sequence(contract_list)
+  updated_messages = contract(contract_list; sequence, kwargs...)
+  updated_messages = normalize!(updated_messages)
+  return ITensor[updated_messages]
 end
-default_message_update_kwargs() = (; normalize=true, contraction_sequence_alg="optimal")
 @traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
 @traitfn function default_bp_maxiter(g::::IsDirected)
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end
-default_cache(ψ::ITensorNetwork) = BeliefPropagationCache(ψ, [[v] for v in vertices(tn)])
-default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
+default_partitioning(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
 
+#We could probably do something cleverer here based on graph partitioning algorithms: https://en.wikipedia.org/wiki/Graph_partition.
+default_partitioning(f::AbstractFormNetwork) = group(v -> first(v), vertices(f))
+default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
 
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
@@ -31,9 +35,13 @@ function BeliefPropagationCache(
   return BeliefPropagationCache(ptn, messages, default_message)
 end
 
-function BeliefPropagationCache(tn::ITensorNetwork, partitioned_vertices; kwargs...)
+function BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
   ptn = PartitionedGraph(tn, partitioned_vertices)
   return BeliefPropagationCache(ptn; kwargs...)
+end
+
+function BeliefPropagationCache(tn; kwargs...)
+  return BeliefPropagationCache(tn, default_partitioning(tn); kwargs...)
 end
 
 function partitioned_itensornetwork(bp_cache::BeliefPropagationCache)
@@ -133,7 +141,7 @@ function update_message(
   bp_cache::BeliefPropagationCache,
   edge::PartitionEdge;
   message_update=default_message_update,
-  message_update_kwargs=default_message_update_kwargs(),
+  message_update_kwargs=(;),
 )
   vertex = src(edge)
   messages = incoming_messages(bp_cache, vertex; ignore_edges=PartitionEdge[reverse(edge)])

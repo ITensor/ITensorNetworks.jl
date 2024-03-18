@@ -57,9 +57,9 @@ function operator_network(f::AbstractFormNetwork)
   )
 end
 
-function derivative(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
+function derivative_state(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
   tn_vertices = derivative_vertices(f, state_vertices)
-  return derivative(tensornetwork(f), tn_vertices; kwargs...)
+  return derivative(f, tn_vertices; kwargs...)
 end
 
 function derivative_vertices(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)

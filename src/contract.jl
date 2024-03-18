@@ -30,18 +30,3 @@ function contract_density_matrix(
   end
   return out
 end
-
-#This should probably just be removed in favour of the second function above
-function contract_exact(
-  contract_list::Vector{ITensor};
-  contraction_sequence_alg="optimal",
-  normalize=true,
-  contractor_kwargs...,
-)
-  seq = contraction_sequence(contract_list; alg=contraction_sequence_alg)
-  out = ITensors.contract(contract_list; sequence=seq, contractor_kwargs...)
-  if normalize
-    normalize!(out)
-  end
-  return ITensor[out]
-end

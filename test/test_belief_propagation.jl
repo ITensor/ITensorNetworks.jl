@@ -8,7 +8,8 @@ using ITensorNetworks:
   tensornetwork,
   update,
   update_factor,
-  incoming_messages
+  incoming_messages,
+  contract
 using Test
 using Compat
 using ITensors
