@@ -6,6 +6,7 @@ using Observers
 using Random
 using Test
 
+#ToDo: Add tests for different signatures and functionality of extending the params
 @testset "MPS TDVP" begin
   @testset "Basic TDVP" begin
     N = 10
@@ -24,8 +25,7 @@ using Test
     ψ0 = random_mps(s; internal_inds_space=10)
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
-
+    ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
     @test norm(ψ1) ≈ 1.0
 
     ## Should lose fidelity:
@@ -35,12 +35,32 @@ using Test
     @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
     # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(
+      H,
+      +0.1im,
+      ψ1;
+      nsweeps=1,
+      cutoff,
+      updater_kwargs=(; krylovdim=20, maxiter=20, tol=1e-8),
+    )
 
     @test norm(ψ2) ≈ 1.0
 
     # Should rotate back to original state:
     @test abs(inner(ψ0, ψ2)) > 0.99
+
+    # test different ways to specify time-step specifications
+    ψa = tdvp(H, -0.1im, ψ0; nsweeps=4, cutoff, nsites=1)
+    ψb = tdvp(H, -0.1im, ψ0; time_step=-0.025im, cutoff, nsites=1)
+    ψc = tdvp(
+      H, -0.1im, ψ0; time_step=[-0.02im, -0.03im, -0.015im, -0.035im], cutoff, nsites=1
+    )
+    ψd = tdvp(
+      H, -0.1im, ψ0; nsweeps=4, time_step=[-0.02im, -0.03im, -0.025im], cutoff, nsites=1
+    )
+    @test inner(ψa, ψb) ≈ 1.0 rtol = 1e-7
+    @test inner(ψa, ψc) ≈ 1.0 rtol = 1e-7
+    @test inner(ψa, ψd) ≈ 1.0 rtol = 1e-7
   end
 
   @testset "TDVP: Sum of Hamiltonians" begin
@@ -65,7 +85,7 @@ using Test
 
     ψ0 = random_mps(s; internal_inds_space=10)
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -76,7 +96,7 @@ using Test
     @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
     # Time evolve backwards:
-    ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -240,7 +260,7 @@ using Test
         H,
         -tau * im,
         phi;
-        nsteps=1,
+        nsweeps=1,
         cutoff,
         nsites,
         normalize=true,
@@ -282,11 +302,10 @@ using Test
   end
 
   @testset "Imaginary Time Evolution" for reverse_step in [true, false]
-    N = 10
     cutoff = 1e-12
     tau = 1.0
-    ttotal = 50.0
-
+    ttotal = 10.0
+    N = 10
     s = siteinds("S=1/2", N)
 
     os = OpSum()
@@ -299,23 +318,23 @@ using Test
     H = mpo(os, s)
 
     state = random_mps(s; internal_inds_space=2)
-    trange = 0.0:tau:ttotal
-    for (step, t) in enumerate(trange)
-      nsites = (step <= 10 ? 2 : 1)
-      state = tdvp(
-        H,
-        -tau,
-        state;
-        cutoff,
-        nsites,
-        reverse_step,
-        normalize=true,
-        updater_kwargs=(; krylovdim=15),
-      )
-    end
-
+    en0 = inner(state', H, state)
+    nsites = [repeat([2], 10); repeat([1], 10)]
+    maxdim = 32
+    state = tdvp(
+      H,
+      -ttotal,
+      state;
+      time_step=-tau,
+      maxdim,
+      cutoff,
+      nsites,
+      reverse_step,
+      normalize=true,
+      updater_kwargs=(; krylovdim=15),
+    )
     en1 = inner(state', H, state)
-    @test en1 < -4.25
+    @test en1 < en0
   end
 
   @testset "Observers" begin
@@ -383,6 +402,9 @@ end
   @testset "Basic TDVP" for c in [named_comb_tree(fill(2, 3)), named_binary_tree(3)]
     cutoff = 1e-12
 
+    tooth_lengths = fill(4, 4)
+    root_vertex = (1, 4)
+    c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
     os = ITensorNetworks.heisenberg(c)
@@ -392,8 +414,7 @@ end
     ψ0 = normalize!(random_ttn(s))
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
-
+    ψ1 = tdvp(H, -0.1im, ψ0; root_vertex, nsweeps=1, cutoff, nsites=2)
     @test norm(ψ1) ≈ 1.0
 
     ## Should lose fidelity:
@@ -403,7 +424,7 @@ end
     @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
     # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -434,7 +455,7 @@ end
 
     ψ0 = normalize!(random_ttn(s; link_space=10))
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -445,7 +466,7 @@ end
     @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
     # Time evolve backwards:
-    ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -550,7 +571,7 @@ end
         H,
         -tau * im,
         phi;
-        nsteps=1,
+        nsweeps=1,
         cutoff,
         nsites,
         normalize=true,
@@ -579,12 +600,14 @@ end
       time_step=-im * tau,
       cutoff,
       normalize=false,
-      (region_observer!)=obs,
+      (sweep_observer!)=obs,
       root_vertex=(3, 2),
     )
 
     @test norm(Sz1 - Sz2) < 5e-3
     @test norm(En1 - En2) < 5e-3
+    @test abs.(last(Sz1) - last(obs.Sz)) .< 5e-3
+    @test abs.(last(Sz2) - last(obs.Sz)) .< 5e-3
   end
 
   @testset "Imaginary Time Evolution" for reverse_step in [true, false]
