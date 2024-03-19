@@ -13,7 +13,7 @@ end
 default_partitioning(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
 
 #We could probably do something cleverer here based on graph partitioning algorithms: https://en.wikipedia.org/wiki/Graph_partition.
-default_partitioning(f::AbstractFormNetwork) = group(v -> first(v), vertices(f))
+default_partitioning(f::AbstractFormNetwork) = group(v -> state_vertex(f, v), vertices(f))
 default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
 
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
