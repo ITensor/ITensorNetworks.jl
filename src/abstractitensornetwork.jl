@@ -721,6 +721,35 @@ function contract_inner(
   return contract(tn; sequence)[]
 end
 
+function contract_with_BP(
+  itn::AbstractITensorNetwork; outputlevel=1, partitioning=group(v -> v, vertices(itn))
+)
+  @assert isempty(externalinds(itn))
+  bp_cache = BeliefPropagationCache(copy(itn), partitioning)
+
+  bp_cache = update(bp_cache)
+
+  pg = partitioned_itensornetwork(bp_cache)
+
+  if !is_tree(partitioned_graph(pg)) && outputlevel > 0
+    println("Partitioned graph is not a tree, result will be approximate!!")
+  end
+
+  log_numerator, log_denominator = 0, 0
+  for pv in partitionvertices(pg)
+    incoming_mts = incoming_messages(bp_cache, [pv])
+    local_state = ITensor[itn[v] for v in vertices(pg, pv)]
+    log_numerator += log(ITensors.contract(vcat(incoming_mts, local_state))[])
+  end
+  for pe in partitionedges(pg)
+    log_denominator += log(
+      ITensors.contract(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))))[]
+    )
+  end
+
+  return exp(log_numerator - log_denominator)
+end
+
 # TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
 # or `norm_sqr` to match `LinearAlgebra.norm_sqr`
 norm_sqr(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)

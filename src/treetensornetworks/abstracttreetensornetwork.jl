@@ -365,20 +365,14 @@ end
 # Inner products
 #
 
-# TODO: implement using multi-graph disjoint union
-function inner(
-  y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex=default_root_vertex(x, A, y)
-)
-  traversal_order = reverse(post_order_dfs_vertices(x, root_vertex))
-  check_hascommoninds(siteinds, A, x)
-  check_hascommoninds(siteinds, A, y)
+# TODO: Remove dispatch on AbstractTTN (unless we want to trigger warning for trees if BP is nonexact)  
+function inner(y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; kwargs...)
   ydag = sim(dag(y); sites=[])
-  x = sim(x; sites=[])
-  O = ydag[root_vertex] * A[root_vertex] * x[root_vertex]
-  for v in traversal_order[2:end]
-    O = O * ydag[v] * A[v] * x[v]
-  end
-  return O[]
+  blf = BilinearFormNetwork(A, ydag, x)
+  blf_scalar_bp = contract_with_BP(
+    tensornetwork(blf); outputlevel=1, partitioning=group(v -> first(v), vertices(blf))
+  )
+  return blf_scalar_bp
 end
 
 # TODO: implement using multi-graph disjoint
