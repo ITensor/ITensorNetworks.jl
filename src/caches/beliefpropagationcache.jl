@@ -3,7 +3,7 @@ default_messages(ptn::PartitionedGraph) = Dictionary()
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
-  updated_messages = normalize!(updated_messages)
+  updated_messages /= norm(updated_messages)
   return ITensor[updated_messages]
 end
 @traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
