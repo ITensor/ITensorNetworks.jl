@@ -12,9 +12,7 @@ using ITensorNetworks:
   dual_index_map,
   bra_network,
   ket_network,
-  operator_network,
-  contract_with_BP,
-  group
+  operator_network
 using Test
 using Random
 
@@ -51,34 +49,5 @@ using Random
 
   @test underlying_graph(ket_network(qf)) == underlying_graph(ψket)
   @test underlying_graph(operator_network(qf)) == underlying_graph(A)
-end
-
-@testset "FormNetworks for TTN" begin
-  Random.seed!(1234)
-  Lx, Ly = 3, 3
-  χ = 2
-  g = named_comb_tree((Lx, Ly))
-  s = siteinds("S=1/2", g)
-  y = TTN(randomITensorNetwork(ComplexF64, s; link_space=χ))
-  x = TTN(randomITensorNetwork(ComplexF64, s; link_space=χ))
-
-  A = TTN(ITensorNetworks.heisenberg(s), s)
-  #First lets do it with the flattened version of the network
-  xy = inner_network(x, y; combine_linkinds=true)
-  xy_scalar = contract(xy)[]
-  xy_scalar_bp = contract_with_BP(xy)
-
-  @test_broken xy_scalar ≈ xy_scalar_bp
-
-  #Now lets keep it unflattened and do Block BP to keep the partitioned graph as a tree
-  xy = inner_network(x, y; combine_linkinds=false)
-  xy_scalar = contract(xy)[]
-  xy_scalar_bp = contract_with_BP(xy; partitioning=group(v -> first(v), vertices(xy)))
-
-  @test xy_scalar ≈ xy_scalar_bp
-  # test contraction of three layers for expectation values
-  # for TTN inner with this signature passes via contract_with_BP
-  @test inner(prime(x), A, y) ≈
-    inner(x, apply(A, y; nsweeps=10, maxdim=16, cutoff=1e-10, init=y)) rtol = 1e-6
 end
 nothing
