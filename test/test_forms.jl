@@ -12,7 +12,7 @@ using ITensorNetworks:
   bra_network,
   ket_network,
   operator_network,
-  derivative_state,
+  derivative,
   BeliefPropagationCache
 using Test
 using Random
@@ -52,16 +52,16 @@ using SplitApplyCombine
   @test underlying_graph(ket_network(qf)) == underlying_graph(ψket)
   @test underlying_graph(operator_network(qf)) == underlying_graph(A)
 
-  ∂qf_∂v = only(derivative_state(qf, [v]))
+  ∂qf_∂v = only(derivative(qf, [v]))
   @test (∂qf_∂v) * (qf[ket_vertex(qf, v)] * qf[bra_vertex(qf, v)]) ≈ contract(qf)
 
-  ∂qf_∂v_bp = derivative_state(qf, [v]; alg="bp", update_cache=false)
+  ∂qf_∂v_bp = derivative(qf, [v]; alg="bp", update_cache=false)
   ∂qf_∂v_bp = contract(∂qf_∂v_bp)
   ∂qf_∂v_bp /= norm(∂qf_∂v_bp)
   ∂qf_∂v /= norm(∂qf_∂v)
   @test ∂qf_∂v_bp != ∂qf_∂v
 
-  ∂qf_∂v_bp = derivative_state(qf, [v]; alg="bp", update_cache=true)
+  ∂qf_∂v_bp = derivative(qf, [v]; alg="bp", update_cache=true)
   ∂qf_∂v_bp = contract(∂qf_∂v_bp)
   ∂qf_∂v_bp /= norm(∂qf_∂v_bp)
   @test ∂qf_∂v_bp ≈ ∂qf_∂v

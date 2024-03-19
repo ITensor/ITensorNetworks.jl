@@ -23,16 +23,17 @@ function derivative(
   ψ::AbstractITensorNetwork,
   verts::Vector;
   (cache!)=nothing,
+  partitions=default_partitioning(ψ),
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(cache!),
 )
   if isnothing(cache!)
-    cache! = Ref(BeliefPropagationCache(ψ))
+    cache! = Ref(BeliefPropagationCache(ψ, partitions))
   end
 
   if update_cache
     cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  return incoming_messages(cache![], setdiff(vertices(ψ), verts))
+  return environment(cache![], setdiff(vertices(ψ), verts))
 end

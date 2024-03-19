@@ -11,7 +11,6 @@ end
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end
 default_partitioning(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
-
 #We could probably do something cleverer here based on graph partitioning algorithms: https://en.wikipedia.org/wiki/Graph_partition.
 default_partitioning(f::AbstractFormNetwork) = group(v -> state_vertex(f, v), vertices(f))
 default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
@@ -104,7 +103,7 @@ function set_messages(cache::BeliefPropagationCache, messages)
   )
 end
 
-function incoming_messages(
+function environment(
   bp_cache::BeliefPropagationCache,
   partition_vertices::Vector{<:PartitionVertex};
   ignore_edges=PartitionEdge[],
@@ -114,15 +113,15 @@ function incoming_messages(
   return reduce(vcat, ms; init=[])
 end
 
-function incoming_messages(
+function environment(
   bp_cache::BeliefPropagationCache, partition_vertex::PartitionVertex; kwargs...
 )
-  return incoming_messages(bp_cache, [partition_vertex]; kwargs...)
+  return environment(bp_cache, [partition_vertex]; kwargs...)
 end
 
-function incoming_messages(bp_cache::BeliefPropagationCache, verts::Vector)
+function environment(bp_cache::BeliefPropagationCache, verts::Vector)
   partition_verts = partitionvertices(bp_cache, verts)
-  messages = incoming_messages(bp_cache, partition_verts)
+  messages = environment(bp_cache, partition_verts)
   central_tensors = ITensor[
     tensornetwork(bp_cache)[v] for v in setdiff(vertices(bp_cache, partition_verts), verts)
   ]
@@ -144,7 +143,7 @@ function update_message(
   message_update_kwargs=(;),
 )
   vertex = src(edge)
-  messages = incoming_messages(bp_cache, vertex; ignore_edges=PartitionEdge[reverse(edge)])
+  messages = environment(bp_cache, vertex; ignore_edges=PartitionEdge[reverse(edge)])
   state = factor(bp_cache, vertex)
 
   return message_update(ITensor[messages; state]; message_update_kwargs...)
