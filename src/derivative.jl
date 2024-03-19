@@ -22,17 +22,17 @@ function derivative(
   ::Algorithm"bp",
   ψ::AbstractITensorNetwork,
   verts::Vector;
-  (bp_cache!)=nothing,
-  update_bp_cache=isnothing(bp_cache!),
-  bp_cache_update_kwargs=default_cache_update_kwargs(bp_cache!),
+  (cache!)=nothing,
+  update_cache=isnothing(cache!),
+  cache_update_kwargs=default_cache_update_kwargs(cache!),
 )
-  if isnothing(bp_cache!)
-    bp_cache! = Ref(BeliefPropagationCache(ψ))
+  if isnothing(cache!)
+    cache! = Ref(BeliefPropagationCache(ψ))
   end
 
-  if update_bp_cache
-    bp_cache![] = update(bp_cache![]; bp_cache_update_kwargs...)
+  if update_cache
+    cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  return incoming_messages(bp_cache![], setdiff(vertices(ψ), verts))
+  return incoming_messages(cache![], setdiff(vertices(ψ), verts))
 end

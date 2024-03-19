@@ -56,7 +56,7 @@ function update(
 )
   blf = copy(blf)
   # TODO: Maybe add a check that it really does preserve the graph.
-  setindex_preserve_graph!(tensornetwork(blf), bra_state, bra_vertex_map(blf)(state_vertex))
-  setindex_preserve_graph!(tensornetwork(blf), ket_state, ket_vertex_map(blf)(state_vertex))
+  setindex_preserve_graph!(tensornetwork(blf), bra_state, bra_vertex(blf, state_vertex))
+  setindex_preserve_graph!(tensornetwork(blf), ket_state, ket_vertex(blf, state_vertex))
   return blf
 end
