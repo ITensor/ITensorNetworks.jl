@@ -52,11 +52,15 @@ function BilinearFormNetwork(
 end
 
 function update(
-  blf::BilinearFormNetwork, state_vertex, bra_state::ITensor, ket_state::ITensor
+  blf::BilinearFormNetwork, original_state_vertex, bra_state::ITensor, ket_state::ITensor
 )
   blf = copy(blf)
   # TODO: Maybe add a check that it really does preserve the graph.
-  setindex_preserve_graph!(tensornetwork(blf), bra_state, bra_vertex(blf, state_vertex))
-  setindex_preserve_graph!(tensornetwork(blf), ket_state, ket_vertex(blf, state_vertex))
+  setindex_preserve_graph!(
+    tensornetwork(blf), bra_state, bra_vertex(blf, original_state_vertex)
+  )
+  setindex_preserve_graph!(
+    tensornetwork(blf), ket_state, ket_vertex(blf, original_state_vertex)
+  )
   return blf
 end
