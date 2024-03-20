@@ -63,7 +63,7 @@ function environment(
   alg=default_environment_algorithm(),
   kwargs...,
 )
-  tn_vertices = environment_vertices(f, state_vertices)
+  tn_vertices = state_vertices(f, state_vertices)
   if alg == "bp"
     partitions = group(v -> state_vertex(f, v), vertices(f))
     return environment(tensornetwork(f), tn_vertices; alg, partitions, kwargs...)
@@ -72,7 +72,7 @@ function environment(
   end
 end
 
-function environment_vertices(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
+function state_vertices(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
   return setdiff(
     vertices(f), vcat(bra_vertices(f, state_vertices), ket_vertices(f, state_vertices))
   )
