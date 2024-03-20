@@ -1,12 +1,15 @@
-default_derivative_algorithm() = "exact"
+default_environment_algorithm() = "exact"
 
-function derivative(
-  ψ::AbstractITensorNetwork, vertices::Vector; alg=default_derivative_algorithm(), kwargs...
+function environment(
+  ψ::AbstractITensorNetwork,
+  vertices::Vector;
+  alg=default_environment_algorithm(),
+  kwargs...,
 )
-  return derivative(Algorithm(alg), ψ, vertices; kwargs...)
+  return environment(Algorithm(alg), ψ, vertices; kwargs...)
 end
 
-function derivative(
+function environment(
   ::Algorithm"exact",
   ψ::AbstractITensorNetwork,
   vertices::Vector;
@@ -18,7 +21,7 @@ function derivative(
   return ITensor[contract(ψ_reduced; sequence, kwargs...)]
 end
 
-function derivative(
+function environment(
   ::Algorithm"bp",
   ψ::AbstractITensorNetwork,
   verts::Vector;

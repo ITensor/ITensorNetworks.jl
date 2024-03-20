@@ -57,22 +57,22 @@ function operator_network(f::AbstractFormNetwork)
   )
 end
 
-function derivative(
+function environment(
   f::AbstractFormNetwork,
   state_vertices::Vector;
-  alg=default_derivative_algorithm(),
+  alg=default_environment_algorithm(),
   kwargs...,
 )
-  tn_vertices = derivative_vertices(f, state_vertices)
+  tn_vertices = environment_vertices(f, state_vertices)
   if alg == "bp"
     partitions = group(v -> state_vertex(f, v), vertices(f))
-    return derivative(tensornetwork(f), tn_vertices; alg, partitions, kwargs...)
+    return environment(tensornetwork(f), tn_vertices; alg, partitions, kwargs...)
   else
-    return derivative(tensornetwork(f), tn_vertices; alg, kwargs...)
+    return environment(tensornetwork(f), tn_vertices; alg, kwargs...)
   end
 end
 
-function derivative_vertices(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
+function environment_vertices(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
   return setdiff(
     vertices(f), vcat(bra_vertices(f, state_vertices), ket_vertices(f, state_vertices))
   )
