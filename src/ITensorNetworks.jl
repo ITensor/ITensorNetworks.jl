@@ -133,6 +133,7 @@ include(joinpath("solvers", "contract.jl"))
 include(joinpath("solvers", "linsolve.jl"))
 include(joinpath("solvers", "sweep_plans", "sweep_plans.jl"))
 include("apply.jl")
+include("environment.jl")
 
 include("exports.jl")
 

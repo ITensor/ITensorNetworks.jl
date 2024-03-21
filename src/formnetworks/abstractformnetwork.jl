@@ -23,20 +23,22 @@ function ket_vertices(f::AbstractFormNetwork)
   return filter(v -> last(v) == ket_vertex_suffix(f), vertices(f))
 end
 
-function bra_ket_vertices(f::AbstractFormNetwork)
+function bra_vertices(f::AbstractFormNetwork, original_state_vertices::Vector)
+  return [bra_vertex_map(f)(osv) for osv in original_state_vertices]
+end
+
+function ket_vertices(f::AbstractFormNetwork, original_state_vertices::Vector)
+  return [ket_vertex_map(f)(osv) for osv in original_state_vertices]
+end
+
+function state_vertices(f::AbstractFormNetwork)
   return vcat(bra_vertices(f), ket_vertices(f))
 end
 
-function bra_vertices(f::AbstractFormNetwork, state_vertices::Vector)
-  return [bra_vertex_map(f)(sv) for sv in state_vertices]
-end
-
-function ket_vertices(f::AbstractFormNetwork, state_vertices::Vector)
-  return [ket_vertex_map(f)(sv) for sv in state_vertices]
-end
-
-function bra_ket_vertices(f::AbstractFormNetwork, state_vertices::Vector)
-  return vcat(bra_vertices(f, state_vertices), ket_vertices(f, state_vertices))
+function state_vertices(f::AbstractFormNetwork, original_state_vertices::Vector)
+  return vcat(
+    bra_vertices(f, original_state_vertices), ket_vertices(f, original_state_vertices)
+  )
 end
 
 function Graphs.induced_subgraph(f::AbstractFormNetwork, vertices::Vector)
@@ -57,18 +59,28 @@ function operator_network(f::AbstractFormNetwork)
   )
 end
 
-function derivative(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
-  tn_vertices = derivative_vertices(f, state_vertices)
-  return derivative(tensornetwork(f), tn_vertices; kwargs...)
-end
-
-function derivative_vertices(f::AbstractFormNetwork, state_vertices::Vector; kwargs...)
-  return setdiff(
-    vertices(f), vcat(bra_vertices(f, state_vertices), ket_vertices(f, state_vertices))
-  )
+function environment(
+  f::AbstractFormNetwork,
+  original_state_vertices::Vector;
+  alg=default_environment_algorithm(),
+  kwargs...,
+)
+  form_vertices = state_vertices(f, original_state_vertices)
+  if alg == "bp"
+    partitioned_vertices = group(v -> original_state_vertex(f, v), vertices(f))
+    return environment(
+      tensornetwork(f), form_vertices; alg, partitioned_vertices, kwargs...
+    )
+  else
+    return environment(tensornetwork(f), form_vertices; alg, kwargs...)
+  end
 end
 
 operator_vertex_map(f::AbstractFormNetwork) = v -> (v, operator_vertex_suffix(f))
 bra_vertex_map(f::AbstractFormNetwork) = v -> (v, bra_vertex_suffix(f))
 ket_vertex_map(f::AbstractFormNetwork) = v -> (v, ket_vertex_suffix(f))
 inv_vertex_map(f::AbstractFormNetwork) = v -> first(v)
+operator_vertex(f::AbstractFormNetwork, v) = operator_vertex_map(f)(v)
+bra_vertex(f::AbstractFormNetwork, v) = bra_vertex_map(f)(v)
+ket_vertex(f::AbstractFormNetwork, v) = ket_vertex_map(f)(v)
+original_state_vertex(f::AbstractFormNetwork, v) = inv_vertex_map(f)(v)

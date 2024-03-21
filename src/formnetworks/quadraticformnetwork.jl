@@ -57,9 +57,9 @@ function QuadraticFormNetwork(
   return QuadraticFormNetwork(blf, dual_index_map, dual_inv_index_map)
 end
 
-function update(qf::QuadraticFormNetwork, state_vertex, ket_state::ITensor)
+function update(qf::QuadraticFormNetwork, original_state_vertex, ket_state::ITensor)
   state_inds = inds(ket_state)
   bra_state = replaceinds(dag(ket_state), state_inds, dual_index_map(qf).(state_inds))
-  new_blf = update(bilinear_formnetwork(qf), state_vertex, bra_state, ket_state)
+  new_blf = update(bilinear_formnetwork(qf), original_state_vertex, bra_state, ket_state)
   return QuadraticFormNetwork(new_blf, dual_index_map(qf), dual_index_map(qf))
 end

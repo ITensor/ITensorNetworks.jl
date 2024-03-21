@@ -23,7 +23,6 @@ function default_norm_cache(ψ::ITensorNetwork)
   ψψ = norm_network(ψ)
   return BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
 end
-default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
 
 function ITensorNetwork(
   ψ_vidal::VidalITensorNetwork; (cache!)=nothing, update_gauge=false, update_kwargs...
