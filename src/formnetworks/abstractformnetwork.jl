@@ -65,10 +65,12 @@ function environment(
   alg=default_environment_algorithm(),
   kwargs...,
 )
-  form_vertices = setdiff(vertices(f), state_vertices(f, original_state_vertices))
+  form_vertices = state_vertices(f, original_state_vertices)
   if alg == "bp"
-    partitions = group(v -> original_state_vertex(f, v), vertices(f))
-    return environment(tensornetwork(f), form_vertices; alg, partitions, kwargs...)
+    partitioned_vertices = group(v -> original_state_vertex(f, v), vertices(f))
+    return environment(
+      tensornetwork(f), form_vertices; alg, partitioned_vertices, kwargs...
+    )
   else
     return environment(tensornetwork(f), form_vertices; alg, kwargs...)
   end

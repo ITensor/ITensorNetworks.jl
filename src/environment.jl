@@ -12,11 +12,11 @@ end
 function environment(
   ::Algorithm"exact",
   ψ::AbstractITensorNetwork,
-  vertices::Vector;
+  verts::Vector;
   contraction_sequence_alg="optimal",
   kwargs...,
 )
-  ψ_reduced = Vector{ITensor}(subgraph(ψ, vertices))
+  ψ_reduced = Vector{ITensor}(subgraph(ψ, setdiff(vertices(ψ), verts)))
   sequence = contraction_sequence(ψ_reduced; alg=contraction_sequence_alg)
   return ITensor[contract(ψ_reduced; sequence, kwargs...)]
 end
@@ -24,7 +24,7 @@ end
 function environment(
   ::Algorithm"bp",
   ψ::AbstractITensorNetwork,
-  verts::Vector;
+  vertices::Vector;
   (cache!)=nothing,
   partitioned_vertices=default_partitioned_vertices(ψ),
   update_cache=isnothing(cache!),
@@ -38,5 +38,5 @@ function environment(
     cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  return environment(cache![], setdiff(vertices(ψ), verts))
+  return environment(cache![], vertices)
 end
