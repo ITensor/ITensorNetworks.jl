@@ -36,7 +36,7 @@ ITensors.disable_warn_order()
 
   Oψ = copy(ψ)
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
-  exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
+  exact_sz = inner(Oψ, ψ) / inner(ψ, ψ)
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bpc = update(bpc)
@@ -66,7 +66,7 @@ ITensors.disable_warn_order()
 
   Oψ = copy(ψ)
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
-  exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
+  exact_sz = inner(Oψ, ψ) / inner(ψ, ψ)
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bpc = update(bpc)
@@ -86,9 +86,7 @@ ITensors.disable_warn_order()
   ψOψ = ising_network(s, beta; szverts=vs)
 
   contract_seq = contraction_sequence(ψψ)
-  actual_szsz =
-    ITensors.contract(ψOψ; sequence=contract_seq)[] /
-    ITensors.contract(ψψ; sequence=contract_seq)[]
+  actual_szsz = contract(ψOψ; sequence=contract_seq)[] / contract(ψψ; sequence=contract_seq)[]
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bpc = update(bpc; maxiter=20)
@@ -113,7 +111,7 @@ ITensors.disable_warn_order()
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   env_tensors = incoming_messages(bpc, [(v, 2) for v in vs])
-  rdm = ITensors.contract(
+  rdm = contract(
     vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]])
   )
 

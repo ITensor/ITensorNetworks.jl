@@ -684,43 +684,6 @@ function norm_network(tn::AbstractITensorNetwork)
   return tntn
 end
 
-# TODO: Use or replace with `flatten_networks`
-function inner_network(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork;
-  map_bra_linkinds=sim,
-  combine_linkinds=false,
-  flatten=combine_linkinds,
-  kwargs...,
-)
-  @assert issetequal(vertices(tn1), vertices(tn2))
-  tn1 = map_bra_linkinds(tn1; sites=[])
-  inner_net = ⊗(dag(tn1), tn2; kwargs...)
-  if flatten
-    for v in vertices(tn1)
-      inner_net = contract(inner_net, (v, 2) => (v, 1); merged_vertex=v)
-    end
-  end
-  if combine_linkinds
-    inner_net = ITensorNetworks.combine_linkinds(inner_net)
-  end
-  return inner_net
-end
-
-# TODO: Rename `inner`.
-function contract_inner(
-  ϕ::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  sequence=nothing,
-  contraction_sequence_kwargs=(;),
-)
-  tn = inner_network(ϕ, ψ; combine_linkinds=true)
-  if isnothing(sequence)
-    sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
-  end
-  return contract(tn; sequence)[]
-end
-
 # TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
 # or `norm_sqr` to match `LinearAlgebra.norm_sqr`
 norm_sqr(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)

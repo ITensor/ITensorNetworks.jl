@@ -44,3 +44,42 @@ function contract_exact(
   end
   return ITensor[out]
 end
+
+scalar(tn::Union{AbstractITensorNetwork, Vector{ITensor}}; alg = "exact", kwargs...) = scalar(Algorithm(alg), tn; kwargs...)
+scalar(alg::Algorithm, tn::Union{AbstractITensorNetwork, Vector{ITensor}}; kwargs...) = contract(alg, tn; kwargs...)[]
+
+function logscalar(tn::AbstractITensorNetwork; alg::String="exact", kwargs...)
+  return logscalar(Algorithm(alg), tn; kwargs...)
+end
+
+function logscalar(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
+  return log(scalar(alg, tn; kwargs...))
+end
+
+function logscalar(alg::Algorithm"bp", tn::AbstractITensorNetwork; (cache!)=nothing,
+  partitioned_vertices=default_partitioned_vertices(tn),
+  update_cache=isnothing(cache!),
+  cache_update_kwargs=default_cache_update_kwargs(cache!),)
+
+  if isnothing(cache!)
+    cache! = Ref(BeliefPropagationCache(tn, partitioned_vertices))
+  end
+
+  if update_cache
+    cache![] = update(cache![]; cache_update_kwargs...)
+  end
+
+  pg = partitioned_itensornetwork(bp_cache)
+
+  log_numerator, log_denominator = 0, 0
+  for pv in partitionvertices(pg)
+      incoming_mts = incoming_messages(bp_cache, [pv])
+      local_state = factor(bp_cache, pv)
+      log_numerator += logscalar(vcat(incoming_mts, local_state); alg = "exact")
+  end
+  for pe in partitionedges(pg)
+      log_denominator += logscalar(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))); alg = "exact")
+  end
+
+  return log_numerator - log_denominator
+end

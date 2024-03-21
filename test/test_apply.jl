@@ -65,14 +65,14 @@ using SplitApplyCombine
       envisposdef=true,
     )
     fSBP =
-      contract_inner(ψOSBP, ψOexact) /
-      sqrt(contract_inner(ψOexact, ψOexact) * contract_inner(ψOSBP, ψOSBP))
+      inner(ψOSBP, ψOexact) /
+      sqrt(inner(ψOexact, ψOexact) * inner(ψOSBP, ψOSBP))
     fVidal =
-      contract_inner(ψOVidal_symm, ψOexact) /
-      sqrt(contract_inner(ψOexact, ψOexact) * contract_inner(ψOVidal_symm, ψOVidal_symm))
+      inner(ψOVidal_symm, ψOexact) /
+      sqrt(inner(ψOexact, ψOexact) * inner(ψOVidal_symm, ψOVidal_symm))
     fGBP =
-      contract_inner(ψOGBP, ψOexact) /
-      sqrt(contract_inner(ψOexact, ψOexact) * contract_inner(ψOGBP, ψOGBP))
+      inner(ψOGBP, ψOexact) /
+      sqrt(inner(ψOexact, ψOexact) * inner(ψOGBP, ψOGBP))
 
     @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
 
