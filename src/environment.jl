@@ -26,12 +26,12 @@ function environment(
   ψ::AbstractITensorNetwork,
   verts::Vector;
   (cache!)=nothing,
-  partitions=default_partitioning(ψ),
+  partitioned_vertices=default_partitioned_vertices(ψ),
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(cache!),
 )
   if isnothing(cache!)
-    cache! = Ref(BeliefPropagationCache(ψ, partitions))
+    cache! = Ref(BeliefPropagationCache(ψ, partitioned_vertices))
   end
 
   if update_cache

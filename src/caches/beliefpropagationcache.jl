@@ -10,7 +10,7 @@ end
 @traitfn function default_bp_maxiter(g::::IsDirected)
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end
-default_partitioning(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
+default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
 default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
 
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
