@@ -9,6 +9,8 @@ function contract(
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
 end
 
+contract(alg::Algorithm"exact", tn::Vector{ITensor}; kwargs...) = contract(tn; kwargs...)
+
 function contract(
   alg::Union{Algorithm"density_matrix",Algorithm"ttn_svd"},
   tn::AbstractITensorNetwork;
@@ -45,22 +47,35 @@ function contract_exact(
   return ITensor[out]
 end
 
-scalar(tn::Union{AbstractITensorNetwork, Vector{ITensor}}; alg = "exact", kwargs...) = scalar(Algorithm(alg), tn; kwargs...)
-scalar(alg::Algorithm, tn::Union{AbstractITensorNetwork, Vector{ITensor}}; kwargs...) = contract(alg, tn; kwargs...)[]
+function scalar(tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg="exact", kwargs...)
+  return scalar(Algorithm(alg), tn; kwargs...)
+end
+function scalar(
+  alg::Algorithm, tn::Union{AbstractITensorNetwork,Vector{ITensor}}; kwargs...
+)
+  return contract(alg, tn; kwargs...)[]
+end
 
-function logscalar(tn::AbstractITensorNetwork; alg::String="exact", kwargs...)
+function logscalar(
+  tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg::String="exact", kwargs...
+)
   return logscalar(Algorithm(alg), tn; kwargs...)
 end
 
-function logscalar(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
-  return log(scalar(alg, tn; kwargs...))
+function logscalar(
+  alg::Algorithm"exact", tn::Union{AbstractITensorNetwork,Vector{ITensor}}; kwargs...
+)
+  return log(complex(scalar(alg, tn; kwargs...)))
 end
 
-function logscalar(alg::Algorithm"bp", tn::AbstractITensorNetwork; (cache!)=nothing,
+function logscalar(
+  alg::Algorithm"bp",
+  tn::AbstractITensorNetwork;
+  (cache!)=nothing,
   partitioned_vertices=default_partitioned_vertices(tn),
   update_cache=isnothing(cache!),
-  cache_update_kwargs=default_cache_update_kwargs(cache!),)
-
+  cache_update_kwargs=default_cache_update_kwargs(cache!),
+)
   if isnothing(cache!)
     cache! = Ref(BeliefPropagationCache(tn, partitioned_vertices))
   end
@@ -69,16 +84,18 @@ function logscalar(alg::Algorithm"bp", tn::AbstractITensorNetwork; (cache!)=noth
     cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  pg = partitioned_itensornetwork(bp_cache)
+  pg = partitioned_itensornetwork(cache![])
 
   log_numerator, log_denominator = 0, 0
   for pv in partitionvertices(pg)
-      incoming_mts = incoming_messages(bp_cache, [pv])
-      local_state = factor(bp_cache, pv)
-      log_numerator += logscalar(vcat(incoming_mts, local_state); alg = "exact")
+    incoming_mts = incoming_messages(cache![], [pv])
+    local_state = factor(cache![], pv)
+    log_numerator += logscalar(vcat(incoming_mts, local_state); alg="exact")
   end
   for pe in partitionedges(pg)
-      log_denominator += logscalar(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))); alg = "exact")
+    log_denominator += logscalar(
+      vcat(message(cache![], pe), message(cache![], reverse(pe))); alg="exact"
+    )
   end
 
   return log_numerator - log_denominator

@@ -2,7 +2,7 @@ using ITensorNetworks
 using ITensorNetworks:
   incoming_messages,
   update,
-  contract_inner,
+  inner,
   norm_network,
   BeliefPropagationCache,
   VidalITensorNetwork
@@ -64,15 +64,11 @@ using SplitApplyCombine
       print_fidelity_loss=true,
       envisposdef=true,
     )
-    fSBP =
-      inner(ψOSBP, ψOexact) /
-      sqrt(inner(ψOexact, ψOexact) * inner(ψOSBP, ψOSBP))
+    fSBP = inner(ψOSBP, ψOexact) / sqrt(inner(ψOexact, ψOexact) * inner(ψOSBP, ψOSBP))
     fVidal =
       inner(ψOVidal_symm, ψOexact) /
       sqrt(inner(ψOexact, ψOexact) * inner(ψOVidal_symm, ψOVidal_symm))
-    fGBP =
-      inner(ψOGBP, ψOexact) /
-      sqrt(inner(ψOexact, ψOexact) * inner(ψOGBP, ψOGBP))
+    fGBP = inner(ψOGBP, ψOexact) / sqrt(inner(ψOexact, ψOexact) * inner(ψOGBP, ψOGBP))
 
     @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
 

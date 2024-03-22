@@ -99,7 +99,7 @@ function incoming_messages(
 )
   bpes = boundary_partitionedges(bp_cache, partition_vertices; dir=:in)
   ms = messages(bp_cache, setdiff(bpes, ignore_edges))
-  return reduce(vcat, ms; init=[])
+  return reduce(vcat, ms; init=ITensor[])
 end
 
 function incoming_messages(

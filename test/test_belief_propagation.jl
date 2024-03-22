@@ -2,7 +2,7 @@ using ITensorNetworks
 using ITensorNetworks:
   ising_network,
   split_index,
-  contract_inner,
+  inner,
   contract_boundary_mps,
   BeliefPropagationCache,
   tensornetwork,
@@ -86,7 +86,8 @@ ITensors.disable_warn_order()
   ψOψ = ising_network(s, beta; szverts=vs)
 
   contract_seq = contraction_sequence(ψψ)
-  actual_szsz = contract(ψOψ; sequence=contract_seq)[] / contract(ψψ; sequence=contract_seq)[]
+  actual_szsz =
+    contract(ψOψ; sequence=contract_seq)[] / contract(ψψ; sequence=contract_seq)[]
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bpc = update(bpc; maxiter=20)
@@ -111,9 +112,7 @@ ITensors.disable_warn_order()
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   env_tensors = incoming_messages(bpc, [(v, 2) for v in vs])
-  rdm = contract(
-    vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]])
-  )
+  rdm = contract(vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]))
 
   rdm = array((rdm * combiner(inds(rdm; plev=0)...)) * combiner(inds(rdm; plev=1)...))
   rdm /= tr(rdm)

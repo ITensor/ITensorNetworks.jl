@@ -684,10 +684,11 @@ function norm_network(tn::AbstractITensorNetwork)
   return tntn
 end
 
-# TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
-# or `norm_sqr` to match `LinearAlgebra.norm_sqr`
-norm_sqr(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)
-
+function inner_network(
+  ψ::AbstractITensorNetwork, ϕ::AbstractITensorNetwork; flatten=false, kwargs...
+)
+  return flatten_networks(ψ, dag(ϕ); flatten, kwargs...)
+end
 norm_sqr_network(ψ::AbstractITensorNetwork; kwargs...) = inner_network(ψ, ψ; kwargs...)
 
 #
