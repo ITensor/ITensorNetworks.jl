@@ -65,3 +65,24 @@ function (H::ScaledSum)(ψ₀)
   end
   return permute(ψ, inds(ψ₀))
 end
+
+function cache_operator_to_disk(
+  state,
+  operator;
+  # univeral kwarg signature
+  outputlevel,
+  # non-universal kwarg
+  write_when_maxdim_exceeds,
+)
+  isnothing(write_when_maxdim_exceeds) && return operator
+  m = maximum(edge_data(linkdims(state)))
+  if m > write_when_maxdim_exceeds
+    if outputlevel >= 2
+      println(
+        "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxlinkdim = $(m), writing environment tensors to disk",
+      )
+    end
+    operator = disk(operator)
+  end
+  return operator
+end

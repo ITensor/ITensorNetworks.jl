@@ -33,20 +33,6 @@ function contract_density_matrix(
   return out
 end
 
-function contract_exact(
-  contract_list::Vector{ITensor};
-  contraction_sequence_alg="optimal",
-  normalize=true,
-  contractor_kwargs...,
-)
-  seq = contraction_sequence(contract_list; alg=contraction_sequence_alg)
-  out = ITensors.contract(contract_list; sequence=seq, contractor_kwargs...)
-  if normalize
-    normalize!(out)
-  end
-  return ITensor[out]
-end
-
 function scalar(tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg="exact", kwargs...)
   return scalar(Algorithm(alg), tn; kwargs...)
 end
