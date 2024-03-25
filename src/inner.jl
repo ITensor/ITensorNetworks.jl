@@ -11,8 +11,8 @@ function inner(
 end
 
 function inner(
-  A::AbstractITensorNetwork,
   ϕ::AbstractITensorNetwork,
+  A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   alg=default_algorithm([A, ϕ, ψ]),
   kwargs...,
@@ -37,15 +37,15 @@ end
 
 function inner(
   alg::Algorithm"exact",
-  A::AbstractITensorNetwork,
   ϕ::AbstractITensorNetwork,
+  A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   sequence=nothing,
   contraction_sequence_kwargs=(;),
   site_index_map=prime,
   kwargs...,
 )
-  tn = flatten_networks(site_index_map(dag(ϕ); links=[]), A, ψ; kwargs...)
+  tn = flatten_networks(dag(ϕ), A, ψ; kwargs...)
   if isnothing(sequence)
     sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
   end
@@ -60,6 +60,17 @@ function loginner(
 )
   return loginner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
+
+function loginner(
+  ϕ::AbstractITensorNetwork,
+  A::AbstractITensorNetwork,
+  ψ::AbstractITensorNetwork;
+  alg=default_algorithm(ϕ, ψ),
+  kwargs...,
+)
+  return loginner(Algorithm(alg), A, ϕ, ψ; kwargs...)
+end
+
 function loginner(
   alg::Algorithm"exact", ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...
 )
@@ -74,29 +85,36 @@ function loginner(
   link_index_map=sim,
   kwargs...,
 )
-  tn = disjoint_union("bra" => link_index_map(dag(ϕ); sites=[]), "ket" => ψ)
+  ϕ_dag = map_inds(link_index_map, dag(ϕ); sites=[])
+  tn = disjoint_union("bra" => ϕ_dag, "ket" => ψ)
   return logscalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
 end
 
 function loginner(
   alg::Algorithm"bp",
-  A::AbstractITensorNetwork,
   ϕ::AbstractITensorNetwork,
+  A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   partitioned_verts=default_inner_partitioned_vertices,
-  site_index_map=prime,
   link_index_map=sim,
   kwargs...,
 )
-  ϕ_dag = link_index_map(site_index_map(dag(ϕ); links=[]); sites=[])
+  ϕ_dag = map_inds(link_index_map, dag(ϕ); sites=[])
   tn = disjoint_union("operator" => A, "bra" => ϕ_dag, "ket" => ψ)
   return logscalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
 end
 
 function inner(
-  alg::Algorithm"bp", ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...
+  alg::Algorithm"bp",
+  ϕ::AbstractITensorNetwork,
+  ψ::AbstractITensorNetwork;
+  partitioned_verts=default_inner_partitioned_vertices,
+  link_index_map=sim,
+  kwargs...,
 )
-  return exp(loginner(alg, ϕ, ψ; kwargs...))
+  ϕ_dag = map_inds(link_index_map, dag(ϕ); sites=[])
+  tn = disjoint_union("bra" => ϕ_dag, "ket" => ψ)
+  return scalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
 end
 
 function inner(
@@ -104,14 +122,22 @@ function inner(
   A::AbstractITensorNetwork,
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
+  partitioned_verts=default_inner_partitioned_vertices,
+  link_index_map=sim,
   kwargs...,
 )
-  return exp(loginner(alg, A, ϕ, ψ; kwargs...))
+  ϕ_dag = map_inds(link_index_map, dag(ϕ); sites=[])
+  tn = disjoint_union("operator" => A, "bra" => ϕ_dag, "ket" => ψ)
+  return scalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
 end
 
 # TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
 # or `norm_sqr` to match `LinearAlgebra.norm_sqr`
-function norm_sqr(ψ::AbstractITensorNetwork; kwargs...)
-  ψ_mapped = sim(ψ; sites=[])
+function norm_sqr(ψ::AbstractITensorNetwork; link_index_map=sim, kwargs...)
+  ψ_mapped = link_index_map(ψ; sites=[])
   return inner(ψ, ψ_mapped; kwargs...)
+end
+
+function norm(ψ::AbstractITensorNetwork; kwargs...)
+  return sqrt(abs(real(norm_sqr(ψ; kwargs...))))
 end

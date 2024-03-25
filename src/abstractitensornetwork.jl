@@ -903,6 +903,8 @@ end
 
 +(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)
 
+ITensors.hasqns(tn::AbstractITensorNetwork) = all([hasqns(tn[v]) for v in vertices(tn)])
+
 ## # TODO: should this make sure that internal indices
 ## # don't clash?
 ## function hvncat(

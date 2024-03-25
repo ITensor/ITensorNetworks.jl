@@ -13,10 +13,12 @@ end
 default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
 default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
 
+#TODO: Define a version of this that works for QN supporting tensors
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
-  return 0.5 *
-         norm((denseblocks(lhs) / sum(diag(lhs))) - (denseblocks(rhs) / sum(diag(rhs))))
+  tr_lhs = length(inds(lhs)) == 1 ? sum(lhs) : sum(diag(lhs))
+  tr_rhs = length(inds(rhs)) == 1 ? sum(rhs) : sum(diag(rhs))
+  return 0.5 * norm((denseblocks(lhs) / tr_lhs) - (denseblocks(rhs) / tr_rhs))
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}
@@ -205,7 +207,7 @@ function update(
   verbose=false,
   kwargs...,
 )
-  compute_error = !isnothing(tol)
+  compute_error = !isnothing(tol) && !hasqns(tensornetwork(bp_cache))
   diff = compute_error ? Ref(0.0) : nothing
   if isnothing(maxiter)
     error("You need to specify a number of iterations for BP!")
@@ -240,4 +242,30 @@ end
 
 function update_factor(bp_cache, vertex, factor)
   return update_factors(bp_cache, [vertex], ITensor[factor])
+end
+
+function vertex_norm(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
+  incoming_mts = environment(bp_cache, [pv])
+  local_state = factor(bp_cache, pv)
+  return scalar(vcat(incoming_mts, local_state))
+end
+
+function edge_norm(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
+  return scalar(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))))
+end
+
+function vertex_norms(bp_cache::BeliefPropagationCache, pvs::Vector)
+  return [vertex_norm(bp_cache, pv) for pv in pvs]
+end
+
+function vertex_norms(bp_cache::BeliefPropagationCache)
+  return vertex_norms(bp_cache, partitionvertices(partitioned_itensornetwork(bp_cache)))
+end
+
+function edge_norms(bp_cache::BeliefPropagationCache, pes::Vector)
+  return [edge_norm(bp_cache, pe) for pe in pes]
+end
+
+function edge_norms(bp_cache::BeliefPropagationCache)
+  return edge_norms(bp_cache, partitionedges(partitioned_itensornetwork(bp_cache)))
 end

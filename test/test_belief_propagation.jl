@@ -112,7 +112,7 @@ ITensors.disable_warn_order()
   bpc = update(bpc; maxiter=20)
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
-  env_tensors = incoming_messages(bpc, [(v, 2) for v in vs])
+  env_tensors = environment(bpc, [(v, 2) for v in vs])
   rdm = contract(vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]))
 
   rdm = array((rdm * combiner(inds(rdm; plev=0)...)) * combiner(inds(rdm; plev=1)...))

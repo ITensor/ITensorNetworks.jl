@@ -33,13 +33,14 @@ function contract_density_matrix(
   return out
 end
 
-function scalar(tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg="exact", kwargs...)
-  return scalar(Algorithm(alg), tn; kwargs...)
-end
 function scalar(
   alg::Algorithm, tn::Union{AbstractITensorNetwork,Vector{ITensor}}; kwargs...
 )
   return contract(alg, tn; kwargs...)[]
+end
+
+function scalar(tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg="exact", kwargs...)
+  return scalar(Algorithm(alg), tn; kwargs...)
 end
 
 function logscalar(
@@ -70,19 +71,28 @@ function logscalar(
     cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  pg = partitioned_itensornetwork(cache![])
+  numerator_terms, denominator_terms = vertex_norms(cache![]), edge_norms(cache![])
 
-  log_numerator, log_denominator = 0, 0
-  for pv in partitionvertices(pg)
-    incoming_mts = incoming_messages(cache![], [pv])
-    local_state = factor(cache![], pv)
-    log_numerator += logscalar(vcat(incoming_mts, local_state); alg="exact")
-  end
-  for pe in partitionedges(pg)
-    log_denominator += logscalar(
-      vcat(message(cache![], pe), message(cache![], reverse(pe))); alg="exact"
-    )
+  return sum(log.(complex.(numerator_terms))) - sum(log.(complex.((denominator_terms))))
+end
+
+function scalar(
+  alg::Algorithm"bp",
+  tn::AbstractITensorNetwork;
+  (cache!)=nothing,
+  partitioned_vertices=default_partitioned_vertices(tn),
+  update_cache=isnothing(cache!),
+  cache_update_kwargs=default_cache_update_kwargs(cache!),
+)
+  if isnothing(cache!)
+    cache! = Ref(BeliefPropagationCache(tn, partitioned_vertices))
   end
 
-  return log_numerator - log_denominator
+  if update_cache
+    cache![] = update(cache![]; cache_update_kwargs...)
+  end
+
+  numerator_terms, denominator_terms = vertex_norms(cache![]), edge_norms(cache![])
+
+  return prod(numerator_terms) / prod(denominator_terms)
 end

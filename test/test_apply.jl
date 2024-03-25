@@ -1,11 +1,6 @@
 using ITensorNetworks
 using ITensorNetworks:
-  environment,
-  update,
-  inner,
-  norm_network,
-  BeliefPropagationCache,
-  VidalITensorNetwork
+  environment, update, inner, norm_network, BeliefPropagationCache, VidalITensorNetwork
 using Test
 using Compat
 using ITensors
