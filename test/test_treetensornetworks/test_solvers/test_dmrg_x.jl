@@ -20,9 +20,9 @@ using Test
 
   ϕ = dmrg_x(H, ψ; nsites=2, dmrg_x_kwargs...)
 
-  @test inner(H, ψ', ψ) / inner(ψ, ψ) ≈ inner(H, ϕ', ϕ) / inner(ϕ, ϕ) rtol = 1e-1
-  @test inner(H, ψ, H, ψ) ≉ inner(H, ψ', ψ)^2 rtol = 1e-7
-  @test inner(H, ϕ, H, ϕ) ≈ inner(H, ϕ', ϕ)^2 rtol = 1e-7
+  @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ', H, ϕ) / inner(ϕ, ϕ) rtol = 1e-1
+  @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ)^2 rtol = 1e-7
+  @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ',H, ϕ)^2 rtol = 1e-7
 
   ϕ̃ = dmrg_x(H, ϕ; nsites=1, dmrg_x_kwargs...)
 
