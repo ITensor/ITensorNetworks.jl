@@ -1,6 +1,6 @@
 using ITensorNetworks
 using ITensorNetworks:
-  environment, update, inner, norm_network, BeliefPropagationCache, VidalITensorNetwork
+  environment, update, inner, norm_sqr_network, BeliefPropagationCache, VidalITensorNetwork
 using Test
 using Compat
 using ITensors
@@ -19,7 +19,7 @@ using SplitApplyCombine
   χ = 2
   ψ = randomITensorNetwork(s; link_space=χ)
   v1, v2 = (2, 2), (1, 2)
-  ψψ = norm_network(ψ)
+  ψψ = norm_sqr_network(ψ)
 
   #Simple Belief Propagation Grouping
   bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
