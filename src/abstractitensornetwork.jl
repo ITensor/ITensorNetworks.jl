@@ -643,10 +643,10 @@ function flatten_networks(
   combine_linkinds=true,
   kwargs...,
 )
-  @assert issetequal(vertices(tn1), vertices(tn2))
   tn1 = map_bra_linkinds(tn1; sites=[])
   flattened_net = ⊗(tn1, tn2; kwargs...)
   if flatten
+    @assert issetequal(vertices(tn1), vertices(tn2))
     for v in vertices(tn1)
       flattened_net = contract(flattened_net, (v, 2) => (v, 1); merged_vertex=v)
     end
@@ -667,29 +667,50 @@ function flatten_networks(
   return flatten_networks(flatten_networks(tn1, tn2; kwargs...), tn3, tn_tail...; kwargs...)
 end
 
-#Ideally this will dispatch to inner_network but this is a temporary fast version for now
-function norm_network(tn::AbstractITensorNetwork)
-  tnbra = rename_vertices(v -> (v, 1), data_graph(tn))
-  tndag = copy(tn)
-  for v in vertices(tndag)
-    setindex_preserve_graph!(tndag, dag(tndag[v]), v)
-  end
-  tnket = rename_vertices(v -> (v, 2), data_graph(prime(tndag; sites=[])))
-  tntn = ITensorNetwork(union(tnbra, tnket))
-  for v in vertices(tn)
-    if !isempty(commoninds(tntn[(v, 1)], tntn[(v, 2)]))
-      add_edge!(tntn, (v, 1) => (v, 2))
-    end
-  end
-  return tntn
+function inner_network(
+  x::AbstractITensorNetwork,
+  y::AbstractITensorNetwork;
+  flatten=false,
+  combine_linkinds=false,
+  map_bra_linkinds=prime,
+  kwargs...,
+)
+  return flatten_networks(dag(x), y; flatten, combine_linkinds, map_bra_linkinds, kwargs...)
 end
 
 function inner_network(
-  ψ::AbstractITensorNetwork, ϕ::AbstractITensorNetwork; flatten=false, kwargs...
+  x::AbstractITensorNetwork,
+  A::AbstractITensorNetwork,
+  y::AbstractITensorNetwork;
+  flatten=false,
+  combine_linkinds=false,
+  map_bra_linkinds=prime,
+  kwargs...,
 )
-  return flatten_networks(ψ, dag(ϕ); flatten, kwargs...)
+  return flatten_networks(
+    dag(x), A, y; flatten, combine_linkinds, map_bra_linkinds, kwargs...
+  )
 end
-norm_sqr_network(ψ::AbstractITensorNetwork; kwargs...) = inner_network(ψ, ψ; kwargs...)
+
+inner_network(x::AbstractITensorNetwork; kwargs...) = inner_network(x, x; kwargs...)
+const norm_sqr_network = inner_network
+
+#Ideally this will not be necessary but this is a temporary fast version to avoid the overhead of `disjoint_union`
+function norm_sqr_network_fast(ψ::AbstractITensorNetwork)
+  ψbra = rename_vertices(v -> (v, 1), data_graph(ψ))
+  ψdag = copy(ψ)
+  for v in vertices(ψdag)
+    setindex_preserve_graph!(ψdag, dag(ψdag[v]), v)
+  end
+  ψket = rename_vertices(v -> (v, 2), data_graph(prime(ψdag; sites=[])))
+  ψψ = ITensorNetwork(union(ψbra, ψket))
+  for v in vertices(ψ)
+    if !isempty(commoninds(ψψ[(v, 1)], ψψ[(v, 2)]))
+      add_edge!(ψψ, (v, 1) => (v, 2))
+    end
+  end
+  return ψψ
+end
 
 #
 # Printing

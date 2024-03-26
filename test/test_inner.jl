@@ -5,8 +5,8 @@ using NamedGraphs
 using ITensorNetworks
 using SplitApplyCombine
 
-using ITensorNetworks: logscalar, scalar, inner
-using ITensors: siteinds
+using ITensorNetworks: logscalar, scalar, inner, loginner
+using ITensors: siteinds, dag
 
 @testset "Inner products, BP vs exact comparison" begin
   Random.seed!(1234)
@@ -18,7 +18,7 @@ using ITensors: siteinds
   x = randomITensorNetwork(s; link_space=χ)
 
   #First lets do it with the flattened version of the network
-  xy = inner_network(x, y; flatten=true, combine_linkinds=true)
+  xy = flatten_networks(dag(x), y; flatten=true, combine_linkinds=true)
   xy_scalar = scalar(xy)
   xy_scalar_bp = scalar(xy; alg="bp", partitioned_vertices=group(v -> v, vertices(xy)))
   xy_scalar_logbp = exp(
@@ -29,8 +29,8 @@ using ITensors: siteinds
   @test xy_scalar_bp ≈ xy_scalar_logbp
   @test xy_scalar ≈ xy_scalar_logbp
 
-  #Now lets keep it unflattened and do it via the inner function
-  xy_scalar = inner(x, y; alg="exact")
+  #Now lets do it via the inner function
+  xy_scalar = inner(x, y; alg="exact", flatten=true, combine_linkinds=true)
   xy_scalar_bp = inner(x, y; alg="bp")
   xy_scalar_logbp = exp(loginner(x, y; alg="bp"))
 
@@ -40,7 +40,7 @@ using ITensors: siteinds
 
   #test contraction of three layers for expectation values
   A = TTN(ITensorNetworks.heisenberg(s), s)
-  xAy_scalar = inner(x', A, y; alg="exact")
+  xAy_scalar = inner(x', A, y; alg="exact", flatten=true, combine_linkinds=true)
   xAy_scalar_bp = inner(x', A, y; alg="bp")
   xAy_scalar_logbp = exp(loginner(x', A, y; alg="bp"))
 

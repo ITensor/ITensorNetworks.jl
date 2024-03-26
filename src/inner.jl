@@ -45,7 +45,7 @@ function inner(
   site_index_map=prime,
   kwargs...,
 )
-  tn = flatten_networks(dag(ϕ), A, ψ; kwargs...)
+  tn = inner_network(ϕ, A, ψ; kwargs...)
   if isnothing(sequence)
     sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
   end
@@ -78,6 +78,16 @@ function loginner(
 end
 
 function loginner(
+  alg::Algorithm"exact",
+  ϕ::AbstractITensorNetwork,
+  A::AbstractITensorNetwork,
+  ψ::AbstractITensorNetwork;
+  kwargs...,
+)
+  return log(inner(alg, ϕ, A, ψ); kwargs...)
+end
+
+function loginner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -109,7 +119,7 @@ function inner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   partitioned_verts=default_inner_partitioned_vertices,
-  link_index_map=sim,
+  link_index_map=prime,
   kwargs...,
 )
   ϕ_dag = map_inds(link_index_map, dag(ϕ); sites=[])
@@ -123,7 +133,7 @@ function inner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   partitioned_verts=default_inner_partitioned_vertices,
-  link_index_map=sim,
+  link_index_map=prime,
   kwargs...,
 )
   ϕ_dag = map_inds(link_index_map, dag(ϕ); sites=[])
@@ -133,10 +143,7 @@ end
 
 # TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
 # or `norm_sqr` to match `LinearAlgebra.norm_sqr`
-function norm_sqr(ψ::AbstractITensorNetwork; link_index_map=sim, kwargs...)
-  ψ_mapped = link_index_map(ψ; sites=[])
-  return inner(ψ, ψ_mapped; kwargs...)
-end
+norm_sqr(ψ::AbstractITensorNetwork; kwargs...) = inner(ψ, ψ; kwargs...)
 
 function norm(ψ::AbstractITensorNetwork; kwargs...)
   return sqrt(abs(real(norm_sqr(ψ; kwargs...))))
