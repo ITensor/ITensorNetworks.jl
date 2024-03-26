@@ -366,20 +366,20 @@ end
 #
 
 # TODO: implement using multi-graph disjoint union
-# function inner(
-#   y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex=default_root_vertex(x, A, y)
-# )
-#   traversal_order = reverse(post_order_dfs_vertices(x, root_vertex))
-#   check_hascommoninds(siteinds, A, x)
-#   check_hascommoninds(siteinds, A, y)
-#   ydag = sim(dag(y); sites=[])
-#   x = sim(x; sites=[])
-#   O = ydag[root_vertex] * A[root_vertex] * x[root_vertex]
-#   for v in traversal_order[2:end]
-#     O = O * ydag[v] * A[v] * x[v]
-#   end
-#   return O[]
-# end
+function inner(
+  y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex=default_root_vertex(x, A, y)
+)
+  traversal_order = reverse(post_order_dfs_vertices(x, root_vertex))
+  check_hascommoninds(siteinds, A, x)
+  check_hascommoninds(siteinds, A, y)
+  ydag = sim(dag(y); sites=[])
+  x = sim(x; sites=[])
+  O = ydag[root_vertex] * A[root_vertex] * x[root_vertex]
+  for v in traversal_order[2:end]
+    O = O * ydag[v] * A[v] * x[v]
+  end
+  return O[]
+end
 
 # TODO: implement using multi-graph disjoint
 function inner(
