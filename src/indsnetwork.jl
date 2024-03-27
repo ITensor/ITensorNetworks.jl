@@ -300,7 +300,7 @@ end
 # Utility
 #
 
-copy(is::IndsNetwork) = IndsNetwork(copy(data_graph(is)))
+Base.copy(is::IndsNetwork) = IndsNetwork(copy(data_graph(is)))
 
 function map_inds(f, is::IndsNetwork, args...; sites=nothing, links=nothing, kwargs...)
   return map_data(i -> f(i, args...; kwargs...), is; vertices=sites, edges=links)

@@ -80,7 +80,7 @@ function messages(
   return [message(bp_cache, edge; kwargs...) for edge in edges]
 end
 
-function copy(bp_cache::BeliefPropagationCache)
+function Base.copy(bp_cache::BeliefPropagationCache)
   return BeliefPropagationCache(
     copy(partitioned_itensornetwork(bp_cache)),
     copy(messages(bp_cache)),

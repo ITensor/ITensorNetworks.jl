@@ -20,7 +20,7 @@ function ProjOuterProdTTN(internal_state::AbstractTTN, operator::AbstractTTN)
   )
 end
 
-function copy(P::ProjOuterProdTTN)
+function Base.copy(P::ProjOuterProdTTN)
   return ProjOuterProdTTN(
     pos(P), copy(internal_state(P)), copy(operator(P)), copy(environments(P))
   )

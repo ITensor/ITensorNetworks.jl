@@ -1,9 +1,4 @@
 import Base:
-  # types
-  Vector,
-  # functions
-  convert,
-  copy,
   eltype,
   getindex,
   hvncat,
