@@ -1,3 +1,5 @@
+using ITensors.ITensorMPS: ITensorMPS
+
 # convert ITensors.OpSum to TreeTensorNetwork
 
 # 
@@ -41,7 +43,7 @@ Hamiltonian, compressing shared interaction channels.
 """
 function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kwargs...)
   # Function barrier to improve type stability
-  coefficient_type = ITensors.determineValType(terms(os))
+  coefficient_type = ITensorMPS.determineValType(terms(os))
   return ttn_svd(coefficient_type, os, sites, root_vertex; kwargs...)
 end
 
@@ -100,7 +102,7 @@ function ttn_svd(
     end
   end
   inbond_coefs = Dict(
-    e => Dict{QN,Vector{ITensors.MatElem{coefficient_type}}}() for e in es
+    e => Dict{QN,Vector{ITensorMPS.MatElem{coefficient_type}}}() for e in es
   )                         # bond coefficients for incoming edge channels
   site_coef_done = Prod{Op}[] # list of terms for which the coefficient has been added to a site factor
   # temporary symbolic representation of TTN Hamiltonian
@@ -158,13 +160,13 @@ function ttn_svd(
         coutmap = get!(outmaps, edge_in => not_incoming_qn, Dict{Vector{Op},Int}())
         cinmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
 
-        bond_row = ITensors.posInLink!(cinmap, incoming)
-        bond_col = ITensors.posInLink!(coutmap, not_incoming) # get incoming channel
+        bond_row = ITensorMPS.posInLink!(cinmap, incoming)
+        bond_col = ITensorMPS.posInLink!(coutmap, not_incoming) # get incoming channel
         bond_coef = convert(coefficient_type, ITensors.coefficient(term))
         q_inbond_coefs = get!(
-          inbond_coefs[edge_in], incoming_qn, ITensors.MatElem{coefficient_type}[]
+          inbond_coefs[edge_in], incoming_qn, ITensorMPS.MatElem{coefficient_type}[]
         )
-        push!(q_inbond_coefs, ITensors.MatElem(bond_row, bond_col, bond_coef))
+        push!(q_inbond_coefs, ITensorMPS.MatElem(bond_row, bond_col, bond_coef))
         T_inds[dim_in] = bond_col
         T_qns[dim_in] = -incoming_qn
       end
@@ -172,7 +174,7 @@ function ttn_svd(
         coutmap = get!(
           outmaps, edges[dout] => outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
         )
-        T_inds[dout] = ITensors.posInLink!(coutmap, outgoing[edges[dout]]) # add outgoing channel
+        T_inds[dout] = ITensorMPS.posInLink!(coutmap, outgoing[edges[dout]]) # add outgoing channel
         T_qns[dout] = outgoing_qns[edges[dout]]
       end
       # if term starts at this site, add its coefficient as a site factor
@@ -197,11 +199,11 @@ function ttn_svd(
       push!(tempTTN[v], el)
     end
 
-    ITensors.remove_dups!(tempTTN[v])
+    ITensorMPS.remove_dups!(tempTTN[v])
     # manual truncation: isometry on incoming edge
     if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
       for (q, mat) in inbond_coefs[edges[dim_in]]
-        M = ITensors.toMatrix(mat)
+        M = ITensorMPS.toMatrix(mat)
         U, S, V = svd(M)
         P = S .^ 2
         truncate!(P; maxdim, cutoff, mindim)
@@ -489,7 +491,7 @@ function TTN(
 
   os = deepcopy(os)
   os = sorteachterm(os, sites, root_vertex)
-  os = ITensors.sortmergeterms(os) # not exported
+  os = ITensorMPS.sortmergeterms(os) # not exported
   if algorithm == "svd"
     T = ttn_svd(os, sites, root_vertex; kwargs...)
   else
