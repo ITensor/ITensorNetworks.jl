@@ -242,7 +242,6 @@ function loginner(
   end
   ψ1dag = sim(dag(ψ1); sites=[])
   traversal_order = reverse(post_order_dfs_vertices(ψ1, root_vertex))
-  check_hascommoninds(siteinds, ψ1dag, ψ2)
 
   O = ψ1dag[root_vertex] * ψ2[root_vertex]
 
@@ -370,8 +369,6 @@ function inner(
   y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex=default_root_vertex(x, A, y)
 )
   traversal_order = reverse(post_order_dfs_vertices(x, root_vertex))
-  check_hascommoninds(siteinds, A, x)
-  check_hascommoninds(siteinds, A, y)
   ydag = sim(dag(y); sites=[])
   x = sim(x; sites=[])
   O = ydag[root_vertex] * A[root_vertex] * x[root_vertex]
@@ -395,15 +392,6 @@ function inner(
       DimensionMismatch(
         "inner: mismatched number of vertices $N and $(nv(x)) or $(nv(y)) or $(nv(A))"
       ),
-    )
-  end
-  check_hascommoninds(siteinds, A, x)
-  check_hascommoninds(siteinds, B, y)
-  for v in vertices(B)
-    !hascommoninds(
-      uniqueinds(siteinds(A, v), siteinds(x, v)), uniqueinds(siteinds(B, v), siteinds(y, v))
-    ) && error(
-      "$(typeof(x)) Ax and $(typeof(y)) By must share site indices. On site $v, Ax has site indices $(uniqueinds(siteinds(A, v), (siteinds(x, v)))) while By has site indices $(uniqueinds(siteinds(B, v), siteinds(y, v))).",
     )
   end
   ydag = sim(linkinds, dag(y))

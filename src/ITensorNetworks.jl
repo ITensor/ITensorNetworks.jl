@@ -43,12 +43,9 @@ using ITensors:
   AbstractMPS,
   Algorithm,
   OneITensor,
-  check_hascommoninds,
   commontags,
   dim,
-  orthocenter,
-  ProjMPS,
-  set_nsite!
+  orthocenter
 using KrylovKit: exponentiate, eigsolve, linsolve
 using NamedGraphs:
   AbstractNamedGraph,
