@@ -1,3 +1,5 @@
+using ITensors.LazyApply: LazyApply
+
 """
 ProjTTNSum
 """
@@ -9,10 +11,10 @@ struct ProjTTNSum{V,T<:AbstractProjTTN{V},Z<:Number} <: AbstractProjTTN{V}
   end
 end
 
-terms(P::ProjTTNSum) = P.terms
+LazyApply.terms(P::ProjTTNSum) = P.terms
 factors(P::ProjTTNSum) = P.factors
 
-copy(P::ProjTTNSum) = ProjTTNSum(copy.(terms(P)), copy(factors(P)))
+Base.copy(P::ProjTTNSum) = ProjTTNSum(copy.(terms(P)), copy(factors(P)))
 
 function ProjTTNSum(operators::Vector{<:AbstractProjTTN})
   return ProjTTNSum(operators, fill(one(Bool), length(operators)))

@@ -6,7 +6,7 @@ pos(::AbstractProjTTN) = error("Not implemented")
 
 underlying_graph(P::AbstractProjTTN) = error("Not implemented")
 
-copy(::AbstractProjTTN) = error("Not implemented")
+Base.copy(::AbstractProjTTN) = error("Not implemented")
 
 set_nsite(::AbstractProjTTN, nsite) = error("Not implemented")
 

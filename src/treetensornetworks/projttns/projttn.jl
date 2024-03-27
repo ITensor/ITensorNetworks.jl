@@ -11,7 +11,7 @@ function ProjTTN(operator::TTN)
   return ProjTTN(vertices(operator), operator, Dictionary{edgetype(operator),ITensor}())
 end
 
-copy(P::ProjTTN) = ProjTTN(pos(P), copy(operator(P)), copy(environments(P)))
+Base.copy(P::ProjTTN) = ProjTTN(pos(P), copy(operator(P)), copy(environments(P)))
 
 #accessors for fields
 environments(p::ProjTTN) = p.environments
