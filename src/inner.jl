@@ -92,11 +92,10 @@ function loginner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   partitioned_verts=default_inner_partitioned_vertices,
-  link_index_map=sim,
+  map_bra_linkinds=sim,
   kwargs...,
 )
-  ϕ_dag = map_inds(link_index_map, dag(ϕ); sites=[])
-  tn = disjoint_union("bra" => ϕ_dag, "ket" => ψ)
+  tn = inner_network(ϕ, ψ; map_bra_linkinds)
   return logscalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
 end
 
@@ -106,11 +105,10 @@ function loginner(
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   partitioned_verts=default_inner_partitioned_vertices,
-  link_index_map=sim,
+  map_bra_linkinds=sim,
   kwargs...,
 )
-  ϕ_dag = map_inds(link_index_map, dag(ϕ); sites=[])
-  tn = disjoint_union("operator" => A, "bra" => ϕ_dag, "ket" => ψ)
+  tn = inner_network(ϕ, A, ψ; map_bra_linkinds)
   return logscalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
 end
 
@@ -119,11 +117,10 @@ function inner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   partitioned_verts=default_inner_partitioned_vertices,
-  link_index_map=prime,
+  map_bra_linkinds=prime,
   kwargs...,
 )
-  ϕ_dag = map_inds(link_index_map, dag(ϕ); sites=[])
-  tn = disjoint_union("bra" => ϕ_dag, "ket" => ψ)
+  tn = inner_network(ϕ, ψ; map_bra_linkinds)
   return scalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
 end
 
@@ -133,11 +130,10 @@ function inner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   partitioned_verts=default_inner_partitioned_vertices,
-  link_index_map=prime,
+  map_bra_linkinds=prime,
   kwargs...,
 )
-  ϕ_dag = map_inds(link_index_map, dag(ϕ); sites=[])
-  tn = disjoint_union("operator" => A, "bra" => ϕ_dag, "ket" => ψ)
+  tn = inner_network(ϕ, A, ψ; map_bra_linkinds)
   return scalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
 end
 

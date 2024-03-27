@@ -43,7 +43,6 @@ using ITensors:
   AbstractMPS,
   Algorithm,
   OneITensor,
-  check_hascommoninds,
   commontags,
   dim,
   orthocenter,

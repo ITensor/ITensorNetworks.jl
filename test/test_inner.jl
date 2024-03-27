@@ -18,7 +18,7 @@ using ITensors: siteinds, dag
   x = randomITensorNetwork(s; link_space=χ)
 
   #First lets do it with the flattened version of the network
-  xy = flatten_networks(dag(x), y; flatten=true, combine_linkinds=true)
+  xy = inner_network(x, y; combine_linkinds=true, flatten=true)
   xy_scalar = scalar(xy)
   xy_scalar_bp = scalar(xy; alg="bp", partitioned_vertices=group(v -> v, vertices(xy)))
   xy_scalar_logbp = exp(
@@ -39,7 +39,7 @@ using ITensors: siteinds, dag
   @test xy_scalar ≈ xy_scalar_logbp
 
   #test contraction of three layers for expectation values
-  A = TTN(ITensorNetworks.heisenberg(s), s)
+  A = ITensorNetwork(TTN(ITensorNetworks.heisenberg(s), s))
   xAy_scalar = inner(x', A, y; alg="exact", flatten=true, combine_linkinds=true)
   xAy_scalar_bp = inner(x', A, y; alg="bp")
   xAy_scalar_logbp = exp(loginner(x', A, y; alg="bp"))

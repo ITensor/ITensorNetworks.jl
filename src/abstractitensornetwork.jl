@@ -635,61 +635,62 @@ function split_index(
   return tn
 end
 
-function flatten_networks(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork;
-  map_bra_linkinds=sim,
-  flatten=true,
-  combine_linkinds=true,
-  kwargs...,
+function stack_flatten_combine(
+  tns::Vector{<:AbstractITensorNetwork};
+  map_bra_linkinds=prime,
+  flatten=false,
+  combine_linkinds=false,
 )
-  tn1 = map_bra_linkinds(tn1; sites=[])
-  flattened_net = ⊗(tn1, tn2; kwargs...)
-  if flatten
-    @assert issetequal(vertices(tn1), vertices(tn2))
-    for v in vertices(tn1)
-      flattened_net = contract(flattened_net, (v, 2) => (v, 1); merged_vertex=v)
+  tns = copy(tns)
+  stacked_tn = map_bra_linkinds(popfirst!(tns); sites=[])
+  current_suffix = 1
+  for tn in tns
+    stacked_tn_vertices = vertices(stacked_tn)
+    stacked_tn = disjoint_union(current_suffix => stacked_tn, current_suffix + 1 => tn)
+
+    if flatten
+      @assert issetequal(vertices(tn), stacked_tn_vertices)
+      for v in vertices(tn)
+        stacked_tn = contract(
+          stacked_tn, (v, current_suffix + 1) => (v, current_suffix); merged_vertex=v
+        )
+      end
+    else
+      if current_suffix != 1
+        #Strip back
+        stacked_tn_vertices = [(v, current_suffix) for v in stacked_tn_vertices]
+        stacked_tn = rename_vertices(
+          v -> v ∈ stacked_tn_vertices ? first(v) : v, stacked_tn
+        )
+      end
+      current_suffix += 1
+    end
+    if combine_linkinds
+      stacked_tn = ITensorNetworks.combine_linkinds(stacked_tn)
     end
   end
-  if combine_linkinds
-    flattened_net = ITensorNetworks.combine_linkinds(flattened_net)
-  end
-  return flattened_net
+
+  return stacked_tn
+end
+
+function stack_flatten_combine(tns::AbstractITensorNetwork...; kwargs...)
+  return stack_flatten_combine([tns...]; kwargs...)
 end
 
 function flatten_networks(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork,
-  tn3::AbstractITensorNetwork,
-  tn_tail::AbstractITensorNetwork...;
-  kwargs...,
+  tns::AbstractITensorNetwork...; combine_linkinds=true, map_bra_linkinds=prime
 )
-  return flatten_networks(flatten_networks(tn1, tn2; kwargs...), tn3, tn_tail...; kwargs...)
+  return stack_flatten_combine(tns...; flatten=true, combine_linkinds, map_bra_linkinds)
+end
+
+function inner_network(x::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...)
+  return stack_flatten_combine(dag(x), y; kwargs...)
 end
 
 function inner_network(
-  x::AbstractITensorNetwork,
-  y::AbstractITensorNetwork;
-  flatten=false,
-  combine_linkinds=false,
-  map_bra_linkinds=prime,
-  kwargs...,
+  x::AbstractITensorNetwork, A::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...
 )
-  return flatten_networks(dag(x), y; flatten, combine_linkinds, map_bra_linkinds, kwargs...)
-end
-
-function inner_network(
-  x::AbstractITensorNetwork,
-  A::AbstractITensorNetwork,
-  y::AbstractITensorNetwork;
-  flatten=false,
-  combine_linkinds=false,
-  map_bra_linkinds=prime,
-  kwargs...,
-)
-  return flatten_networks(
-    dag(x), A, y; flatten, combine_linkinds, map_bra_linkinds, kwargs...
-  )
+  return stack_flatten_combine(dag(x), A, y; kwargs...)
 end
 
 inner_network(x::AbstractITensorNetwork; kwargs...) = inner_network(x, x; kwargs...)
