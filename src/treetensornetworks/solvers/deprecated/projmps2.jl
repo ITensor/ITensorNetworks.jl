@@ -1,5 +1,4 @@
-import ITensors:
-  AbstractProjMPO, makeL!, makeR!, set_nsite!, contract, OneITensor, site_range
+import ITensors: AbstractProjMPO, makeL!, makeR!, contract, OneITensor, site_range
 import Base: copy
 
 """
@@ -28,11 +27,6 @@ Base.length(P::ProjMPS2) = length(P.M)
 
 function copy(P::ProjMPS2)
   return ProjMPS2(P.lpos, P.rpos, P.nsite, copy(P.M), copy(P.LR))
-end
-
-function set_nsite!(P::ProjMPS2, nsite)
-  P.nsite = nsite
-  return P
 end
 
 function makeL!(P::ProjMPS2, psi::MPS, k::Int)

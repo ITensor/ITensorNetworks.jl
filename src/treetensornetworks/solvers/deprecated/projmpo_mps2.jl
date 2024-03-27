@@ -1,4 +1,4 @@
-import ITensors: AbstractProjMPO, makeL!, makeR!, set_nsite!, contract, nsite
+import ITensors: AbstractProjMPO, makeL!, makeR!, contract, nsite
 import Base: copy
 
 mutable struct ProjMPO_MPS2 <: AbstractProjMPO
@@ -17,14 +17,6 @@ end
 copy(P::ProjMPO_MPS2) = ProjMPO_MPS2(copy(P.PH), copy(P.Ms))
 
 nsite(P::ProjMPO_MPS2) = nsite(P.PH)
-
-function set_nsite!(P::ProjMPO_MPS2, nsite)
-  set_nsite!(P.PH, nsite)
-  for m in P.Ms
-    set_nsite!(m, nsite)
-  end
-  return P
-end
 
 function makeL!(P::ProjMPO_MPS2, psi::MPS, k::Int)
   makeL!(P.PH, psi, k)

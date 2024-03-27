@@ -45,9 +45,7 @@ using ITensors:
   OneITensor,
   commontags,
   dim,
-  orthocenter,
-  ProjMPS,
-  set_nsite!
+  orthocenter
 using KrylovKit: exponentiate, eigsolve, linsolve
 using NamedGraphs:
   AbstractNamedGraph,

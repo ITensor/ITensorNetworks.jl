@@ -1,4 +1,4 @@
-import ITensors: AbstractProjMPO, makeL!, makeR!, set_nsite!
+import ITensors: AbstractProjMPO, makeL!, makeR!
 import Base: copy
 
 """
@@ -34,11 +34,6 @@ end
 
 function copy(P::ProjMPOApply)
   return ProjMPOApply(P.lpos, P.rpos, P.nsite, copy(P.psi0), copy(P.H), copy(P.LR))
-end
-
-function set_nsite!(P::ProjMPOApply, nsite)
-  P.nsite = nsite
-  return P
 end
 
 function makeL!(P::ProjMPOApply, psi::MPS, k::Int)
