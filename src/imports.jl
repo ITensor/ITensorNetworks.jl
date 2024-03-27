@@ -83,7 +83,6 @@ import ITensors:
   # permute
   permute,
   #commoninds
-  check_hascommoninds,
   hascommoninds,
   # linkdims
   linkdim,

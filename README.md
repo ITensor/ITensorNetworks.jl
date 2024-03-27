@@ -10,9 +10,13 @@
 > In short, use this package with caution, and don't expect the interface to be stable
 > or for us to clearly announce parts of the code we are changing.
 
+
+
 # ITensorNetworks
 
 A package to provide general network data structures and tools to use with ITensors.jl.
+
+
 
 ## Installation
 
@@ -99,13 +103,13 @@ and 4 edge(s):
 
 with vertex data:
 4-element Dictionary{Tuple{Int64, Int64}, Any}
- (1, 1) │ ((dim=2|id=74|"1×1,2×1"), (dim=2|id=723|"1×1,1×2"))
- (2, 1) │ ((dim=2|id=74|"1×1,2×1"), (dim=2|id=823|"2×1,2×2"))
- (1, 2) │ ((dim=2|id=723|"1×1,1×2"), (dim=2|id=712|"1×2,2×2"))
- (2, 2) │ ((dim=2|id=823|"2×1,2×2"), (dim=2|id=712|"1×2,2×2"))
+ (1, 1) │ ((dim=2|id=712|"1×1,2×1"), (dim=2|id=598|"1×1,1×2"))
+ (2, 1) │ ((dim=2|id=712|"1×1,2×1"), (dim=2|id=457|"2×1,2×2"))
+ (1, 2) │ ((dim=2|id=598|"1×1,1×2"), (dim=2|id=683|"1×2,2×2"))
+ (2, 2) │ ((dim=2|id=457|"2×1,2×2"), (dim=2|id=683|"1×2,2×2"))
 
 julia> tn[1, 1]
-ITensor ord=2 (dim=2|id=74|"1×1,2×1") (dim=2|id=723|"1×1,1×2")
+ITensor ord=2 (dim=2|id=712|"1×1,2×1") (dim=2|id=598|"1×1,1×2")
 NDTensors.EmptyStorage{NDTensors.EmptyNumber, NDTensors.Dense{NDTensors.EmptyNumber, Vector{NDTensors.EmptyNumber}}}
 
 julia> neighbors(tn, (1, 1))
@@ -129,8 +133,8 @@ and 1 edge(s):
 
 with vertex data:
 2-element Dictionary{Tuple{Int64, Int64}, Any}
- (1, 1) │ ((dim=2|id=74|"1×1,2×1"), (dim=2|id=723|"1×1,1×2"))
- (1, 2) │ ((dim=2|id=723|"1×1,1×2"), (dim=2|id=712|"1×2,2×2"))
+ (1, 1) │ ((dim=2|id=712|"1×1,2×1"), (dim=2|id=598|"1×1,1×2"))
+ (1, 2) │ ((dim=2|id=598|"1×1,1×2"), (dim=2|id=683|"1×2,2×2"))
 
 julia> tn_2 = subgraph(v -> v[1] == 2, tn)
 ITensorNetwork{Tuple{Int64, Int64}} with 2 vertices:
@@ -143,8 +147,8 @@ and 1 edge(s):
 
 with vertex data:
 2-element Dictionary{Tuple{Int64, Int64}, Any}
- (2, 1) │ ((dim=2|id=74|"1×1,2×1"), (dim=2|id=823|"2×1,2×2"))
- (2, 2) │ ((dim=2|id=823|"2×1,2×2"), (dim=2|id=712|"1×2,2×2"))
+ (2, 1) │ ((dim=2|id=712|"1×1,2×1"), (dim=2|id=457|"2×1,2×2"))
+ (2, 2) │ ((dim=2|id=457|"2×1,2×2"), (dim=2|id=683|"1×2,2×2"))
 ```
 
 
@@ -166,9 +170,9 @@ and 2 edge(s):
 
 with vertex data:
 3-element Dictionary{Int64, Vector{Index}}
- 1 │ Index[(dim=2|id=598|"S=1/2,Site,n=1")]
- 2 │ Index[(dim=2|id=457|"S=1/2,Site,n=2")]
- 3 │ Index[(dim=2|id=683|"S=1/2,Site,n=3")]
+ 1 │ Index[(dim=2|id=830|"S=1/2,Site,n=1")]
+ 2 │ Index[(dim=2|id=369|"S=1/2,Site,n=2")]
+ 3 │ Index[(dim=2|id=558|"S=1/2,Site,n=3")]
 
 and edge data:
 0-element Dictionary{NamedEdge{Int64}, Vector{Index}}
@@ -186,9 +190,9 @@ and 2 edge(s):
 
 with vertex data:
 3-element Dictionary{Int64, Any}
- 1 │ ((dim=2|id=598|"S=1/2,Site,n=1"), (dim=2|id=123|"1,2"))
- 2 │ ((dim=2|id=457|"S=1/2,Site,n=2"), (dim=2|id=123|"1,2"), (dim=2|id=656|"2,3…
- 3 │ ((dim=2|id=683|"S=1/2,Site,n=3"), (dim=2|id=656|"2,3"))
+ 1 │ ((dim=2|id=830|"S=1/2,Site,n=1"), (dim=2|id=186|"1,2"))
+ 2 │ ((dim=2|id=369|"S=1/2,Site,n=2"), (dim=2|id=186|"1,2"), (dim=2|id=430|"2,3…
+ 3 │ ((dim=2|id=558|"S=1/2,Site,n=3"), (dim=2|id=430|"2,3"))
 
 julia> tn2 = ITensorNetwork(s; link_space=2)
 ITensorNetwork{Int64} with 3 vertices:
@@ -203,9 +207,9 @@ and 2 edge(s):
 
 with vertex data:
 3-element Dictionary{Int64, Any}
- 1 │ ((dim=2|id=598|"S=1/2,Site,n=1"), (dim=2|id=382|"1,2"))
- 2 │ ((dim=2|id=457|"S=1/2,Site,n=2"), (dim=2|id=382|"1,2"), (dim=2|id=190|"2,3…
- 3 │ ((dim=2|id=683|"S=1/2,Site,n=3"), (dim=2|id=190|"2,3"))
+ 1 │ ((dim=2|id=830|"S=1/2,Site,n=1"), (dim=2|id=994|"1,2"))
+ 2 │ ((dim=2|id=369|"S=1/2,Site,n=2"), (dim=2|id=994|"1,2"), (dim=2|id=978|"2,3…
+ 3 │ ((dim=2|id=558|"S=1/2,Site,n=3"), (dim=2|id=978|"2,3"))
 
 julia> @visualize tn1;
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 

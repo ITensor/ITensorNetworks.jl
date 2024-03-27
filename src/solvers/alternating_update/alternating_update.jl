@@ -94,8 +94,6 @@ function alternating_update(
 end
 
 function alternating_update(operator::AbstractTTN, init_state::AbstractTTN; kwargs...)
-  check_hascommoninds(siteinds, operator, init_state)
-  check_hascommoninds(siteinds, operator, init_state')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   operator = ITensors.permute(operator, (linkind, siteinds, linkind))
@@ -106,8 +104,6 @@ end
 function alternating_update(
   operator::AbstractTTN, init_state::AbstractTTN, sweep_plans; kwargs...
 )
-  check_hascommoninds(siteinds, operator, init_state)
-  check_hascommoninds(siteinds, operator, init_state')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   operator = ITensors.permute(operator, (linkind, siteinds, linkind))
@@ -138,10 +134,6 @@ Returns:
 function alternating_update(
   operators::Vector{<:AbstractTTN}, init_state::AbstractTTN; kwargs...
 )
-  for operator in operators
-    check_hascommoninds(siteinds, operator, init_state)
-    check_hascommoninds(siteinds, operator, init_state')
-  end
   operators .= ITensors.permute.(operators, Ref((linkind, siteinds, linkind)))
   projected_operators = ProjTTNSum(operators)
   return alternating_update(projected_operators, init_state; kwargs...)
@@ -150,10 +142,6 @@ end
 function alternating_update(
   operators::Vector{<:AbstractTTN}, init_state::AbstractTTN, sweep_plans; kwargs...
 )
-  for operator in operators
-    check_hascommoninds(siteinds, operator, init_state)
-    check_hascommoninds(siteinds, operator, init_state')
-  end
   operators .= ITensors.permute.(operators, Ref((linkind, siteinds, linkind)))
   projected_operators = ProjTTNSum(operators)
   return alternating_update(projected_operators, init_state, sweep_plans; kwargs...)

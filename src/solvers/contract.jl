@@ -27,8 +27,6 @@ function sum_contract(
     return typeof(tn2)([res])
   end
 
-  # check_hascommoninds(siteinds, tn1, tn2)
-
   # In case `tn1` and `tn2` have the same internal indices
   operator = ProjOuterProdTTN{vertextype(first(tn1s))}[]
   for (tn1, tn2) in zip(tn1s, tn2s)
