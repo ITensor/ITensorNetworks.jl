@@ -1,4 +1,8 @@
-using NamedGraphs: NamedGraphs, vertextype
+using DataGraphs: underlying_graph
+using Graphs: neighbors
+using ITensors: ITensor, contract, order
+using ITensors.ITensorMPS: ITensorMPS, nsite
+using NamedGraphs: NamedGraphs, NamedEdge, incident_edges, vertextype
 
 abstract type AbstractProjTTN{V} end
 
@@ -24,14 +28,14 @@ Graphs.edgetype(P::AbstractProjTTN) = edgetype(underlying_graph(P))
 
 on_edge(P::AbstractProjTTN) = isa(pos(P), edgetype(P))
 
-nsite(P::AbstractProjTTN) = on_edge(P) ? 0 : length(pos(P))
+ITensorMPS.nsite(P::AbstractProjTTN) = on_edge(P) ? 0 : length(pos(P))
 
 function sites(P::AbstractProjTTN{V}) where {V}
   on_edge(P) && return V[]
   return pos(P)
 end
 
-function incident_edges(P::AbstractProjTTN{V})::Vector{NamedEdge{V}} where {V}
+function NamedGraphs.incident_edges(P::AbstractProjTTN{V})::Vector{NamedEdge{V}} where {V}
   on_edge(P) && return [pos(P), reverse(pos(P))]
   edges = [
     [edgetype(P)(n => v) for n in setdiff(neighbors(underlying_graph(P), v), sites(P))] for

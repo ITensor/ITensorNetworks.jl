@@ -1,7 +1,7 @@
 using DataGraphs: DataGraphs, AbstractDataGraph, edge_data, edge_data_type, vertex_data
 using Graphs: Graphs
 using ITensors: ITensors, unioninds, uniqueinds
-using NamedGraphs: NamedGraphs, rename_vertices
+using NamedGraphs: NamedGraphs, incident_edges, rename_vertices
 
 abstract type AbstractIndsNetwork{V,I} <: AbstractDataGraph{V,Vector{I},Vector{I}} end
 

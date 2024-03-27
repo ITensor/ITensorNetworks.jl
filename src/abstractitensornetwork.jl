@@ -11,6 +11,7 @@ using LinearAlgebra: LinearAlgebra
 using NamedGraphs:
   NamedGraphs,
   NamedGraph,
+  incident_edges,
   not_implemented,
   rename_vertices,
   vertex_to_parent_vertex,

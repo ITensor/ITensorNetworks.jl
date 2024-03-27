@@ -1,3 +1,5 @@
+using NamedGraphs: boundary_partitionedges
+
 default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)

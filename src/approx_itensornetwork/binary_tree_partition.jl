@@ -1,3 +1,4 @@
+using DataGraphs: DataGraph
 using ITensors: Index, ITensor, delta, noncommoninds, replaceinds, sim
 using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs: disjoint_union, rename_vertices, subgraph

@@ -1,4 +1,6 @@
-using ITensors.LazyApply: LazyApply
+using ITensors: ITensors, contract
+using ITensors.LazyApply: LazyApply, terms
+using NamedGraphs: NamedGraphs, incident_edges
 
 """
 ProjTTNSum
@@ -25,25 +27,25 @@ end
 
 on_edge(P::ProjTTNSum) = on_edge(terms(P)[1])
 
-nsite(P::ProjTTNSum) = nsite(terms(P)[1])
+ITensorMPS.nsite(P::ProjTTNSum) = nsite(terms(P)[1])
 
 function set_nsite(Ps::ProjTTNSum, nsite)
   return ProjTTNSum(map(p -> set_nsite(p, nsite), terms(Ps)), factors(Ps))
 end
 
-underlying_graph(P::ProjTTNSum) = underlying_graph(terms(P)[1])
+DataGraphs.underlying_graph(P::ProjTTNSum) = underlying_graph(terms(P)[1])
 
 Base.length(P::ProjTTNSum) = length(terms(P)[1])
 
 sites(P::ProjTTNSum) = sites(terms(P)[1])
 
-incident_edges(P::ProjTTNSum) = incident_edges(terms(P)[1])
+NamedGraphs.incident_edges(P::ProjTTNSum) = incident_edges(terms(P)[1])
 
 internal_edges(P::ProjTTNSum) = internal_edges(terms(P)[1])
 
-product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
+ITensors.product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
 
-function contract(P::ProjTTNSum, v::ITensor)
+function ITensors.contract(P::ProjTTNSum, v::ITensor)
   res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
     f * contract(p, v)
   end

@@ -1,10 +1,3 @@
-import NamedGraphs:
-  rename_vertices,
-  disjoint_union,
-  mincut_partitions,
-  incident_edges,
-  boundary_partitionedges
-
 import .DataGraphs:
   underlying_graph,
   underlying_graph_type,

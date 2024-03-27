@@ -1,3 +1,5 @@
+using NamedGraphs: incident_edges
+
 struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}
   pos::Union{Vector{<:V},NamedEdge{V}}
   internal_state::TTN{V}
