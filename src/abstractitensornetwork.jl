@@ -780,34 +780,6 @@ end
 # Common index checking
 # 
 
-function hascommoninds(
-  ::typeof(siteinds), A::AbstractITensorNetwork{V}, B::AbstractITensorNetwork{V}
-) where {V}
-  for v in vertices(A)
-    !hascommoninds(siteinds(A, v), siteinds(B, v)) && return false
-  end
-  return true
-end
-
-function check_hascommoninds(
-  ::typeof(siteinds), A::AbstractITensorNetwork{V}, B::AbstractITensorNetwork{V}
-) where {V}
-  N = nv(A)
-  if nv(B) ≠ N
-    throw(
-      DimensionMismatch(
-        "$(typeof(A)) and $(typeof(B)) have mismatched number of vertices $N and $(nv(B))."
-      ),
-    )
-  end
-  for v in vertices(A)
-    !hascommoninds(siteinds(A, v), siteinds(B, v)) && error(
-      "$(typeof(A)) A and $(typeof(B)) B must share site indices. On vertex $v, A has site indices $(siteinds(A, v)) while B has site indices $(siteinds(B, v)).",
-    )
-  end
-  return nothing
-end
-
 function hassameinds(
   ::typeof(siteinds), A::AbstractITensorNetwork{V}, B::AbstractITensorNetwork{V}
 ) where {V}
