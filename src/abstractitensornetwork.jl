@@ -1,10 +1,12 @@
-using DataGraphs: DataGraphs, edge_data, underlying_graph, underlying_graph_type, vertex_data
+using DataGraphs:
+  DataGraphs, edge_data, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, dst, edgetype, neighbors, rem_edge!, src, vertices
-using ITensors: ITensors, commoninds, hascommoninds, unioninds, uniqueinds
+using ITensors: ITensors, commoninds, contract, hascommoninds, unioninds, uniqueinds
 using ITensors.ITensorMPS: ITensorMPS
 using LinearAlgebra: LinearAlgebra
-using NamedGraphs: NamedGraphs, NamedGraph, rename_vertices, vertex_to_parent_vertex, vertextype
+using NamedGraphs:
+  NamedGraphs, NamedGraph, rename_vertices, vertex_to_parent_vertex, vertextype
 using ITensors.NDTensors: NDTensors
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
@@ -50,7 +52,9 @@ end
 function DataGraphs.vertex_data(graph::AbstractITensorNetwork, args...)
   return vertex_data(data_graph(graph), args...)
 end
-DataGraphs.edge_data(graph::AbstractITensorNetwork, args...) = edge_data(data_graph(graph), args...)
+function DataGraphs.edge_data(graph::AbstractITensorNetwork, args...)
+  return edge_data(data_graph(graph), args...)
+end
 
 DataGraphs.underlying_graph(tn::AbstractITensorNetwork) = underlying_graph(data_graph(tn))
 function NamedGraphs.vertex_to_parent_vertex(tn::AbstractITensorNetwork, vertex)
@@ -378,7 +382,7 @@ end
 # TODO: how to define this lazily?
 #norm(tn::AbstractITensorNetwork) = sqrt(inner(tn, tn))
 
-function isapprox(
+function Base.isapprox(
   x::AbstractITensorNetwork,
   y::AbstractITensorNetwork;
   atol::Real=0,
@@ -396,7 +400,7 @@ function isapprox(
   return d <= max(atol, rtol * max(norm(x), norm(y)))
 end
 
-function contract(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+function ITensors.contract(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
   return contract(tn, edgetype(tn)(edge); kwargs...)
 end
 
@@ -740,7 +744,7 @@ norm_sqr_network(ψ::AbstractITensorNetwork; kwargs...) = inner_network(ψ, ψ; 
 # Printing
 #
 
-function show(io::IO, mime::MIME"text/plain", graph::AbstractITensorNetwork)
+function Base.show(io::IO, mime::MIME"text/plain", graph::AbstractITensorNetwork)
   println(io, "$(typeof(graph)) with $(nv(graph)) vertices:")
   show(io, mime, vertices(graph))
   println(io, "\n")
@@ -905,27 +909,3 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
 end
 
 Base.:+(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)
-
-## # TODO: should this make sure that internal indices
-## # don't clash?
-## function hvncat(
-##   dim::Int, tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; new_dim_names=(1, 2)
-## )
-##   dg = hvncat(dim, data_graph(tn1), data_graph(tn2); new_dim_names)
-## 
-##   # Add in missing edges that may be shared
-##   # across `tn1` and `tn2`.
-##   vertices1 = vertices(dg)[1:nv(tn1)]
-##   vertices2 = vertices(dg)[(nv(tn1) + 1):end]
-##   for v1 in vertices1, v2 in vertices2
-##     if hascommoninds(dg[v1], dg[v2])
-##       add_edge!(dg, v1 => v2)
-##     end
-##   end
-## 
-##   # TODO: Allow customization of the output type.
-##   ## return promote_type(typeof(tn1), typeof(tn2))(dg)
-##   ## return contract_output(typeof(tn1), typeof(tn2))(dg)
-## 
-##   return ITensorNetwork(dg)
-## end

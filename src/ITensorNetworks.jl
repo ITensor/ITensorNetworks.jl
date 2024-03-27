@@ -52,17 +52,11 @@ using NamedGraphs:
   parent_vertices_to_vertices,
   not_implemented
 
+# TODO: Delete this.
 include("imports.jl")
 
-# TODO: Move to `DataGraphs.jl`
-edge_data_type(::AbstractNamedGraph) = Any
-isassigned(::AbstractNamedGraph, ::Any) = false
-function iterate(::AbstractDataGraph)
-  return error(
-    "Iterating data graphs is not yet defined. We may define it in the future as iterating through the vertex and edge data.",
-  )
-end
-
+include("Graphs/abstractgraph.jl")
+include("Graphs/abstractdatagraph.jl")
 include("observers.jl")
 include("visualize.jl")
 include("graphs.jl")
@@ -101,8 +95,6 @@ include("gauging.jl")
 include("utils.jl")
 include("tensornetworkoperators.jl")
 include("ITensorsExt/itensorutils.jl")
-include("Graphs/abstractgraph.jl")
-include("Graphs/abstractdatagraph.jl")
 include("solvers/local_solvers/eigsolve.jl")
 include("solvers/local_solvers/exponentiate.jl")
 include("solvers/local_solvers/dmrg_x.jl")

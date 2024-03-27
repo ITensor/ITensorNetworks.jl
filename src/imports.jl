@@ -1,14 +1,4 @@
-import Base:
-  eltype,
-  getindex,
-  hvncat,
-  setindex!,
-  show,
-  isapprox,
-  isassigned,
-  iterate,
-  union,
-  +
+import Base: union, +
 
 import NamedGraphs:
   vertextype,
