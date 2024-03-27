@@ -1,7 +1,5 @@
 module ITensorNetworks
 
-# using Combinatorics
-using Compat
 using DataGraphs
 using DataStructures
 using Dictionaries

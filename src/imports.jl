@@ -1,5 +1,3 @@
-import Base: union, +
-
 import NamedGraphs:
   vertextype,
   convert_vertextype,
@@ -81,13 +79,3 @@ import ITensors:
   scalartype,
   #adding
   add
-
-import ITensors.LazyApply:
-  # extracting terms from a sum
-  terms
-#Algorithm
-Algorithm
-
-using ITensors.ContractionSequenceOptimization: deepmap
-
-import ITensors.ITensorVisualizationCore: visualize

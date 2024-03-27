@@ -1,3 +1,5 @@
+using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
+
 function sqrt_and_inv_sqrt(
   A::ITensor; ishermitian=false, cutoff=nothing, regularization=nothing
 )
@@ -389,9 +391,7 @@ function fidelity(
     ],
     envs,
   )
-  term1 = ITensors.contract(
-    term1_tns; sequence=ITensors.optimal_contraction_sequence(term1_tns)
-  )
+  term1 = ITensors.contract(term1_tns; sequence=optimal_contraction_sequence(term1_tns))
 
   term2_tns = vcat(
     [
@@ -402,13 +402,9 @@ function fidelity(
     ],
     envs,
   )
-  term2 = ITensors.contract(
-    term2_tns; sequence=ITensors.optimal_contraction_sequence(term2_tns)
-  )
+  term2 = ITensors.contract(term2_tns; sequence=optimal_contraction_sequence(term2_tns))
   term3_tns = vcat([p_prev, q_prev, prime(dag(p_cur)), prime(dag(q_cur)), gate], envs)
-  term3 = ITensors.contract(
-    term3_tns; sequence=ITensors.optimal_contraction_sequence(term3_tns)
-  )
+  term3 = ITensors.contract(term3_tns; sequence=optimal_contraction_sequence(term3_tns))
 
   f = term3[] / sqrt(term1[] * term2[])
   return f * conj(f)
@@ -435,16 +431,14 @@ function optimise_p_q(
   qs_ind = setdiff(inds(q_cur), collect(Iterators.flatten(inds.(vcat(envs, p_cur)))))
   ps_ind = setdiff(inds(p_cur), collect(Iterators.flatten(inds.(vcat(envs, q_cur)))))
 
-  opt_b_seq = ITensors.optimal_contraction_sequence(
-    vcat(ITensor[p, q, o, dag(prime(q_cur))], envs)
-  )
-  opt_b_tilde_seq = ITensors.optimal_contraction_sequence(
+  opt_b_seq = optimal_contraction_sequence(vcat(ITensor[p, q, o, dag(prime(q_cur))], envs))
+  opt_b_tilde_seq = optimal_contraction_sequence(
     vcat(ITensor[p, q, o, dag(prime(p_cur))], envs)
   )
-  opt_M_seq = ITensors.optimal_contraction_sequence(
+  opt_M_seq = optimal_contraction_sequence(
     vcat(ITensor[q_cur, replaceinds(prime(dag(q_cur)), prime(qs_ind), qs_ind), p_cur], envs)
   )
-  opt_M_tilde_seq = ITensors.optimal_contraction_sequence(
+  opt_M_tilde_seq = optimal_contraction_sequence(
     vcat(ITensor[p_cur, replaceinds(prime(dag(p_cur)), prime(ps_ind), ps_ind), q_cur], envs)
   )
 

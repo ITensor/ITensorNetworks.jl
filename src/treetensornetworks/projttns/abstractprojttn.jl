@@ -1,3 +1,5 @@
+using NamedGraphs: NamedGraphs, vertextype
+
 abstract type AbstractProjTTN{V} end
 
 environments(::AbstractProjTTN) = error("Not implemented")
@@ -101,8 +103,8 @@ function Base.eltype(P::AbstractProjTTN)::Type
   return ElType
 end
 
-vertextype(::Type{<:AbstractProjTTN{V}}) where {V} = V
-vertextype(p::AbstractProjTTN) = vertextype(typeof(p))
+NamedGraphs.vertextype(::Type{<:AbstractProjTTN{V}}) where {V} = V
+NamedGraphs.vertextype(p::AbstractProjTTN) = vertextype(typeof(p))
 
 function Base.size(P::AbstractProjTTN)::Tuple{Int,Int}
   d = 1

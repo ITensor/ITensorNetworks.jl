@@ -2,12 +2,19 @@ using DataGraphs:
   DataGraphs, edge_data, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, dst, edgetype, neighbors, rem_edge!, src, vertices
-using ITensors: ITensors, commoninds, contract, hascommoninds, unioninds, uniqueinds
+using ITensors:
+  ITensors, ITensor, commoninds, contract, hascommoninds, unioninds, uniqueinds
 using ITensors.ITensorMPS: ITensorMPS
+using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
+using ITensors.NDTensors: NDTensors
 using LinearAlgebra: LinearAlgebra
 using NamedGraphs:
-  NamedGraphs, NamedGraph, rename_vertices, vertex_to_parent_vertex, vertextype
-using ITensors.NDTensors: NDTensors
+  NamedGraphs,
+  NamedGraph,
+  not_implemented,
+  rename_vertices,
+  vertex_to_parent_vertex,
+  vertextype
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
 
@@ -759,9 +766,9 @@ function Base.show(io::IO, mime::MIME"text/plain", graph::AbstractITensorNetwork
   return nothing
 end
 
-show(io::IO, graph::AbstractITensorNetwork) = show(io, MIME"text/plain"(), graph)
+Base.show(io::IO, graph::AbstractITensorNetwork) = show(io, MIME"text/plain"(), graph)
 
-function visualize(
+function ITensorVisualizationCore.visualize(
   tn::AbstractITensorNetwork,
   args...;
   vertex_labels_prefix=nothing,
@@ -778,7 +785,7 @@ end
 # Link dimensions
 # 
 
-function maxlinkdim(tn::AbstractITensorNetwork)
+function ITensors.maxlinkdim(tn::AbstractITensorNetwork)
   md = 1
   for e in edges(tn)
     md = max(md, linkdim(tn, e))
