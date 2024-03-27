@@ -1,7 +1,4 @@
 import NamedGraphs:
-  vertextype,
-  convert_vertextype,
-  vertex_to_parent_vertex,
   rename_vertices,
   disjoint_union,
   mincut_partitions,

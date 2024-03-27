@@ -1,3 +1,7 @@
+using DataGraphs: DataGraph
+using ITensors: ITensor
+using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
+
 struct Private end
 
 """
@@ -44,8 +48,8 @@ function ITensorNetwork{V}(tn::AbstractITensorNetwork) where {V}
 end
 ITensorNetwork(tn::AbstractITensorNetwork) = ITensorNetwork{vertextype(tn)}(tn)
 
-convert_vertextype(::Type{V}, tn::ITensorNetwork{V}) where {V} = tn
-convert_vertextype(V::Type, tn::ITensorNetwork) = ITensorNetwork{V}(tn)
+NamedGraphs.convert_vertextype(::Type{V}, tn::ITensorNetwork{V}) where {V} = tn
+NamedGraphs.convert_vertextype(V::Type, tn::ITensorNetwork) = ITensorNetwork{V}(tn)
 
 Base.copy(tn::ITensorNetwork) = ITensorNetwork(copy(data_graph(tn)))
 

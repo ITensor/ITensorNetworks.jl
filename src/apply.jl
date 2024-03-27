@@ -1,4 +1,26 @@
+using ITensors:
+  ITensors,
+  Index,
+  ITensor,
+  apply,
+  commonind,
+  commoninds,
+  contract,
+  dag,
+  denseblocks,
+  hasqns,
+  isdiag,
+  noprime,
+  prime,
+  replaceind,
+  replaceinds,
+  unioninds,
+  uniqueinds
 using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
+using ITensors.ITensorMPS: siteinds
+using LinearAlgebra: eigen, norm, svd
+using NamedGraphs: NamedEdge
+using Observers: insert_function!
 
 function sqrt_and_inv_sqrt(
   A::ITensor; ishermitian=false, cutoff=nothing, regularization=nothing
@@ -25,7 +47,9 @@ function symmetric_factorize(
   A::ITensor, inds...; (observer!)=nothing, tags="", svd_kwargs...
 )
   if !isnothing(observer!)
-    insert_function!(observer!, "singular_values" => (; singular_values) -> singular_values)
+    Observers.insert_function!(
+      observer!, "singular_values" => (; singular_values) -> singular_values
+    )
   end
   U, S, V = svd(A, inds...; lefttags=tags, righttags=tags, svd_kwargs...)
   u = commonind(S, U)
@@ -46,7 +70,7 @@ function symmetric_factorize(
     Fu = replaceinds(Fu, v => u)
     S = replaceinds(S, v => u')
   end
-  update!(observer!; singular_values=S)
+  Observers.update!(observer!; singular_values=S)
   return Fu, Fv
 end
 
@@ -361,7 +385,7 @@ function ITensors.apply(o, ψ::VidalITensorNetwork; normalize=false, apply_kwarg
     return VidalITensorNetwork(updated_ψ, updated_bond_tensors)
 
   else
-    updated_ψ = ITensors.apply(o, updated_ψ; normalize)
+    updated_ψ = apply(o, updated_ψ; normalize)
     return VidalITensorNetwork(ψ, updated_bond_tensors)
   end
 end

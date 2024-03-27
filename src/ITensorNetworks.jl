@@ -44,11 +44,7 @@ using ITensors:
   orthocenter
 using KrylovKit: exponentiate, eigsolve, linsolve
 using NamedGraphs:
-  AbstractNamedGraph,
-  parent_graph,
-  vertex_to_parent_vertex,
-  parent_vertices_to_vertices,
-  not_implemented
+  AbstractNamedGraph, parent_graph, parent_vertices_to_vertices, not_implemented
 
 # TODO: Delete this.
 include("imports.jl")
