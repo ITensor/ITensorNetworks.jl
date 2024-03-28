@@ -1,16 +1,20 @@
-using DifferentialEquations
-using ITensors
-using ITensorNetworks: NamedGraphs.AbstractNamedEdge
+@eval module $(gensym())
+using ITensors: contract
+using ITensorNetworks: ITensorNetworks, TimeDependentSum, TTN, mpo, mps, siteinds, tdvp
+using OrdinaryDiffEq: Tsit5
 using KrylovKit: exponentiate
-using LinearAlgebra
-using Test
+using LinearAlgebra: norm
+using NamedGraphs: AbstractNamedEdge, named_comb_tree
+using Test: @test, @test_broken, @testset
 
-const ttn_solvers_examples_dir = joinpath(
-  pkgdir(ITensorNetworks), "examples", "treetensornetworks", "solvers"
+include(
+  joinpath(
+    @__DIR__, "ITensorNetworksTestSolversUtils", "ITensorNetworksTestSolversUtils.jl"
+  ),
 )
 
-include(joinpath(ttn_solvers_examples_dir, "03_models.jl"))
-include(joinpath(ttn_solvers_examples_dir, "03_solvers.jl"))
+using .ITensorNetworksTestSolversUtils:
+  ITensorNetworksTestSolversUtils, krylov_solver, ode_solver
 
 # Functions need to be defined in global scope (outside
 # of the @testset macro)
@@ -40,7 +44,7 @@ function ode_updater(
 )
   region = first(sweep_plan[which_region_update])
   (; time_step, t) = internal_kwargs
-  t = isa(region, ITensorNetworks.NamedGraphs.AbstractNamedEdge) ? t : t + time_step
+  t = isa(region, AbstractNamedEdge) ? t : t + time_step
 
   H⃗₀ = projected_operator![]
   result, info = ode_solver(
@@ -64,7 +68,9 @@ end
 krylov_kwargs = (; tol=1e-8, krylovdim=15, eager=true)
 krylov_updater_kwargs = (; f=[f⃗], krylov_kwargs)
 
-function krylov_solver(H⃗₀, ψ₀; time_step, ishermitian=false, issymmetric=false, kwargs...)
+function ITensorNetworksTestSolversUtils.krylov_solver(
+  H⃗₀, ψ₀; time_step, ishermitian=false, issymmetric=false, kwargs...
+)
   psi_t, info = krylov_solver(
     -im * TimeDependentSum(f⃗, H⃗₀),
     time_step,
@@ -93,7 +99,7 @@ function krylov_updater(
   (; time_step, t) = internal_kwargs
   H⃗₀ = projected_operator![]
   region = first(sweep_plan[which_region_update])
-  t = isa(region, ITensorNetworks.NamedGraphs.AbstractNamedEdge) ? t : t + time_step
+  t = isa(region, AbstractNamedEdge) ? t : t + time_step
 
   result, info = krylov_solver(
     -im * TimeDependentSum(f, H⃗₀),
@@ -225,5 +231,4 @@ end
   @test ode_err < 1e-2
   @test krylov_err < 1e-2
 end
-
-nothing
+end
