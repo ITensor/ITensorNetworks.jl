@@ -109,7 +109,7 @@ function contract_ket(P::ProjOuterProdTTN, v::ITensor)
 end
 
 # ToDo: verify conjugation etc. with complex AbstractTTN
-function contract(P::ProjOuterProdTTN, x::ITensor)
+function NDTensors.contract(P::ProjOuterProdTTN, x::ITensor)
   ket = contract_ket(P, ITensor(one(Bool)))
   return (dag(ket) * x) * ket
 end

@@ -254,28 +254,28 @@ function neighbor_itensors(tn::AbstractITensorNetwork, vertex)
   return [tn[vn] for vn in neighbors(tn, vertex)]
 end
 
-function uniqueinds(tn::AbstractITensorNetwork, vertex)
+function ITensors.uniqueinds(tn::AbstractITensorNetwork, vertex)
   return uniqueinds(tn[vertex], neighbor_itensors(tn, vertex)...)
 end
 
-function uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
+function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
   return uniqueinds(tn[src(edge)], tn[dst(edge)])
 end
 
-function uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
+function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
   return uniqueinds(tn, edgetype(tn)(edge))
 end
 
-function siteinds(tn::AbstractITensorNetwork, vertex)
+function ITensors.siteinds(tn::AbstractITensorNetwork, vertex)
   return uniqueinds(tn, vertex)
 end
 
-function commoninds(tn::AbstractITensorNetwork, edge)
+function ITensors.commoninds(tn::AbstractITensorNetwork, edge)
   e = edgetype(tn)(edge)
   return commoninds(tn[src(e)], tn[dst(e)])
 end
 
-function linkinds(tn::AbstractITensorNetwork, edge)
+function ITensorMPS.linkinds(tn::AbstractITensorNetwork, edge)
   return commoninds(tn, edge)
 end
 
@@ -288,7 +288,7 @@ function externalinds(tn::AbstractITensorNetwork)
 end
 
 # Priming and tagging (changing Index identifiers)
-function replaceinds(tn::AbstractITensorNetwork, is_is′::Pair{<:IndsNetwork,<:IndsNetwork})
+function ITensors.replaceinds(tn::AbstractITensorNetwork, is_is′::Pair{<:IndsNetwork,<:IndsNetwork})
   tn = copy(tn)
   is, is′ = is_is′
   @assert underlying_graph(is) == underlying_graph(is′)
@@ -417,7 +417,7 @@ end
 # the vertex `src(edge)`.
 # TODO: write this in terms of a more generic function
 # `Graphs.merge_vertices!` (https://github.com/mtfishman/ITensorNetworks.jl/issues/12)
-function contract(tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex=dst(edge))
+function NDTensors.contract(tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex=dst(edge))
   V = promote_type(vertextype(tn), typeof(merged_vertex))
   # TODO: Check `ITensorNetwork{V}`, shouldn't need a copy here.
   tn = ITensorNetwork{V}(copy(tn))
@@ -445,16 +445,16 @@ function contract(tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex=
   return tn
 end
 
-function tags(tn::AbstractITensorNetwork, edge)
+function ITensors.tags(tn::AbstractITensorNetwork, edge)
   is = linkinds(tn, edge)
   return commontags(is)
 end
 
-function svd(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+function LinearAlgebra.svd(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
   return svd(tn, edgetype(tn)(edge))
 end
 
-function svd(
+function LinearAlgebra.svd(
   tn::AbstractITensorNetwork,
   edge::AbstractEdge;
   U_vertex=src(edge),
@@ -481,7 +481,7 @@ function svd(
   return tn
 end
 
-function qr(
+function LinearAlgebra.qr(
   tn::AbstractITensorNetwork,
   edge::AbstractEdge;
   Q_vertex=src(edge),
@@ -503,7 +503,7 @@ function qr(
   return tn
 end
 
-function factorize(
+function LinearAlgebra.factorize(
   tn::AbstractITensorNetwork,
   edge::AbstractEdge;
   X_vertex=src(edge),
@@ -540,7 +540,7 @@ function factorize(
   return tn
 end
 
-function factorize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+function LinearAlgebra.factorize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
   return factorize(tn, edgetype(tn)(edge); kwargs...)
 end
 
@@ -559,18 +559,18 @@ function _orthogonalize_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwa
   return tn
 end
 
-function orthogonalize(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+function ITensorMPS.orthogonalize(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
   return _orthogonalize_edge(tn, edge; kwargs...)
 end
 
-function orthogonalize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+function ITensorMPS.orthogonalize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
   return orthogonalize(tn, edgetype(tn)(edge); kwargs...)
 end
 
 # Orthogonalize an ITensorNetwork towards a source vertex, treating
 # the network as a tree spanned by a spanning tree.
 # TODO: Rename `tree_orthogonalize`.
-function orthogonalize(ψ::AbstractITensorNetwork, source_vertex)
+function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, source_vertex)
   spanning_tree_edges = post_order_dfs_edges(bfs_tree(ψ, source_vertex), source_vertex)
   for e in spanning_tree_edges
     ψ = orthogonalize(ψ, e)
@@ -589,11 +589,11 @@ function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs..
   return tn
 end
 
-function truncate(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+function Base.truncate(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
   return _truncate_edge(tn, edge; kwargs...)
 end
 
-function truncate(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+function Base.truncate(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
   return truncate(tn, edgetype(tn)(edge); kwargs...)
 end
 
@@ -794,16 +794,16 @@ function ITensors.maxlinkdim(tn::AbstractITensorNetwork)
   return md
 end
 
-function linkdim(tn::AbstractITensorNetwork, edge::Pair)
+function ITensorMPS.linkdim(tn::AbstractITensorNetwork, edge::Pair)
   return linkdim(tn, edgetype(tn)(edge))
 end
 
-function linkdim(tn::AbstractITensorNetwork{V}, edge::AbstractEdge{V}) where {V}
+function ITensorMPS.linkdim(tn::AbstractITensorNetwork{V}, edge::AbstractEdge{V}) where {V}
   ls = linkinds(tn, edge)
   return prod([isnothing(l) ? 1 : dim(l) for l in ls])
 end
 
-function linkdims(tn::AbstractITensorNetwork{V}) where {V}
+function ITensorMPS.linkdims(tn::AbstractITensorNetwork{V}) where {V}
   ld = DataGraph{V,Any,Int}(copy(underlying_graph(tn)))
   for e in edges(ld)
     ld[e] = linkdim(tn, e)
@@ -861,7 +861,7 @@ is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
 is_multi_edge(tn::AbstractITensorNetwork) = Base.Fix1(is_multi_edge, tn)
 
 """Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex """
-function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
+function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   @assert issetequal(vertices(tn1), vertices(tn2))
 
   tn1 = combine_linkinds(tn1; edges=filter(is_multi_edge(tn1), edges(tn1)))

@@ -174,7 +174,7 @@ end
 # Utility
 # 
 
-function replacebond!(T::TTN, edge::AbstractEdge, phi::ITensor; kwargs...)
+function ITensorMPS.replacebond!(T::TTN, edge::AbstractEdge, phi::ITensor; kwargs...)
   ortho::String = get(kwargs, :ortho, "left")
   swapsites::Bool = get(kwargs, :swapsites, false)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
@@ -203,10 +203,10 @@ function replacebond!(T::TTN, edge::AbstractEdge, phi::ITensor; kwargs...)
   return spec
 end
 
-function replacebond!(T::TTN, edge::Pair, phi::ITensor; kwargs...)
+function ITensorMPS.replacebond!(T::TTN, edge::Pair, phi::ITensor; kwargs...)
   return replacebond!(T, edgetype(T)(edge), phi; kwargs...)
 end
 
-function replacebond(T0::TTN, args...; kwargs...)
+function ITensorMPS.replacebond(T0::TTN, args...; kwargs...)
   return replacebond!(copy(T0), args...; kwargs...)
 end

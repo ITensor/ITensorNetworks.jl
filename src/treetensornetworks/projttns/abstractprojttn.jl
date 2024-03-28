@@ -73,11 +73,11 @@ end
 
 projected_operator_tensors(P::AbstractProjTTN) = error("Not implemented.")
 
-function contract(P::AbstractProjTTN, v::ITensor)
+function NDTensors.contract(P::AbstractProjTTN, v::ITensor)
   return foldl(*, projected_operator_tensors(P); init=v)
 end
 
-function product(P::AbstractProjTTN, v::ITensor)
+function ITensors.product(P::AbstractProjTTN, v::ITensor)
   Pv = contract(P, v)
   if order(Pv) != order(v)
     error(

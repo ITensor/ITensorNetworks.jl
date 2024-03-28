@@ -1,21 +1,21 @@
 using NamedGraphs: vertex_to_parent_vertex
-using ITensors: ITensor, contract
+using ITensors: ITensor
 using ITensors.ContractionSequenceOptimization: deepmap
-using ITensors.NDTensors: Algorithm, @Algorithm_str
+using ITensors.NDTensors: NDTensors, Algorithm, @Algorithm_str, contract
 using LinearAlgebra: normalize!
 
-function contract(tn::AbstractITensorNetwork; alg::String="exact", kwargs...)
+function NDTensors.contract(tn::AbstractITensorNetwork; alg::String="exact", kwargs...)
   return contract(Algorithm(alg), tn; kwargs...)
 end
 
-function contract(
+function NDTensors.contract(
   alg::Algorithm"exact", tn::AbstractITensorNetwork; sequence=vertices(tn), kwargs...
 )
   sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn, v), sequence)
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
 end
 
-function contract(
+function NDTensors.contract(
   alg::Union{Algorithm"density_matrix",Algorithm"ttn_svd"},
   tn::AbstractITensorNetwork;
   output_structure::Function=path_graph_structure,

@@ -1,4 +1,4 @@
-using DataGraphs: DataGraph
+using DataGraphs: DataGraphs, DataGraph
 using ITensors: ITensor
 using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
 
@@ -21,7 +21,7 @@ end
 data_graph(tn::ITensorNetwork) = getfield(tn, :data_graph)
 data_graph_type(TN::Type{<:ITensorNetwork}) = fieldtype(TN, :data_graph)
 
-function underlying_graph_type(TN::Type{<:ITensorNetwork})
+function DataGraphs.underlying_graph_type(TN::Type{<:ITensorNetwork})
   return fieldtype(data_graph_type(TN), :underlying_graph)
 end
 

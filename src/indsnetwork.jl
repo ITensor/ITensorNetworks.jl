@@ -1,8 +1,9 @@
 using DataGraphs: DataGraphs, vertex_data
 using Graphs: Graphs
+using Graphs.SimpleGraphs: AbstractSimpleGraph
 using ITensors: Index, dag
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
+using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph, vertextype
 
 struct IndsNetwork{V,I} <: AbstractIndsNetwork{V,I}
   data_graph::DataGraph{V,Vector{I},Vector{I},NamedGraph{V},NamedEdge{V}}
@@ -24,7 +25,7 @@ Graphs.is_directed(::Type{<:IndsNetwork}) = false
 
 # When setting an edge with collections of `Index`, set the reverse direction
 # edge with the `dag`.
-function reverse_data_direction(
+function DataGraphs.reverse_data_direction(
   inds_network::IndsNetwork, is::Union{Index,Tuple{Vararg{Index}},Vector{<:Index}}
 )
   return dag(is)

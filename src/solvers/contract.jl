@@ -50,14 +50,14 @@ function sum_contract(
   return alternating_update(operator, init; nsweeps, nsites, updater, cutoff, kwargs...)
 end
 
-function contract(a::Algorithm"fit", tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
+function NDTensors.contract(a::Algorithm"fit", tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
   return sum_contract(a, [(tn1, tn2)]; kwargs...)
 end
 
 """
 Overload of `ITensors.contract`.
 """
-function contract(tn1::AbstractTTN, tn2::AbstractTTN; alg="fit", kwargs...)
+function NDTensors.contract(tn1::AbstractTTN, tn2::AbstractTTN; alg="fit", kwargs...)
   return contract(Algorithm(alg), tn1, tn2; kwargs...)
 end
 
