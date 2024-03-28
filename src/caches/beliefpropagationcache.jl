@@ -11,6 +11,7 @@ end
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end
 default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
+default_partitioned_vertices(f::AbstractFormNetwork) = group(v -> original_state_vertex(f, v), vertices(f))
 default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
 
 #TODO: Define a version of this that works for QN supporting tensors

@@ -635,62 +635,15 @@ function split_index(
   return tn
 end
 
-function stack_flatten_combine(
-  tns::Vector{<:AbstractITensorNetwork};
-  map_bra_linkinds=prime,
-  flatten=false,
-  combine_linkinds=false,
-)
-  tns = copy(tns)
-  stacked_tn = map_bra_linkinds(popfirst!(tns); sites=[])
-  current_suffix = 1
-  for tn in tns
-    stacked_tn_vertices = vertices(stacked_tn)
-    stacked_tn = disjoint_union(current_suffix => stacked_tn, current_suffix + 1 => tn)
-
-    if flatten
-      @assert issetequal(vertices(tn), stacked_tn_vertices)
-      for v in vertices(tn)
-        stacked_tn = contract(
-          stacked_tn, (v, current_suffix + 1) => (v, current_suffix); merged_vertex=v
-        )
-      end
-    else
-      if current_suffix != 1
-        #Strip back
-        stacked_tn_vertices = [(v, current_suffix) for v in stacked_tn_vertices]
-        stacked_tn = rename_vertices(
-          v -> v ∈ stacked_tn_vertices ? first(v) : v, stacked_tn
-        )
-      end
-      current_suffix += 1
-    end
-    if combine_linkinds
-      stacked_tn = ITensorNetworks.combine_linkinds(stacked_tn)
-    end
-  end
-
-  return stacked_tn
-end
-
-function stack_flatten_combine(tns::AbstractITensorNetwork...; kwargs...)
-  return stack_flatten_combine([tns...]; kwargs...)
-end
-
-function flatten_networks(
-  tns::AbstractITensorNetwork...; combine_linkinds=true, map_bra_linkinds=prime
-)
-  return stack_flatten_combine(tns...; flatten=true, combine_linkinds, map_bra_linkinds)
-end
-
+#Just make this call to form network, rip out flatten
 function inner_network(x::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...)
-  return stack_flatten_combine(dag(x), y; kwargs...)
+  return BilinearFormNetwork(x, y; kwargs...)
 end
 
 function inner_network(
   x::AbstractITensorNetwork, A::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...
 )
-  return stack_flatten_combine(dag(x), A, y; kwargs...)
+  return BilinearFormNetwork(x, A, y; kwargs...)
 end
 
 inner_network(x::AbstractITensorNetwork; kwargs...) = inner_network(x, x; kwargs...)

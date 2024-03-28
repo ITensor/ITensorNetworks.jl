@@ -55,6 +55,12 @@ function logscalar(
   return log(complex(scalar(alg, tn; kwargs...)))
 end
 
+#This should just pass to a logscalar(bp_cache::BeliefPropagationCache, ...)
+#Catch the 0 case in logscalar not in scalar, then pass to exp(logscalar(...))
+#Check if negative before complex() call
+#Break down into scalar factors? 
+#Make general to all algorithms
+
 function logscalar(
   alg::Algorithm"bp",
   tn::AbstractITensorNetwork;
