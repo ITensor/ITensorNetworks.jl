@@ -733,6 +733,15 @@ end
 # Common index checking
 # 
 
+function hascommoninds(
+  ::typeof(siteinds), A::AbstractITensorNetwork{V}, B::AbstractITensorNetwork{V}
+) where {V}
+  for v in vertices(A)
+    !hascommoninds(siteinds(A, v), siteinds(B, v)) && return false
+  end
+  return true
+end
+
 function hassameinds(
   ::typeof(siteinds), A::AbstractITensorNetwork{V}, B::AbstractITensorNetwork{V}
 ) where {V}

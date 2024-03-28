@@ -82,6 +82,8 @@ import ITensors:
   dag,
   # permute
   permute,
+  #commoninds
+  hascommoninds,
   # linkdims
   linkdim,
   linkdims,
