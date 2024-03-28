@@ -1,3 +1,8 @@
+using Graphs: nv, vertices
+using ITensors: ITensors, linkinds, sim
+using ITensors.NDTensors: Algorithm, @Algorithm_str, contract
+using NamedGraphs: vertextype
+
 function sum_contract(
   ::Algorithm"fit",
   tns::Vector{<:Tuple{<:AbstractTTN,<:AbstractTTN}};
@@ -66,7 +71,7 @@ end
 """
 Overload of `ITensors.apply`.
 """
-function apply(tn1::AbstractTTN, tn2::AbstractTTN; init, kwargs...)
+function ITensors.apply(tn1::AbstractTTN, tn2::AbstractTTN; init, kwargs...)
   if !isone(plev_diff(flatten_external_indsnetwork(tn1, tn2), external_indsnetwork(init)))
     error(
       "Initial guess `init` needs to primelevel one less than the contraction tn1 and tn2."
