@@ -24,7 +24,7 @@ end
 # Orthogonality center
 # 
 
-isortho(ψ::AbstractTTN) = isone(length(ortho_center(ψ)))
+ITensorMPS.isortho(ψ::AbstractTTN) = isone(length(ortho_center(ψ)))
 
 function set_ortho_center(ψ::AbstractTTN{V}, new_center::Vector{<:V}) where {V}
   return typeof(ψ)(itensor_network(ψ), new_center)

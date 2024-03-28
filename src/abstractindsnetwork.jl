@@ -20,7 +20,7 @@ function DataGraphs.edge_data(graph::AbstractIndsNetwork, args...)
 end
 
 # TODO: Define a generic fallback for `AbstractDataGraph`?
-edge_data_type(::Type{<:AbstractIndsNetwork{V,I}}) where {V,I} = Vector{I}
+DataGraphs.edge_data_type(::Type{<:AbstractIndsNetwork{V,I}}) where {V,I} = Vector{I}
 
 # 
 # Index access

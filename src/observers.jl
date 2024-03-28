@@ -1,4 +1,4 @@
 """
 Overload of `Observers.update!`.
 """
-update!(::Nothing; kwargs...) = nothing
+Observers.update!(::Nothing; kwargs...) = nothing

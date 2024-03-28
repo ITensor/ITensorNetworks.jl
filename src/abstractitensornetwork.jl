@@ -244,7 +244,7 @@ end
 
 # For backwards compatibility
 # TODO: Delete this
-linkinds(tn::AbstractITensorNetwork) = internal_indsnetwork(tn)
+ITensorMPS.linkinds(tn::AbstractITensorNetwork) = internal_indsnetwork(tn)
 
 #
 # Index access
