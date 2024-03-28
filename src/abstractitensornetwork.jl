@@ -3,7 +3,24 @@ using DataGraphs:
 using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, dst, edgetype, neighbors, rem_edge!, src, vertices
 using ITensors:
-  ITensors, ITensor, commoninds, contract, hascommoninds, unioninds, uniqueinds
+  ITensors,
+  ITensor,
+  addtags,
+  commoninds,
+  contract,
+  dag,
+  hascommoninds,
+  noprime,
+  prime,
+  replaceprime,
+  setprime,
+  unioninds,
+  uniqueinds,
+  removetags,
+  replacetags,
+  settags,
+  sim,
+  swaptags
 using ITensors.ITensorMPS: ITensorMPS
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
 using ITensors.NDTensors: NDTensors
@@ -334,11 +351,11 @@ const map_inds_label_functions = [
 
 for f in map_inds_label_functions
   @eval begin
-    function $f(n::Union{IndsNetwork,AbstractITensorNetwork}, args...; kwargs...)
+    function ITensors.$f(n::Union{IndsNetwork,AbstractITensorNetwork}, args...; kwargs...)
       return map_inds($f, n, args...; kwargs...)
     end
 
-    function $f(
+    function ITensors.$f(
       ffilter::typeof(linkinds),
       n::Union{IndsNetwork,AbstractITensorNetwork},
       args...;
@@ -347,7 +364,7 @@ for f in map_inds_label_functions
       return map_inds($f, n, args...; sites=[], kwargs...)
     end
 
-    function $f(
+    function ITensors.$f(
       ffilter::typeof(siteinds),
       n::Union{IndsNetwork,AbstractITensorNetwork},
       args...;

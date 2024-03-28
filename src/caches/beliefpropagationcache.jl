@@ -1,3 +1,4 @@
+using ITensors.ITensorMPS: ITensorMPS
 using NamedGraphs: boundary_partitionedges
 
 default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
@@ -59,7 +60,7 @@ for f in [
   :(NamedGraphs.partitionvertices),
   :(NamedGraphs.vertices),
   :(NamedGraphs.boundary_partitionedges),
-  :linkinds,
+  :(ITensorMPS.linkinds),
 ]
   @eval begin
     function $f(bp_cache::BeliefPropagationCache, args...; kwargs...)

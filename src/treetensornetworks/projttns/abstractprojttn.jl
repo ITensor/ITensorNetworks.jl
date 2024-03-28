@@ -1,4 +1,4 @@
-using DataGraphs: underlying_graph
+using DataGraphs: DataGraphs, underlying_graph
 using Graphs: neighbors
 using ITensors: ITensor, contract, order
 using ITensors.ITensorMPS: ITensorMPS, nsite
@@ -10,7 +10,7 @@ environments(::AbstractProjTTN) = error("Not implemented")
 operator(::AbstractProjTTN) = error("Not implemented")
 pos(::AbstractProjTTN) = error("Not implemented")
 
-underlying_graph(P::AbstractProjTTN) = error("Not implemented")
+DataGraphs.underlying_graph(P::AbstractProjTTN) = error("Not implemented")
 
 Base.copy(::AbstractProjTTN) = error("Not implemented")
 

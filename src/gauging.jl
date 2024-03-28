@@ -1,3 +1,5 @@
+using ITensors.NDTensors: scalartype
+
 function default_bond_tensors(ψ::ITensorNetwork)
   return DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))
 end

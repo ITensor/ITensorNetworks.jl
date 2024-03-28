@@ -1,3 +1,4 @@
+using DataGraphs: DataGraphs
 using NamedGraphs: incident_edges
 
 struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}
@@ -9,7 +10,7 @@ end
 
 environments(p::ProjOuterProdTTN) = p.environments
 operator(p::ProjOuterProdTTN) = p.operator
-underlying_graph(p::ProjOuterProdTTN) = underlying_graph(operator(p))
+DataGraphs.underlying_graph(p::ProjOuterProdTTN) = underlying_graph(operator(p))
 pos(p::ProjOuterProdTTN) = p.pos
 internal_state(p::ProjOuterProdTTN) = p.internal_state
 

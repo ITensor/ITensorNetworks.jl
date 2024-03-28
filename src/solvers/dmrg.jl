@@ -1,5 +1,8 @@
+using ITensors.ITensorMPS: ITensorMPS, dmrg
+using KrylovKit: KrylovKit
+
 """
-Overload of `ITensors.dmrg`.
+Overload of `ITensors.ITensorMPS.dmrg`.
 """
 
 function ITensorMPS.dmrg(
@@ -11,4 +14,4 @@ end
 """
 Overload of `KrylovKit.eigsolve`.
 """
-eigsolve(H, init::AbstractTTN; kwargs...) = dmrg(H, init; kwargs...)
+KrylovKit.eigsolve(H, init::AbstractTTN; kwargs...) = dmrg(H, init; kwargs...)
