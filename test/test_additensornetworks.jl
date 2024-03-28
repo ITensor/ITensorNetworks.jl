@@ -1,5 +1,4 @@
 using ITensorNetworks
-using ITensorNetworks: inner_network
 using Test
 using Compat
 using ITensors
@@ -14,7 +13,7 @@ using Random
 
 @testset "add_itensornetworks" begin
   Random.seed!(5623)
-  g = named_grid((2, 3))
+  g = named_grid((2, 2))
   s = siteinds("S=1/2", g)
   ψ1 = ITensorNetwork(s, v -> "↑")
   ψ2 = ITensorNetwork(s, v -> "↓")
@@ -28,11 +27,9 @@ using Random
   ψψ_GHZ = inner_network(ψ_GHZ, ψ_GHZ)
   ψOψ_GHZ = inner_network(ψ_GHZ, Oψ_GHZ)
 
-  @test ITensors.contract(ψOψ_GHZ)[] / ITensors.contract(ψψ_GHZ)[] == 0.0
+  @test scalar(ψOψ_GHZ) / scalar(ψψ_GHZ) == 0.0
 
   χ = 3
-  g = hexagonal_lattice_graph(1, 2)
-
   s1 = siteinds("S=1/2", g)
   s2 = copy(s1)
   rem_edge!(s2, NamedEdge((1, 1) => (1, 2)))
@@ -52,26 +49,11 @@ using Random
   Oψ2 = copy(ψ2)
   Oψ2[v] = apply(op("Sz", s2[v]), Oψ2[v])
 
-  ψψ_12 = inner_network(ψ12, ψ12)
-  ψOψ_12 = inner_network(ψ12, Oψ12)
-
-  ψ1ψ2 = inner_network(ψ1, ψ2)
-  ψ1Oψ2 = inner_network(ψ1, Oψ2)
-
-  ψψ_2 = inner_network(ψ2, ψ2)
-  ψOψ_2 = inner_network(ψ2, Oψ2)
-
-  ψψ_1 = inner_network(ψ1, ψ1)
-  ψOψ_1 = inner_network(ψ1, Oψ1)
-
+  alg = "exact"
   expec_method1 =
-    (
-      ITensors.contract(ψOψ_1)[] +
-      ITensors.contract(ψOψ_2)[] +
-      2 * ITensors.contract(ψ1Oψ2)[]
-    ) /
-    (ITensors.contract(ψψ_1)[] + ITensors.contract(ψψ_2)[] + 2 * ITensors.contract(ψ1ψ2)[])
-  expec_method2 = ITensors.contract(ψOψ_12)[] / ITensors.contract(ψψ_12)[]
+    (inner(ψ1, Oψ1; alg) + inner(ψ2, Oψ2; alg) + 2*inner(ψ1, Oψ2; alg)) /
+      (norm_sqr(ψ1; alg) + norm_sqr(ψ2; alg) + 2 * inner(ψ1, ψ2; alg))
+  expec_method2 = inner(ψ12, Oψ12; alg) / norm_sqr(ψ12; alg)
 
   @test expec_method1 ≈ expec_method2
 end

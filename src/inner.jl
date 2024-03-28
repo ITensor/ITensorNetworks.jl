@@ -1,26 +1,21 @@
-default_inner_partitioned_vertices(tn) = group(v -> first(v), vertices(tn))
-#Default to BP always?!
-default_algorithm(tns::Vector) = all(is_tree.(tns)) ? "bp" : "exact"
+default_algorithm(tns::Tuple) = "bp"
 
 #Default for map_linkinds should be sim.
-#Use form code and just default to identity inbetween x and y
-#Have ϕ in the same space as y and then a dual_map kwarg?
 
 function inner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
-  alg=default_algorithm([ϕ, ψ]),
+  alg=default_algorithm((ϕ, ψ)),
   kwargs...,
 )
   return inner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
 
-#Make [A, ϕ, ψ] a Tuple
 function inner(
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
-  alg=default_algorithm([ϕ, A, ψ]),
+  alg=default_algorithm((ϕ, A, ψ)),
   kwargs...,
 )
   return inner(Algorithm(alg), ϕ, A, ψ; kwargs...)
@@ -48,7 +43,6 @@ function inner(
   ψ::AbstractITensorNetwork;
   sequence=nothing,
   contraction_sequence_kwargs=(;),
-  site_index_map=prime,
   kwargs...,
 )
   tn = inner_network(ϕ, A, ψ; kwargs...)
@@ -74,7 +68,7 @@ function loginner(
   alg=default_algorithm(ϕ, ψ),
   kwargs...,
 )
-  return loginner(Algorithm(alg), A, ϕ, ψ; kwargs...)
+  return loginner(Algorithm(alg), ϕ, A, ψ; kwargs...)
 end
 
 function loginner(
@@ -97,7 +91,7 @@ function loginner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
-  partitioned_verts=default_inner_partitioned_vertices,
+  partitioned_verts=default_partitioned_vertices,
   dual_link_index_map=sim,
   kwargs...,
 )
@@ -110,7 +104,7 @@ function loginner(
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
-  partitioned_verts=default_inner_partitioned_vertices,
+  partitioned_verts=default_partitioned_vertices,
   dual_link_index_map=sim,
   kwargs...,
 )
@@ -122,8 +116,8 @@ function inner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
-  partitioned_verts=default_inner_partitioned_vertices,
-  dual_link_index_map=prime,
+  partitioned_verts=default_partitioned_vertices,
+  dual_link_index_map=sim,
   kwargs...,
 )
   tn = inner_network(ϕ, ψ; dual_link_index_map)
@@ -132,11 +126,11 @@ end
 
 function inner(
   alg::Algorithm"bp",
-  A::AbstractITensorNetwork,
   ϕ::AbstractITensorNetwork,
+  A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
-  partitioned_verts=default_inner_partitioned_vertices,
-  dual_link_index_map=prime,
+  partitioned_verts=default_partitioned_vertices,
+  dual_link_index_map=sim,
   kwargs...,
 )
   tn = inner_network(ϕ, A, ψ; dual_link_index_map)

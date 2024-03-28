@@ -38,11 +38,11 @@ using ITensors: siteinds, dag
   @test xy_scalar_bp ≈ xy_scalar_logbp
   @test xy_scalar ≈ xy_scalar_logbp
 
-#   #test contraction of three layers for expectation values
+  #test contraction of three layers for expectation values
   A = ITensorNetwork(TTN(ITensorNetworks.heisenberg(s), s))
-  xAy_scalar = inner(x', A, y; alg="exact")
-  xAy_scalar_bp = inner(x', A, y; alg="bp")
-  xAy_scalar_logbp = exp(loginner(x', A, y; alg="bp"))
+  xAy_scalar = inner(x, A, y; alg="exact")
+  xAy_scalar_bp = inner(x, A, y; alg="bp")
+  xAy_scalar_logbp = exp(loginner(x, A, y; alg="bp"))
 
   @test xAy_scalar ≈ xAy_scalar_bp
   @test xAy_scalar_bp ≈ xAy_scalar_logbp

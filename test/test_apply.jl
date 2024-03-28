@@ -1,6 +1,6 @@
 using ITensorNetworks
 using ITensorNetworks:
-  environment, update, inner, norm_sqr_network, BeliefPropagationCache, VidalITensorNetwork
+  environment, update, inner, BeliefPropagationCache, VidalITensorNetwork, norm_sqr_network_fast
 using Test
 using Compat
 using ITensors
@@ -19,8 +19,7 @@ using SplitApplyCombine
   χ = 2
   ψ = randomITensorNetwork(s; link_space=χ)
   v1, v2 = (2, 2), (1, 2)
-  ψψ = norm_sqr_network(ψ)
-
+  ψψ = disjoint_union("bra" => dag(prime(ψ; sites = [])), "ket" => ψ)
   #Simple Belief Propagation Grouping
   bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bp_cache = update(bp_cache; maxiter=20)
@@ -31,7 +30,9 @@ using SplitApplyCombine
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
   bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
   bp_cache = update(bp_cache; maxiter=20)
-  envsGBP = environment(bp_cache, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
+  envsGBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
+
+  inner_alg = "exact"
 
   ngates = 5
 
@@ -59,11 +60,11 @@ using SplitApplyCombine
       print_fidelity_loss=true,
       envisposdef=true,
     )
-    fSBP = inner(ψOSBP, ψOexact) / sqrt(inner(ψOexact, ψOexact) * inner(ψOSBP, ψOSBP))
+    fSBP = inner(ψOSBP, ψOexact; alg = inner_alg) / sqrt(inner(ψOexact, ψOexact; alg = inner_alg) * inner(ψOSBP, ψOSBP; alg = inner_alg))
     fVidal =
-      inner(ψOVidal_symm, ψOexact) /
-      sqrt(inner(ψOexact, ψOexact) * inner(ψOVidal_symm, ψOVidal_symm))
-    fGBP = inner(ψOGBP, ψOexact) / sqrt(inner(ψOexact, ψOexact) * inner(ψOGBP, ψOGBP))
+      inner(ψOVidal_symm, ψOexact; alg = inner_alg) /
+      sqrt(inner(ψOexact, ψOexact; alg = inner_alg) * inner(ψOVidal_symm, ψOVidal_symm; alg = inner_alg))
+    fGBP = inner(ψOGBP, ψOexact; alg = inner_alg) / sqrt(inner(ψOexact, ψOexact; alg = inner_alg) * inner(ψOGBP, ψOGBP; alg = inner_alg))
 
     @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
 

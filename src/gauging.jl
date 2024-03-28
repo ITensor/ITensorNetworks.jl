@@ -20,8 +20,8 @@ function copy(ψ::VidalITensorNetwork)
 end
 
 function default_norm_cache(ψ::ITensorNetwork)
-  ψψ = norm_sqr_network(ψ)
-  return BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+  ψψ = disjoint_union("bra" => dag(prime(ψ; sites = [])), "ket" => ψ)
+  return BeliefPropagationCache(ψψ, group(v -> first(v), vertices(ψψ)))
 end
 
 function ITensorNetwork(
@@ -46,7 +46,7 @@ function ITensorNetwork(
 
     for e in edges(ψ)
       vsrc, vdst = src(e), dst(e)
-      pe = partitionedge(bp_cache, (vsrc, 1) => (vdst, 1))
+      pe = partitionedge(bp_cache, (vsrc, "bra") => (vdst, "bra"))
       set!(mts, pe, copy(ITensor[dense(bond_tensor(ψ_vidal, e))]))
       set!(mts, reverse(pe), copy(ITensor[dense(bond_tensor(ψ_vidal, e))]))
     end
@@ -75,7 +75,7 @@ function vidalitensornetwork_preserve_cache(
     vsrc, vdst = src(e), dst(e)
     ψvsrc, ψvdst = ψ_vidal_site_tensors[vsrc], ψ_vidal_site_tensors[vdst]
 
-    pe = partitionedge(cache, (vsrc, 1) => (vdst, 1))
+    pe = partitionedge(cache, (vsrc, "bra") => (vdst, "bra"))
     edge_ind = commoninds(ψvsrc, ψvdst)
     edge_ind_sim = sim(edge_ind)
 
