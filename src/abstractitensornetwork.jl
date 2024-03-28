@@ -288,7 +288,9 @@ function externalinds(tn::AbstractITensorNetwork)
 end
 
 # Priming and tagging (changing Index identifiers)
-function ITensors.replaceinds(tn::AbstractITensorNetwork, is_is′::Pair{<:IndsNetwork,<:IndsNetwork})
+function ITensors.replaceinds(
+  tn::AbstractITensorNetwork, is_is′::Pair{<:IndsNetwork,<:IndsNetwork}
+)
   tn = copy(tn)
   is, is′ = is_is′
   @assert underlying_graph(is) == underlying_graph(is′)
@@ -417,7 +419,9 @@ end
 # the vertex `src(edge)`.
 # TODO: write this in terms of a more generic function
 # `Graphs.merge_vertices!` (https://github.com/mtfishman/ITensorNetworks.jl/issues/12)
-function NDTensors.contract(tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex=dst(edge))
+function NDTensors.contract(
+  tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex=dst(edge)
+)
   V = promote_type(vertextype(tn), typeof(merged_vertex))
   # TODO: Check `ITensorNetwork{V}`, shouldn't need a copy here.
   tn = ITensorNetwork{V}(copy(tn))

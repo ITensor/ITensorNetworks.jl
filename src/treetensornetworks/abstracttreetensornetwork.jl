@@ -147,7 +147,9 @@ function NDTensors.contract(
   # return ψ[root_vertex]
 end
 
-function ITensors.inner(ϕ::AbstractTTN, ψ::AbstractTTN; root_vertex=default_root_vertex(ϕ, ψ))
+function ITensors.inner(
+  ϕ::AbstractTTN, ψ::AbstractTTN; root_vertex=default_root_vertex(ϕ, ψ)
+)
   ϕᴴ = sim(dag(ϕ); sites=[])
   ψ = sim(ψ; sites=[])
   ϕψ = ϕᴴ ⊗ ψ
@@ -331,7 +333,9 @@ function ITensors.add(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
 end
 
 # TODO: Delete this
-function ITensors.permute(ψ::AbstractTTN, ::Tuple{typeof(linkind),typeof(siteinds),typeof(linkind)})
+function ITensors.permute(
+  ψ::AbstractTTN, ::Tuple{typeof(linkind),typeof(siteinds),typeof(linkind)}
+)
   ψ̃ = copy(ψ)
   for v in vertices(ψ)
     ls = [only(linkinds(ψ, n => v)) for n in neighbors(ψ, v)] # TODO: won't work for multiple indices per link...

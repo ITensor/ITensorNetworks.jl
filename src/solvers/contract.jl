@@ -50,7 +50,9 @@ function sum_contract(
   return alternating_update(operator, init; nsweeps, nsites, updater, cutoff, kwargs...)
 end
 
-function NDTensors.contract(a::Algorithm"fit", tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
+function NDTensors.contract(
+  a::Algorithm"fit", tn1::AbstractTTN, tn2::AbstractTTN; kwargs...
+)
   return sum_contract(a, [(tn1, tn2)]; kwargs...)
 end
 
