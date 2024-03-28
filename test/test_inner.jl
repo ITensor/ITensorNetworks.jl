@@ -21,9 +21,7 @@ using ITensors: siteinds, dag
   xy = inner_network(x, y)
   xy_scalar = scalar(xy)
   xy_scalar_bp = scalar(xy; alg="bp")
-  xy_scalar_logbp = exp(
-    logscalar(xy; alg="bp")
-  )
+  xy_scalar_logbp = exp(logscalar(xy; alg="bp"))
 
   @test xy_scalar ≈ xy_scalar_bp
   @test xy_scalar_bp ≈ xy_scalar_logbp

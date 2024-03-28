@@ -5,6 +5,8 @@ using Random
 using Test
 using EinExprs: Exhaustive, Greedy, HyPar
 
+using ITensorNetworks: norm_sqr_network
+
 Random.seed!(1234)
 
 ITensors.disable_warn_order()

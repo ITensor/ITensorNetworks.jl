@@ -55,50 +55,33 @@ function logscalar(
   return log(complex(scalar(alg, tn; kwargs...)))
 end
 
-#This should just pass to a logscalar(bp_cache::BeliefPropagationCache, ...)
-#Catch the 0 case in logscalar not in scalar, then pass to exp(logscalar(...))
-#Check if negative before complex() call
-#Break down into scalar factors? 
-#Make general to all algorithms
-
 function logscalar(
-  alg::Algorithm"bp",
+  alg::Algorithm,
   tn::AbstractITensorNetwork;
   (cache!)=nothing,
-  partitioned_vertices=default_partitioned_vertices(tn),
+  cache_construction_kwargs=(;),
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(cache!),
 )
   if isnothing(cache!)
-    cache! = Ref(BeliefPropagationCache(tn, partitioned_vertices))
+    cache! = Ref(cache(alg, tn; cache_construction_kwargs...))
   end
 
   if update_cache
     cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  numerator_terms, denominator_terms = vertex_norms(cache![]), edge_norms(cache![])
-
-  return sum(log.(complex.(numerator_terms))) - sum(log.(complex.((denominator_terms))))
+  numerator_terms, denominator_terms = scalar_factors(cache![])
+  terms = vcat(numerator_terms, denominator_terms)
+  if any(==(0), terms)
+    return -Inf
+  elseif all(>=(0), terms)
+    return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
+  else
+    return sum(log.(complex.(numerator_terms))) - sum(log.(complex.((denominator_terms))))
+  end
 end
 
-function scalar(
-  alg::Algorithm"bp",
-  tn::AbstractITensorNetwork;
-  (cache!)=nothing,
-  partitioned_vertices=default_partitioned_vertices(tn),
-  update_cache=isnothing(cache!),
-  cache_update_kwargs=default_cache_update_kwargs(cache!),
-)
-  if isnothing(cache!)
-    cache! = Ref(BeliefPropagationCache(tn, partitioned_vertices))
-  end
-
-  if update_cache
-    cache![] = update(cache![]; cache_update_kwargs...)
-  end
-
-  numerator_terms, denominator_terms = vertex_norms(cache![]), edge_norms(cache![])
-
-  return prod(numerator_terms) / prod(denominator_terms)
+function scalar(alg::Algorithm"bp", tn::AbstractITensorNetwork; kwargs...)
+  return exp(logscalar(alg, tn; kwargs...))
 end

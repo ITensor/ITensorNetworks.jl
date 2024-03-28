@@ -8,8 +8,6 @@ s = siteinds("S=1/2", g)
 
 ψ = ITensorNetwork(s; link_space=10)
 
-# ρ = flatten_networks(dag(ψ), ψ')
-
 # Or:
 
 ss = ∪(dag(s), s'; merge_data=union)

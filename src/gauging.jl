@@ -20,7 +20,7 @@ function copy(ψ::VidalITensorNetwork)
 end
 
 function default_norm_cache(ψ::ITensorNetwork)
-  ψψ = disjoint_union("bra" => dag(prime(ψ; sites = [])), "ket" => ψ)
+  ψψ = norm_sqr_network(ψ)
   return BeliefPropagationCache(ψψ, group(v -> first(v), vertices(ψψ)))
 end
 

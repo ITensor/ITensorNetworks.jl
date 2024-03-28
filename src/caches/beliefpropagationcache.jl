@@ -11,7 +11,9 @@ end
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end
 default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
-default_partitioned_vertices(f::AbstractFormNetwork) = group(v -> original_state_vertex(f, v), vertices(f))
+function default_partitioned_vertices(f::AbstractFormNetwork)
+  return group(v -> original_state_vertex(f, v), vertices(f))
+end
 default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
 
 #TODO: Define a version of this that works for QN supporting tensors
@@ -40,8 +42,14 @@ function BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
   return BeliefPropagationCache(ptn; kwargs...)
 end
 
-function BeliefPropagationCache(tn; kwargs...)
-  return BeliefPropagationCache(tn, default_partitioning(tn); kwargs...)
+function BeliefPropagationCache(
+  tn; partitioned_vertices=default_partitioned_vertices(tn), kwargs...
+)
+  return BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
+end
+
+function cache(alg::Algorithm"bp", tn; kwargs...)
+  return BeliefPropagationCache(tn; kwargs...)
 end
 
 function partitioned_itensornetwork(bp_cache::BeliefPropagationCache)
@@ -269,4 +277,8 @@ end
 
 function edge_norms(bp_cache::BeliefPropagationCache)
   return edge_norms(bp_cache, partitionedges(partitioned_itensornetwork(bp_cache)))
+end
+
+function scalar_factors(bp_cache::BeliefPropagationCache)
+  return vertex_norms(bp_cache), edge_norms(bp_cache)
 end

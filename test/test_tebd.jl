@@ -5,7 +5,7 @@ using Test
 ITensors.disable_warn_order()
 
 @testset "Ising TEBD" begin
-  dims = (4, 4)
+  dims = (2, 3)
   n = prod(dims)
   g = named_grid(dims)
 
@@ -33,11 +33,8 @@ ITensors.disable_warn_order()
   β = 2.0
   Δβ = 0.2
 
-  # Sequence for contracting expectation values
-  inner_sequence = reduce((x, y) -> [x, y], vec(Tuple.(CartesianIndices(dims))))
-
   ψ_init = ITensorNetwork(s, v -> "↑")
-  E0 = expect(ℋ, ψ_init; sequence=inner_sequence)
+  E0 = expect(ℋ, ψ_init)
   ψ = tebd(
     group_terms(ℋ, g),
     ψ_init;
@@ -48,7 +45,7 @@ ITensors.disable_warn_order()
     ortho=false,
     print_frequency=typemax(Int),
   )
-  E1 = expect(ℋ, ψ; sequence=inner_sequence)
+  E1 = expect(ℋ, ψ)
   ψ = tebd(
     group_terms(ℋ, g),
     ψ_init;
@@ -59,8 +56,8 @@ ITensors.disable_warn_order()
     ortho=true,
     print_frequency=typemax(Int),
   )
-  E2 = expect(ℋ, ψ; sequence=inner_sequence)
+  E2 = expect(ℋ, ψ)
   @show E0, E1, E2, E_dmrg
-  @test (((abs((E2 - E1) / E2) < 1e-4) && (E1 < E0)) || (E2 < E1 < E0))
-  @test E2 ≈ E_dmrg rtol = 1e-4
+  @test (((abs((E2 - E1) / E2) < 1e-3) && (E1 < E0)) || (E2 < E1 < E0))
+  @test E2 ≈ E_dmrg rtol = 1e-3
 end

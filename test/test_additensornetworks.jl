@@ -51,8 +51,8 @@ using Random
 
   alg = "exact"
   expec_method1 =
-    (inner(ψ1, Oψ1; alg) + inner(ψ2, Oψ2; alg) + 2*inner(ψ1, Oψ2; alg)) /
-      (norm_sqr(ψ1; alg) + norm_sqr(ψ2; alg) + 2 * inner(ψ1, ψ2; alg))
+    (inner(ψ1, Oψ1; alg) + inner(ψ2, Oψ2; alg) + 2 * inner(ψ1, Oψ2; alg)) /
+    (norm_sqr(ψ1; alg) + norm_sqr(ψ2; alg) + 2 * inner(ψ1, ψ2; alg))
   expec_method2 = inner(ψ12, Oψ12; alg) / norm_sqr(ψ12; alg)
 
   @test expec_method1 ≈ expec_method2

@@ -88,10 +88,10 @@ using ITensorNetworks: norm_sqr, neighbor_itensors
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
     ψ = ITensorNetwork(s, v -> "↑")
-    tn = inner_network(ψ, ψ)
-    tn_2 = contract(tn, ((1, 2), 2) => ((1, 2), 1))
-    @test !has_vertex(tn_2, ((1, 2), 2))
-    @test tn_2[((1, 2), 1)] ≈ tn[((1, 2), 2)] * tn[((1, 2), 1)]
+    tn = norm_sqr_network(ψ)
+    tn_2 = contract(tn, ((1, 2), "ket") => ((1, 2), "bra"))
+    @test !has_vertex(tn_2, ((1, 2), "ket"))
+    @test tn_2[((1, 2), "bra")] ≈ tn[((1, 2), "ket")] * tn[((1, 2), "bra")]
   end
 
   @testset "Remove edge (regression test for issue #5)" begin
@@ -100,15 +100,15 @@ using ITensorNetworks: norm_sqr, neighbor_itensors
     s = siteinds("S=1/2", g)
     ψ = ITensorNetwork(s, v -> "↑")
     rem_vertex!(ψ, (1, 2))
-    tn = inner_network(ψ, ψ)
-    @test !has_vertex(tn, ((1, 2), 1))
-    @test !has_vertex(tn, ((1, 2), 2))
-    @test has_vertex(tn, ((1, 1), 1))
-    @test has_vertex(tn, ((1, 1), 2))
-    @test has_vertex(tn, ((2, 1), 1))
-    @test has_vertex(tn, ((2, 1), 2))
-    @test has_vertex(tn, ((2, 2), 1))
-    @test has_vertex(tn, ((2, 2), 2))
+    tn = norm_sqr_network(ψ)
+    @test !has_vertex(tn, ((1, 2), "bra"))
+    @test !has_vertex(tn, ((1, 2), "ket"))
+    @test has_vertex(tn, ((1, 1), "bra"))
+    @test has_vertex(tn, ((1, 1), "ket"))
+    @test has_vertex(tn, ((2, 1), "bra"))
+    @test has_vertex(tn, ((2, 1), "ket"))
+    @test has_vertex(tn, ((2, 2), "bra"))
+    @test has_vertex(tn, ((2, 2), "ket"))
   end
 
   @testset "Custom element type" for eltype in (Float32, Float64, ComplexF32, ComplexF64),

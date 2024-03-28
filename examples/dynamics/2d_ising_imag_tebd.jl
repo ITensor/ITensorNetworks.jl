@@ -8,7 +8,7 @@ Random.seed!(1234)
 
 ITensors.disable_warn_order()
 
-system_dims = (6, 6)
+system_dims = (2, 3)
 n = prod(system_dims)
 g = named_grid(system_dims)
 
@@ -58,16 +58,13 @@ println("maxdim = $χ")
 @show β, Δβ
 @show ortho
 
-# Contraction sequence for exactly computing expectation values
-inner_sequence = reduce((x, y) -> [x, y], vec(Tuple.(CartesianIndices(system_dims))))
-
 println("\nFirst run TEBD without orthogonalization")
 ψ = @time tebd(
   group_terms(ℋ, g), ψ_init; β, Δβ, cutoff=1e-8, maxdim=χ, ortho=false, print_frequency=1
 )
 
 println("\nMeasure energy expectation value")
-E = @time expect(ℋ, ψ; sequence=inner_sequence)
+E = @time expect(ℋ, ψ)
 @show E
 
 println("\nThen run TEBD with orthogonalization (more accurate)")
@@ -76,11 +73,11 @@ println("\nThen run TEBD with orthogonalization (more accurate)")
 )
 
 println("\nMeasure energy expectation value")
-E = @time expect(ℋ, ψ; sequence=inner_sequence)
+E = @time expect(ℋ, ψ)
 @show E
 
 println("\nMeasure magnetization")
-Z_dict = @time expect("Z", ψ; sequence=inner_sequence)
+Z_dict = @time expect("Z", ψ)
 Z = [Z_dict[Tuple(I)] for I in CartesianIndices(system_dims)]
 display(Z)
 display(heatmap(Z))

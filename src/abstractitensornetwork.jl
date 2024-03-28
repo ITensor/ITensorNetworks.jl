@@ -667,7 +667,6 @@ function flatten_networks(
   return flatten_networks(flatten_networks(tn1, tn2; kwargs...), tn3, tn_tail...; kwargs...)
 end
 
-
 function inner_network(x::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...)
   return BilinearFormNetwork(x, y; kwargs...)
 end
@@ -679,7 +678,9 @@ function inner_network(
 end
 
 inner_network(x::AbstractITensorNetwork; kwargs...) = inner_network(x, x; kwargs...)
-const norm_sqr_network = inner_network
+function norm_sqr_network(ψ::AbstractITensorNetwork)
+  return disjoint_union("bra" => dag(prime(ψ; sites=[])), "ket" => ψ)
+end
 
 #Ideally this will not be necessary but this is a temporary fast version to avoid the overhead of `disjoint_union`
 function norm_sqr_network_fast(ψ::AbstractITensorNetwork)

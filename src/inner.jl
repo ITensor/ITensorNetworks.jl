@@ -91,12 +91,11 @@ function loginner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
-  partitioned_verts=default_partitioned_vertices,
   dual_link_index_map=sim,
   kwargs...,
 )
   tn = inner_network(ϕ, ψ; dual_link_index_map)
-  return logscalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
+  return logscalar(alg, tn; kwargs...)
 end
 
 function loginner(
@@ -104,24 +103,22 @@ function loginner(
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
-  partitioned_verts=default_partitioned_vertices,
   dual_link_index_map=sim,
   kwargs...,
 )
   tn = inner_network(ϕ, A, ψ; dual_link_index_map)
-  return logscalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
+  return logscalar(alg, tn; kwargs...)
 end
 
 function inner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
-  partitioned_verts=default_partitioned_vertices,
   dual_link_index_map=sim,
   kwargs...,
 )
   tn = inner_network(ϕ, ψ; dual_link_index_map)
-  return scalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
+  return scalar(alg, tn; kwargs...)
 end
 
 function inner(
@@ -129,12 +126,11 @@ function inner(
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
-  partitioned_verts=default_partitioned_vertices,
   dual_link_index_map=sim,
   kwargs...,
 )
   tn = inner_network(ϕ, A, ψ; dual_link_index_map)
-  return scalar(alg, tn; partitioned_vertices=partitioned_verts(tn), kwargs...)
+  return scalar(alg, tn; kwargs...)
 end
 
 # TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
