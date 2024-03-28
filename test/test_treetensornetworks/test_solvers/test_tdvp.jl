@@ -1,12 +1,24 @@
-using ITensors
-using ITensorNetworks
-using ITensorNetworks: exponentiate_updater
-using KrylovKit: exponentiate
-using Observers
-using Random
-using Test
+@eval module $(gensym())
+using Graphs: dst, edges, src
+using ITensors: ITensor, contract, dag, inner, noprime, normalize, prime, scalar
+using ITensorNetworks:
+  ITensorNetworks,
+  OpSum,
+  TTN,
+  apply,
+  expect,
+  mpo,
+  mps,
+  op,
+  random_mps,
+  random_ttn,
+  siteinds,
+  tdvp
+using LinearAlgebra: norm
+using NamedGraphs: named_binary_tree, named_comb_tree
+using Observers: observer
+using Test: @testset, @test
 
-#ToDo: Add tests for different signatures and functionality of extending the params
 @testset "MPS TDVP" begin
   @testset "Basic TDVP" begin
     N = 10
@@ -193,7 +205,7 @@ using Test
         cutoff,
         normalize=false,
         updater_kwargs=(; tol=1e-12, maxiter=500, krylovdim=25),
-        updater=exponentiate_updater,
+        updater=ITensorNetworks.exponentiate_updater,
       )
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
@@ -253,7 +265,6 @@ using Test
 
     for step in 1:Nsteps
       state = apply(gates, state; cutoff)
-      #normalize!(state)
 
       nsites = (step <= 3 ? 2 : 1)
       phi = tdvp(
@@ -279,7 +290,7 @@ using Test
 
     phi = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
 
-    obs = Observer(
+    obs = observer(
       "Sz" => (; state) -> expect("Sz", state; vertices=[c])[c],
       "En" => (; state) -> real(inner(state', H, state)),
     )
@@ -361,12 +372,12 @@ using Test
 
     measure_sz(; state) = expect("Sz", state; vertices=[c])[c]
     measure_en(; state) = real(inner(state', H, state))
-    sweep_obs = Observer("Sz" => measure_sz, "En" => measure_en)
+    sweep_obs = observer("Sz" => measure_sz, "En" => measure_en)
 
     get_info(; info) = info
     step_measure_sz(; state) = expect("Sz", state; vertices=[c])[c]
     step_measure_en(; state) = real(inner(state', H, state))
-    region_obs = Observer(
+    region_obs = observer(
       "Sz" => step_measure_sz, "En" => step_measure_en, "info" => get_info
     )
 
@@ -411,7 +422,7 @@ end
 
     H = TTN(os, s)
 
-    ψ0 = normalize!(random_ttn(s))
+    ψ0 = normalize(random_ttn(s))
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; root_vertex, nsweeps=1, cutoff, nsites=2)
@@ -453,7 +464,7 @@ end
     H2 = TTN(os2, s)
     Hs = [H1, H2]
 
-    ψ0 = normalize!(random_ttn(s; link_space=10))
+    ψ0 = normalize(random_ttn(s; link_space=10))
 
     ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
@@ -564,7 +575,6 @@ end
 
     for step in 1:Nsteps
       state = apply(gates, state; cutoff, maxdim)
-      #normalize!(state)
 
       nsites = (step <= 3 ? 2 : 1)
       phi = tdvp(
@@ -589,7 +599,7 @@ end
     # 
 
     phi = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
-    obs = Observer(
+    obs = observer(
       "Sz" => (; state) -> expect("Sz", state; vertices=[c])[c],
       "En" => (; state) -> real(inner(state', H, state)),
     )
@@ -622,7 +632,7 @@ end
     os = ITensorNetworks.heisenberg(c)
     H = TTN(os, s)
 
-    state = normalize!(random_ttn(s; link_space=2))
+    state = normalize(random_ttn(s; link_space=2))
 
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
@@ -641,100 +651,5 @@ end
 
     @test inner(state', H, state) < -2.47
   end
-
-  # TODO: verify quantum number suport in ITensorNetworks
-
-  # @testset "Observers" begin
-  #   cutoff = 1e-12
-  #   tau = 0.1
-  #   ttotal = 1.0
-
-  #   tooth_lengths = fill(2, 3)
-  #   c = named_comb_tree(tooth_lengths)
-  #   s = siteinds("S=1/2", c; conserve_qns=true)
-
-  #   os = ITensorNetworks.heisenberg(c)
-  #   H = TTN(os, s)
-
-  #   c = (2, 2)
-
-  #   #
-  #   # Using the ITensors observer system
-  #   # 
-  #   struct TDVPObserver <: AbstractObserver end
-
-  #   Nsteps = convert(Int, ceil(abs(ttotal / tau)))
-  #   Sz1 = zeros(Nsteps)
-  #   En1 = zeros(Nsteps)
-  #   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
-  #     if bond == 1 && half_sweep == 2
-  #       Sz1[sweep] = expect("Sz", psi; vertices=[c])[c]
-  #       En1[sweep] = real(inner(psi', H, psi))
-  #     end
-  #   end
-
-  #   psi1 = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
-  #   tdvp(
-  #     H,
-  #     -im * ttotal,
-  #     psi1;
-  #     time_step=-im * tau,
-  #     cutoff,
-  #     normalize=false,
-  #     (observer!)=TDVPObserver(),
-  #     root_vertex=N,
-  #   )
-
-  #   #
-  #   # Using Observers.jl
-  #   # 
-
-  #   function measure_sz(; psi, bond, half_sweep)
-  #     if bond == 1  && half_sweep == 2
-  #       return expect("Sz", psi; vertices=[c])[c]
-  #     end
-  #     return nothing
-  #   end
-
-  #   function measure_en(; psi, bond, half_sweep)
-  #     if bond == 1 && half_sweep == 2
-  #       return real(inner(psi', H, psi))
-  #     end
-  #     return nothing
-  #   end
-
-  #   obs = Observer("Sz" => measure_sz, "En" => measure_en)
-
-  #   step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
-
-  #   step_measure_en(; psi) = real(inner(psi', H, psi))
-
-  #   step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
-
-  #   psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
-  #   tdvp(
-  #     H,
-  #     -im * ttotal,
-  #     psi2;
-  #     time_step=-im * tau,
-  #     cutoff,
-  #     normalize=false,
-  #     (observer!)=obs,
-  #     (step_observer!)=step_obs,
-  #     root_vertex=N,
-  #   )
-
-  #   Sz2 = results(obs)["Sz"]
-  #   En2 = results(obs)["En"]
-
-  #   Sz2_step = results(step_obs)["Sz"]
-  #   En2_step = results(step_obs)["En"]
-
-  #   @test Sz1 ≈ Sz2
-  #   @test En1 ≈ En2
-  #   @test Sz1 ≈ Sz2_step
-  #   @test En1 ≈ En2_step
-  # end  
 end
-
-nothing
+end
