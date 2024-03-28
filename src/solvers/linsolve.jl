@@ -1,3 +1,4 @@
+using KrylovKit: KrylovKit
 
 """
 $(TYPEDSIGNATURES)
@@ -22,7 +23,7 @@ Keyword arguments:
 
 Overload of `KrylovKit.linsolve`.
 """
-function linsolve(
+function KrylovKit.linsolve(
   A::AbstractTTN,
   b::AbstractTTN,
   x₀::AbstractTTN,

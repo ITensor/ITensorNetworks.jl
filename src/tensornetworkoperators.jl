@@ -1,3 +1,6 @@
+using ITensors: ITensors, commoninds, product
+using LinearAlgebra: factorize
+
 """
 Take a vector of gates which act on different edges/ vertices of an Inds network and construct the tno which represents prod(gates).
 """

@@ -1,6 +1,6 @@
-using DifferentialEquations
-using ITensors
-using ITensorNetworks
+using OrdinaryDiffEq: ODEProblem, Tsit5, solve
+using ITensors: ITensor
+using ITensorNetworks: TimeDependentSum, to_vec
 using KrylovKit: exponentiate
 
 function ode_solver(
@@ -17,13 +17,13 @@ function ode_solver(
   end
 
   time_span = (current_time, current_time + time_step)
-  u₀, ITensor_from_vec = to_vec(ψ₀)
+  u₀, itensor_from_vec = to_vec(ψ₀)
   f(ψ::ITensor, p, t) = H(t)(ψ)
-  f(u::Vector, p, t) = to_vec(f(ITensor_from_vec(u), p, t))[1]
+  f(u::Vector, p, t) = to_vec(f(itensor_from_vec(u), p, t))[1]
   prob = ODEProblem(f, u₀, time_span)
   sol = solve(prob, solver_alg; kwargs...)
   uₜ = sol.u[end]
-  return ITensor_from_vec(uₜ), nothing
+  return itensor_from_vec(uₜ), nothing
 end
 
 function krylov_solver(

@@ -1,3 +1,5 @@
+using Observers: Observers
+
 #ToDo: generalize beyond 2-site
 #ToDo: remove concept of orthogonality center for generality
 function current_ortho(sweep_plan, which_region_update)
@@ -122,7 +124,7 @@ function region_update(
     region_kwargs...,
     internal_kwargs...,
   )
-  update!(region_observer!; all_kwargs...)
+  Observers.update!(region_observer!; all_kwargs...)
   !(isnothing(region_printer)) && region_printer(; all_kwargs...)
 
   return state, projected_operator
