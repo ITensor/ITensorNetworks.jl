@@ -1,3 +1,5 @@
+using Observers: Observers
+
 function alternating_update(
   operator,
   init_state::AbstractTTN;
@@ -77,7 +79,7 @@ function alternating_update(
       end
     end
 
-    update!(sweep_observer!; state, which_sweep, sweep_time, outputlevel, sweep_plans)
+    Observers.update!(sweep_observer!; state, which_sweep, sweep_time, outputlevel, sweep_plans)
     !isnothing(sweep_printer) &&
       sweep_printer(; state, which_sweep, sweep_time, outputlevel, sweep_plans)
     checkdone(;

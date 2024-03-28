@@ -20,7 +20,7 @@ using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
 using ITensors.ITensorMPS: siteinds
 using LinearAlgebra: eigen, norm, svd
 using NamedGraphs: NamedEdge
-using Observers: insert_function!
+using Observers: Observers
 
 function sqrt_and_inv_sqrt(
   A::ITensor; ishermitian=false, cutoff=nothing, regularization=nothing
