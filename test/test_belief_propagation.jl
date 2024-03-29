@@ -25,7 +25,9 @@ using ITensors:
   ITensor,
   inds,
   combiner,
-  array
+  array,
+  dag,
+  inner
 
 disable_warn_order()
 

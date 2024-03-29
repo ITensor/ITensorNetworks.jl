@@ -1,5 +1,5 @@
 using NamedGraphs: vertex_to_parent_vertex
-using ITensors: ITensor
+using ITensors: ITensor, scalar
 using ITensors.ContractionSequenceOptimization: deepmap
 using ITensors.NDTensors: NDTensors, Algorithm, @Algorithm_str, contract
 using LinearAlgebra: normalize!
@@ -41,13 +41,15 @@ function contract_density_matrix(
   return out
 end
 
-function scalar(
+function ITensors.scalar(
   alg::Algorithm, tn::Union{AbstractITensorNetwork,Vector{ITensor}}; kwargs...
 )
   return contract(alg, tn; kwargs...)[]
 end
 
-function scalar(tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg="exact", kwargs...)
+function ITensors.scalar(
+  tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg="exact", kwargs...
+)
   return scalar(Algorithm(alg), tn; kwargs...)
 end
 
@@ -90,6 +92,6 @@ function logscalar(
   end
 end
 
-function scalar(alg::Algorithm"bp", tn::AbstractITensorNetwork; kwargs...)
+function ITensors.scalar(alg::Algorithm"bp", tn::AbstractITensorNetwork; kwargs...)
   return exp(logscalar(alg, tn; kwargs...))
 end

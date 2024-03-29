@@ -1,22 +1,15 @@
+using Test
 using ITensorNetworks
 using ITensorNetworks:
-  environment,
-  update,
-  inner,
-  BeliefPropagationCache,
-  VidalITensorNetwork,
-  norm_sqr_network_fast
-using Test
-using Compat
-using ITensors
-using Metis
-using NamedGraphs
-using Random
-using LinearAlgebra
-using SplitApplyCombine
+  environment, update, BeliefPropagationCache, VidalITensorNetwork, norm_sqr_network_fast
+
+using ITensors: inner
+using SplitApplyCombine: group
+using Random: seed!
+using NamedGraphs: named_grid, disjoint_union
 
 @testset "apply" begin
-  Random.seed!(5623)
+  seed!(5623)
   g_dims = (2, 3)
   n = prod(g_dims)
   g = named_grid(g_dims)

@@ -1,8 +1,9 @@
+using ITensors: inner, scalar, loginner
+using LinearAlgebra: norm, norm_sqr
+
 default_algorithm(tns::Tuple) = "bp"
 
-#Default for map_linkinds should be sim.
-
-function inner(
+function ITensors.inner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   alg=default_algorithm((ϕ, ψ)),
@@ -11,7 +12,7 @@ function inner(
   return inner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
 
-function inner(
+function ITensors.inner(
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -21,7 +22,7 @@ function inner(
   return inner(Algorithm(alg), ϕ, A, ψ; kwargs...)
 end
 
-function inner(
+function ITensors.inner(
   alg::Algorithm"exact",
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -36,7 +37,7 @@ function inner(
   return scalar(tn; sequence)
 end
 
-function inner(
+function ITensors.inner(
   alg::Algorithm"exact",
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
@@ -52,7 +53,7 @@ function inner(
   return scalar(tn; sequence)
 end
 
-function loginner(
+function ITensors.loginner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   alg=default_algorithm(ϕ, ψ),
@@ -61,7 +62,7 @@ function loginner(
   return loginner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
 
-function loginner(
+function ITensors.loginner(
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -71,13 +72,13 @@ function loginner(
   return loginner(Algorithm(alg), ϕ, A, ψ; kwargs...)
 end
 
-function loginner(
+function ITensors.loginner(
   alg::Algorithm"exact", ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...
 )
   return log(inner(alg, ϕ, ψ); kwargs...)
 end
 
-function loginner(
+function ITensors.loginner(
   alg::Algorithm"exact",
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
@@ -87,7 +88,7 @@ function loginner(
   return log(inner(alg, ϕ, A, ψ); kwargs...)
 end
 
-function loginner(
+function ITensors.loginner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -98,7 +99,7 @@ function loginner(
   return logscalar(alg, tn; kwargs...)
 end
 
-function loginner(
+function ITensors.loginner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
@@ -110,7 +111,7 @@ function loginner(
   return logscalar(alg, tn; kwargs...)
 end
 
-function inner(
+function ITensors.inner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -121,7 +122,7 @@ function inner(
   return scalar(alg, tn; kwargs...)
 end
 
-function inner(
+function ITensors.inner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
@@ -135,7 +136,7 @@ end
 
 # TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
 # or `norm_sqr` to match `LinearAlgebra.norm_sqr`
-norm_sqr(ψ::AbstractITensorNetwork; kwargs...) = inner(ψ, ψ; kwargs...)
+LinearAlgebra.norm_sqr(ψ::AbstractITensorNetwork; kwargs...) = inner(ψ, ψ; kwargs...)
 
 function LinearAlgebra.norm(ψ::AbstractITensorNetwork; kwargs...)
   return sqrt(abs(real(norm_sqr(ψ; kwargs...))))
