@@ -1,3 +1,6 @@
+using ITensors.ITensorMPS: ITensorMPS
+using NamedGraphs: boundary_partitionedges
+
 default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
@@ -68,7 +71,7 @@ for f in [
   :(NamedGraphs.partitionvertices),
   :(NamedGraphs.vertices),
   :(NamedGraphs.boundary_partitionedges),
-  :linkinds,
+  :(ITensorMPS.linkinds),
 ]
   @eval begin
     function $f(bp_cache::BeliefPropagationCache, args...; kwargs...)
@@ -91,7 +94,7 @@ function messages(
   return [message(bp_cache, edge; kwargs...) for edge in edges]
 end
 
-function copy(bp_cache::BeliefPropagationCache)
+function Base.copy(bp_cache::BeliefPropagationCache)
   return BeliefPropagationCache(
     copy(partitioned_itensornetwork(bp_cache)),
     copy(messages(bp_cache)),

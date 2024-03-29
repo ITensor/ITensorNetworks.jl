@@ -4,7 +4,7 @@ abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
 
 const AbstractTTN = AbstractTreeTensorNetwork
 
-function underlying_graph_type(G::Type{<:AbstractTTN})
+function DataGraphs.underlying_graph_type(G::Type{<:AbstractTTN})
   return underlying_graph_type(data_graph_type(G))
 end
 
@@ -24,7 +24,7 @@ end
 # Orthogonality center
 # 
 
-isortho(ψ::AbstractTTN) = isone(length(ortho_center(ψ)))
+ITensorMPS.isortho(ψ::AbstractTTN) = isone(length(ortho_center(ψ)))
 
 function set_ortho_center(ψ::AbstractTTN{V}, new_center::Vector{<:V}) where {V}
   return typeof(ψ)(itensor_network(ψ), new_center)
@@ -89,7 +89,7 @@ end
 # Orthogonalization
 # 
 
-function orthogonalize(ψ::AbstractTTN{V}, root_vertex::V; kwargs...) where {V}
+function ITensorMPS.orthogonalize(ψ::AbstractTTN{V}, root_vertex::V; kwargs...) where {V}
   (isortho(ψ) && only(ortho_center(ψ)) == root_vertex) && return ψ
   if isortho(ψ)
     edge_list = edge_path(ψ, only(ortho_center(ψ)), root_vertex)
@@ -104,7 +104,7 @@ end
 
 # For ambiguity error
 
-function orthogonalize(tn::AbstractTTN, edge::AbstractEdge; kwargs...)
+function ITensorMPS.orthogonalize(tn::AbstractTTN, edge::AbstractEdge; kwargs...)
   return typeof(tn)(orthogonalize(ITensorNetwork(tn), edge; kwargs...))
 end
 
@@ -112,7 +112,7 @@ end
 # Truncation
 # 
 
-function truncate(ψ::AbstractTTN; root_vertex=default_root_vertex(ψ), kwargs...)
+function Base.truncate(ψ::AbstractTTN; root_vertex=default_root_vertex(ψ), kwargs...)
   for e in post_order_dfs_edges(ψ, root_vertex)
     # always orthogonalize towards source first to make truncations controlled
     ψ = orthogonalize(ψ, src(e))
@@ -123,7 +123,7 @@ function truncate(ψ::AbstractTTN; root_vertex=default_root_vertex(ψ), kwargs..
 end
 
 # For ambiguity error
-function truncate(tn::AbstractTTN, edge::AbstractEdge; kwargs...)
+function Base.truncate(tn::AbstractTTN, edge::AbstractEdge; kwargs...)
   return typeof(tn)(truncate(ITensorNetwork(tn), edge; kwargs...))
 end
 
@@ -132,7 +132,7 @@ end
 #
 
 # TODO: decide on contraction order: reverse dfs vertices or forward dfs edges?
-function contract(
+function NDTensors.contract(
   ψ::AbstractTTN{V}, root_vertex::V=default_root_vertex(ψ); kwargs...
 ) where {V}
   ψ = copy(ψ)
@@ -147,7 +147,9 @@ function contract(
   # return ψ[root_vertex]
 end
 
-function inner(ϕ::AbstractTTN, ψ::AbstractTTN; root_vertex=default_root_vertex(ϕ, ψ))
+function ITensors.inner(
+  ϕ::AbstractTTN, ψ::AbstractTTN; root_vertex=default_root_vertex(ϕ, ψ)
+)
   ϕᴴ = sim(dag(ϕ); sites=[])
   ψ = sim(ψ; sites=[])
   ϕψ = ϕᴴ ⊗ ψ
@@ -165,7 +167,7 @@ function inner(ϕ::AbstractTTN, ψ::AbstractTTN; root_vertex=default_root_vertex
   return ϕψ[root_vertex, 1][]
 end
 
-function norm(ψ::AbstractTTN)
+function LinearAlgebra.norm(ψ::AbstractTTN)
   if isortho(ψ)
     return norm(ψ[only(ortho_center(ψ))])
   end
@@ -176,7 +178,7 @@ end
 # Utility
 # 
 
-function normalize!(ψ::AbstractTTN)
+function LinearAlgebra.normalize!(ψ::AbstractTTN)
   c = ortho_center(ψ)
   lognorm_ψ = lognorm(ψ)
   if lognorm_ψ == -Inf
@@ -189,7 +191,7 @@ function normalize!(ψ::AbstractTTN)
   return ψ
 end
 
-function normalize(ψ::AbstractTTN)
+function LinearAlgebra.normalize(ψ::AbstractTTN)
   return normalize!(copy(ψ))
 end
 
@@ -215,7 +217,7 @@ function LinearAlgebra.rmul!(ψ::AbstractTTN, α::Number)
   return _apply_to_orthocenter!(*, ψ, α)
 end
 
-function lognorm(ψ::AbstractTTN)
+function ITensorMPS.lognorm(ψ::AbstractTTN)
   if isortho(ψ)
     return log(norm(ψ[only(ortho_center(ψ))]))
   end
@@ -232,8 +234,8 @@ function logdot(ψ1::TTNT, ψ2::TTNT; kwargs...) where {TTNT<:AbstractTTN}
   return loginner(ψ1, ψ2; kwargs...)
 end
 
-#TODO: stick with this traversal or find optimal contraction sequence?
-function loginner(
+# TODO: stick with this traversal or find optimal contraction sequence?
+function ITensorMPS.loginner(
   ψ1::TTNT, ψ2::TTNT; root_vertex=default_root_vertex(ψ1, ψ2)
 )::Number where {TTNT<:AbstractTTN}
   N = nv(ψ1)
@@ -331,7 +333,9 @@ function ITensors.add(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
 end
 
 # TODO: Delete this
-function permute(ψ::AbstractTTN, ::Tuple{typeof(linkind),typeof(siteinds),typeof(linkind)})
+function ITensors.permute(
+  ψ::AbstractTTN, ::Tuple{typeof(linkind),typeof(siteinds),typeof(linkind)}
+)
   ψ̃ = copy(ψ)
   for v in vertices(ψ)
     ls = [only(linkinds(ψ, n => v)) for n in neighbors(ψ, v)] # TODO: won't work for multiple indices per link...
@@ -365,7 +369,7 @@ end
 #
 
 # TODO: implement using multi-graph disjoint union
-function inner(
+function ITensors.inner(
   y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex=default_root_vertex(x, A, y)
 )
   traversal_order = reverse(post_order_dfs_vertices(x, root_vertex))
@@ -379,7 +383,7 @@ function inner(
 end
 
 # TODO: implement using multi-graph disjoint
-function inner(
+function ITensors.inner(
   B::AbstractTTN,
   y::AbstractTTN,
   A::AbstractTTN,
@@ -409,7 +413,7 @@ function inner(
   return O[]
 end
 
-function expect(
+function ITensorMPS.expect(
   operator::String,
   state::AbstractTTN;
   vertices=vertices(state),

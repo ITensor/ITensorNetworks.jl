@@ -1,3 +1,5 @@
+using ITensors.NDTensors: scalartype
+
 function default_bond_tensors(ψ::ITensorNetwork)
   return DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))
 end
@@ -15,7 +17,7 @@ function data_graph_type(TN::Type{<:VidalITensorNetwork})
   return data_graph_type(fieldtype(TN, :itensornetwork))
 end
 data_graph(ψ::VidalITensorNetwork) = data_graph(site_tensors(ψ))
-function copy(ψ::VidalITensorNetwork)
+function Base.copy(ψ::VidalITensorNetwork)
   return VidalITensorNetwork(copy(site_tensors(ψ)), copy(bond_tensors(ψ)))
 end
 

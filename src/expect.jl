@@ -1,4 +1,6 @@
-function expect(
+using ITensors.ITensorMPS: ITensorMPS
+
+function ITensorMPS.expect(
   op::String,
   ψ::AbstractITensorNetwork;
   cutoff=nothing,
@@ -23,7 +25,7 @@ function expect(
   return res
 end
 
-function expect(
+function ITensorMPS.expect(
   ℋ::OpSum,
   ψ::AbstractITensorNetwork;
   cutoff=nothing,
@@ -43,7 +45,7 @@ function expect(
   return ψh⃗ψ / ψψ
 end
 
-function expect(
+function ITensorMPS.expect(
   opsum_sum::Sum{<:OpSum},
   ψ::AbstractITensorNetwork;
   cutoff=nothing,

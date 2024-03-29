@@ -1,3 +1,6 @@
+using DataGraphs: DataGraphs
+using NamedGraphs: incident_edges
+
 struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}
   pos::Union{Vector{<:V},NamedEdge{V}}
   internal_state::TTN{V}
@@ -7,7 +10,7 @@ end
 
 environments(p::ProjOuterProdTTN) = p.environments
 operator(p::ProjOuterProdTTN) = p.operator
-underlying_graph(p::ProjOuterProdTTN) = underlying_graph(operator(p))
+DataGraphs.underlying_graph(p::ProjOuterProdTTN) = underlying_graph(operator(p))
 pos(p::ProjOuterProdTTN) = p.pos
 internal_state(p::ProjOuterProdTTN) = p.internal_state
 
@@ -20,7 +23,7 @@ function ProjOuterProdTTN(internal_state::AbstractTTN, operator::AbstractTTN)
   )
 end
 
-function copy(P::ProjOuterProdTTN)
+function Base.copy(P::ProjOuterProdTTN)
   return ProjOuterProdTTN(
     pos(P), copy(internal_state(P)), copy(operator(P)), copy(environments(P))
   )
@@ -107,7 +110,7 @@ function contract_ket(P::ProjOuterProdTTN, v::ITensor)
 end
 
 # ToDo: verify conjugation etc. with complex AbstractTTN
-function contract(P::ProjOuterProdTTN, x::ITensor)
+function NDTensors.contract(P::ProjOuterProdTTN, x::ITensor)
   ket = contract_ket(P, ITensor(one(Bool)))
   return (dag(ket) * x) * ket
 end
