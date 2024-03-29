@@ -137,6 +137,6 @@ end
 # or `norm_sqr` to match `LinearAlgebra.norm_sqr`
 norm_sqr(ψ::AbstractITensorNetwork; kwargs...) = inner(ψ, ψ; kwargs...)
 
-function norm(ψ::AbstractITensorNetwork; kwargs...)
+function LinearAlgebra.norm(ψ::AbstractITensorNetwork; kwargs...)
   return sqrt(abs(real(norm_sqr(ψ; kwargs...))))
 end

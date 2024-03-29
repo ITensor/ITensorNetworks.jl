@@ -1,18 +1,18 @@
 using Test
-using Random
-using Graphs
-using NamedGraphs
 using ITensorNetworks
-using SplitApplyCombine
 
 using ITensorNetworks: logscalar, scalar, inner, loginner
 using ITensors: siteinds, dag
+using SplitApplyCombine: group
+using Graphs: SimpleGraph, uniform_tree
+using NamedGraphs: NamedGraph
+using Random: seed!
 
 @testset "Inner products, BP vs exact comparison" begin
-  Random.seed!(1234)
+  seed!(1234)
   L = 4
   χ = 2
-  g = NamedGraph(Graphs.SimpleGraph(uniform_tree(L)))
+  g = NamedGraph(SimpleGraph(uniform_tree(L)))
   s = siteinds("S=1/2", g)
   y = randomITensorNetwork(s; link_space=χ)
   x = randomITensorNetwork(s; link_space=χ)

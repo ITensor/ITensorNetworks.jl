@@ -9,5 +9,5 @@ function contract_boundary_mps(tn::ITensorNetwork; kwargs...)
   end
   T = MPO([tn[i1, d2 - 1] for i1 in 1:d1])
   vR = MPS([tn[i1, d2] for i1 in 1:d1])
-  return inner(dag(vL), T, vR)[]
+  return ITensors.inner(dag(vL), T, vR)[]
 end

@@ -1,8 +1,8 @@
+using Test
 using ITensorNetworks
 using ITensorNetworks:
   ising_network,
   split_index,
-  inner,
   contract_boundary_mps,
   BeliefPropagationCache,
   tensornetwork,
@@ -10,16 +10,24 @@ using ITensorNetworks:
   update_factor,
   environment,
   contract
-using Test
-using Compat
-using ITensors
-using LinearAlgebra
-using NamedGraphs
-using SplitApplyCombine
-using Random
-using Metis
 
-ITensors.disable_warn_order()
+using LinearAlgebra: eigvals, tr
+using NamedGraphs: named_grid, named_comb_tree, PartitionVertex, NamedEdge
+using Random: seed!
+using SplitApplyCombine: group
+using ITensors:
+  siteinds,
+  apply,
+  randomITensor,
+  disable_warn_order,
+  prime,
+  op,
+  ITensor,
+  inds,
+  combiner,
+  array
+
+disable_warn_order()
 
 @testset "belief_propagation" begin
 
@@ -28,7 +36,7 @@ ITensors.disable_warn_order()
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 4
-  Random.seed!(1234)
+  seed!(1234)
   ψ = randomITensorNetwork(s; link_space=χ)
 
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
@@ -58,7 +66,7 @@ ITensors.disable_warn_order()
   g = named_comb_tree((4, 4))
   s = siteinds("S=1/2", g)
   χ = 2
-  Random.seed!(1564)
+  seed!(1564)
   ψ = randomITensorNetwork(s; link_space=χ)
 
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])

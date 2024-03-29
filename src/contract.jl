@@ -15,6 +15,10 @@ function NDTensors.contract(
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
 end
 
+function NDTensors.contract(alg::Algorithm"exact", tensors::Vector{ITensor}; kwargs...)
+  return contract(tensors; kwargs...)
+end
+
 function NDTensors.contract(
   alg::Union{Algorithm"density_matrix",Algorithm"ttn_svd"},
   tn::AbstractITensorNetwork;
