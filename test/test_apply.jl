@@ -1,12 +1,12 @@
 using Test
 using ITensorNetworks
 using ITensorNetworks:
-  environment, update, BeliefPropagationCache, VidalITensorNetwork, norm_sqr_network_fast
+  environment, update, BeliefPropagationCache, VidalITensorNetwork, norm_sqr_network
 
-using ITensors: inner
+using ITensors: inner, siteinds, op, apply
 using SplitApplyCombine: group
 using Random: seed!
-using NamedGraphs: named_grid, disjoint_union
+using NamedGraphs: named_grid, PartitionVertex
 
 @testset "apply" begin
   seed!(5623)
@@ -17,7 +17,7 @@ using NamedGraphs: named_grid, disjoint_union
   χ = 2
   ψ = randomITensorNetwork(s; link_space=χ)
   v1, v2 = (2, 2), (1, 2)
-  ψψ = disjoint_union("bra" => dag(prime(ψ; sites=[])), "ket" => ψ)
+  ψψ = norm_sqr_network(ψ)
   #Simple Belief Propagation Grouping
   bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bp_cache = update(bp_cache; maxiter=20)
@@ -35,7 +35,7 @@ using NamedGraphs: named_grid, disjoint_union
   ngates = 5
 
   for i in 1:ngates
-    o = ITensors.op("RandomUnitary", s[v1]..., s[v2]...)
+    o = op("RandomUnitary", s[v1]..., s[v2]...)
 
     ψOexact = apply(o, ψ; cutoff=1e-16)
     ψOSBP = apply(

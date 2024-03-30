@@ -69,7 +69,7 @@ function logscalar(
   alg::Algorithm,
   tn::AbstractITensorNetwork;
   (cache!)=nothing,
-  cache_construction_kwargs=(;),
+  cache_construction_kwargs=default_cache_construction_kwargs(alg, tn),
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(cache!),
 )

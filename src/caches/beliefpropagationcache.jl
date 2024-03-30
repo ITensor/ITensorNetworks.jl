@@ -18,6 +18,9 @@ function default_partitioned_vertices(f::AbstractFormNetwork)
   return group(v -> original_state_vertex(f, v), vertices(f))
 end
 default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
+function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
+  return (; partition_vertices=default_partitioned_vertices(ψ))
+end
 
 #TODO: Define a version of this that works for QN supporting tensors
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
@@ -51,8 +54,12 @@ function BeliefPropagationCache(
   return BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
 end
 
-function cache(alg::Algorithm"bp", tn; kwargs...)
-  return BeliefPropagationCache(tn; kwargs...)
+function cache(
+  alg::Algorithm"bp",
+  tn;
+  cache_construction_kwargs=default_cache_construction_kwargs(alg, tn),
+)
+  return BeliefPropagationCache(tn; cache_construction_kwargs...)
 end
 
 function partitioned_itensornetwork(bp_cache::BeliefPropagationCache)
