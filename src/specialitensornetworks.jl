@@ -1,4 +1,5 @@
 using ITensors: diagITensor, noprime!
+using ITensors.NDTensors: dim
 using DataGraphs: IsUnderlyingGraph
 using Distributions: Distribution
 

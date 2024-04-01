@@ -1,17 +1,11 @@
-using NamedGraphs: directed_graph
-using ITensors: onehot
-using ITensors.ITensorMPS: linkdim, linkinds, siteinds
-using ITensors: convert_eltype
-using ITensors: combiner
-using ITensors.ITensorMPS: add
-using Graphs: ne
-using Graphs: edges
-using Graphs: bfs_tree
-using Graphs.SimpleGraphs: add_vertex!
 using DataGraphs:
   DataGraphs, edge_data, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, dst, edgetype, neighbors, rem_edge!, src, vertices
+using Graphs: add_vertex!
+using Graphs: bfs_tree
+using Graphs: edges
+using Graphs: ne
 using ITensors:
   ITensors,
   ITensor,
@@ -30,18 +24,25 @@ using ITensors:
   settags,
   sim,
   swaptags
+using ITensors: combiner
+using ITensors: convert_eltype
+using ITensors: onehot
 using ITensors.ITensorMPS: ITensorMPS
+using ITensors.ITensorMPS: add
+using ITensors.ITensorMPS: linkdim, linkinds, siteinds
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-using ITensors.NDTensors: NDTensors
+using ITensors.NDTensors: NDTensors, dim
 using LinearAlgebra: LinearAlgebra
 using NamedGraphs:
   NamedGraphs,
   NamedGraph,
+  ⊔,
   incident_edges,
   not_implemented,
   rename_vertices,
   vertex_to_parent_vertex,
   vertextype
+using NamedGraphs: directed_graph
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
 
