@@ -62,7 +62,15 @@ end
 function logscalar(
   alg::Algorithm"exact", tn::Union{AbstractITensorNetwork,Vector{ITensor}}; kwargs...
 )
-  return log(complex(scalar(alg, tn; kwargs...)))
+  s = scalar(alg, tn; kwargs...)
+  if s ≈ 0
+    tol = 1e-16
+    return -Inf
+  elseif isa(s, AbstractFloat) && s >= 0
+    return log(s)
+  else
+    return complex(s)
+  end
 end
 
 function logscalar(
@@ -74,7 +82,7 @@ function logscalar(
   cache_update_kwargs=default_cache_update_kwargs(cache!),
 )
   if isnothing(cache!)
-    cache! = Ref(cache(alg, tn; cache_construction_kwargs...))
+    cache! = Ref(cache(alg, tn; cache_construction_kwargs))
   end
 
   if update_cache
@@ -83,9 +91,9 @@ function logscalar(
 
   numerator_terms, denominator_terms = scalar_factors(cache![])
   terms = vcat(numerator_terms, denominator_terms)
-  if any(==(0), terms)
+  if any(≈(0), terms)
     return -Inf
-  elseif all(>=(0), terms)
+  elseif all(t -> isa(t, AbstractFloat), terms) && all(>=(0), terms)
     return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
   else
     return sum(log.(complex.(numerator_terms))) - sum(log.(complex.((denominator_terms))))

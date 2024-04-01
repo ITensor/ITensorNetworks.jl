@@ -19,7 +19,7 @@ function default_partitioned_vertices(f::AbstractFormNetwork)
 end
 default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
 function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
-  return (; partition_vertices=default_partitioned_vertices(ψ))
+  return (; partitioned_vertices=default_partitioned_vertices(ψ))
 end
 
 #TODO: Define a version of this that works for QN supporting tensors

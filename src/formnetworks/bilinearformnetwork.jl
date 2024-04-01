@@ -51,8 +51,6 @@ function Base.copy(blf::BilinearFormNetwork)
   )
 end
 
-#Is the ordering of the indices correct here? CHECK THIS
-#Put bra into the vector space!!!!
 function BilinearFormNetwork(
   bra::AbstractITensorNetwork,
   ket::AbstractITensorNetwork;
