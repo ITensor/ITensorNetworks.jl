@@ -8,7 +8,7 @@ using ITensorNetworks:
   split_index,
   tensornetwork,
   update,
-  update_factor,
+  update_factor
 
 using Test: @test, @testset
 using LinearAlgebra: eigvals, tr
@@ -17,19 +17,18 @@ using Random: Random
 using SplitApplyCombine: group
 using ITensors:
   ITensor,
-  apply, 
+  apply,
   array,
   combiner,
   dag,
   disable_warn_order,
-  inds, 
+  inds,
   inner,
   op,
   prime,
   randomITensor,
   siteinds,
-
-disable_warn_order()
+  disable_warn_order()
 
 @testset "belief_propagation" begin
 
