@@ -1,14 +1,14 @@
-using Test
 using ITensorNetworks
 
-using NamedGraphs: hexagonal_lattice_graph, rem_edge!, named_grid, NamedEdge
+using Test: @test, @testset
+using NamedGraphs: NamedEdge, hexagonal_lattice_graph, named_grid, rem_edge!
 using SplitApplyCombine: group
-using Random: seed!
-using ITensors: siteinds, scalar, apply, inner, op
+using Random: Random
+using ITensors: apply, inner, op, scalar, siteinds
 using LinearAlgebra: norm_sqr
 
 @testset "add_itensornetworks" begin
-  seed!(5623)
+  Random.seed!(5623)
   g = named_grid((2, 2))
   s = siteinds("S=1/2", g)
   ψ1 = ITensorNetwork(s, v -> "↑")

@@ -1,17 +1,15 @@
-using ITensors
 using ITensorNetworks
-using OMEinsumContractionOrders
-using Random
-using Test
-using EinExprs: Exhaustive, Greedy, HyPar
-
 using ITensorNetworks: norm_sqr_network
 
-Random.seed!(1234)
+using ITensors: contract, siteinds
+using EinExprs: Exhaustive, Greedy, HyPar
+using Random: Random
+using Test: @test, @testset
 
 ITensors.disable_warn_order()
 
 @testset "contraction_sequence" begin
+  Random.seed!(1234)
   dims = (2, 3)
   g = named_grid(dims)
   s = siteinds("S=1/2", g)

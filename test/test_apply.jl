@@ -1,15 +1,15 @@
-using Test
 using ITensorNetworks
 using ITensorNetworks:
-  environment, update, BeliefPropagationCache, VidalITensorNetwork, norm_sqr_network
+  BeliefPropagationCache, VidalITensorNetwork, environment, norm_sqr_network, update
 
-using ITensors: inner, siteinds, op, apply
+using Test: @test, @testset
+using ITensors: apply, op, inner, siteinds
 using SplitApplyCombine: group
-using Random: seed!
-using NamedGraphs: named_grid, PartitionVertex
+using Random: Random
+using NamedGraphs: PartitionVertex, named_grid
 
 @testset "apply" begin
-  seed!(5623)
+  Random.seed!(5623)
   g_dims = (2, 3)
   n = prod(g_dims)
   g = named_grid(g_dims)

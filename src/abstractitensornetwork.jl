@@ -724,23 +724,6 @@ function norm_sqr_network(ψ::AbstractITensorNetwork)
   return disjoint_union("bra" => dag(prime(ψ; sites=[])), "ket" => ψ)
 end
 
-#Ideally this will not be necessary but this is a temporary fast version to avoid the overhead of `disjoint_union`
-function norm_sqr_network_fast(ψ::AbstractITensorNetwork)
-  ψbra = rename_vertices(v -> (v, 1), data_graph(ψ))
-  ψdag = copy(ψ)
-  for v in vertices(ψdag)
-    setindex_preserve_graph!(ψdag, dag(ψdag[v]), v)
-  end
-  ψket = rename_vertices(v -> (v, 2), data_graph(prime(ψdag; sites=[])))
-  ψψ = ITensorNetwork(union(ψbra, ψket))
-  for v in vertices(ψ)
-    if !isempty(commoninds(ψψ[(v, 1)], ψψ[(v, 2)]))
-      add_edge!(ψψ, (v, 1) => (v, 2))
-    end
-  end
-  return ψψ
-end
-
 #
 # Printing
 #
@@ -911,28 +894,4 @@ end
 
 Base.:+(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)
 
-ITensors.hasqns(tn::AbstractITensorNetwork) = all([hasqns(tn[v]) for v in vertices(tn)])
-
-## # TODO: should this make sure that internal indices
-## # don't clash?
-## function hvncat(
-##   dim::Int, tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; new_dim_names=(1, 2)
-## )
-##   dg = hvncat(dim, data_graph(tn1), data_graph(tn2); new_dim_names)
-## 
-##   # Add in missing edges that may be shared
-##   # across `tn1` and `tn2`.
-##   vertices1 = vertices(dg)[1:nv(tn1)]
-##   vertices2 = vertices(dg)[(nv(tn1) + 1):end]
-##   for v1 in vertices1, v2 in vertices2
-##     if hascommoninds(dg[v1], dg[v2])
-##       add_edge!(dg, v1 => v2)
-##     end
-##   end
-## 
-##   # TODO: Allow customization of the output type.
-##   ## return promote_type(typeof(tn1), typeof(tn2))(dg)
-##   ## return contract_output(typeof(tn1), typeof(tn2))(dg)
-## 
-##   return ITensorNetwork(dg)
-## end
+ITensors.hasqns(tn::AbstractITensorNetwork) = any(v -> hasqns(tn[v]), vertices(tn))

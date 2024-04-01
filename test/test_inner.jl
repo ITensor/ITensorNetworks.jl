@@ -1,15 +1,15 @@
 using Test
 using ITensorNetworks
 
-using ITensorNetworks: logscalar, scalar, inner, loginner
-using ITensors: siteinds, dag
+using ITensorNetworks: inner, loginner, logscalar, scalar
+using ITensors: dag, siteinds
 using SplitApplyCombine: group
 using Graphs: SimpleGraph, uniform_tree
 using NamedGraphs: NamedGraph
-using Random: seed!
+using Random: Random
 
 @testset "Inner products, BP vs exact comparison" begin
-  seed!(1234)
+  Random.seed!(1234)
   L = 4
   χ = 2
   g = NamedGraph(SimpleGraph(uniform_tree(L)))

@@ -54,12 +54,8 @@ function BeliefPropagationCache(
   return BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
 end
 
-function cache(
-  alg::Algorithm"bp",
-  tn;
-  cache_construction_kwargs=default_cache_construction_kwargs(alg, tn),
-)
-  return BeliefPropagationCache(tn; cache_construction_kwargs...)
+function cache(alg::Algorithm"bp", tn; kwargs...)
+  return BeliefPropagationCache(tn; kwargs...)
 end
 
 function partitioned_itensornetwork(bp_cache::BeliefPropagationCache)
@@ -263,32 +259,26 @@ function update_factor(bp_cache, vertex, factor)
   return update_factors(bp_cache, [vertex], ITensor[factor])
 end
 
-function vertex_norm(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
+function region_scalar(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
   incoming_mts = environment(bp_cache, [pv])
   local_state = factor(bp_cache, pv)
   return scalar(vcat(incoming_mts, local_state))
 end
 
-function edge_norm(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
+function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
   return scalar(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))))
 end
 
-function vertex_norms(bp_cache::BeliefPropagationCache, pvs::Vector)
-  return [vertex_norm(bp_cache, pv) for pv in pvs]
+function vertex_scalars(bp_cache::BeliefPropagationCache, pvs::Vector)
+  return [region_scalar(bp_cache, pv) for pv in pvs]
 end
 
-function vertex_norms(bp_cache::BeliefPropagationCache)
-  return vertex_norms(bp_cache, partitionvertices(partitioned_itensornetwork(bp_cache)))
+function edge_scalars(bp_cache::BeliefPropagationCache, pes::Vector)
+  return [region_scalar(bp_cache, pe) for pe in pes]
 end
 
-function edge_norms(bp_cache::BeliefPropagationCache, pes::Vector)
-  return [edge_norm(bp_cache, pe) for pe in pes]
-end
-
-function edge_norms(bp_cache::BeliefPropagationCache)
-  return edge_norms(bp_cache, partitionedges(partitioned_itensornetwork(bp_cache)))
-end
-
-function scalar_factors(bp_cache::BeliefPropagationCache)
-  return vertex_norms(bp_cache), edge_norms(bp_cache)
+function scalar_factors_quotient(bp_cache::BeliefPropagationCache)
+  pvs = partitionvertices(partitioned_itensornetwork(bp_cache))
+  pes = partitionedges(partitioned_itensornetwork(bp_cache))
+  return vertex_scalars(bp_cache, pvs), edge_scalars(bp_cache, pes)
 end

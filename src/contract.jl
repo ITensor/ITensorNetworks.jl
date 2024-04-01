@@ -4,7 +4,7 @@ using ITensors.ContractionSequenceOptimization: deepmap
 using ITensors.NDTensors: NDTensors, Algorithm, @Algorithm_str, contract
 using LinearAlgebra: normalize!
 
-function NDTensors.contract(tn::AbstractITensorNetwork; alg::String="exact", kwargs...)
+function NDTensors.contract(tn::AbstractITensorNetwork; alg="exact", kwargs...)
   return contract(Algorithm(alg), tn; kwargs...)
 end
 
@@ -54,7 +54,7 @@ function ITensors.scalar(
 end
 
 function logscalar(
-  tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg::String="exact", kwargs...
+  tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg="exact", kwargs...
 )
   return logscalar(Algorithm(alg), tn; kwargs...)
 end
@@ -63,14 +63,8 @@ function logscalar(
   alg::Algorithm"exact", tn::Union{AbstractITensorNetwork,Vector{ITensor}}; kwargs...
 )
   s = scalar(alg, tn; kwargs...)
-  if s ≈ 0
-    tol = 1e-16
-    return -Inf
-  elseif isa(s, AbstractFloat) && s >= 0
-    return log(s)
-  else
-    return complex(s)
-  end
+  s = real(s) < 0 ? complex(s) : s
+  return log(s)
 end
 
 function logscalar(
@@ -82,22 +76,18 @@ function logscalar(
   cache_update_kwargs=default_cache_update_kwargs(cache!),
 )
   if isnothing(cache!)
-    cache! = Ref(cache(alg, tn; cache_construction_kwargs))
+    cache! = Ref(cache(alg, tn; cache_construction_kwargs...))
   end
 
   if update_cache
     cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  numerator_terms, denominator_terms = scalar_factors(cache![])
+  numerator_terms, denominator_terms = scalar_factors_quotient(cache![])
   terms = vcat(numerator_terms, denominator_terms)
-  if any(≈(0), terms)
-    return -Inf
-  elseif all(t -> isa(t, AbstractFloat), terms) && all(>=(0), terms)
-    return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
-  else
-    return sum(log.(complex.(numerator_terms))) - sum(log.(complex.((denominator_terms))))
-  end
+  terms .= any(t -> real(t) < 0, terms) ? complex.(terms) : terms
+
+  return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
 end
 
 function ITensors.scalar(alg::Algorithm"bp", tn::AbstractITensorNetwork; kwargs...)
