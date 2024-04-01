@@ -1,3 +1,5 @@
+using Observers: Observers
+
 """
 Overload of `Observers.update!`.
 """

@@ -1,3 +1,5 @@
+using KrylovKit: eigsolve
+
 function eigsolve_updater(
   init;
   state!,

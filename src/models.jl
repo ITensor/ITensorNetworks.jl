@@ -1,3 +1,6 @@
+using Graphs: grid, neighborhood, vertices
+using ITensors.Ops: OpSum
+
 _maybe_fill(x, n) = x
 _maybe_fill(x::Number, n) = fill(x, n)
 
@@ -6,6 +9,7 @@ function nth_nearest_neighbors(g, v, n::Int)  #ToDo: Add test for this.
   return setdiff(neighborhood(g, v, n), neighborhood(g, v, n - 1))
 end
 
+# TODO: Move to `NamedGraphs.jl` or `GraphsExtensions.jl`.
 next_nearest_neighbors(g, v) = nth_nearest_neighbors(g, v, 2)
 
 function tight_binding(g::AbstractGraph; t=1, tp=0, h=0)

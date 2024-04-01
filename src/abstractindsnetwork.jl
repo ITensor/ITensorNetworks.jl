@@ -1,5 +1,6 @@
+using ITensors: IndexSet
 using DataGraphs: DataGraphs, AbstractDataGraph, edge_data, edge_data_type, vertex_data
-using Graphs: Graphs
+using Graphs: Graphs, AbstractEdge
 using ITensors: ITensors, unioninds, uniqueinds
 using NamedGraphs: NamedGraphs, incident_edges, rename_vertices
 

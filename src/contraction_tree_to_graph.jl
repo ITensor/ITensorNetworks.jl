@@ -1,3 +1,4 @@
+using Graphs.SimpleGraphs: rem_vertex!
 """
 Take a contraction sequence and return a directed graph.
 """
