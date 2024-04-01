@@ -20,6 +20,7 @@ using ITensors:
   uniqueinds
 using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
 using ITensors.ITensorMPS: siteinds
+using KrylovKit: linsolve
 using LinearAlgebra: eigen, norm, svd
 using NamedGraphs: NamedEdge
 using Observers: Observers

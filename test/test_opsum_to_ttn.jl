@@ -1,11 +1,11 @@
-using Dictionaries
+using Dictionaries: Dictionary
 using ITensors
 using ITensorGaussianMPS: hopping_hamiltonian
 using ITensorNetworks
-using Random
+using KrylovKit: eigsolve
 using LinearAlgebra: eigvals
 using Graphs: add_vertex!, rem_vertex!, add_edge!, rem_edge!
-using Test
+using Test: @test, @testset
 
 function to_matrix(t::ITensor)
   c = combiner(inds(t; plev=0))

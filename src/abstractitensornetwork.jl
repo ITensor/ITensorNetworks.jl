@@ -11,6 +11,7 @@ using ITensors:
   ITensor,
   addtags,
   commoninds,
+  commontags,
   contract,
   dag,
   hascommoninds,
@@ -43,6 +44,7 @@ using NamedGraphs:
   vertex_to_parent_vertex,
   vertextype
 using NamedGraphs: directed_graph
+using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
 
