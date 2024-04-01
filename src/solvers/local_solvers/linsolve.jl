@@ -1,3 +1,5 @@
+using KrylovKit: linsolve
+
 function linsolve_updater(
   init;
   state!,
@@ -17,7 +19,7 @@ function linsolve_updater(
 )
   P = projected_operator![]
   b = dag(only(proj_mps(P)))
-  x, info = KrylovKit.linsolve(
+  x, info = linsolve(
     P, b, init, a₀, a₁; ishermitian=false, tol, krylovdim, maxiter, verbosity
   )
   return x, (;)

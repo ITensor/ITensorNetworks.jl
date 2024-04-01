@@ -1,3 +1,5 @@
+using KrylovKit: exponentiate
+
 function exponentiate_updater(
   init;
   state!,

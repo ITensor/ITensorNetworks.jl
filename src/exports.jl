@@ -1,13 +1,3 @@
-using NamedGraphs: named_grid
-using NamedGraphs: named_comb_tree
-using NamedGraphs: named_binary_tree
-using NamedGraphs: mincut_partitions
-using NamedGraphs: comb_tree
-using Graphs: outneighbors
-using Graphs: mincut
-using Graphs: is_directed
-using Graphs: inneighbors
-using Graphs.SimpleGraphs: grid
 # Graphs
 export grid,
   dst,
