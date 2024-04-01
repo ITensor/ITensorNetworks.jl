@@ -1,3 +1,5 @@
+using Distributions: Distribution
+
 """
 RETURN A TENSOR NETWORK WITH COPY TENSORS ON EACH VERTEX. 
 Note that passing a link_space will mean the indices of the resulting network don't match those of the input indsnetwork

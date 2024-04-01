@@ -1,4 +1,5 @@
-using DataGraphs: DataGraphs, vertex_data
+using DataGraphs: DataGraphs, DataGraph, map_data, vertex_data
+using Dictionaries: AbstractDictionary, Indices
 using Graphs: Graphs
 using Graphs.SimpleGraphs: AbstractSimpleGraph
 using ITensors: Index, dag

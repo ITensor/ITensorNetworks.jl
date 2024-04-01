@@ -1,10 +1,5 @@
 module ITensorNetworks
 
-using DataGraphs
-using DataStructures
-using Dictionaries
-using Distributions
-using DocStringExtensions
 using Graphs
 using GraphsFlows
 using Graphs.SimpleGraphs # AbstractSimpleGraph
@@ -31,20 +26,9 @@ using TimerOutputs
 
 using DataGraphs: IsUnderlyingGraph, edge_data_type, vertex_data_type
 using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
-using ITensors:
-  @Algorithm_str,
-  @debug_check,
-  @timeit_debug,
-  δ,
-  AbstractMPS,
-  Algorithm,
-  OneITensor,
-  commontags,
-  dim,
-  orthocenter
+using ITensors: @Algorithm_str, @timeit_debug, δ, Algorithm, OneITensor, commontags, dim
 using KrylovKit: exponentiate, eigsolve, linsolve
-using NamedGraphs:
-  AbstractNamedGraph, parent_graph, parent_vertices_to_vertices, not_implemented
+using NamedGraphs: AbstractNamedGraph, parent_graph, not_implemented
 
 include("Graphs/abstractgraph.jl")
 include("Graphs/abstractdatagraph.jl")

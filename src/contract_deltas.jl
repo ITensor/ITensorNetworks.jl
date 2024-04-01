@@ -1,3 +1,5 @@
+using DataStructures: DataStructures, DisjointSets, find_root!
+
 """
 Rewrite of the function
   `DataStructures.root_union!(s::IntDisjointSet{T}, x::T, y::T) where {T<:Integer}`.

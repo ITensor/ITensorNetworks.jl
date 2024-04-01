@@ -16,7 +16,6 @@ using ITensors:
   setprime,
   unioninds,
   uniqueinds,
-  removetags,
   replacetags,
   settags,
   sim,
@@ -171,7 +170,7 @@ function ITensors.promote_itensor_eltype(tn::AbstractITensorNetwork)
   return LinearAlgebra.promote_leaf_eltypes(tn)
 end
 
-ITensors.scalartype(tn::AbstractITensorNetwork) = LinearAlgebra.promote_leaf_eltypes(tn)
+NDTensors.scalartype(tn::AbstractITensorNetwork) = LinearAlgebra.promote_leaf_eltypes(tn)
 
 # TODO: eltype(::AbstractITensorNetwork) (cannot behave the same as eltype(::ITensors.AbstractMPS))
 

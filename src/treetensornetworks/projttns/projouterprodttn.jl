@@ -1,4 +1,5 @@
 using DataGraphs: DataGraphs
+using Dictionaries: set!
 using NamedGraphs: incident_edges
 
 struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}
