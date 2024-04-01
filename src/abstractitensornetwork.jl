@@ -1,21 +1,33 @@
 using DataGraphs:
   DataGraphs, edge_data, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
-using Graphs: Graphs, Graph, add_edge!, dst, edgetype, neighbors, rem_edge!, src, vertices
-using Graphs: add_vertex!
-using Graphs: bfs_tree
-using Graphs: edges
-using Graphs: ne
+using Graphs:
+  Graphs,
+  Graph,
+  add_edge!,
+  add_vertex!,
+  bfs_tree,
+  dst,
+  edges,
+  edgetype,
+  ne,
+  neighbors,
+  rem_edge!,
+  src,
+  vertices
 using ITensors:
   ITensors,
   ITensor,
   addtags,
+  combiner,
   commoninds,
   commontags,
   contract,
+  convert_eltype,
   dag,
   hascommoninds,
   noprime,
+  onehot,
   prime,
   replaceprime,
   setprime,
@@ -25,12 +37,7 @@ using ITensors:
   settags,
   sim,
   swaptags
-using ITensors: combiner
-using ITensors: convert_eltype
-using ITensors: onehot
-using ITensors.ITensorMPS: ITensorMPS
-using ITensors.ITensorMPS: add
-using ITensors.ITensorMPS: linkdim, linkinds, siteinds
+using ITensors.ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
 using ITensors.NDTensors: NDTensors, dim
 using LinearAlgebra: LinearAlgebra

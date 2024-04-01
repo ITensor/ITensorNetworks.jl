@@ -1,11 +1,26 @@
+@eval module $(gensym())
+using DataGraphs: vertex_data
 using Dictionaries: Dictionary
-using ITensors
+using Graphs: add_vertex!, rem_vertex!, add_edge!, rem_edge!, vertices
+using ITensors:
+  ITensors,
+  Index,
+  ITensor,
+  @disable_warn_order,
+  combinedind,
+  combiner,
+  contract,
+  dag,
+  inds,
+  removeqns
+using ITensors.ITensorMPS: MPO
+using ITensors.NDTensors: matrix
 using ITensorGaussianMPS: hopping_hamiltonian
-using ITensorNetworks
+using ITensorNetworks: ITensorNetworks, OpSum, TTN, relabel_sites, siteinds
 using KrylovKit: eigsolve
-using LinearAlgebra: eigvals
-using Graphs: add_vertex!, rem_vertex!, add_edge!, rem_edge!
-using Test: @test, @testset
+using LinearAlgebra: eigvals, norm
+using NamedGraphs: leaf_vertices, named_comb_tree, named_grid, post_order_dfs_vertices
+using Test: @test, @test_broken, @testset
 
 function to_matrix(t::ITensor)
   c = combiner(inds(t; plev=0))
@@ -259,4 +274,5 @@ end
       @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
     end
   end
+end
 end
