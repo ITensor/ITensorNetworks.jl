@@ -1,3 +1,4 @@
+using ITensors.NDTensors: ind
 using DataStructures: DataStructures, DisjointSets, find_root!
 
 """

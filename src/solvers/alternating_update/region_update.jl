@@ -1,3 +1,4 @@
+using ITensors.NDTensors: mindim
 using Observers: Observers
 
 #ToDo: generalize beyond 2-site

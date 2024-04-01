@@ -1,3 +1,8 @@
+using Graphs: has_vertex
+using NamedGraphs: edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
+using IsApprox: Approx
+using ITensors: directsum, hasinds, permute, plev
+using ITensors.ITensorMPS: isortho, linkind, loginner, lognorm, orthogonalize
 using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end

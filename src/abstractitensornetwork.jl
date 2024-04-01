@@ -1,3 +1,13 @@
+using NamedGraphs: directed_graph
+using ITensors: onehot
+using ITensors.ITensorMPS: linkdim, linkinds, siteinds
+using ITensors: convert_eltype
+using ITensors: combiner
+using ITensors.ITensorMPS: add
+using Graphs: ne
+using Graphs: edges
+using Graphs: bfs_tree
+using Graphs.SimpleGraphs: add_vertex!
 using DataGraphs:
   DataGraphs, edge_data, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary

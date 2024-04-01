@@ -1,3 +1,4 @@
+using ITensors: filterinds
 using NamedGraphs: Key
 using ITensors: ITensors, Index, ITensor, QN, inds, op, replaceinds, uniqueinds
 using ITensors.NDTensors: NDTensors

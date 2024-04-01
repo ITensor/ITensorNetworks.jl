@@ -1,3 +1,4 @@
+using ITensors: siteind
 function ITensors.siteind(sitetype::String, v::Tuple; kwargs...)
   return addtags(siteind(sitetype; kwargs...), ITensorNetworks.vertex_tag(v))
 end

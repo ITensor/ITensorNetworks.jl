@@ -1,3 +1,6 @@
+using ITensors: uniqueind
+using ITensors.NDTensors: array
+
 function dmrg_x_updater(
   init;
   state!,

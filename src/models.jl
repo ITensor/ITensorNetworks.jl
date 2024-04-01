@@ -1,3 +1,4 @@
+using Graphs: neighborhood
 _maybe_fill(x, n) = x
 _maybe_fill(x::Number, n) = fill(x, n)
 
