@@ -84,8 +84,13 @@ function logscalar(
   end
 
   numerator_terms, denominator_terms = scalar_factors_quotient(cache![])
-  terms = vcat(numerator_terms, denominator_terms)
-  terms .= any(t -> real(t) < 0, terms) ? complex.(terms) : terms
+  numerator_terms =
+    any(t -> real(t) < 0, numerator_terms) ? complex.(numerator_terms) : numerator_terms
+  denominator_terms = if any(t -> real(t) < 0, denominator_terms)
+    complex.(denominator_terms)
+  else
+    denominator_terms
+  end
 
   return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
 end

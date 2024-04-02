@@ -1,5 +1,5 @@
 using ITensors.ITensorMPS: ITensorMPS
-using NamedGraphs: boundary_partitionedges
+using NamedGraphs: boundary_partitionedges, partitionvertices, partitionedges
 
 default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()
