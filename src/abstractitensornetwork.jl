@@ -869,7 +869,7 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 
   #Create vertices of tn12 as direct sum of tn1[v] and tn2[v]. Work out the matching indices by matching edges. Make index tags those of tn1[v]
   for v in vertices(tn1)
-    @assert siteinds(tn1, v) == siteinds(tn2, v)
+    @assert issetequal(siteinds(tn1, v), siteinds(tn2, v))
 
     e1_v = filter(x -> src(x) == v || dst(x) == v, edges_tn1)
     e2_v = filter(x -> src(x) == v || dst(x) == v, edges_tn2)
