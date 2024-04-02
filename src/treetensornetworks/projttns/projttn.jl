@@ -82,7 +82,7 @@ function projected_operator_tensors(P::ProjTTN)
   if on_edge(P)
     itensor_map = environments
   else
-    itensor_map = Union{ITensor,OneITensor}[] # TODO: will a Hamiltonian TTN tensor ever be a OneITensor?
+    itensor_map = ITensor[]
     for s in sites(P)
       site_envs = filter(hascommoninds(operator(P)[s]), environments)
       frst, scnd, rst = _separate_first_two(site_envs)

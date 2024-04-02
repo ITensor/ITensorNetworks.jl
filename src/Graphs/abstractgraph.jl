@@ -1,3 +1,7 @@
+using Graphs: AbstractGraph, IsDirected, a_star
+using NamedGraphs: child_vertices, undirected_graph
+using SimpleTraits: @traitfn
+
 """Determine if an edge involves a leaf (at src or dst)"""
 function is_leaf_edge(g::AbstractGraph, e)
   return is_leaf(g, src(e)) || is_leaf(g, dst(e))

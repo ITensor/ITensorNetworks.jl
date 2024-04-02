@@ -1,3 +1,5 @@
+using LinearAlgebra: ishermitian
+
 """
 The struct contains cached density matrices and cached partial density matrices
 for each edge / set of edges in the tensor network.
@@ -144,9 +146,7 @@ end
 
 function _get_low_rank_projector(tensor, inds1, inds2; cutoff, maxdim)
   @assert length(inds(tensor)) <= 4
-  @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: eigen" begin
-    F = eigen(tensor, inds1, inds2; cutoff=cutoff, maxdim=maxdim, ishermitian=true)
-  end
+  F = eigen(tensor, inds1, inds2; cutoff=cutoff, maxdim=maxdim, ishermitian=true)
   return F.Vt
 end
 

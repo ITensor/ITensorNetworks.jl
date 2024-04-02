@@ -1,3 +1,6 @@
+using ITensors: inner
+using ITensors.ITensorMPS: MPS
+using ITensors.ITensorMPS: MPO
 #Given an ITensorNetwork on an Lx*Ly grid with sites indexed as (i,j) then perform contraction using a sequence of mps-mpo contractions
 function contract_boundary_mps(tn::ITensorNetwork; kwargs...)
   dims = maximum(vertices(tn))

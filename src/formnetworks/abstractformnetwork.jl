@@ -1,3 +1,4 @@
+using Graphs: induced_subgraph
 default_bra_vertex_suffix() = "bra"
 default_ket_vertex_suffix() = "ket"
 default_operator_vertex_suffix() = "operator"

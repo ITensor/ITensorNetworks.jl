@@ -1,3 +1,6 @@
+using ITensors.LazyApply: Applied, Prod, Scaled, Sum
+using ITensors.Ops: Ops, Op
+
 # TODO: Rename this `replace_sites`?
 # TODO: Use `fmap`, `deepmap`, `treemap`?
 function replace_vertices(f, ∑o::Sum)

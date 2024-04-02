@@ -1,3 +1,4 @@
+using NamedGraphs: pre_order_dfs_vertices
 using DataGraphs: DataGraph
 using ITensors: Index, ITensor, delta, noncommoninds, replaceinds, sim
 using ITensors.NDTensors: Algorithm, @Algorithm_str

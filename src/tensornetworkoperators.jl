@@ -1,3 +1,4 @@
+using Graphs: has_edge
 using ITensors: ITensors, commoninds, product
 using LinearAlgebra: factorize
 

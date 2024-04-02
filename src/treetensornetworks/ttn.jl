@@ -1,3 +1,9 @@
+using ITensors.ITensorMPS: randomMPS, replacebond!
+using ITensors.NDTensors: truncate!
+using LinearAlgebra: normalize
+using NamedGraphs: named_path_graph
+using Random: randn!
+
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
 
