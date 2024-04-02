@@ -1,6 +1,9 @@
-using ITensors
-using ITensorNetworks
-using Test
+@eval module $(gensym())
+using Graphs: vertices
+using ITensors.ITensorMPS: MPS
+using ITensorNetworks: TTN, expect, random_mps, siteinds
+using NamedGraphs: named_comb_tree
+using Test: @test, @testset
 
 @testset "MPS expect comparison with ITensors" begin
   N = 25
@@ -28,5 +31,4 @@ end
   res = expect("Sz", state)
   @test all([isapprox(res[v], magnetization[v]; atol=1e-8) for v in vertices(s)])
 end
-
-nothing
+end

@@ -1,6 +1,6 @@
 using NamedGraphs
 using ITensors
-using ITensorNetworks
+using ITensorNetworks: randomITensorNetwork
 using Random
 
 Random.seed!(1234)
