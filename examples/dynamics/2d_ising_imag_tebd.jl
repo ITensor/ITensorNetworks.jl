@@ -1,8 +1,10 @@
-using ITensors
-using ITensorNetworks
+using ITensors: ITensors, inner
+using ITensors.ITensorMPS: MPO, MPS
+using ITensorNetworks: cartesian_to_linear, dmrg, expect, ising, siteinds, tebd
 using ITensorUnicodePlots
+using NamedGraphs: rename_vertices
 using UnicodePlots
-using Random
+using Random: Random
 
 Random.seed!(1234)
 

@@ -1,6 +1,7 @@
+using Graphs: vertices
 using NamedGraphs
 using ITensors
-using ITensorNetworks
+using ITensorNetworks: ITensorNetwork
 using ITensorUnicodePlots
 using Metis
 

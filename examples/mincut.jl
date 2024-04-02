@@ -1,7 +1,23 @@
-using NamedGraphs
-using ITensors
-using ITensorNetworks
-using ITensorUnicodePlots
+using Graphs:
+  adjacency_matrix,
+  bfs_tree,
+  center,
+  diameter,
+  eccentricity,
+  neighborhood_dists,
+  nv,
+  periphery,
+  radius
+using NamedGraphs:
+  dijkstra_mst,
+  dijkstra_parents,
+  dijkstra_tree,
+  mincut_partitions,
+  named_grid,
+  symrcm_permute
+using ITensors: dag
+using ITensorNetworks: ITensorNetwork, ⊗, flatten_networks, siteinds
+using ITensorUnicodePlots: @visualize
 
 g = named_grid(5)
 s = siteinds("S=1/2", g)

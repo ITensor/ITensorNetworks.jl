@@ -1,8 +1,10 @@
-using AbstractTrees
-using NamedGraphs
-using ITensors
-using ITensorNetworks
-using ITensorUnicodePlots
+using Graphs: neighbors, vertices
+using NamedGraphs: incident_edges, is_leaf, leaf_vertices, named_binary_tree
+using ITensors: contract, dag, prime
+using ITensorNetworks: TTN, ⊗, contraction_sequence, siteinds
+using ITensorUnicodePlots: @visualize
+using LinearAlgebra: svd
+using Random: randn!
 
 g = named_binary_tree(3)
 s = siteinds("S=1/2", g)

@@ -1,6 +1,8 @@
-using ITensors, OMEinsumContractionOrders
+@eval module $(gensym())
 using DataGraphs: DataGraph, underlying_graph, vertex_data
-using ITensors: contract
+using Graphs: add_vertex!, vertices
+using ITensors: Index, ITensor, contract, noncommoninds, randomITensor
+using ITensors.ITensorMPS: MPS
 using ITensorNetworks:
   _DensityMartrixAlgGraph,
   _contract_deltas_ignore_leaf_partitions,
@@ -10,10 +12,13 @@ using ITensorNetworks:
   _partition,
   _rem_vertex!,
   _root,
-  binary_tree_structure,
-  randomITensorNetwork,
   IndsNetwork,
-  path_graph_structure
+  ITensorNetwork,
+  binary_tree_structure,
+  path_graph_structure,
+  randomITensorNetwork
+using NamedGraphs: NamedEdge, named_grid, post_order_dfs_vertices
+using OMEinsumContractionOrders: OMEinsumContractionOrders
 using Test: @test, @testset
 
 @testset "test mincut functions on top of MPS" begin
@@ -142,4 +147,5 @@ end
   end
   # Check that a specific density matrix info has been cached
   @test haskey(alg_graph.caches.es_to_pdm, Set([NamedEdge(nothing, path[3])]))
+end
 end
