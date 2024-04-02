@@ -1,7 +1,21 @@
 @eval module $(gensym())
+using Graphs: nv
 using ITensorNetworks:
-  ITensorNetworks, OpSum, TTN, apply, dmrg_x, inner, mpo, mps, random_mps, siteinds
-using LinearAlgebra: normalize
+  ITensorNetworks,
+  OpSum,
+  TTN,
+  apply,
+  contract,
+  dmrg_x,
+  inner,
+  linkdims,
+  mpo,
+  mps,
+  random_mps,
+  siteinds
+using ITensors: @disable_warn_order, array, dag, onehot, uniqueind
+using LinearAlgebra: eigen, normalize
+using NamedGraphs: named_comb_tree
 using Random: Random
 using Test: @test, @testset
 

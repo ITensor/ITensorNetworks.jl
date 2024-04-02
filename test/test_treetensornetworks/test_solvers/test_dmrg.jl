@@ -1,15 +1,31 @@
 @eval module $(gensym())
-using DataGraphs: vertex_data
+using DataGraphs: edge_data, vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
 using ITensors: ITensors
-using ITensors.ITensorMPS: MPO, MPS
+using ITensors.ITensorMPS: MPO, MPS, randomMPS
 using ITensorNetworks:
-  ITensorNetworks, OpSum, TTN, apply, dmrg, inner, mpo, random_mps, relabel_sites, siteinds
+  ITensorNetworks,
+  OpSum,
+  TTN,
+  apply,
+  dmrg,
+  inner,
+  linkdims,
+  mpo,
+  random_mps,
+  random_ttn,
+  relabel_sites,
+  siteinds
 using KrylovKit: eigsolve
 using NamedGraphs: named_comb_tree
 using Observers: observer
 using Test: @test, @test_broken, @testset
+
+# This is needed since `eigen` is broken
+# if there are no QNs and auto-fermion
+# is enabled.
+ITensors.disable_auto_fermion()
 
 @testset "MPS DMRG" for nsites in [1, 2]
   N = 10
