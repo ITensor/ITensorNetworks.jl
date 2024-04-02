@@ -16,7 +16,18 @@ using NamedGraphs: NamedEdge, PartitionVertex, named_comb_tree, named_grid
 using Random: Random
 using SplitApplyCombine: group
 using ITensors:
-  ITensor, apply, array, combiner, dag, inds, inner, op, prime, randomITensor, siteinds
+  ITensors,
+  ITensor,
+  apply,
+  array,
+  combiner,
+  dag,
+  inds,
+  inner,
+  op,
+  prime,
+  randomITensor,
+  siteinds
 
 @testset "belief_propagation" begin
   ITensors.disable_warn_order()
