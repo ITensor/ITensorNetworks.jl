@@ -1,8 +1,13 @@
-using Dictionaries
-using ITensors
-using ITensorNetworks
-using Random
-using Test
+@eval module $(gensym())
+using DataGraphs: edge_data, vertex_data
+using Dictionaries: Dictionary
+using Graphs: edges, ne, nv, vertices
+using ITensorNetworks: IndsNetwork, union_all_inds
+using ITensors: Index
+using ITensors.NDTensors: dim
+using NamedGraphs: named_comb_tree
+using Random: Random
+using Test: @test, @testset
 
 @testset "IndsNetwork constructors" begin
   Random.seed!(1234)
@@ -163,4 +168,5 @@ end
   is_m = union_all_inds(is1, is2)
   @test all(issetequal(is_m[v], union(is1[v], is2[v])) for v in vertices(c))
   @test all(issetequal(is_m[e], union(is1[e], is2[e])) for e in edges(c))
+end
 end

@@ -1,11 +1,52 @@
-using Dictionaries
-using Distributions
-using GraphsFlows
-using ITensors
-using ITensorNetworks
-using NamedGraphs
-using Random
-using Test
+@eval module $(gensym())
+using DataGraphs: vertex_data
+using Dictionaries: Dictionary
+using Distributions: Uniform
+using Graphs:
+  dijkstra_shortest_paths,
+  edges,
+  grid,
+  has_vertex,
+  ne,
+  neighbors,
+  nv,
+  rem_vertex!,
+  vertices,
+  weights
+using GraphsFlows: GraphsFlows
+using ITensors:
+  ITensors,
+  Index,
+  ITensor,
+  commonind,
+  commoninds,
+  contract,
+  dag,
+  hascommoninds,
+  hasinds,
+  inds,
+  itensor,
+  order,
+  sim,
+  uniqueinds
+using ITensors.NDTensors: dims
+using ITensorNetworks:
+  ITensorNetworks,
+  ⊗,
+  IndsNetwork,
+  ITensorNetwork,
+  contraction_sequence,
+  externalinds,
+  inner_network,
+  internalinds,
+  linkinds,
+  orthogonalize,
+  randomITensorNetwork,
+  siteinds
+using LinearAlgebra: factorize
+using NamedGraphs: NamedEdge, incident_edges, named_comb_tree, named_grid
+using Random: Random, randn!
+using Test: @test, @test_broken, @testset
 
 @testset "ITensorNetwork tests" begin
   @testset "ITensorNetwork Basics" begin
@@ -268,4 +309,5 @@ using Test
     tn = randomITensorNetwork(is; link_space=3)
     @test_broken swapprime(tn, 0, 2)
   end
+end
 end
