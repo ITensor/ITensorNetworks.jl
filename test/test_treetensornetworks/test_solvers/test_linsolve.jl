@@ -1,6 +1,8 @@
 @eval module $(gensym())
 using ITensorNetworks: ITensorNetworks, OpSum, apply, dmrg, inner, mpo, random_mps, siteinds
-using Test: @test, @testset
+using KrylovKit: linsolve
+using Random: Random
+using Test: @test, @test_broken, @testset
 
 @testset "Linsolve" begin
   @testset "Linsolve Basics" begin
