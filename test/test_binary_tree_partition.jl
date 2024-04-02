@@ -1,17 +1,20 @@
 using ITensors, OMEinsumContractionOrders
-using Graphs, NamedGraphs
-using ITensorNetworks
+using DataGraphs: DataGraph, underlying_graph, vertex_data
 using ITensors: contract
 using ITensorNetworks:
-  _root,
+  _DensityMartrixAlgGraph,
+  _contract_deltas_ignore_leaf_partitions,
+  _is_rooted_directed_binary_tree,
   _mps_partition_inds_order,
   _mincut_partitions,
-  _is_rooted_directed_binary_tree,
-  _contract_deltas_ignore_leaf_partitions,
+  _partition,
   _rem_vertex!,
-  _DensityMartrixAlgGraph,
-  _partition
-using Test
+  _root,
+  binary_tree_structure,
+  randomITensorNetwork,
+  IndsNetwork,
+  path_graph_structure
+using Test: @test, @testset
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")

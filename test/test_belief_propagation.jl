@@ -1,23 +1,34 @@
-using ITensorNetworks
+@eval module $(gensym())
+using Compat: Compat
+using Graphs: vertices
 using ITensorNetworks:
-  ising_network,
-  split_index,
+  ITensorNetworks,
+  BeliefPropagationCache,
+  IndsNetwork,
+  ⊗,
+  apply,
+  combine_linkinds,
+  contract,
   contract_inner,
   contract_boundary_mps,
-  BeliefPropagationCache,
+  contraction_sequence,
+  environment,
+  flatten_networks,
+  ising_network,
+  linkinds_combiners,
+  randomITensorNetwork,
+  siteinds,
+  split_index,
   tensornetwork,
   update,
-  update_factor,
-  environment,
-  contract
-using Test
-using Compat
-using ITensors
-using LinearAlgebra
-using NamedGraphs
-using SplitApplyCombine
-using Random
-using Metis
+  update_factor
+using ITensors: ITensors, ITensor, combiner, dag, inds, op, prime, randomITensor
+using ITensors.NDTensors: array
+using LinearAlgebra: eigvals, tr
+using NamedGraphs: NamedEdge, PartitionVertex, named_comb_tree, named_grid
+using Random: Random
+using SplitApplyCombine: group
+using Test: @test, @testset
 
 ITensors.disable_warn_order()
 
@@ -157,4 +168,5 @@ ITensors.disable_warn_order()
     contract_boundary_mps(ψOψ; cutoff=1e-16) / contract_boundary_mps(ψψ; cutoff=1e-16)
 
   @test abs.((numerator / denominator) - exact_sz) <= 1e-5
+end
 end
