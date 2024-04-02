@@ -1,4 +1,5 @@
 [deps]
+DataGraphs = "b5a273c3-7e6c-41f6-98bd-8d7f1525a36a"
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 ITensorNetworks = "2919e153-833c-4bdc-8836-1ea460a35fc7"

@@ -1,10 +1,11 @@
 @eval module $(gensym())
+using DataGraphs: vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
 using ITensors: ITensors
 using ITensors.ITensorMPS: MPO, MPS
 using ITensorNetworks:
-  ITensorNetworks, OpSum, TTN, apply, dmrg, inner, mpo, random_mps, siteinds
+  ITensorNetworks, OpSum, TTN, apply, dmrg, inner, mpo, random_mps, relabel_sites, siteinds
 using KrylovKit: eigsolve
 using NamedGraphs: named_comb_tree
 using Observers: observer
