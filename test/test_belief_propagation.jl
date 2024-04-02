@@ -16,21 +16,10 @@ using NamedGraphs: NamedEdge, PartitionVertex, named_comb_tree, named_grid
 using Random: Random
 using SplitApplyCombine: group
 using ITensors:
-  ITensor,
-  apply,
-  array,
-  combiner,
-  dag,
-  disable_warn_order,
-  inds,
-  inner,
-  op,
-  prime,
-  randomITensor,
-  siteinds,
-  disable_warn_order()
+  ITensor, apply, array, combiner, dag, inds, inner, op, prime, randomITensor, siteinds
 
 @testset "belief_propagation" begin
+  ITensors.disable_warn_order()
 
   #First test on an MPS, should be exact
   g_dims = (1, 6)
