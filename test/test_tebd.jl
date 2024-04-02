@@ -1,6 +1,11 @@
-using ITensors
-using ITensorNetworks
-using Test
+@eval module $(gensym())
+using Graphs: vertices
+using ITensors: ITensors
+using ITensors.ITensorMPS: MPO, MPS
+using ITensorNetworks:
+  ITensorNetwork, cartesian_to_linear, dmrg, expect, group_terms, ising, siteinds, tebd
+using NamedGraphs: named_grid, rename_vertices
+using Test: @test, @testset
 
 ITensors.disable_warn_order()
 
@@ -63,4 +68,5 @@ ITensors.disable_warn_order()
   @show E0, E1, E2, E_dmrg
   @test (((abs((E2 - E1) / E2) < 1e-4) && (E1 < E0)) || (E2 < E1 < E0))
   @test E2 ≈ E_dmrg rtol = 1e-4
+end
 end

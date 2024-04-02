@@ -1,22 +1,29 @@
-using ITensors
+@eval module $(gensym())
+using DataGraphs: underlying_graph
 using Graphs: nv
 using NamedGraphs
-using ITensorNetworks
 using ITensorNetworks:
-  delta_network,
-  update,
-  tensornetwork,
-  bra_vertex,
-  ket_vertex,
-  dual_index_map,
+  BeliefPropagationCache,
+  BilinearFormNetwork,
+  QuadraticFormNetwork,
   bra_network,
-  ket_network,
-  operator_network,
+  bra_vertex,
+  delta_network,
+  dual_index_map,
   environment,
-  BeliefPropagationCache
-using Test
-using Random
-using SplitApplyCombine
+  externalinds,
+  ket_network,
+  ket_vertex,
+  operator_network,
+  randomITensorNetwork,
+  siteinds,
+  tensornetwork,
+  union_all_inds,
+  update
+using ITensors: contract, dag, inds, prime, randomITensor
+using LinearAlgebra: norm
+using Test: @test, @testset
+using Random: Random
 
 @testset "FormNetworks" begin
   g = named_grid((1, 4))
@@ -65,4 +72,5 @@ using SplitApplyCombine
   ∂qf_∂v_bp = contract(∂qf_∂v_bp)
   ∂qf_∂v_bp /= norm(∂qf_∂v_bp)
   @test ∂qf_∂v_bp ≈ ∂qf_∂v
+end
 end

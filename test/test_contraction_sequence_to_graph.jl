@@ -1,15 +1,19 @@
-using ITensorNetworks
+@eval module $(gensym())
+using Graphs: vertices
 using ITensorNetworks:
+  _root,
+  contraction_sequence,
   contraction_sequence_to_digraph,
   contraction_sequence_to_graph,
   internal_edges,
   contraction_tree_leaf_bipartition,
   distance_to_leaf,
+  flatten_networks,
   leaf_vertices,
-  _root
-using Test
-using ITensors
-using NamedGraphs
+  randomITensorNetwork,
+  siteinds
+using Test: @test, @testset
+using NamedGraphs: is_leaf, leaf_vertices, named_grid
 
 @testset "contraction_sequence_to_graph" begin
   n = 3
@@ -47,4 +51,5 @@ using NamedGraphs
       @test Set([vsi.I for vsi in vcat(v[1], v[2])]) == Set(vertices(ψψ))
     end
   end
+end
 end
