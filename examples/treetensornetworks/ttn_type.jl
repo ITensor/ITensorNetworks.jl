@@ -1,9 +1,10 @@
-using Graphs: neighbors, vertices
+using Graphs: dst, edgetype, neighbors, src, vertices
 using NamedGraphs: incident_edges, is_leaf, leaf_vertices, named_binary_tree
 using ITensors: contract, dag, prime
-using ITensorNetworks: TTN, ⊗, contraction_sequence, siteinds
+using ITensorNetworks:
+  TTN, ⊗, contraction_sequence, inner, norm_sqr_network, orthogonalize, siteinds
 using ITensorUnicodePlots: @visualize
-using LinearAlgebra: svd
+using LinearAlgebra: norm, qr, svd
 using Random: randn!
 
 g = named_binary_tree(3)

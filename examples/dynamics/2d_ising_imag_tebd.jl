@@ -1,9 +1,10 @@
+using Graphs: vertices
 using ITensors: ITensors, inner
 using ITensors.ITensorMPS: MPO, MPS
-using ITensorNetworks: cartesian_to_linear, dmrg, expect, ising, siteinds, tebd
+using ITensorNetworks: cartesian_to_linear, dmrg, expect, group_terms, ising, siteinds, tebd
 using ITensorUnicodePlots
-using NamedGraphs: rename_vertices
-using UnicodePlots
+using NamedGraphs: named_grid, rename_vertices
+using UnicodePlots: heatmap
 using Random: Random
 
 Random.seed!(1234)

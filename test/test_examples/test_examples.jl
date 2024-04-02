@@ -1,6 +1,7 @@
-using ITensorNetworks
-using Suppressor
-using Test
+@eval module $(gensym())
+using ITensorNetworks: ITensorNetworks
+using Suppressor: @suppress
+using Test: @testset
 
 @testset "Test examples" begin
   example_files = [
@@ -28,4 +29,5 @@ using Test
       @suppress include(joinpath(pkgdir(ITensorNetworks), "examples", example_file))
     end
   end
+end
 end
