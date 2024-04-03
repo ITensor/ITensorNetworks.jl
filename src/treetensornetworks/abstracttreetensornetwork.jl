@@ -295,7 +295,7 @@ function Base.:+(
   @assert all(ψ -> nv(first(ψs)) == nv(ψ), ψs)
 
   # Output state
-  ϕ = TTN(siteinds(ψs[1]))
+  ϕ = ttn(siteinds(ψs[1]))
 
   vs = post_order_dfs_vertices(ϕ, root_vertex)
   es = post_order_dfs_edges(ϕ, root_vertex)

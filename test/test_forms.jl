@@ -15,7 +15,7 @@ using ITensorNetworks:
   ket_network,
   ket_vertex,
   operator_network,
-  randomITensorNetwork,
+  random_itensornetwork,
   siteinds,
   tensornetwork,
   union_all_inds,
@@ -32,9 +32,9 @@ using Random: Random
   s_operator = union_all_inds(s_bra, s_ket)
   χ, D = 2, 3
   Random.seed!(1234)
-  ψket = randomITensorNetwork(s_ket; link_space=χ)
-  ψbra = randomITensorNetwork(s_bra; link_space=χ)
-  A = randomITensorNetwork(s_operator; link_space=D)
+  ψket = random_itensornetwork(s_ket; link_space=χ)
+  ψbra = random_itensornetwork(s_bra; link_space=χ)
+  A = random_itensornetwork(s_operator; link_space=D)
 
   blf = BilinearFormNetwork(A, ψbra, ψket)
   @test nv(blf) == nv(ψket) + nv(ψbra) + nv(A)

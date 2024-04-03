@@ -3,7 +3,7 @@ using Graphs: nv
 using ITensorNetworks:
   ITensorNetworks,
   OpSum,
-  TTN,
+  ttn,
   apply,
   contract,
   dmrg_x,
@@ -60,11 +60,11 @@ end
   # Random fields h ∈ [-W, W]
   h = W * (2 * rand(nv(c)) .- 1)
 
-  H = TTN(ITensorNetworks.heisenberg(c; h), s)
+  H = ttn(ITensorNetworks.heisenberg(c; h), s)
 
-  # TODO: Use `TTN(s; states=v -> rand(["↑", "↓"]))` or
+  # TODO: Use `ttn(s; states=v -> rand(["↑", "↓"]))` or
   # `ttns(s; states=v -> rand(["↑", "↓"]))`
-  ψ = normalize(TTN(s, v -> rand(["↑", "↓"])))
+  ψ = normalize(ttn(s, v -> rand(["↑", "↓"])))
 
   dmrg_x_kwargs = (nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
 

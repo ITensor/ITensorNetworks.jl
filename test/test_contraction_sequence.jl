@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using EinExprs: Exhaustive, Greedy, HyPar
 using ITensorNetworks:
-  contraction_sequence, norm_sqr_network, randomITensorNetwork, siteinds
+  contraction_sequence, norm_sqr_network, random_itensornetwork, siteinds
 using ITensors: ITensors, contract
 using NamedGraphs: named_grid
 using OMEinsumContractionOrders: OMEinsumContractionOrders
@@ -15,7 +15,7 @@ Random.seed!(1234)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
     χ = 10
-    ψ = randomITensorNetwork(s; link_space=χ)
+    ψ = random_itensornetwork(s; link_space=χ)
     tn = norm_sqr_network(ψ)
     seq_optimal = contraction_sequence(tn; alg="optimal")
     res_optimal = contract(tn; sequence=seq_optimal)[]

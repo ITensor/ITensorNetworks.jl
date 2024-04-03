@@ -8,7 +8,7 @@ using ITensorNetworks:
   gate_group_to_tno,
   get_tnos,
   ising,
-  randomITensorNetwork,
+  random_itensornetwork,
   siteinds
 using ITensors: ITensor, noprime
 using NamedGraphs: named_grid
@@ -32,7 +32,7 @@ using Test: @test, @testset
   #Construct a single tno which represents prod(gates)
   single_tno = gate_group_to_tno(s, gates)
 
-  ψ = randomITensorNetwork(s; link_space=2)
+  ψ = random_itensornetwork(s; link_space=2)
 
   ψ_gated = copy(ψ)
   for gate in gates

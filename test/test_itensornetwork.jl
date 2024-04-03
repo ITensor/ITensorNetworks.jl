@@ -41,7 +41,7 @@ using ITensorNetworks:
   internalinds,
   linkinds,
   orthogonalize,
-  randomITensorNetwork,
+  random_itensornetwork,
   siteinds
 using LinearAlgebra: factorize
 using NamedGraphs: NamedEdge, incident_edges, named_comb_tree, named_grid
@@ -150,7 +150,7 @@ using Test: @test, @test_broken, @testset
     @test has_vertex(tn, ((2, 2), 2))
   end
 
-  @testset "Custom element type" for eltype in (Float32, Float64, ComplexF32, ComplexF64),
+  @testset "Custom element type" for elt in (Float32, Float64, ComplexF32, ComplexF64),
     link_space in (nothing, 3),
     g in (
       grid((4,)),
@@ -160,33 +160,33 @@ using Test: @test, @test_broken, @testset
     )
 
     ψ = ITensorNetwork(g; link_space) do v, inds...
-      return itensor(randn(eltype, dims(inds)...), inds...)
+      return itensor(randn(elt, dims(inds)...), inds...)
     end
-    @test Base.eltype(ψ[first(vertices(ψ))]) == eltype
+    @test eltype(ψ[first(vertices(ψ))]) == elt
     ψ = ITensorNetwork(g; link_space) do v, inds...
       return itensor(randn(dims(inds)...), inds...)
     end
-    @test Base.eltype(ψ[first(vertices(ψ))]) == Float64
-    ψ = randomITensorNetwork(eltype, g; link_space)
-    @test Base.eltype(ψ[first(vertices(ψ))]) == eltype
-    ψ = randomITensorNetwork(g; link_space)
-    @test Base.eltype(ψ[first(vertices(ψ))]) == Float64
-    ψ = ITensorNetwork(eltype, undef, g; link_space)
-    @test Base.eltype(ψ[first(vertices(ψ))]) == eltype
+    @test eltype(ψ[first(vertices(ψ))]) == Float64
+    ψ = random_itensornetwork(elt, g; link_space)
+    @test eltype(ψ[first(vertices(ψ))]) == elt
+    ψ = random_itensornetwork(g; link_space)
+    @test elt(ψ[first(vertices(ψ))]) == Float64
+    ψ = ITensorNetwork(elt, undef, g; link_space)
+    @test eltype(ψ[first(vertices(ψ))]) == elt
     ψ = ITensorNetwork(undef, g)
-    @test Base.eltype(ψ[first(vertices(ψ))]) == Float64
+    @test eltype(ψ[first(vertices(ψ))]) == Float64
   end
 
-  @testset "randomITensorNetwork with custom distributions" begin
+  @testset "random_itensornetwork with custom distributions" begin
     distribution = Uniform(-1.0, 1.0)
-    tn = randomITensorNetwork(distribution, named_grid(4); link_space=2)
+    tn = random_itensornetwork(distribution, named_grid(4); link_space=2)
     # Note: distributions in package `Distributions` currently doesn't support customized
     # eltype, and all elements have type `Float64`
-    @test Base.eltype(tn[first(vertices(tn))]) == Float64
+    @test eltype(tn[first(vertices(tn))]) == Float64
   end
 
   @testset "orthogonalize" begin
-    tn = randomITensorNetwork(named_grid(4); link_space=2)
+    tn = random_itensornetwork(named_grid(4); link_space=2)
     Z = contract(inner_network(tn, tn))[]
 
     tn_ortho = factorize(tn, 4 => 3)
@@ -266,18 +266,18 @@ using Test: @test, @test_broken, @testset
     @test length(internalinds(ψ)) == length(edges(g))
   end
 
-  @testset "ElType conversion, $new_eltype" for new_eltype in (Float32, ComplexF64)
+  @testset "eltype conversion, $new_eltype" for new_eltype in (Float32, ComplexF64)
     dims = (2, 2)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
-    ψ = randomITensorNetwork(s; link_space=2)
+    ψ = random_itensornetwork(s; link_space=2)
     @test ITensors.scalartype(ψ) == Float64
 
     ϕ = ITensors.convert_leaf_eltype(new_eltype, ψ)
     @test ITensors.scalartype(ϕ) == new_eltype
   end
 
-  @testset "Construction from state map" for ElT in (Float32, ComplexF64)
+  @testset "Construction from state map" for elt in (Float32, ComplexF64)
     dims = (2, 2)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
@@ -291,13 +291,13 @@ using Test: @test, @test_broken, @testset
     @test abs(t[si => "↑", [b => end for b in bi]...]) == 1.0 # insert_links introduces extra signs through factorization...
     @test t[si => "↓", [b => end for b in bi]...] == 0.0
 
-    ϕ = ITensorNetwork(ElT, s, state_map)
+    ϕ = ITensorNetwork(elt, s, state_map)
     t = ϕ[2, 2]
     si = only(siteinds(ϕ, (2, 2)))
     bi = map(e -> only(linkinds(ϕ, e)), incident_edges(ϕ, (2, 2)))
-    @test eltype(t) == ElT
-    @test abs(t[si => "↑", [b => end for b in bi]...]) == convert(ElT, 1.0) # insert_links introduces extra signs through factorization...
-    @test t[si => "↓", [b => end for b in bi]...] == convert(ElT, 0.0)
+    @test eltype(t) == elt
+    @test abs(t[si => "↑", [b => end for b in bi]...]) == convert(elt, 1.0) # insert_links introduces extra signs through factorization...
+    @test t[si => "↓", [b => end for b in bi]...] == convert(elt, 0.0)
   end
 
   @testset "Priming and tagging" begin
@@ -306,7 +306,7 @@ using Test: @test, @test_broken, @testset
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
     is = siteinds("S=1/2", c)
-    tn = randomITensorNetwork(is; link_space=3)
+    tn = random_itensornetwork(is; link_space=3)
     @test_broken swapprime(tn, 0, 2)
   end
 end

@@ -5,7 +5,7 @@ using ITensorNetworks:
   OpSum,
   ProjOuterProdTTN,
   ProjTTNSum,
-  TTN,
+  ttn,
   TreeTensorNetwork,
   apply,
   contract,
@@ -105,7 +105,7 @@ end
   psi = normalize(random_ttn(s; link_space=8))
 
   os = ITensorNetworks.heisenberg(c; J1=1, J2=1)
-  H = TTN(os, s)
+  H = ttn(os, s)
 
   # Test basic usage with default parameters
   Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=1, cutoff=eps())
@@ -120,7 +120,7 @@ end
   # BLAS.axpy-like test
   os_id = OpSum()
   os_id += -1, "Id", vertices(s)[1], "Id", vertices(s)[1]
-  minus_identity = TTN(os_id, s)
+  minus_identity = ttn(os_id, s)
   Hpsi = ITensorNetworks.sum_apply(
     [(H, psi), (minus_identity, psi)]; alg="fit", init=psi, nsweeps=1
   )

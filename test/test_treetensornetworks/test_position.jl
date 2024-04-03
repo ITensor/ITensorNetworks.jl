@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using Graphs: vertices
 using ITensors: ITensors
-using ITensorNetworks: ITensorNetworks, ProjTTN, TTN, environments, position, siteinds
+using ITensorNetworks: ITensorNetworks, ProjTTN, ttn, environments, position, siteinds
 using NamedGraphs: named_comb_tree
 using Test
 
@@ -23,14 +23,14 @@ using Test
 
   os = ITensorNetworks.heisenberg(c)
 
-  H = TTN(os, s)
+  H = ttn(os, s)
 
   d = Dict()
   for (i, v) in enumerate(vertices(s))
     d[v] = isodd(i) ? "Up" : "Dn"
   end
   states = v -> d[v]
-  psi = TTN(s, states)
+  psi = ttn(s, states)
 
   # actual test, verifies that position is out of place
   vs = vertices(s)

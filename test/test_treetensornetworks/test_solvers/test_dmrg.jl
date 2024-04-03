@@ -7,7 +7,7 @@ using ITensors.ITensorMPS: MPO, MPS, randomMPS
 using ITensorNetworks:
   ITensorNetworks,
   OpSum,
-  TTN,
+  ttn,
   apply,
   dmrg,
   inner,
@@ -179,7 +179,7 @@ end
 
     os = ITensorNetworks.heisenberg(c)
 
-    H = TTN(os, s)
+    H = ttn(os, s)
 
     # make init_state
     d = Dict()
@@ -187,7 +187,7 @@ end
       d[v] = isodd(i) ? "Up" : "Dn"
     end
     states = v -> d[v]
-    psi = TTN(s, states)
+    psi = ttn(s, states)
 
     #    psi = random_ttn(s; link_space=20) #FIXME: random_ttn broken for QN conserving case
 
@@ -243,14 +243,14 @@ end
   ITensors.enable_auto_fermion()
 
   # now get auto-fermion results 
-  H = TTN(os, s)
+  H = ttn(os, s)
   # make init_state
   d = Dict()
   for (i, v) in enumerate(vertices(s))
     d[v] = isodd(i) ? "Up" : "Dn"
   end
   states = v -> d[v]
-  psi = TTN(s, states)
+  psi = ttn(s, states)
   psi = dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
@@ -277,7 +277,7 @@ end
   c = named_comb_tree((3, 2))
   s = siteinds("S=1/2", c)
   os = ITensorNetworks.heisenberg(c)
-  H = TTN(os, s)
+  H = ttn(os, s)
   psi = random_ttn(s; link_space=5)
   psi = dmrg(H, psi; nsweeps, maxdim, nsites)
 

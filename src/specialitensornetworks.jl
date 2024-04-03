@@ -101,24 +101,24 @@ end
 """
 Build an ITensor network on a graph specified by the inds network s. Bond_dim is given by link_space and entries are randomised (normal distribution, mean 0 std 1)
 """
-function randomITensorNetwork(eltype::Type, s::IndsNetwork; link_space=nothing)
+function random_itensornetwork(eltype::Type, s::IndsNetwork; link_space=nothing)
   return ITensorNetwork(s; link_space) do v, inds...
     itensor(randn(eltype, dim(inds)...), inds...)
   end
 end
 
-function randomITensorNetwork(s::IndsNetwork; link_space=nothing)
-  return randomITensorNetwork(Float64, s; link_space)
+function random_itensornetwork(s::IndsNetwork; link_space=nothing)
+  return random_itensornetwork(Float64, s; link_space)
 end
 
-@traitfn function randomITensorNetwork(
+@traitfn function random_itensornetwork(
   eltype::Type, g::::IsUnderlyingGraph; link_space=nothing
 )
-  return randomITensorNetwork(eltype, IndsNetwork(g); link_space)
+  return random_itensornetwork(eltype, IndsNetwork(g); link_space)
 end
 
-@traitfn function randomITensorNetwork(g::::IsUnderlyingGraph; link_space=nothing)
-  return randomITensorNetwork(Float64, IndsNetwork(g); link_space)
+@traitfn function random_itensornetwork(g::::IsUnderlyingGraph; link_space=nothing)
+  return random_itensornetwork(Float64, IndsNetwork(g); link_space)
 end
 
 """
@@ -126,7 +126,7 @@ Build an ITensor network on a graph specified by the inds network s.
 Bond_dim is given by link_space and entries are randomized.
 The random distribution is based on the input argument `distribution`.
 """
-function randomITensorNetwork(
+function random_itensornetwork(
   distribution::Distribution, s::IndsNetwork; link_space=nothing
 )
   return ITensorNetwork(s; link_space) do v, inds...
@@ -134,8 +134,8 @@ function randomITensorNetwork(
   end
 end
 
-@traitfn function randomITensorNetwork(
+@traitfn function random_itensornetwork(
   distribution::Distribution, g::::IsUnderlyingGraph; link_space=nothing
 )
-  return randomITensorNetwork(distribution, IndsNetwork(g); link_space)
+  return random_itensornetwork(distribution, IndsNetwork(g); link_space)
 end

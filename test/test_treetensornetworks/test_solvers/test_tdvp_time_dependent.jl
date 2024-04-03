@@ -1,6 +1,6 @@
 @eval module $(gensym())
 using ITensors: contract
-using ITensorNetworks: ITensorNetworks, TimeDependentSum, TTN, mpo, mps, siteinds, tdvp
+using ITensorNetworks: ITensorNetworks, TimeDependentSum, ttn, mpo, mps, siteinds, tdvp
 using OrdinaryDiffEq: Tsit5
 using KrylovKit: exponentiate
 using LinearAlgebra: norm
@@ -193,7 +193,7 @@ end
   ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
   H⃗₀ = [TTN(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 
-  ψ₀ = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
+  ψ₀ = ttn(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
 
   ψₜ_ode = tdvp(
     H⃗₀,

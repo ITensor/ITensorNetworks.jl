@@ -1,6 +1,6 @@
 @eval module $(gensym())
 using Graphs: vertices
-using ITensorNetworks: TTN, contract, ortho_center, siteinds, union_all_inds
+using ITensorNetworks: ttn, contract, ortho_center, siteinds, union_all_inds
 using ITensors: @disable_warn_order, prime, randomITensor
 using LinearAlgebra: norm
 using NamedGraphs: named_comb_tree
@@ -26,15 +26,15 @@ using Test: @test, @testset
     # create random ITensor with these indices
     O = randomITensor(sites_o...)
     # dense TTN constructor from IndsNetwork
-    @disable_warn_order o1 = TTN(O, is_isp; cutoff)
+    @disable_warn_order o1 = ttn(O, is_isp; cutoff)
     # dense TTN constructor from Vector{Vector{Index}} and NamedDimGraph
-    @disable_warn_order o2 = TTN(O, sites_o, c; vertex_order, cutoff)
+    @disable_warn_order o2 = ttn(O, sites_o, c; vertex_order, cutoff)
     # convert to array with proper index order
     AO = Array(O, sites_o...)
     # dense array constructor from IndsNetwork
-    @disable_warn_order o3 = TTN(AO, is_isp; vertex_order, cutoff)
+    @disable_warn_order o3 = ttn(AO, is_isp; vertex_order, cutoff)
     # dense array constructor from Vector{Vector{Index}} and NamedDimGraph
-    @disable_warn_order o4 = TTN(AO, sites_o, c; vertex_order, cutoff)
+    @disable_warn_order o4 = ttn(AO, sites_o, c; vertex_order, cutoff)
     # see if this actually worked
     root_vertex = only(ortho_center(o1))
     @disable_warn_order begin

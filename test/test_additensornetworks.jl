@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using Graphs: rem_edge!, vertices
 using NamedGraphs: NamedEdge, hexagonal_lattice_graph, named_grid
-using ITensorNetworks: ITensorNetwork, inner_network, randomITensorNetwork, siteinds
+using ITensorNetworks: ITensorNetwork, inner_network, random_itensornetwork, siteinds
 using ITensors: ITensors, apply, op
 using Random: Random
 using Test: @test, @testset
@@ -32,8 +32,8 @@ using Test: @test, @testset
   rem_edge!(s2, NamedEdge((1, 1) => (1, 2)))
 
   v = rand(vertices(g))
-  ψ1 = randomITensorNetwork(s1; link_space=χ)
-  ψ2 = randomITensorNetwork(s2; link_space=χ)
+  ψ1 = random_itensornetwork(s1; link_space=χ)
+  ψ2 = random_itensornetwork(s2; link_space=χ)
 
   ψ12 = ψ1 + ψ2
 

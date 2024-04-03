@@ -10,7 +10,7 @@ using ITensorNetworks:
   distance_to_leaf,
   flatten_networks,
   leaf_vertices,
-  randomITensorNetwork,
+  random_itensornetwork,
   siteinds
 using Test: @test, @testset
 using NamedGraphs: is_leaf, leaf_vertices, named_grid
@@ -21,7 +21,7 @@ using NamedGraphs: is_leaf, leaf_vertices, named_grid
   g = named_grid(dims)
   s = siteinds("S=1/2", g)
 
-  ψ = randomITensorNetwork(s; link_space=2)
+  ψ = random_itensornetwork(s; link_space=2)
   ψψ = flatten_networks(ψ, ψ)
 
   seq = contraction_sequence(ψψ)
