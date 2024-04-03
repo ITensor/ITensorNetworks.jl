@@ -141,6 +141,30 @@ function ttn(
   return ttn(ElT, sites, ops; kwargs...)
 end
 
+# construct from dense ITensor, using IndsNetwork of site indices
+function ttn(
+  A::ITensor, is::IndsNetwork; ortho_center=default_root_vertex(is), kwargs...
+)
+  for v in vertices(is)
+    @assert hasinds(A, is[v])
+  end
+  @assert ortho_center ∈ vertices(is)
+  ψ = ITensorNetwork(is)
+  Ã = A
+  for e in post_order_dfs_edges(ψ, ortho_center)
+    left_inds = uniqueinds(is, e)
+    L, R = factorize(Ã, left_inds; tags=edge_tag(e), ortho="left", kwargs...)
+    l = commonind(L, R)
+    ψ[src(e)] = L
+    is[e] = [l]
+    Ã = R
+  end
+  ψ[ortho_center] = Ã
+  T = ttn(ψ)
+  T = orthogonalize(T, ortho_center)
+  return T
+end
+
 # Special constructors
 
 function mps(external_inds::Vector{<:Index}; states)

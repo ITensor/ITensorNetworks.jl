@@ -27,26 +27,11 @@ using Test: @test, @testset
     O = randomITensor(sites_o...)
     # dense TTN constructor from IndsNetwork
     @disable_warn_order o1 = ttn(O, is_isp; cutoff)
-    # dense TTN constructor from Vector{Vector{Index}} and NamedDimGraph
-    @disable_warn_order o2 = ttn(O, sites_o, c; vertex_order, cutoff)
-    # convert to array with proper index order
-    AO = Array(O, sites_o...)
-    # dense array constructor from IndsNetwork
-    @disable_warn_order o3 = ttn(AO, is_isp; vertex_order, cutoff)
-    # dense array constructor from Vector{Vector{Index}} and NamedDimGraph
-    @disable_warn_order o4 = ttn(AO, sites_o, c; vertex_order, cutoff)
-    # see if this actually worked
     root_vertex = only(ortho_center(o1))
     @disable_warn_order begin
       O1 = contract(o1, root_vertex)
-      O2 = contract(o2, root_vertex)
-      O3 = contract(o3, root_vertex)
-      O4 = contract(o4, root_vertex)
     end
     @test norm(O - O1) < 1e2 * cutoff
-    @test norm(O - O2) < 1e2 * cutoff
-    @test norm(O - O3) < 1e2 * cutoff
-    @test norm(O - O4) < 1e2 * cutoff
   end
 
   @testset "Ortho" begin

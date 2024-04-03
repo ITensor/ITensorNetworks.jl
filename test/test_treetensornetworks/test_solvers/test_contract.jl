@@ -6,7 +6,6 @@ using ITensorNetworks:
   ProjOuterProdTTN,
   ProjTTNSum,
   ttn,
-  TreeTensorNetwork,
   apply,
   contract,
   delta,
@@ -157,10 +156,10 @@ end
   M1 = replaceprime(randomMPO(sites) + randomMPO(sites), 1 => 2, 0 => 1)
   M2 = randomMPO(sites) + randomMPO(sites)
   M12_ref = contract(M1, M2; alg="naive")
-  t12_ref = TreeTensorNetwork([M12_ref[v] for v in eachindex(M12_ref)])
+  t12_ref = ttn([M12_ref[v] for v in eachindex(M12_ref)])
 
-  t1 = TreeTensorNetwork([M1[v] for v in eachindex(M1)])
-  t2 = TreeTensorNetwork([M2[v] for v in eachindex(M2)])
+  t1 = ttn([M1[v] for v in eachindex(M1)])
+  t2 = ttn([M2[v] for v in eachindex(M2)])
 
   # Test with good initial guess
   @test contract(t1, t2; alg="fit", init=t12_ref, nsweeps=1) ≈ t12_ref rtol = 1e-7
