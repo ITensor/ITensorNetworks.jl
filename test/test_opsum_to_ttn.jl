@@ -17,6 +17,7 @@ using ITensors.ITensorMPS: MPO
 using ITensors.NDTensors: matrix
 using ITensorGaussianMPS: hopping_hamiltonian
 using ITensorNetworks: ITensorNetworks, OpSum, ttn, relabel_sites, siteinds
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using KrylovKit: eigsolve
 using LinearAlgebra: eigvals, norm
 using NamedGraphs: leaf_vertices, named_comb_tree, named_grid, post_order_dfs_vertices
@@ -48,7 +49,7 @@ end
     J1 = -1
     J2 = 2
     h = 0.5
-    H = ITensorNetworks.ising(c; J1=J1, J2=J2, h=h)
+    H = ModelHamiltonians.ising(c; J1=J1, J2=J2, h=h)
     # add combination of longer range interactions
     Hlr = copy(H)
     Hlr += 5, "Z", (1, 2), "Z", (2, 2), "Z", (3, 2)

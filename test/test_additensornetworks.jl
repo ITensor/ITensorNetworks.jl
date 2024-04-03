@@ -2,7 +2,7 @@
 using Graphs: rem_edge!, vertices
 using NamedGraphs: NamedEdge, hexagonal_lattice_graph, named_grid
 using ITensorNetworks: ITensorNetwork, inner_network, random_itensornetwork, siteinds
-using ITensors: ITensors, apply, op
+using ITensors: ITensors, apply, contract, op
 using Random: Random
 using Test: @test, @testset
 
@@ -22,7 +22,7 @@ using Test: @test, @testset
   ψψ_GHZ = inner_network(ψ_GHZ, ψ_GHZ)
   ψOψ_GHZ = inner_network(ψ_GHZ, Oψ_GHZ)
 
-  @test ITensors.contract(ψOψ_GHZ)[] / ITensors.contract(ψψ_GHZ)[] == 0.0
+  @test contract(ψOψ_GHZ)[] / contract(ψψ_GHZ)[] == 0.0
 
   χ = 3
   g = hexagonal_lattice_graph(1, 2)
@@ -59,13 +59,9 @@ using Test: @test, @testset
   ψOψ_1 = inner_network(ψ1, Oψ1)
 
   expec_method1 =
-    (
-      ITensors.contract(ψOψ_1)[] +
-      ITensors.contract(ψOψ_2)[] +
-      2 * ITensors.contract(ψ1Oψ2)[]
-    ) /
-    (ITensors.contract(ψψ_1)[] + ITensors.contract(ψψ_2)[] + 2 * ITensors.contract(ψ1ψ2)[])
-  expec_method2 = ITensors.contract(ψOψ_12)[] / ITensors.contract(ψψ_12)[]
+    (contract(ψOψ_1)[] + contract(ψOψ_2)[] + 2 * contract(ψ1Oψ2)[]) /
+    (contract(ψψ_1)[] + contract(ψψ_2)[] + 2 * contract(ψ1ψ2)[])
+  expec_method2 = contract(ψOψ_12)[] / contract(ψψ_12)[]
 
   @test expec_method1 ≈ expec_method2
 end

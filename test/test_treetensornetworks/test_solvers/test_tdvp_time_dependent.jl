@@ -191,7 +191,7 @@ end
   ℋ₁₀ = ITensorNetworks.heisenberg(c; J1=J₁, J2=0.0)
   ℋ₂₀ = ITensorNetworks.heisenberg(c; J1=0.0, J2=J₂)
   ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
-  H⃗₀ = [TTN(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
+  H⃗₀ = [ttn(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 
   ψ₀ = ttn(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
 
