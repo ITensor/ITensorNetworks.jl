@@ -1,6 +1,6 @@
 using NamedGraphs
 using ITensors
-using ITensorNetworks
+using ITensorNetworks: TTN
 using ITensorUnicodePlots
 
 g = named_comb_tree((5, 2))

@@ -1,7 +1,6 @@
-using ITensors
-using ITensorNetworks
-using ITensorUnicodePlots
-using NamedGraphs
+using ITensorNetworks: IndsNetwork, itensors
+using ITensorUnicodePlots: @visualize
+using NamedGraphs: named_grid
 
 χ, d = 5, 2
 system_dims = (4, 4)

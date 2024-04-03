@@ -1,9 +1,8 @@
-using Graphs: weights
-using Graphs: dijkstra_shortest_paths
-using NamedGraphs: NamedDiGraph
-using GraphsFlows: GraphsFlows
 using AbstractTrees: Leaves, PostOrderDFS
 using Combinatorics: powerset
+using Graphs: dijkstra_shortest_paths, weights
+using GraphsFlows: GraphsFlows
+using NamedGraphs: NamedDiGraph
 
 # a large number to prevent this edge being a cut
 MAX_WEIGHT = 1e32

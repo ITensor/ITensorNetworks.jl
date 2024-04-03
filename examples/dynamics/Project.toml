@@ -1,8 +1,6 @@
 [deps]
-AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
-DataGraphs = "b5a273c3-7e6c-41f6-98bd-8d7f1525a36a"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 ITensorNetworks = "2919e153-833c-4bdc-8836-1ea460a35fc7"
 ITensorUnicodePlots = "73163f41-4a9e-479f-8353-73bf94dbd758"
 NamedGraphs = "678767b0-92e7-4007-89e4-4527a8725b19"
-Weave = "44d3d7a6-8a23-5bf8-98c5-b353f8df5ec9"
+UnicodePlots = "b8865327-cd53-5732-bb35-84acbb429228"

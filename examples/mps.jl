@@ -1,9 +1,10 @@
-using AbstractTrees
-using ITensors
-using ITensorNetworks
+using AbstractTrees: print_tree
+using DataGraphs: edge_data, vertex_data
+using ITensors: contract, dag, sim
+using ITensorNetworks: IndsNetwork, ITensorNetwork, contraction_sequence, siteinds
 using ITensorUnicodePlots
-using Random
-using NamedGraphs
+using Random: Random, randn!
+using NamedGraphs: named_path_graph, subgraph
 
 Random.seed!(1234)
 

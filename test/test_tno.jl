@@ -1,9 +1,18 @@
-using Test
-using ITensorNetworks
-using ITensors
-using Random
-
-using ITensorNetworks: gate_group_to_tno, get_tnos, group_commuting_itensors, contract_inner
+@eval module $(gensym())
+using Graphs: vertices
+using ITensorNetworks:
+  apply,
+  contract_inner,
+  flatten_networks,
+  group_commuting_itensors,
+  gate_group_to_tno,
+  get_tnos,
+  ising,
+  randomITensorNetwork,
+  siteinds
+using ITensors: ITensor, noprime
+using NamedGraphs: named_grid
+using Test: @test, @testset
 
 @testset "TN operator Basics" begin
   L = 3
@@ -33,13 +42,13 @@ using ITensorNetworks: gate_group_to_tno, get_tnos, group_commuting_itensors, co
   for tno in tnos
     ψ_tnod = flatten_networks(ψ_tnod, tno)
     for v in vertices(ψ_tnod)
-      noprime!(ψ_tnod[v])
+      ψ_tnod[v] = noprime(ψ_tnod[v])
     end
   end
   ψ_tno = copy(ψ)
   ψ_tno = flatten_networks(ψ_tno, single_tno)
   for v in vertices(ψ_tno)
-    noprime!(ψ_tno[v])
+    ψ_tno[v] = noprime(ψ_tno[v])
   end
 
   z1 = contract_inner(ψ_gated, ψ_gated)
@@ -51,4 +60,5 @@ using ITensorNetworks: gate_group_to_tno, get_tnos, group_commuting_itensors, co
   @test f12 * conj(f12) ≈ 1.0
   @test f13 * conj(f13) ≈ 1.0
   @test f23 * conj(f23) ≈ 1.0
+end
 end
