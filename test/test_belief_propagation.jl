@@ -21,7 +21,7 @@ using ITensorNetworks:
   tensornetwork,
   update,
   update_factor
-using ITensors: ITensors, ITensor, combiner, dag, inner, inds, op, prime, randomITensor
+using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, randomITensor
 using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
 using NamedGraphs: NamedEdge, PartitionVertex, named_comb_tree, named_grid

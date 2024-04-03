@@ -1,7 +1,8 @@
 using Test
 using ITensorNetworks
 
-using ITensorNetworks: inner, loginner, logscalar, scalar
+using ITensorNetworks:
+  TTN, inner, inner_network, loginner, logscalar, randomITensorNetwork, scalar
 using ITensors: dag, siteinds
 using SplitApplyCombine: group
 using Graphs: SimpleGraph, uniform_tree

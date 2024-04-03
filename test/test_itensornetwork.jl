@@ -25,6 +25,7 @@ using ITensors:
   hascommoninds,
   hasinds,
   inds,
+  inner,
   itensor,
   order,
   sim,
@@ -40,6 +41,7 @@ using ITensorNetworks:
   inner_network,
   internalinds,
   linkinds,
+  norm_sqr_network,
   orthogonalize,
   randomITensorNetwork,
   siteinds

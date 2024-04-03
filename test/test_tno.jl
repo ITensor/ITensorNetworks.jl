@@ -2,7 +2,6 @@
 using Graphs: vertices
 using ITensorNetworks:
   apply,
-  contract_inner,
   flatten_networks,
   group_commuting_itensors,
   gate_group_to_tno,
@@ -10,7 +9,7 @@ using ITensorNetworks:
   ising,
   randomITensorNetwork,
   siteinds
-using ITensors: ITensor, noprime
+using ITensors: ITensor, inner, noprime
 using NamedGraphs: named_grid
 using Test: @test, @testset
 
