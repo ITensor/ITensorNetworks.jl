@@ -142,9 +142,7 @@ function ttn(
 end
 
 # construct from dense ITensor, using IndsNetwork of site indices
-function ttn(
-  A::ITensor, is::IndsNetwork; ortho_center=default_root_vertex(is), kwargs...
-)
+function ttn(A::ITensor, is::IndsNetwork; ortho_center=default_root_vertex(is), kwargs...)
   for v in vertices(is)
     @assert hasinds(A, is[v])
   end
