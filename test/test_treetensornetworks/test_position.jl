@@ -1,6 +1,8 @@
-using ITensors
-using ITensorNetworks
-using ITensorNetworks: position, environments
+@eval module $(gensym())
+using Graphs: vertices
+using ITensors: ITensors
+using ITensorNetworks: ITensorNetworks, ProjTTN, TTN, environments, position, siteinds
+using NamedGraphs: named_comb_tree
 using Test
 
 @testset "ProjTTN position" begin
@@ -44,4 +46,4 @@ using Test
     ITensors.disable_auto_fermion()
   end
 end
-nothing
+end

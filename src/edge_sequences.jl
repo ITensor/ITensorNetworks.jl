@@ -1,3 +1,6 @@
+using NamedGraphs: partitioned_graph
+using Graphs: connected_components
+using Graphs: IsDirected
 default_edge_sequence_alg() = "forest_cover"
 function default_edge_sequence(pg::PartitionedGraph)
   return PartitionEdge.(edge_sequence(partitioned_graph(pg)))

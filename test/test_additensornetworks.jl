@@ -1,11 +1,10 @@
-using ITensorNetworks
-
-using Test: @test, @testset
-using NamedGraphs: NamedEdge, hexagonal_lattice_graph, named_grid, rem_edge!
-using SplitApplyCombine: group
+@eval module $(gensym())
+using Graphs: rem_edge!, vertices
+using NamedGraphs: NamedEdge, hexagonal_lattice_graph, named_grid
+using ITensorNetworks: ITensorNetwork, inner_network, randomITensorNetwork, siteinds
+using ITensors: ITensors, apply, op
 using Random: Random
-using ITensors: apply, inner, op, scalar, siteinds
-using LinearAlgebra: norm_sqr
+using Test: @test, @testset
 
 @testset "add_itensornetworks" begin
   Random.seed!(5623)
@@ -52,4 +51,5 @@ using LinearAlgebra: norm_sqr
   expec_method2 = inner(ψ12, Oψ12; alg) / norm_sqr(ψ12; alg)
 
   @test expec_method1 ≈ expec_method2
+end
 end

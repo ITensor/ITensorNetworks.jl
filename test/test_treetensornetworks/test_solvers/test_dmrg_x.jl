@@ -1,7 +1,23 @@
-using ITensors
-using ITensorNetworks
-using Random
-using Test
+@eval module $(gensym())
+using Graphs: nv
+using ITensorNetworks:
+  ITensorNetworks,
+  OpSum,
+  TTN,
+  apply,
+  contract,
+  dmrg_x,
+  inner,
+  linkdims,
+  mpo,
+  mps,
+  random_mps,
+  siteinds
+using ITensors: @disable_warn_order, array, dag, onehot, uniqueind
+using LinearAlgebra: eigen, normalize
+using NamedGraphs: named_comb_tree
+using Random: Random
+using Test: @test, @testset
 
 @testset "MPS DMRG-X" for conserve_qns in (false, true)
   n = 10
@@ -48,7 +64,7 @@ end
 
   # TODO: Use `TTN(s; states=v -> rand(["↑", "↓"]))` or
   # `ttns(s; states=v -> rand(["↑", "↓"]))`
-  ψ = normalize!(TTN(s, v -> rand(["↑", "↓"])))
+  ψ = normalize(TTN(s, v -> rand(["↑", "↓"])))
 
   dmrg_x_kwargs = (nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
 
@@ -76,5 +92,4 @@ end
   @test inner(ϕ', H, ϕ) ≈ (dag(U_exact') * T * U_exact)[] atol = 1e-6
   @test abs(inner(U_dmrgx, U_exact)) ≈ 1 atol = 1e-6
 end
-
-nothing
+end

@@ -1,12 +1,22 @@
-using ITensorNetworks
+@eval module $(gensym())
+using Compat: Compat
+using Graphs: vertices
 using ITensorNetworks:
-  BeliefPropagationCache, VidalITensorNetwork, environment, norm_sqr_network, update
-
-using Test: @test, @testset
-using ITensors: apply, op, inner, siteinds
-using SplitApplyCombine: group
-using Random: Random
+  BeliefPropagationCache,
+  ITensorNetwork,
+  VidalITensorNetwork,
+  apply,
+  contract_inner,
+  environment,
+  norm_network,
+  randomITensorNetwork,
+  siteinds,
+  update
+using ITensors: ITensors
 using NamedGraphs: PartitionVertex, named_grid
+using Random: Random
+using SplitApplyCombine: group
+using Test: @test, @testset
 
 @testset "apply" begin
   Random.seed!(5623)
@@ -74,4 +84,5 @@ using NamedGraphs: PartitionVertex, named_grid
 
     @test isapprox(real(fSBP * conj(fSBP)), real(fVidal * conj(fVidal)); atol=1e-3)
   end
+end
 end

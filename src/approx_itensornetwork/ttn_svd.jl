@@ -1,3 +1,4 @@
+using IterTools: partition
 """
 Approximate a `partition` into an output ITensorNetwork
 with the binary tree structure defined by `out_tree` by

@@ -1,7 +1,26 @@
-using ITensors
-using ITensorNetworks
-using Random
-using Test
+@eval module $(gensym())
+using Graphs: vertices
+using ITensorNetworks:
+  ITensorNetworks,
+  OpSum,
+  ProjOuterProdTTN,
+  ProjTTNSum,
+  TTN,
+  TreeTensorNetwork,
+  apply,
+  contract,
+  delta,
+  dmrg,
+  inner,
+  mpo,
+  random_mps,
+  random_ttn,
+  siteinds
+using ITensors: prime, replaceinds, replaceprime
+using ITensors.ITensorMPS: randomMPO
+using LinearAlgebra: norm, normalize
+using NamedGraphs: named_comb_tree
+using Test: @test, @test_broken, @testset
 
 @testset "Contract MPO" begin
   N = 20
@@ -83,7 +102,7 @@ end
   c = named_comb_tree(tooth_lengths)
 
   s = siteinds("S=1/2", c)
-  psi = normalize!(random_ttn(s; link_space=8))
+  psi = normalize(random_ttn(s; link_space=8))
 
   os = ITensorNetworks.heisenberg(c; J1=1, J2=1)
   H = TTN(os, s)
@@ -146,5 +165,4 @@ end
   # Test with good initial guess
   @test contract(t1, t2; alg="fit", init=t12_ref, nsweeps=1) ≈ t12_ref rtol = 1e-7
 end
-
-nothing
+end

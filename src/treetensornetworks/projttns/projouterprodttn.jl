@@ -1,4 +1,6 @@
 using DataGraphs: DataGraphs
+using Dictionaries: set!
+using ITensors: ITensor
 using NamedGraphs: incident_edges
 
 struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}
@@ -84,7 +86,7 @@ function projected_operator_tensors(P::ProjOuterProdTTN)
   environments = ITensor[environment(P, edge) for edge in incident_edges(P)]
   # manual heuristic for contraction order fixing: for each site in ProjTTN, apply up to
   # two environments, then TTN tensor, then other environments
-  itensor_map = Union{ITensor,OneITensor}[] # TODO: will a Hamiltonian TTN tensor ever be a OneITensor?
+  itensor_map = ITensor[]
   for j in sites(P)
     push!(itensor_map, internal_state(P)[j])
   end

@@ -1,7 +1,8 @@
-using ITensors
-using ITensorNetworks
-using Test
-using Random
+@eval module $(gensym())
+using ITensorNetworks: ITensorNetworks, OpSum, apply, dmrg, inner, mpo, random_mps, siteinds
+using KrylovKit: linsolve
+using Random: Random
+using Test: @test, @test_broken, @testset
 
 @testset "Linsolve" begin
   @testset "Linsolve Basics" begin
@@ -51,5 +52,4 @@ using Random
     # @test norm(x - x_c) < 1E-3
   end
 end
-
-nothing
+end

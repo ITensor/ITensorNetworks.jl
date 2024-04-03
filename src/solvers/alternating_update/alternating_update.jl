@@ -1,3 +1,5 @@
+using ITensors: state
+using ITensors.ITensorMPS: linkind
 using Observers: Observers
 
 function alternating_update(

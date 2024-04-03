@@ -81,3 +81,4 @@ Z_dict = @time expect("Z", ψ)
 Z = [Z_dict[Tuple(I)] for I in CartesianIndices(system_dims)]
 display(Z)
 display(heatmap(Z))
+

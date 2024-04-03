@@ -1,4 +1,7 @@
-using ITensors.NDTensors: scalartype
+using NamedGraphs: partitionedge
+using IterTools: cache
+using ITensors: tags
+using ITensors.NDTensors: dense, scalartype
 
 function default_bond_tensors(ψ::ITensorNetwork)
   return DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))

@@ -1,17 +1,25 @@
-using ITensors, OMEinsumContractionOrders
-using Graphs, NamedGraphs
-using ITensorNetworks
-using ITensors: contract
+@eval module $(gensym())
+using DataGraphs: DataGraph, underlying_graph, vertex_data
+using Graphs: add_vertex!, vertices
+using ITensors: Index, ITensor, contract, noncommoninds, randomITensor
+using ITensors.ITensorMPS: MPS
 using ITensorNetworks:
-  _root,
+  _DensityMartrixAlgGraph,
+  _contract_deltas_ignore_leaf_partitions,
+  _is_rooted_directed_binary_tree,
   _mps_partition_inds_order,
   _mincut_partitions,
-  _is_rooted_directed_binary_tree,
-  _contract_deltas_ignore_leaf_partitions,
+  _partition,
   _rem_vertex!,
-  _DensityMartrixAlgGraph,
-  _partition
-using Test
+  _root,
+  IndsNetwork,
+  ITensorNetwork,
+  binary_tree_structure,
+  path_graph_structure,
+  randomITensorNetwork
+using NamedGraphs: NamedEdge, named_grid, post_order_dfs_vertices
+using OMEinsumContractionOrders: OMEinsumContractionOrders
+using Test: @test, @testset
 
 @testset "test mincut functions on top of MPS" begin
   i = Index(2, "i")
@@ -139,4 +147,5 @@ end
   end
   # Check that a specific density matrix info has been cached
   @test haskey(alg_graph.caches.es_to_pdm, Set([NamedEdge(nothing, path[3])]))
+end
 end

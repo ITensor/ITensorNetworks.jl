@@ -1,7 +1,12 @@
+using LinearAlgebra: pinv
 using ITensors.NDTensors:
+  Block,
   Tensor,
+  blockdim,
+  blockoffsets,
   diaglength,
   getdiagindex,
+  nzblocks,
   setdiagindex!,
   tensor,
   DiagBlockSparseTensor,

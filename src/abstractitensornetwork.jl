@@ -1,38 +1,57 @@
 using DataGraphs:
   DataGraphs, edge_data, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
-using Graphs: Graphs, Graph, add_edge!, dst, edgetype, neighbors, rem_edge!, src, vertices
+using Graphs:
+  Graphs,
+  Graph,
+  add_edge!,
+  add_vertex!,
+  bfs_tree,
+  dst,
+  edges,
+  edgetype,
+  ne,
+  neighbors,
+  rem_edge!,
+  src,
+  vertices
 using ITensors:
   ITensors,
   ITensor,
   addtags,
+  combiner,
   commoninds,
+  commontags,
   contract,
+  convert_eltype,
   dag,
   hascommoninds,
   noprime,
+  onehot,
   prime,
   replaceprime,
   setprime,
   unioninds,
   uniqueinds,
-  removetags,
   replacetags,
   settags,
   sim,
   swaptags
-using ITensors.ITensorMPS: ITensorMPS
+using ITensors.ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-using ITensors.NDTensors: NDTensors
+using ITensors.NDTensors: NDTensors, dim
 using LinearAlgebra: LinearAlgebra
 using NamedGraphs:
   NamedGraphs,
   NamedGraph,
+  ⊔,
   incident_edges,
   not_implemented,
   rename_vertices,
   vertex_to_parent_vertex,
   vertextype
+using NamedGraphs: directed_graph
+using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
 
@@ -171,7 +190,7 @@ function ITensors.promote_itensor_eltype(tn::AbstractITensorNetwork)
   return LinearAlgebra.promote_leaf_eltypes(tn)
 end
 
-ITensors.scalartype(tn::AbstractITensorNetwork) = LinearAlgebra.promote_leaf_eltypes(tn)
+NDTensors.scalartype(tn::AbstractITensorNetwork) = LinearAlgebra.promote_leaf_eltypes(tn)
 
 # TODO: eltype(::AbstractITensorNetwork) (cannot behave the same as eltype(::ITensors.AbstractMPS))
 

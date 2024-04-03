@@ -1,7 +1,11 @@
-using Test
-using ITensorNetworks
-using ITensors
-using Random
+@eval module $(gensym())
+using Graphs: vertices
+using ITensorNetworks: TTN, contract, ortho_center, siteinds, union_all_inds
+using ITensors: @disable_warn_order, prime, randomITensor
+using LinearAlgebra: norm
+using NamedGraphs: named_comb_tree
+using Random: shuffle
+using Test: @test, @testset
 
 @testset "TTN operator Basics" begin
 
@@ -48,4 +52,5 @@ using Random
   @testset "Ortho" begin
     # TODO
   end
+end
 end
