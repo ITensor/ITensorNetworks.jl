@@ -97,7 +97,7 @@ function compose_updaters(; kwargs...#solver=eigsolve_updater, expander=local_su
   function composed_updater(init; kwargs...)
     info=(;)
     kwargs_for_updaters=map(x -> kwargs[x], kwarg_symbols)
-    other_kwargs=Base.structdiff(kwargs,NamedTuple(zip(kwarg_symbols,kwargs_for_updaters)))
+    other_kwargs=Base.structdiff(kwargs,NamedTuple(kwarg_symbols .=> kwargs_for_updaters))
   
     for (func,kwargs_for_updater,info_symbol) in zip(funcs,kwargs_for_updaters,info_symbols)
       init, new_info=func(init;
