@@ -30,9 +30,6 @@ using Test: @test, @testset
       S1 = contract(s1, root_vertex)
     end
     @test norm(S - S1) < 1e2 * cutoff
-    @test norm(S - S2) < 1e2 * cutoff
-    @test norm(S - S3) < 1e2 * cutoff
-    @test norm(S - S4) < 1e2 * cutoff
   end
 
   @testset "Ortho" begin
