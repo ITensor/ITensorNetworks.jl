@@ -26,10 +26,6 @@ end
 
 const TTN = TreeTensorNetwork
 
-function ttn(itensor_network::ITensorNetwork, ortho_center::Vector)
-  return ttn(itensor_network, ortho_center)
-end
-
 function data_graph_type(G::Type{<:TTN})
   return data_graph_type(fieldtype(G, :itensor_network))
 end

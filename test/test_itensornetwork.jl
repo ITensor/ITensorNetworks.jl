@@ -170,7 +170,7 @@ using Test: @test, @test_broken, @testset
     ψ = random_itensornetwork(elt, g; link_space)
     @test eltype(ψ[first(vertices(ψ))]) == elt
     ψ = random_itensornetwork(g; link_space)
-    @test elt(ψ[first(vertices(ψ))]) == Float64
+    @test eltype(ψ[first(vertices(ψ))]) == Float64
     ψ = ITensorNetwork(elt, undef, g; link_space)
     @test eltype(ψ[first(vertices(ψ))]) == elt
     ψ = ITensorNetwork(undef, g)
