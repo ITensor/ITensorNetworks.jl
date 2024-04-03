@@ -6,13 +6,12 @@ using ITensorNetworks:
   ITensorNetwork,
   VidalITensorNetwork,
   apply,
-  contract_inner,
   environment,
-  norm_network,
+  norm_sqr_network,
   randomITensorNetwork,
   siteinds,
   update
-using ITensors: ITensors
+using ITensors: ITensors, inner, op
 using NamedGraphs: PartitionVertex, named_grid
 using Random: Random
 using SplitApplyCombine: group

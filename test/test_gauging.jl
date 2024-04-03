@@ -4,13 +4,12 @@ using ITensorNetworks:
   BeliefPropagationCache,
   ITensorNetwork,
   VidalITensorNetwork,
-  contract_inner,
   gauge_error,
   messages,
   randomITensorNetwork,
   siteinds,
   update
-using ITensors: diagITensor, inds
+using ITensors: diagITensor, inds, inner
 using ITensors.NDTensors: vector
 using LinearAlgebra: diag
 using NamedGraphs: named_grid
