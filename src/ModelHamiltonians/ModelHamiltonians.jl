@@ -1,6 +1,6 @@
 module ModelHamiltonians
 using Dictionaries: AbstractDictionary
-using Graphs: AbstractGraph, dst, edges, edgetype, neighborhood, src, vertices
+using Graphs: AbstractGraph, dst, edges, edgetype, neighborhood, path_graph, src, vertices
 using ITensors.Ops: OpSum
 
 to_callable(value::Type) = value
@@ -109,22 +109,23 @@ heisenberg(N::Integer; kwargs...) = heisenberg(path_graph(N); kwargs...)
 Next-to-nearest-neighbor Ising model (ZZX) on a general graph
 """
 function ising(g::AbstractGraph; J1=-1, J2=0, h=0)
-  # TODO: Make `J2` callable once other issues
-  # are addressed.
-  (; J1, h) = map(to_callable, (; J1, h))
+  (; J1, J2, h) = map(to_callable, (; J1, J2, h))
   ℋ = OpSum()
   for e in edges(g)
     ℋ += J1(e), "Sz", src(e), "Sz", dst(e)
   end
-  # TODO: Try removing this if-statement. This
-  # helps to avoid constructing next-nearest
-  # neighbor gates, and also avoids a bug
-  # in `neighborhood` for integer labels.
   if !iszero(J2)
     for v in vertices(g)
       for nn in next_nearest_neighbors(g, v)
         e = edgetype(g)(v, nn)
-        ℋ += J2, "Sz", src(e), "Sz", dst(e)
+        # TODO: Try removing this if-statement. This
+        # helps to avoid constructing next-nearest
+        # neighbor gates, which `apply` can't handle
+        # right now. We could skip zero terms in gate
+        # construction.
+        if !iszero(J2(e))
+          ℋ += J2(e), "Sz", src(e), "Sz", dst(e)
+        end
       end
     end
   end
