@@ -114,18 +114,16 @@ function ising(g::AbstractGraph; J1=-1, J2=0, h=0)
   for e in edges(g)
     ℋ += J1(e), "Sz", src(e), "Sz", dst(e)
   end
-  if !iszero(J2)
-    for v in vertices(g)
-      for nn in next_nearest_neighbors(g, v)
-        e = edgetype(g)(v, nn)
-        # TODO: Try removing this if-statement. This
-        # helps to avoid constructing next-nearest
-        # neighbor gates, which `apply` can't handle
-        # right now. We could skip zero terms in gate
-        # construction.
-        if !iszero(J2(e))
-          ℋ += J2(e), "Sz", src(e), "Sz", dst(e)
-        end
+  for v in vertices(g)
+    for nn in next_nearest_neighbors(g, v)
+      e = edgetype(g)(v, nn)
+      # TODO: Try removing this if-statement. This
+      # helps to avoid constructing next-nearest
+      # neighbor gates, which `apply` can't handle
+      # right now. We could skip zero terms in gate
+      # construction.
+      if !iszero(J2(e))
+        ℋ += J2(e), "Sz", src(e), "Sz", dst(e)
       end
     end
   end
