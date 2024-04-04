@@ -1,5 +1,6 @@
 @eval module $(gensym())
-using Graphs: nv
+using Dictionaries: Dictionary
+using Graphs: nv, vertices
 using ITensorNetworks:
   OpSum, ttn, apply, contract, dmrg_x, inner, linkdims, mpo, mps, random_mps, siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
@@ -48,7 +49,7 @@ end
 
   W = 12
   # Random fields h ∈ [-W, W]
-  h = W * (2 * rand(nv(c)) .- 1)
+  h = Dictionary(vertices(c), W * (2 * rand(nv(c)) .- 1))
 
   H = ttn(ModelHamiltonians.heisenberg(c; h), s)
 

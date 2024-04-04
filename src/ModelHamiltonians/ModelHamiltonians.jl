@@ -1,12 +1,18 @@
 module ModelHamiltonians
-using Dictionaries: Dictionary
-using Graphs: AbstractGraph, dst, edges, edgetype, neighborhood, path_graph, src, vertices
+using Dictionaries: AbstractDictionary
+using Graphs: AbstractGraph, dst, edges, edgetype, neighborhood, src, vertices
 using ITensors.Ops: OpSum
 
 to_callable(value::Type) = value
 to_callable(value::Function) = value
-to_callable(value::Dict) = Base.Fix1(getindex, value)
-to_callable(value::Dictionary) = Base.Fix1(getindex, value)
+to_callable(value::AbstractDict) = Base.Fix1(getindex, value)
+to_callable(value::AbstractDictionary) = Base.Fix1(getindex, value)
+function to_callable(value::AbstractArray{<:Any,N}) where {N}
+  getindex_value(x::Integer) = value[x]
+  getindex_value(x::Tuple{Vararg{Integer,N}}) = value[x...]
+  getindex_value(x::CartesianIndex{N}) = value[x]
+  return getindex_value
+end
 to_callable(value) = Returns(value)
 
 # TODO: Move to `NamedGraphs.jl` or `GraphsExtensions.jl`.
@@ -31,8 +37,8 @@ function tight_binding(g::AbstractGraph; t=1, tp=0, h=0)
   for v in vertices(g)
     for nn in next_nearest_neighbors(g, v)
       e = edgetype(g)(v, nn)
-      ℋ -= tp(e), "Cdag", v, "C", nn
-      ℋ -= tp(e), "Cdag", nn, "C", v
+      ℋ -= tp(e), "Cdag", src(e), "C", dst(e)
+      ℋ -= tp(e), "Cdag", dst(e), "C", src(e)
     end
   end
   for v in vertices(g)
@@ -56,10 +62,10 @@ function hubbard(g::AbstractGraph; U=0, t=1, tp=0, h=0)
   for v in vertices(g)
     for nn in next_nearest_neighbors(g, v)
       e = edgetype(g)(v, nn)
-      ℋ -= tp(e), "Cdagup", v, "Cup", nn
-      ℋ -= tp(e), "Cdagup", nn, "Cup", v
-      ℋ -= tp(e), "Cdagdn", v, "Cdn", nn
-      ℋ -= tp(e), "Cdagdn", nn, "Cdn", v
+      ℋ -= tp(e), "Cdagup", src(e), "Cup", dst(e)
+      ℋ -= tp(e), "Cdagup", dst(e), "Cup", src(e)
+      ℋ -= tp(e), "Cdagdn", src(e), "Cdn", dst(e)
+      ℋ -= tp(e), "Cdagdn", dst(e), "Cdn", src(e)
     end
   end
   for v in vertices(g)
@@ -73,52 +79,31 @@ end
 Random field J1-J2 Heisenberg model on a general graph
 """
 function heisenberg(g::AbstractGraph; J1=1, J2=0, h=0)
-  # TODO: Make `J2` callable once other issues
-  # are addressed.
-  (; J1, h) = map(to_callable, (; J1, h))
+  (; J1, J2, h) = map(to_callable, (; J1, J2, h))
   ℋ = OpSum()
   for e in edges(g)
     ℋ += J1(e) / 2, "S+", src(e), "S-", dst(e)
     ℋ += J1(e) / 2, "S-", src(e), "S+", dst(e)
     ℋ += J1(e), "Sz", src(e), "Sz", dst(e)
   end
-  # TODO: This throws an error when constructing the
-  # `OpSum` when it is called, investigate!
-  #  AssertionError: isempty(first(a_split))
-  #  Stacktrace:
-  #    [1] op_term(a::Tuple{Vector{Float64}, String, Tuple{Int64, Int64}})
-  #      @ ITensors.Ops ~/.julia/packages/ITensors/jmIjr/src/Ops/Ops.jl:265
-  #    [2] +(o1::ITensors.LazyApply.Sum{ITensors.LazyApply.Scaled{ComplexF64, ITensors.LazyApply.Prod{ITensors.Ops.Op}}}, o2::Tuple{Vector{Float64}, String, Tuple{Int64, Int64}})
-  #      @ ITensors.Ops ~/.julia/packages/ITensors/jmIjr/src/Ops/Ops.jl:276
-  #    [3] heisenberg(g::NamedGraphs.NamedGraph{Tuple{Int64, Int64}}; J1::Int64, J2::Int64, h::Vector{Float64})
-  #      @ ITensorNetworks.ModelHamiltonians ~/.julia/dev/ITensorNetworks/src/ModelHamiltonians/ModelHamiltonians.jl:90
-  if !iszero(J2)
-    for v in vertices(g)
-      for nn in next_nearest_neighbors(g, v)
-        # e = edgetype(g)(v, nn)
-        ℋ += J2 / 2, "S+", v, "S-", nn
-        ℋ += J2 / 2, "S-", v, "S+", nn
-        ℋ += J2, "Sz", v, "Sz", nn
-      end
+  for v in vertices(g)
+    for nn in next_nearest_neighbors(g, v)
+      e = edgetype(g)(v, nn)
+      ℋ += J2(e) / 2, "S+", src(e), "S-", dst(e)
+      ℋ += J2(e) / 2, "S-", src(e), "S+", dst(e)
+      ℋ += J2(e), "Sz", src(e), "Sz", dst(e)
     end
   end
   for v in vertices(g)
-    # TODO: This throws an error when constructing the
-    # `OpSum` when it is called, investigate!
-    #  AssertionError: isempty(first(a_split))
-    #  Stacktrace:
-    #    [1] op_term(a::Tuple{Vector{Float64}, String, Tuple{Int64, Int64}})
-    #      @ ITensors.Ops ~/.julia/packages/ITensors/jmIjr/src/Ops/Ops.jl:265
-    #    [2] +(o1::ITensors.LazyApply.Sum{ITensors.LazyApply.Scaled{ComplexF64, ITensors.LazyApply.Prod{ITensors.Ops.Op}}}, o2::Tuple{Vector{Float64}, String, Tuple{Int64, Int64}})
-    #      @ ITensors.Ops ~/.julia/packages/ITensors/jmIjr/src/Ops/Ops.jl:276
-    #    [3] heisenberg(g::NamedGraphs.NamedGraph{Tuple{Int64, Int64}}; J1::Int64, J2::Int64, h::Vector{Float64})
-    #      @ ITensorNetworks.ModelHamiltonians ~/.julia/dev/ITensorNetworks/src/ModelHamiltonians/ModelHamiltonians.jl:90
-    if !iszero(h(v))
-      ℋ += h(v), "Sz", v
-    end
+    ℋ += h(v), "Sz", v
   end
   return ℋ
 end
+
+"""
+Random field J1-J2 Heisenberg model on a chain of length N
+"""
+heisenberg(N::Integer; kwargs...) = heisenberg(path_graph(N); kwargs...)
 
 """
 Next-to-nearest-neighbor Ising model (ZZX) on a general graph
@@ -138,8 +123,8 @@ function ising(g::AbstractGraph; J1=-1, J2=0, h=0)
   if !iszero(J2)
     for v in vertices(g)
       for nn in next_nearest_neighbors(g, v)
-        # e = edgetype(g)(v, nn)
-        ℋ += J2, "Sz", v, "Sz", nn
+        e = edgetype(g)(v, nn)
+        ℋ += J2, "Sz", src(e), "Sz", dst(e)
       end
     end
   end
@@ -148,11 +133,6 @@ function ising(g::AbstractGraph; J1=-1, J2=0, h=0)
   end
   return ℋ
 end
-
-"""
-Random field J1-J2 Heisenberg model on a chain of length N
-"""
-heisenberg(N::Integer; kwargs...) = heisenberg(path_graph(N); kwargs...)
 
 """
 Next-to-nearest-neighbor Ising model (ZZX) on a chain of length N
