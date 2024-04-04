@@ -25,7 +25,7 @@ using Test: @test, @testset
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 2
-  ψ = random_itensornetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
   v1, v2 = (2, 2), (1, 2)
   ψψ = norm_network(ψ)
 

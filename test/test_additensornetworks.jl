@@ -32,8 +32,8 @@ using Test: @test, @testset
   rem_edge!(s2, NamedEdge((1, 1) => (1, 2)))
 
   v = rand(vertices(g))
-  ψ1 = random_itensornetwork(s1; link_space=χ)
-  ψ2 = random_itensornetwork(s2; link_space=χ)
+  ψ1 = random_tensornetwork(s1; link_space=χ)
+  ψ2 = random_tensornetwork(s2; link_space=χ)
 
   ψ12 = ψ1 + ψ2
 

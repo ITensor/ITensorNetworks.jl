@@ -21,7 +21,7 @@ using NamedGraphs: is_leaf, leaf_vertices, named_grid
   g = named_grid(dims)
   s = siteinds("S=1/2", g)
 
-  ψ = random_itensornetwork(s; link_space=2)
+  ψ = random_tensornetwork(s; link_space=2)
   ψψ = flatten_networks(ψ, ψ)
 
   seq = contraction_sequence(ψψ)

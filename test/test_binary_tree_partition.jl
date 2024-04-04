@@ -56,7 +56,7 @@ end
 @testset "test _binary_tree_partition_inds of a 2D network" begin
   N = (3, 3, 3)
   linkdim = 2
-  network = random_itensornetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  network = random_tensornetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
   tn = Array{ITensor,length(N)}(undef, N...)
   for v in vertices(network)
     tn[v...] = network[v...]

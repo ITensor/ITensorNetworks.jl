@@ -4,7 +4,7 @@ Approximate a `binary_tree_partition` into an output ITensorNetwork
 with the same binary tree structure. `root` is the root vertex of the
 pre-order depth-first-search traversal used to perform the truncations.
 """
-function approx_itensornetwork(
+function approx_tensornetwork(
   ::Algorithm"density_matrix",
   binary_tree_partition::DataGraph;
   root,
@@ -33,7 +33,7 @@ function approx_itensornetwork(
   )
 end
 
-function approx_itensornetwork(
+function approx_tensornetwork(
   ::Algorithm"ttn_svd",
   binary_tree_partition::DataGraph;
   root,
@@ -60,7 +60,7 @@ Approximate a given ITensorNetwork `tn` into an output ITensorNetwork
 with a binary tree structure. The binary tree structure is defined based
 on `inds_btree`, which is a directed binary tree DataGraph of indices.
 """
-function approx_itensornetwork(
+function approx_tensornetwork(
   alg::Union{Algorithm"density_matrix",Algorithm"ttn_svd"},
   tn::ITensorNetwork,
   inds_btree::DataGraph;
@@ -70,7 +70,7 @@ function approx_itensornetwork(
   contraction_sequence_kwargs=(;),
 )
   par = _partition(tn, inds_btree; alg="mincut_recursive_bisection")
-  output_tn, log_root_norm = approx_itensornetwork(
+  output_tn, log_root_norm = approx_tensornetwork(
     alg,
     par;
     root=_root(inds_btree),
@@ -95,7 +95,7 @@ end
 Approximate a given ITensorNetwork `tn` into an output ITensorNetwork with `output_structure`.
 `output_structure` outputs a directed binary tree DataGraph defining the desired graph structure.
 """
-function approx_itensornetwork(
+function approx_tensornetwork(
   alg::Union{Algorithm"density_matrix",Algorithm"ttn_svd"},
   tn::ITensorNetwork,
   output_structure::Function=path_graph_structure;
@@ -105,7 +105,7 @@ function approx_itensornetwork(
   contraction_sequence_kwargs=(;),
 )
   inds_btree = output_structure(tn)
-  return approx_itensornetwork(
+  return approx_tensornetwork(
     alg,
     tn,
     inds_btree;
@@ -117,7 +117,7 @@ function approx_itensornetwork(
 end
 
 # interface
-function approx_itensornetwork(
+function approx_tensornetwork(
   partitioned_tn::DataGraph;
   alg::String,
   root,
@@ -126,7 +126,7 @@ function approx_itensornetwork(
   contraction_sequence_alg="optimal",
   contraction_sequence_kwargs=(;),
 )
-  return approx_itensornetwork(
+  return approx_tensornetwork(
     Algorithm(alg),
     partitioned_tn;
     root,
@@ -137,7 +137,7 @@ function approx_itensornetwork(
   )
 end
 
-function approx_itensornetwork(
+function approx_tensornetwork(
   tn::ITensorNetwork,
   inds_btree::DataGraph;
   alg::String,
@@ -146,7 +146,7 @@ function approx_itensornetwork(
   contraction_sequence_alg="optimal",
   contraction_sequence_kwargs=(;),
 )
-  return approx_itensornetwork(
+  return approx_tensornetwork(
     Algorithm(alg),
     tn,
     inds_btree;
@@ -157,7 +157,7 @@ function approx_itensornetwork(
   )
 end
 
-function approx_itensornetwork(
+function approx_tensornetwork(
   tn::ITensorNetwork,
   output_structure::Function=path_graph_structure;
   alg::String,
@@ -166,7 +166,7 @@ function approx_itensornetwork(
   contraction_sequence_alg="optimal",
   contraction_sequence_kwargs=(;),
 )
-  return approx_itensornetwork(
+  return approx_tensornetwork(
     Algorithm(alg),
     tn,
     output_structure;

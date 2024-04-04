@@ -167,9 +167,9 @@ using Test: @test, @test_broken, @testset
       return itensor(randn(dims(inds)...), inds...)
     end
     @test eltype(ψ[first(vertices(ψ))]) == Float64
-    ψ = random_itensornetwork(elt, g; link_space)
+    ψ = random_tensornetwork(elt, g; link_space)
     @test eltype(ψ[first(vertices(ψ))]) == elt
-    ψ = random_itensornetwork(g; link_space)
+    ψ = random_tensornetwork(g; link_space)
     @test eltype(ψ[first(vertices(ψ))]) == Float64
     ψ = ITensorNetwork(elt, undef, g; link_space)
     @test eltype(ψ[first(vertices(ψ))]) == elt
@@ -179,14 +179,14 @@ using Test: @test, @test_broken, @testset
 
   @testset "random_itensornetwork with custom distributions" begin
     distribution = Uniform(-1.0, 1.0)
-    tn = random_itensornetwork(distribution, named_grid(4); link_space=2)
+    tn = random_tensornetwork(distribution, named_grid(4); link_space=2)
     # Note: distributions in package `Distributions` currently doesn't support customized
     # eltype, and all elements have type `Float64`
     @test eltype(tn[first(vertices(tn))]) == Float64
   end
 
   @testset "orthogonalize" begin
-    tn = random_itensornetwork(named_grid(4); link_space=2)
+    tn = random_tensornetwork(named_grid(4); link_space=2)
     Z = contract(inner_network(tn, tn))[]
 
     tn_ortho = factorize(tn, 4 => 3)
@@ -270,7 +270,7 @@ using Test: @test, @test_broken, @testset
     dims = (2, 2)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
-    ψ = random_itensornetwork(s; link_space=2)
+    ψ = random_tensornetwork(s; link_space=2)
     @test ITensors.scalartype(ψ) == Float64
 
     ϕ = ITensors.convert_leaf_eltype(new_eltype, ψ)
@@ -306,7 +306,7 @@ using Test: @test, @test_broken, @testset
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
     is = siteinds("S=1/2", c)
-    tn = random_itensornetwork(is; link_space=3)
+    tn = random_tensornetwork(is; link_space=3)
     @test_broken swapprime(tn, 0, 2)
   end
 end

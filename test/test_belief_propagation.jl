@@ -40,7 +40,7 @@ ITensors.disable_warn_order()
   s = siteinds("S=1/2", g)
   χ = 4
   Random.seed!(1234)
-  ψ = random_itensornetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
 
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
@@ -70,7 +70,7 @@ ITensors.disable_warn_order()
   s = siteinds("S=1/2", g)
   χ = 2
   Random.seed!(1564)
-  ψ = random_itensornetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
 
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
@@ -116,7 +116,7 @@ ITensors.disable_warn_order()
   s = siteinds("S=1/2", g)
   vs = [(2, 2), (2, 3)]
   χ = 3
-  ψ = random_itensornetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
@@ -138,7 +138,7 @@ ITensors.disable_warn_order()
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 2
-  ψ = random_itensornetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
   v = (2, 2)
 
   ψψ = flatten_networks(ψ, dag(ψ); combine_linkinds=false, map_bra_linkinds=prime)

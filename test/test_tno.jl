@@ -32,7 +32,7 @@ using Test: @test, @testset
   #Construct a single tno which represents prod(gates)
   single_tno = gate_group_to_tno(s, gates)
 
-  ψ = random_itensornetwork(s; link_space=2)
+  ψ = random_tensornetwork(s; link_space=2)
 
   ψ_gated = copy(ψ)
   for gate in gates

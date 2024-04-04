@@ -21,7 +21,7 @@ function NDTensors.contract(
   output_structure::Function=path_graph_structure,
   kwargs...,
 )
-  return approx_itensornetwork(alg, tn, output_structure; kwargs...)
+  return approx_tensornetwork(alg, tn, output_structure; kwargs...)
 end
 
 function contract_density_matrix(

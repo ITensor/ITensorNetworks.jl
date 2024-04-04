@@ -15,7 +15,7 @@ Random.seed!(1234)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
     χ = 10
-    ψ = random_itensornetwork(s; link_space=χ)
+    ψ = random_tensornetwork(s; link_space=χ)
     tn = norm_sqr_network(ψ)
     seq_optimal = contraction_sequence(tn; alg="optimal")
     res_optimal = contract(tn; sequence=seq_optimal)[]
