@@ -31,7 +31,7 @@ function data_graph_type(G::Type{<:TTN})
 end
 
 function Base.copy(ψ::TTN)
-  return TTN(copy(ψ.itensor_network), copy(ψ.ortho_center))
+  return ttn(copy(ψ.itensor_network), copy(ψ.ortho_center))
 end
 
 # Field access
@@ -44,36 +44,36 @@ data_graph(ψ::TTN) = data_graph(itensor_network(ψ))
 # Constructor
 # 
 
-TTN(tn::ITensorNetwork, args...) = TTN{vertextype(tn)}(tn, args...)
+ttn(tn::ITensorNetwork, args...) = TTN{vertextype(tn)}(tn, args...)
 
 # catch-all for default ElType
-function TTN(g::AbstractGraph, args...; kwargs...)
-  return TTN(Float64, g, args...; kwargs...)
+function ttn(g::AbstractGraph, args...; kwargs...)
+  return ttn(Float64, g, args...; kwargs...)
 end
 
-function TTN(eltype::Type{<:Number}, graph::AbstractGraph, args...; kwargs...)
+function ttn(eltype::Type{<:Number}, graph::AbstractGraph, args...; kwargs...)
   itensor_network = ITensorNetwork(eltype, graph; kwargs...)
-  return TTN(itensor_network, args...)
+  return ttn(itensor_network, args...)
 end
 
 # construct from given state (map)
-function TTN(::Type{ElT}, is::AbstractIndsNetwork, initstate, args...) where {ElT<:Number}
+function ttn(::Type{ElT}, is::AbstractIndsNetwork, initstate, args...) where {ElT<:Number}
   itensor_network = ITensorNetwork(ElT, is, initstate)
-  return TTN(itensor_network, args...)
+  return ttn(itensor_network, args...)
 end
 
 # Constructor from a collection of ITensors.
 # TODO: Support other collections like `Dictionary`,
 # interface for custom vertex names.
-function TTN(ts::ITensorCollection)
-  return TTN(ITensorNetwork(ts))
+function ttn(ts::ITensorCollection)
+  return ttn(ITensorNetwork(ts))
 end
 
 # TODO: Implement `random_circuit_ttn` for non-trivial
 # bond dimensions and correlations.
 # TODO: Implement random_ttn for QN-Index
 function random_ttn(args...; kwargs...)
-  T = TTN(args...; kwargs...)
+  T = ttn(args...; kwargs...)
   randn!.(vertex_data(T))
   normalize!.(vertex_data(T))
   return T
@@ -91,14 +91,14 @@ function random_mps(
   else
     randomMPS(external_inds, states; linkdims=internal_inds_space)
   end
-  return TTN([tn_mps[v] for v in eachindex(tn_mps)])
+  return ttn([tn_mps[v] for v in eachindex(tn_mps)])
 end
 
 #
 # Construction from operator (map)
 #
 
-function TTN(
+function ttn(
   ::Type{ElT},
   sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork},
   ops::Dictionary;
@@ -110,7 +110,7 @@ function TTN(
   for v in vertices(sites)
     os *= Op(ops[v], v)
   end
-  T = TTN(ElT, os, sites; kwargs...)
+  T = ttn(ElT, os, sites; kwargs...)
   # see https://github.com/ITensor/ITensors.jl/issues/526
   lognormT = lognorm(T)
   T /= exp(lognormT / N) # TODO: fix broadcasting for in-place assignment
@@ -119,7 +119,7 @@ function TTN(
   return T
 end
 
-function TTN(
+function ttn(
   ::Type{ElT},
   sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork},
   fops::Function;
@@ -127,10 +127,10 @@ function TTN(
 ) where {ElT<:Number}
   sites = first(sites_map) # TODO: Use the sites_map
   ops = Dictionary(vertices(sites), map(v -> fops(v), vertices(sites)))
-  return TTN(ElT, sites, ops; kwargs...)
+  return ttn(ElT, sites, ops; kwargs...)
 end
 
-function TTN(
+function ttn(
   ::Type{ElT},
   sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork},
   op::String;
@@ -138,7 +138,29 @@ function TTN(
 ) where {ElT<:Number}
   sites = first(sites_map) # TODO: Use the sites_map
   ops = Dictionary(vertices(sites), fill(op, nv(sites)))
-  return TTN(ElT, sites, ops; kwargs...)
+  return ttn(ElT, sites, ops; kwargs...)
+end
+
+# construct from dense ITensor, using IndsNetwork of site indices
+function ttn(A::ITensor, is::IndsNetwork; ortho_center=default_root_vertex(is), kwargs...)
+  for v in vertices(is)
+    @assert hasinds(A, is[v])
+  end
+  @assert ortho_center ∈ vertices(is)
+  ψ = ITensorNetwork(is)
+  Ã = A
+  for e in post_order_dfs_edges(ψ, ortho_center)
+    left_inds = uniqueinds(is, e)
+    L, R = factorize(Ã, left_inds; tags=edge_tag(e), ortho="left", kwargs...)
+    l = commonind(L, R)
+    ψ[src(e)] = L
+    is[e] = [l]
+    Ã = R
+  end
+  ψ[ortho_center] = Ã
+  T = ttn(ψ)
+  T = orthogonalize(T, ortho_center)
+  return T
 end
 
 # Special constructors
@@ -156,25 +178,8 @@ function mps(external_inds::Vector{<:Vector{<:Index}}; states)
   tn = insert_missing_internal_inds(
     tn, edges(g); internal_inds_space=trivial_space(indtype(external_inds))
   )
-  return TTN(tn)
+  return ttn(tn)
 end
-
-## function mps(external_inds::Vector{<:Index}; states)
-##   is = path_indsnetwork(external_inds)
-##   tn = TTN(underlying_graph(is))
-##   tn = insert_missing_internal_inds(tn, trivial_space(indtype(is)))
-##   for v in vertices(tn)
-##     @show v
-##     @show tn[v]
-##     tn[v] *= state(only(is[v]), states(v))
-##     @show tn[v]
-##   end
-##   return tn
-## end
-
-## function productTTN(args...; kwargs...)
-##   return TTN(args...; link_space=1, kwargs...)
-## end
 
 # 
 # Utility

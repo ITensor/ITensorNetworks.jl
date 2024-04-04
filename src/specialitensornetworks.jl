@@ -1,4 +1,4 @@
-using ITensors: diagITensor, noprime!
+using ITensors: delta
 using ITensors.NDTensors: dim
 using DataGraphs: IsUnderlyingGraph
 using Distributions: Distribution
@@ -24,101 +24,26 @@ function delta_network(graph::AbstractNamedGraph; link_space=nothing)
 end
 
 """
-BUILD Z OF CLASSICAL ISING MODEL ON A GIVEN GRAPH AT INVERSE TEMP BETA
-H = -\\sum_{(v,v') \\in edges}\\sigma^{z}_{v}\\sigma^{z}_{v'}
-OPTIONAL ARGUMENT:
-  h: EXTERNAL MAGNETIC FIELD
-  szverts: A LIST OF VERTICES OVER WHICH TO APPLY A SZ.
-    THE RESULTANT NETWORK CAN THEN BE CONTRACTED AND DIVIDED BY THE ACTUAL PARTITION FUNCTION TO GET THAT OBSERVABLE
-    INDSNETWORK IS ASSUMED TO BE BUILT FROM A GRAPH (NO SITE INDS) AND OF LINK SPACE 2
-"""
-function ising_network(
-  eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0, szverts=nothing
-)
-  s = insert_missing_internal_inds(s, edges(s); internal_inds_space=2)
-  tn = delta_network(eltype, s)
-  if (szverts != nothing)
-    for v in szverts
-      tn[v] = diagITensor(eltype[1, -1], inds(tn[v]))
-    end
-  end
-  for edge in edges(tn)
-    v1 = src(edge)
-    v2 = dst(edge)
-    i = commoninds(tn[v1], tn[v2])[1]
-    deg_v1 = degree(tn, v1)
-    deg_v2 = degree(tn, v2)
-    f11 = exp(beta * (1 + h / deg_v1 + h / deg_v2))
-    f12 = exp(beta * (-1 + h / deg_v1 - h / deg_v2))
-    f21 = exp(beta * (-1 - h / deg_v1 + h / deg_v2))
-    f22 = exp(beta * (1 - h / deg_v1 - h / deg_v2))
-    q = eltype[f11 f12; f21 f22]
-    w, V = eigen(q)
-    w = map(sqrt, w)
-    sqrt_q = V * ITensors.Diagonal(w) * inv(V)
-    t = itensor(sqrt_q, i, i')
-    tn[v1] = tn[v1] * t
-    tn[v1] = noprime!(tn[v1])
-    t = itensor(sqrt_q, i', i)
-    tn[v2] = tn[v2] * t
-    tn[v2] = noprime!(tn[v2])
-  end
-  return tn
-end
-
-function ising_network(s::IndsNetwork, beta::Number; h::Number=0.0, szverts=nothing)
-  return ising_network(typeof(beta), s, beta; h, szverts)
-end
-
-function ising_network(
-  eltype::Type, g::NamedGraph, beta::Number; h::Number=0.0, szverts=nothing
-)
-  return ising_network(eltype, IndsNetwork(g; link_space=2), beta; h, szverts)
-end
-
-function ising_network(g::NamedGraph, beta::Number; h::Number=0.0, szverts=nothing)
-  return ising_network(eltype(beta), g, beta; h, szverts)
-end
-
-"""Build the wavefunction whose norm is equal to Z of the classical ising model
-s needs to have site indices in this case!"""
-function ising_network_state(eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0)
-  return ising_network(eltype, s, 0.5 * beta; h)
-end
-
-function ising_network_state(eltype::Type, g::NamedGraph, beta::Number; h::Number=0.0)
-  return ising_network(eltype, IndsNetwork(g, 2, 2), 0.5 * beta; h)
-end
-
-function ising_network_state(s::IndsNetwork, beta::Number; h::Number=0.0)
-  return ising_network_state(typeof(beta), s, beta; h)
-end
-
-function ising_network_state(g::NamedGraph, beta::Number; h::Number=0.0)
-  return ising_network(typeof(beta), IndsNetwork(g, 2, 2), 0.5 * beta; h)
-end
-
-"""
 Build an ITensor network on a graph specified by the inds network s. Bond_dim is given by link_space and entries are randomised (normal distribution, mean 0 std 1)
 """
-function randomITensorNetwork(eltype::Type, s::IndsNetwork; link_space=nothing)
+function random_tensornetwork(eltype::Type, s::IndsNetwork; link_space=nothing)
   return ITensorNetwork(s; link_space) do v, inds...
     itensor(randn(eltype, dim(inds)...), inds...)
   end
 end
 
-function randomITensorNetwork(s::IndsNetwork; link_space=nothing)
-  return randomITensorNetwork(Float64, s; link_space)
+function random_tensornetwork(s::IndsNetwork; link_space=nothing)
+  return random_tensornetwork(Float64, s; link_space)
 end
 
-@traitfn function randomITensorNetwork(
+@traitfn function random_tensornetwork(
   eltype::Type, g::::IsUnderlyingGraph; link_space=nothing
 )
-  return randomITensorNetwork(eltype, IndsNetwork(g); link_space)
+  return random_tensornetwork(eltype, IndsNetwork(g); link_space)
 end
 
-@traitfn function randomITensorNetwork(g::::IsUnderlyingGraph; link_space=nothing)
-  return randomITensorNetwork(Float64, IndsNetwork(g); link_space)
+@traitfn function random_tensornetwork(g::::IsUnderlyingGraph; link_space=nothing)
+  return random_tensornetwork(Float64, IndsNetwork(g); link_space)
 end
 
 """
@@ -126,7 +51,7 @@ Build an ITensor network on a graph specified by the inds network s.
 Bond_dim is given by link_space and entries are randomized.
 The random distribution is based on the input argument `distribution`.
 """
-function randomITensorNetwork(
+function random_tensornetwork(
   distribution::Distribution, s::IndsNetwork; link_space=nothing
 )
   return ITensorNetwork(s; link_space) do v, inds...
@@ -134,8 +59,8 @@ function randomITensorNetwork(
   end
 end
 
-@traitfn function randomITensorNetwork(
+@traitfn function random_tensornetwork(
   distribution::Distribution, g::::IsUnderlyingGraph; link_space=nothing
 )
-  return randomITensorNetwork(distribution, IndsNetwork(g); link_space)
+  return random_tensornetwork(distribution, IndsNetwork(g); link_space)
 end

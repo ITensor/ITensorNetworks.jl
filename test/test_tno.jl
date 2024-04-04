@@ -7,9 +7,9 @@ using ITensorNetworks:
   group_commuting_itensors,
   gate_group_to_tno,
   get_tnos,
-  ising,
-  randomITensorNetwork,
+  random_tensornetwork,
   siteinds
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: ITensor, noprime
 using NamedGraphs: named_grid
 using Test: @test, @testset
@@ -19,7 +19,7 @@ using Test: @test, @testset
   g = named_grid((L, L))
   s = siteinds("S=1/2", g)
 
-  ℋ = ising(g; h=1.5)
+  ℋ = ModelHamiltonians.ising(g; h=1.5)
   gates = Vector{ITensor}(ℋ, s)
   gate_groups = group_commuting_itensors(gates)
 
@@ -32,7 +32,7 @@ using Test: @test, @testset
   #Construct a single tno which represents prod(gates)
   single_tno = gate_group_to_tno(s, gates)
 
-  ψ = randomITensorNetwork(s; link_space=2)
+  ψ = random_tensornetwork(s; link_space=2)
 
   ψ_gated = copy(ψ)
   for gate in gates

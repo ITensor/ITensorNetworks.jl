@@ -3,11 +3,11 @@ using DataGraphs: edge_data, vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
 using ITensors: ITensors
-using ITensors.ITensorMPS: MPO, MPS, randomMPS
+using ITensors.ITensorMPS: ITensorMPS
 using ITensorNetworks:
   ITensorNetworks,
   OpSum,
-  TTN,
+  ttn,
   apply,
   dmrg,
   inner,
@@ -17,6 +17,7 @@ using ITensorNetworks:
   random_ttn,
   relabel_sites,
   siteinds
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using KrylovKit: eigsolve
 using NamedGraphs: named_comb_tree
 using Observers: observer
@@ -48,8 +49,8 @@ ITensors.disable_auto_fermion()
   maxdim = [10, 20, 40, 100]
 
   # Compare to `ITensors.MPO` version of `dmrg`
-  H_mpo = MPO([H[v] for v in 1:nv(H)])
-  psi_mps = MPS([psi[v] for v in 1:nv(psi)])
+  H_mpo = ITensorMPS.MPO([H[v] for v in 1:nv(H)])
+  psi_mps = ITensorMPS.MPS([psi[v] for v in 1:nv(psi)])
   e2, psi2 = dmrg(H_mpo, psi_mps; nsweeps, maxdim, outputlevel=0)
 
   psi = dmrg(
@@ -177,9 +178,9 @@ end
     end
     s = siteinds("S=1/2", c; conserve_qns=use_qns)
 
-    os = ITensorNetworks.heisenberg(c)
+    os = ModelHamiltonians.heisenberg(c)
 
-    H = TTN(os, s)
+    H = ttn(os, s)
 
     # make init_state
     d = Dict()
@@ -187,7 +188,7 @@ end
       d[v] = isodd(i) ? "Up" : "Dn"
     end
     states = v -> d[v]
-    psi = TTN(s, states)
+    psi = ttn(s, states)
 
     #    psi = random_ttn(s; link_space=20) #FIXME: random_ttn broken for QN conserving case
 
@@ -202,8 +203,8 @@ end
     linear_order = [4, 1, 2, 5, 3, 6]
     vmap = Dictionary(vertices(s)[linear_order], 1:length(linear_order))
     sline = only.(collect(vertex_data(s)))[linear_order]
-    Hline = MPO(relabel_sites(os, vmap), sline)
-    psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+    Hline = ITensorMPS.MPO(relabel_sites(os, vmap), sline)
+    psiline = ITensorMPS.randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
     e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
     @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
@@ -228,7 +229,7 @@ end
   U = 2.0
   t = 1.3
   tp = 0.6
-  os = ITensorNetworks.hubbard(c; U, t, tp)
+  os = ModelHamiltonians.hubbard(c; U, t, tp)
 
   # for conversion to ITensors.MPO
   linear_order = [4, 1, 2, 5, 3, 6]
@@ -237,27 +238,27 @@ end
 
   # get MPS / MPO with JW string result
   ITensors.disable_auto_fermion()
-  Hline = MPO(relabel_sites(os, vmap), sline)
-  psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+  Hline = ITensorMPS.MPO(relabel_sites(os, vmap), sline)
+  psiline = ITensorMPS.randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
   e_jw, psi_jw = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
   ITensors.enable_auto_fermion()
 
   # now get auto-fermion results 
-  H = TTN(os, s)
+  H = ttn(os, s)
   # make init_state
   d = Dict()
   for (i, v) in enumerate(vertices(s))
     d[v] = isodd(i) ? "Up" : "Dn"
   end
   states = v -> d[v]
-  psi = TTN(s, states)
+  psi = ttn(s, states)
   psi = dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
 
   # Compare to `ITensors.MPO` version of `dmrg`
-  Hline = MPO(relabel_sites(os, vmap), sline)
-  psiline = randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+  Hline = ITensorMPS.MPO(relabel_sites(os, vmap), sline)
+  psiline = ITensorMPS.randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
   e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
   @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
@@ -276,8 +277,8 @@ end
 
   c = named_comb_tree((3, 2))
   s = siteinds("S=1/2", c)
-  os = ITensorNetworks.heisenberg(c)
-  H = TTN(os, s)
+  os = ModelHamiltonians.heisenberg(c)
+  H = ttn(os, s)
   psi = random_ttn(s; link_space=5)
   psi = dmrg(H, psi; nsweeps, maxdim, nsites)
 

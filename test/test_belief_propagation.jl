@@ -14,14 +14,14 @@ using ITensorNetworks:
   contraction_sequence,
   environment,
   flatten_networks,
-  ising_network,
   linkinds_combiners,
-  randomITensorNetwork,
+  random_tensornetwork,
   siteinds,
   split_index,
   tensornetwork,
   update,
   update_factor
+using ITensorNetworks.ModelNetworks: ModelNetworks
 using ITensors: ITensors, ITensor, combiner, dag, inds, op, prime, randomITensor
 using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
@@ -40,7 +40,7 @@ ITensors.disable_warn_order()
   s = siteinds("S=1/2", g)
   χ = 4
   Random.seed!(1234)
-  ψ = randomITensorNetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
 
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
@@ -70,7 +70,7 @@ ITensors.disable_warn_order()
   s = siteinds("S=1/2", g)
   χ = 2
   Random.seed!(1564)
-  ψ = randomITensorNetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
 
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
@@ -94,13 +94,12 @@ ITensors.disable_warn_order()
   s = IndsNetwork(g; link_space=2)
   beta = 0.2
   vs = [(2, 3), (3, 3)]
-  ψψ = ising_network(s, beta)
-  ψOψ = ising_network(s, beta; szverts=vs)
+  ψψ = ModelNetworks.ising_network(s, beta)
+  ψOψ = ModelNetworks.ising_network(s, beta; szverts=vs)
 
   contract_seq = contraction_sequence(ψψ)
   actual_szsz =
-    ITensors.contract(ψOψ; sequence=contract_seq)[] /
-    ITensors.contract(ψψ; sequence=contract_seq)[]
+    contract(ψOψ; sequence=contract_seq)[] / contract(ψψ; sequence=contract_seq)[]
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bpc = update(bpc; maxiter=20)
@@ -117,7 +116,7 @@ ITensors.disable_warn_order()
   s = siteinds("S=1/2", g)
   vs = [(2, 2), (2, 3)]
   χ = 3
-  ψ = randomITensorNetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
@@ -125,9 +124,7 @@ ITensors.disable_warn_order()
 
   ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
   env_tensors = environment(bpc, [(v, 2) for v in vs])
-  rdm = ITensors.contract(
-    vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]])
-  )
+  rdm = contract(vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]))
 
   rdm = array((rdm * combiner(inds(rdm; plev=0)...)) * combiner(inds(rdm; plev=1)...))
   rdm /= tr(rdm)
@@ -141,7 +138,7 @@ ITensors.disable_warn_order()
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 2
-  ψ = randomITensorNetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
   v = (2, 2)
 
   ψψ = flatten_networks(ψ, dag(ψ); combine_linkinds=false, map_bra_linkinds=prime)

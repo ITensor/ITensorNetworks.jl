@@ -7,7 +7,7 @@ using ITensorNetworks:
   contract_inner,
   gauge_error,
   messages,
-  randomITensorNetwork,
+  random_tensornetwork,
   siteinds,
   update
 using ITensors: diagITensor, inds
@@ -25,7 +25,7 @@ using Test: @test, @testset
   χ = 6
 
   Random.seed!(5467)
-  ψ = randomITensorNetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
 
   # Move directly to vidal gauge
   ψ_vidal = VidalITensorNetwork(ψ)

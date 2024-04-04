@@ -1,6 +1,7 @@
 @eval module $(gensym())
 using ITensors: contract
-using ITensorNetworks: ITensorNetworks, TimeDependentSum, TTN, mpo, mps, siteinds, tdvp
+using ITensorNetworks: ITensorNetworks, TimeDependentSum, ttn, mpo, mps, siteinds, tdvp
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using OrdinaryDiffEq: Tsit5
 using KrylovKit: exponentiate
 using LinearAlgebra: norm
@@ -126,8 +127,8 @@ end
   cutoff = 1e-8
 
   s = siteinds("S=1/2", n)
-  ℋ₁₀ = ITensorNetworks.heisenberg(n; J1=J₁, J2=0.0)
-  ℋ₂₀ = ITensorNetworks.heisenberg(n; J1=0.0, J2=J₂)
+  ℋ₁₀ = ModelHamiltonians.heisenberg(n; J1=J₁, J2=0.0)
+  ℋ₂₀ = ModelHamiltonians.heisenberg(n; J1=0.0, J2=J₂)
   ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
   H⃗₀ = [mpo(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 
@@ -188,12 +189,12 @@ end
   cutoff = 1e-8
 
   s = siteinds("S=1/2", c)
-  ℋ₁₀ = ITensorNetworks.heisenberg(c; J1=J₁, J2=0.0)
-  ℋ₂₀ = ITensorNetworks.heisenberg(c; J1=0.0, J2=J₂)
+  ℋ₁₀ = ModelHamiltonians.heisenberg(c; J1=J₁, J2=0.0)
+  ℋ₂₀ = ModelHamiltonians.heisenberg(c; J1=0.0, J2=J₂)
   ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
-  H⃗₀ = [TTN(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
+  H⃗₀ = [ttn(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 
-  ψ₀ = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
+  ψ₀ = ttn(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
 
   ψₜ_ode = tdvp(
     H⃗₀,
