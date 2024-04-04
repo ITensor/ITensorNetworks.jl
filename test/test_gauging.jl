@@ -7,7 +7,7 @@ using ITensorNetworks:
   contract_inner,
   gauge_error,
   messages,
-  random_itensornetwork,
+  random_tensornetwork,
   siteinds,
   update
 using ITensors: diagITensor, inds

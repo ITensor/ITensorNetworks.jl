@@ -10,7 +10,7 @@ using ITensorNetworks:
   distance_to_leaf,
   flatten_networks,
   leaf_vertices,
-  random_itensornetwork,
+  random_tensornetwork,
   siteinds
 using Test: @test, @testset
 using NamedGraphs: is_leaf, leaf_vertices, named_grid

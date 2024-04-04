@@ -30,7 +30,7 @@ function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}
-  partitioned_itensornetwork::PTN
+  partitioned_tensornetwork::PTN
   messages::MTS
   default_message::DM
 end
@@ -52,7 +52,7 @@ function BeliefPropagationCache(tn; kwargs...)
 end
 
 function partitioned_tensornetwork(bp_cache::BeliefPropagationCache)
-  return bp_cache.partitioned_itensornetwork
+  return bp_cache.partitioned_tensornetwork
 end
 messages(bp_cache::BeliefPropagationCache) = bp_cache.messages
 default_message(bp_cache::BeliefPropagationCache) = bp_cache.default_message

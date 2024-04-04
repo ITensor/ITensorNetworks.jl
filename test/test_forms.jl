@@ -15,7 +15,7 @@ using ITensorNetworks:
   ket_network,
   ket_vertex,
   operator_network,
-  random_itensornetwork,
+  random_tensornetwork,
   siteinds,
   tensornetwork,
   union_all_inds,

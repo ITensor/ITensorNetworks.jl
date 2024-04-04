@@ -11,7 +11,7 @@ using ITensorNetworks:
   IndsNetwork,
   ITensorNetwork,
   path_graph_structure,
-  random_itensornetwork
+  random_tensornetwork
 using NamedGraphs: leaf_vertices, named_grid
 using Test: @test, @testset
 

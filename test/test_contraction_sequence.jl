@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using EinExprs: Exhaustive, Greedy, HyPar
 using ITensorNetworks:
-  contraction_sequence, norm_sqr_network, random_itensornetwork, siteinds
+  contraction_sequence, norm_sqr_network, random_tensornetwork, siteinds
 using ITensors: ITensors, contract
 using NamedGraphs: named_grid
 using OMEinsumContractionOrders: OMEinsumContractionOrders

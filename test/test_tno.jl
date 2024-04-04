@@ -7,7 +7,7 @@ using ITensorNetworks:
   group_commuting_itensors,
   gate_group_to_tno,
   get_tnos,
-  random_itensornetwork,
+  random_tensornetwork,
   siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: ITensor, noprime

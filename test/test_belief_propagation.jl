@@ -15,7 +15,7 @@ using ITensorNetworks:
   environment,
   flatten_networks,
   linkinds_combiners,
-  random_itensornetwork,
+  random_tensornetwork,
   siteinds,
   split_index,
   tensornetwork,

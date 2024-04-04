@@ -9,7 +9,7 @@ using ITensorNetworks:
   contract_inner,
   environment,
   norm_network,
-  random_itensornetwork,
+  random_tensornetwork,
   siteinds,
   update
 using ITensors: ITensors

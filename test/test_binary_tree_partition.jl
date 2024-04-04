@@ -16,7 +16,7 @@ using ITensorNetworks:
   ITensorNetwork,
   binary_tree_structure,
   path_graph_structure,
-  random_itensornetwork
+  random_tensornetwork
 using NamedGraphs: NamedEdge, named_grid, post_order_dfs_vertices
 using OMEinsumContractionOrders: OMEinsumContractionOrders
 using Test: @test, @testset

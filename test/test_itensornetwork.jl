@@ -41,7 +41,7 @@ using ITensorNetworks:
   internalinds,
   linkinds,
   orthogonalize,
-  random_itensornetwork,
+  random_tensornetwork,
   siteinds
 using LinearAlgebra: factorize
 using NamedGraphs: NamedEdge, incident_edges, named_comb_tree, named_grid
@@ -177,7 +177,7 @@ using Test: @test, @test_broken, @testset
     @test eltype(ψ[first(vertices(ψ))]) == Float64
   end
 
-  @testset "random_itensornetwork with custom distributions" begin
+  @testset "random_tensornetwork with custom distributions" begin
     distribution = Uniform(-1.0, 1.0)
     tn = random_tensornetwork(distribution, named_grid(4); link_space=2)
     # Note: distributions in package `Distributions` currently doesn't support customized
