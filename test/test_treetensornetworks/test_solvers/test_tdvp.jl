@@ -14,6 +14,7 @@ using ITensorNetworks:
   random_ttn,
   siteinds,
   tdvp
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using LinearAlgebra: norm
 using NamedGraphs: named_binary_tree, named_comb_tree
 using Observers: observer
@@ -418,7 +419,7 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
+    os = ModelHamiltonians.heisenberg(c)
 
     H = ttn(os, s)
 
@@ -495,7 +496,7 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
+    os = ModelHamiltonians.heisenberg(c)
     H = ttn(os, s)
     HM = contract(H)
 
@@ -543,7 +544,7 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
+    os = ModelHamiltonians.heisenberg(c)
     H = ttn(os, s)
 
     gates = ITensor[]
@@ -629,7 +630,7 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
+    os = ModelHamiltonians.heisenberg(c)
     H = ttn(os, s)
 
     state = normalize(random_ttn(s; link_space=2))

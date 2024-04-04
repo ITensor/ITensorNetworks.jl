@@ -15,8 +15,9 @@ using ITensorNetworks:
   random_mps,
   random_ttn,
   siteinds
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: prime, replaceinds, replaceprime
-using ITensors.ITensorMPS: randomMPO
+using ITensors.ITensorMPS: ITensorMPS
 using LinearAlgebra: norm, normalize
 using NamedGraphs: named_comb_tree
 using Test: @test, @test_broken, @testset
@@ -103,7 +104,7 @@ end
   s = siteinds("S=1/2", c)
   psi = normalize(random_ttn(s; link_space=8))
 
-  os = ITensorNetworks.heisenberg(c; J1=1, J2=1)
+  os = ModelHamiltonians.heisenberg(c; J1=1, J2=1)
   H = ttn(os, s)
 
   # Test basic usage with default parameters
@@ -153,8 +154,10 @@ end
   sites = siteinds("Qubit", nbit)
 
   # randomMPO does not support linkdims keyword.
-  M1 = replaceprime(randomMPO(sites) + randomMPO(sites), 1 => 2, 0 => 1)
-  M2 = randomMPO(sites) + randomMPO(sites)
+  M1 = replaceprime(
+    ITensorMPS.randomMPO(sites) + ITensorMPS.randomMPO(sites), 1 => 2, 0 => 1
+  )
+  M2 = ITensorMPS.randomMPO(sites) + ITensorMPS.randomMPO(sites)
   M12_ref = contract(M1, M2; alg="naive")
   t12_ref = ttn([M12_ref[v] for v in eachindex(M12_ref)])
 

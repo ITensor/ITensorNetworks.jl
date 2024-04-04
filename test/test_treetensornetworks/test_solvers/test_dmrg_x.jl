@@ -1,18 +1,8 @@
 @eval module $(gensym())
 using Graphs: nv
 using ITensorNetworks:
-  ITensorNetworks,
-  OpSum,
-  ttn,
-  apply,
-  contract,
-  dmrg_x,
-  inner,
-  linkdims,
-  mpo,
-  mps,
-  random_mps,
-  siteinds
+  OpSum, ttn, apply, contract, dmrg_x, inner, linkdims, mpo, mps, random_mps, siteinds
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: @disable_warn_order, array, dag, onehot, uniqueind
 using LinearAlgebra: eigen, normalize
 using NamedGraphs: named_comb_tree
@@ -28,7 +18,7 @@ using Test: @test, @testset
   W = 12
   # Random fields h ∈ [-W, W]
   h = W * (2 * rand(n) .- 1)
-  H = mpo(ITensorNetworks.heisenberg(n; h), s)
+  H = mpo(ModelHamiltonians.heisenberg(n; h), s)
 
   ψ = mps(s; states=(v -> rand(["↑", "↓"])))
 
@@ -60,7 +50,7 @@ end
   # Random fields h ∈ [-W, W]
   h = W * (2 * rand(nv(c)) .- 1)
 
-  H = ttn(ITensorNetworks.heisenberg(c; h), s)
+  H = ttn(ModelHamiltonians.heisenberg(c; h), s)
 
   # TODO: Use `ttn(s; states=v -> rand(["↑", "↓"]))` or
   # `ttns(s; states=v -> rand(["↑", "↓"]))`

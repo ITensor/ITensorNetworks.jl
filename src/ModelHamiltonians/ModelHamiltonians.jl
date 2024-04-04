@@ -86,10 +86,8 @@ function heisenberg(g::AbstractGraph; J1=1, J2=0, h=0)
       ℋ += J2(e), "Sz", v, "Sz", nn
     end
   end
-  for (i, v) in enumerate(vertices(g))
-    if !iszero(h[i])
-      ℋ += h[i], "Sz", v
-    end
+  for v in vertices(g)
+    ℋ += h(v), "Sz", v
   end
   return ℋ
 end
@@ -98,15 +96,23 @@ end
 Next-to-nearest-neighbor Ising model (ZZX) on a general graph
 """
 function ising(g::AbstractGraph; J1=-1, J2=0, h=0)
-  (; J1, J2, h) = map(to_callable, (; J1, J2, h))
+  # TODO: Make `J2` callable once other issues
+  # are addressed.
+  (; J1, h) = map(to_callable, (; J1, h))
   ℋ = OpSum()
   for e in edges(g)
     ℋ += J1(e), "Sz", src(e), "Sz", dst(e)
   end
   for v in vertices(g)
-    for nn in next_nearest_neighbors(g, v)
-      e = edgetype(g)(v, nn)
-      ℋ += J2(e), "Sz", v, "Sz", nn
+    # TODO: Try removing this if-statement. This
+    # helps to avoid constructing next-nearest
+    # neighbor gates, and also avoids a bug
+    # in `neighborhood` for integer labels.
+    if !iszero(J2)
+      for nn in next_nearest_neighbors(g, v)
+        e = edgetype(g)(v, nn)
+        ℋ += J2, "Sz", v, "Sz", nn
+      end
     end
   end
   for v in vertices(g)

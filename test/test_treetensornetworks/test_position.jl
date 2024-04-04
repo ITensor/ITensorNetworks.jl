@@ -1,7 +1,8 @@
 @eval module $(gensym())
 using Graphs: vertices
 using ITensors: ITensors
-using ITensorNetworks: ITensorNetworks, ProjTTN, ttn, environments, position, siteinds
+using ITensorNetworks: ProjTTN, ttn, environments, position, siteinds
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using NamedGraphs: named_comb_tree
 using Test
 
@@ -21,7 +22,7 @@ using Test
   end
   s = siteinds("S=1/2", c; conserve_qns=use_qns)
 
-  os = ITensorNetworks.heisenberg(c)
+  os = ModelHamiltonians.heisenberg(c)
 
   H = ttn(os, s)
 

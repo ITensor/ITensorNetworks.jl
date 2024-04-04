@@ -13,9 +13,9 @@ using ITensors:
   dag,
   inds,
   removeqns
-using ITensors.ITensorMPS: MPO
+using ITensors.ITensorMPS: ITensorMPS
 using ITensors.NDTensors: matrix
-using ITensorGaussianMPS: hopping_hamiltonian
+using ITensorGaussianMPS: ITensorGaussianMPS
 using ITensorNetworks: ITensorNetworks, OpSum, ttn, relabel_sites, siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using KrylovKit: eigsolve
@@ -64,7 +64,7 @@ end
       # get TTN Hamiltonian directly
       Hsvd = ttn(H, is; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      Hline = MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
       # compare resulting dense Hamiltonians
       @disable_warn_order begin
         Tttno = prod(Hline)
@@ -74,7 +74,7 @@ end
 
       # this breaks for longer range interactions
       Hsvd_lr = ttn(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)
-      Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
+      Hline_lr = ITensorMPS.MPO(relabel_sites(Hlr, vmap), sites)
       @disable_warn_order begin
         Tttno_lr = prod(Hline_lr)
         Tmpo_lr = contract(Hsvd_lr)
@@ -126,7 +126,7 @@ end
     J1 = -1
     J2 = 2
     h = 0.5
-    H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)
+    H = ModelHamiltonians.heisenberg(c; J1=J1, J2=J2, h=h)
     # add combination of longer range interactions
     Hlr = copy(H)
     Hlr += 5, "Z", (1, 2), "Z", (2, 2)#, "Z", (3,2)
@@ -141,7 +141,7 @@ end
       # get TTN Hamiltonian directly
       Hsvd = ttn(H, is; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      Hline = MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
       # compare resulting sparse Hamiltonians
 
       @disable_warn_order begin
@@ -152,7 +152,7 @@ end
 
       # this breaks for longer range interactions ###not anymore
       Hsvd_lr = ttn(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)
-      Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
+      Hline_lr = ITensorMPS.MPO(relabel_sites(Hlr, vmap), sites)
       @disable_warn_order begin
         Tttno_lr = prod(Hline_lr)
         Tmpo_lr = contract(Hsvd_lr)
@@ -176,7 +176,7 @@ end
     tp = 0.4
     U = 0.0
     h = 0.5
-    H = ITensorNetworks.tight_binding(c; t, tp, h)
+    H = ModelHamiltonians.tight_binding(c; t, tp, h)
 
     # add combination of longer range interactions
     Hlr = copy(H)
@@ -187,9 +187,9 @@ end
       # get corresponding MPO Hamiltonian
       sites = [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
       vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
-      Hline = ITensors.MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
       # compare resulting sparse Hamiltonians
-      Hmat_sp = hopping_hamiltonian(relabel_sites(H, vmap))
+      Hmat_sp = ITensorGaussianMPS.hopping_hamiltonian(relabel_sites(H, vmap))
       @disable_warn_order begin
         Tmpo = prod(Hline)
         Tttno = contract(Hsvd)
@@ -242,7 +242,7 @@ end
     J2 = 2
     h = 0.5
     # connectivity of the Hamiltonian is that of the original comb graph
-    H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)
+    H = ModelHamiltonians.heisenberg(c; J1=J1, J2=J2, h=h)
 
     # add combination of longer range interactions
     Hlr = copy(H)
@@ -255,7 +255,7 @@ end
       # get TTN Hamiltonian directly
       Hsvd = ttn(H, is_missing_site; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      Hline = MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
 
       # compare resulting sparse Hamiltonians
       @disable_warn_order begin
@@ -267,7 +267,7 @@ end
       Hsvd_lr = ttn(
         Hlr, is_missing_site; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10
       )
-      Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
+      Hline_lr = ITensorMPS.MPO(relabel_sites(Hlr, vmap), sites)
       @disable_warn_order begin
         Tttno_lr = prod(Hline_lr)
         Tmpo_lr = contract(Hsvd_lr)

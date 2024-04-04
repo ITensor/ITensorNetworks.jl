@@ -1,6 +1,8 @@
 module ModelNetworks
-using Graphs: edges
-using ..ITensorNetworks: IndsNetwork
+using Graphs: degree, dst, edges, src
+using ..ITensorNetworks: IndsNetwork, delta_network, insert_missing_internal_inds, itensor
+using ITensors: commoninds, diagITensor, inds, noprime
+using LinearAlgebra: Diagonal, eigen
 using NamedGraphs: NamedGraph
 
 """
@@ -35,13 +37,13 @@ function ising_network(
     q = eltype[f11 f12; f21 f22]
     w, V = eigen(q)
     w = map(sqrt, w)
-    sqrt_q = V * ITensors.Diagonal(w) * inv(V)
+    sqrt_q = V * Diagonal(w) * inv(V)
     t = itensor(sqrt_q, i, i')
     tn[v1] = tn[v1] * t
-    tn[v1] = noprime!(tn[v1])
+    tn[v1] = noprime(tn[v1])
     t = itensor(sqrt_q, i', i)
     tn[v2] = tn[v2] * t
-    tn[v2] = noprime!(tn[v2])
+    tn[v2] = noprime(tn[v2])
   end
   return tn
 end

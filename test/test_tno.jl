@@ -7,9 +7,9 @@ using ITensorNetworks:
   group_commuting_itensors,
   gate_group_to_tno,
   get_tnos,
-  ising,
   random_itensornetwork,
   siteinds
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: ITensor, noprime
 using NamedGraphs: named_grid
 using Test: @test, @testset
@@ -19,7 +19,7 @@ using Test: @test, @testset
   g = named_grid((L, L))
   s = siteinds("S=1/2", g)
 
-  ℋ = ising(g; h=1.5)
+  ℋ = ModelHamiltonians.ising(g; h=1.5)
   gates = Vector{ITensor}(ℋ, s)
   gate_groups = group_commuting_itensors(gates)
 
