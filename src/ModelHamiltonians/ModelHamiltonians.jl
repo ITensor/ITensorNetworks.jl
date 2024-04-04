@@ -62,8 +62,10 @@ function hubbard(g::AbstractGraph; U=0, t=1, tp=0, h=0)
       ℋ -= tp(e), "Cdagdn", nn, "Cdn", v
     end
   end
-  ℋ -= h(v), "Sz", v
-  ℋ += U(v), "Nupdn", v
+  for v in vertices(g)
+    ℋ -= h(v), "Sz", v
+    ℋ += U(v), "Nupdn", v
+  end
   return ℋ
 end
 
@@ -71,23 +73,49 @@ end
 Random field J1-J2 Heisenberg model on a general graph
 """
 function heisenberg(g::AbstractGraph; J1=1, J2=0, h=0)
-  (; J1, J2, h) = map(to_callable, (; J1, J2, h))
+  # TODO: Make `J2` callable once other issues
+  # are addressed.
+  (; J1, h) = map(to_callable, (; J1, h))
   ℋ = OpSum()
   for e in edges(g)
     ℋ += J1(e) / 2, "S+", src(e), "S-", dst(e)
     ℋ += J1(e) / 2, "S-", src(e), "S+", dst(e)
     ℋ += J1(e), "Sz", src(e), "Sz", dst(e)
   end
-  for v in vertices(g)
-    for nn in next_nearest_neighbors(g, v)
-      e = edgetype(g)(v, nn)
-      ℋ += J2(e) / 2, "S+", v, "S-", nn
-      ℋ += J2(e) / 2, "S-", v, "S+", nn
-      ℋ += J2(e), "Sz", v, "Sz", nn
+  # TODO: This throws an error when constructing the
+  # `OpSum` when it is called, investigate!
+  #  AssertionError: isempty(first(a_split))
+  #  Stacktrace:
+  #    [1] op_term(a::Tuple{Vector{Float64}, String, Tuple{Int64, Int64}})
+  #      @ ITensors.Ops ~/.julia/packages/ITensors/jmIjr/src/Ops/Ops.jl:265
+  #    [2] +(o1::ITensors.LazyApply.Sum{ITensors.LazyApply.Scaled{ComplexF64, ITensors.LazyApply.Prod{ITensors.Ops.Op}}}, o2::Tuple{Vector{Float64}, String, Tuple{Int64, Int64}})
+  #      @ ITensors.Ops ~/.julia/packages/ITensors/jmIjr/src/Ops/Ops.jl:276
+  #    [3] heisenberg(g::NamedGraphs.NamedGraph{Tuple{Int64, Int64}}; J1::Int64, J2::Int64, h::Vector{Float64})
+  #      @ ITensorNetworks.ModelHamiltonians ~/.julia/dev/ITensorNetworks/src/ModelHamiltonians/ModelHamiltonians.jl:90
+  if !iszero(J2)
+    for v in vertices(g)
+      for nn in next_nearest_neighbors(g, v)
+        # e = edgetype(g)(v, nn)
+        ℋ += J2 / 2, "S+", v, "S-", nn
+        ℋ += J2 / 2, "S-", v, "S+", nn
+        ℋ += J2, "Sz", v, "Sz", nn
+      end
     end
   end
   for v in vertices(g)
-    ℋ += h(v), "Sz", v
+    # TODO: This throws an error when constructing the
+    # `OpSum` when it is called, investigate!
+    #  AssertionError: isempty(first(a_split))
+    #  Stacktrace:
+    #    [1] op_term(a::Tuple{Vector{Float64}, String, Tuple{Int64, Int64}})
+    #      @ ITensors.Ops ~/.julia/packages/ITensors/jmIjr/src/Ops/Ops.jl:265
+    #    [2] +(o1::ITensors.LazyApply.Sum{ITensors.LazyApply.Scaled{ComplexF64, ITensors.LazyApply.Prod{ITensors.Ops.Op}}}, o2::Tuple{Vector{Float64}, String, Tuple{Int64, Int64}})
+    #      @ ITensors.Ops ~/.julia/packages/ITensors/jmIjr/src/Ops/Ops.jl:276
+    #    [3] heisenberg(g::NamedGraphs.NamedGraph{Tuple{Int64, Int64}}; J1::Int64, J2::Int64, h::Vector{Float64})
+    #      @ ITensorNetworks.ModelHamiltonians ~/.julia/dev/ITensorNetworks/src/ModelHamiltonians/ModelHamiltonians.jl:90
+    if !iszero(h(v))
+      ℋ += h(v), "Sz", v
+    end
   end
   return ℋ
 end
@@ -103,14 +131,14 @@ function ising(g::AbstractGraph; J1=-1, J2=0, h=0)
   for e in edges(g)
     ℋ += J1(e), "Sz", src(e), "Sz", dst(e)
   end
-  for v in vertices(g)
-    # TODO: Try removing this if-statement. This
-    # helps to avoid constructing next-nearest
-    # neighbor gates, and also avoids a bug
-    # in `neighborhood` for integer labels.
-    if !iszero(J2)
+  # TODO: Try removing this if-statement. This
+  # helps to avoid constructing next-nearest
+  # neighbor gates, and also avoids a bug
+  # in `neighborhood` for integer labels.
+  if !iszero(J2)
+    for v in vertices(g)
       for nn in next_nearest_neighbors(g, v)
-        e = edgetype(g)(v, nn)
+        # e = edgetype(g)(v, nn)
         ℋ += J2, "Sz", v, "Sz", nn
       end
     end
