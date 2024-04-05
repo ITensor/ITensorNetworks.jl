@@ -177,6 +177,14 @@ function ITensorNetwork(value, inds_network::IndsNetwork; kwargs...)
   return ITensorNetwork(to_callable(value), inds_network; kwargs...)
 end
 
+function ITensorNetwork(elt::Type, f, inds_network::IndsNetwork; link_space=1, kwargs...)
+  tn = ITensorNetwork(f, inds_network; kwargs...)
+  for v in vertices(tn)
+    tn[v] = elt.(tn[v])
+  end
+  return tn
+end
+
 function ITensorNetwork(
   itensor_constructor::Function, inds_network::IndsNetwork; link_space=1, kwargs...
 )

@@ -38,7 +38,7 @@ end
 # 
 
 function ITensorMPS.orthogonalize(tn::AbstractTTN, ortho_center; kwargs...)
-  new_ortho_region ∈ ortho_region(tn) && return tn
+  ortho_center ∈ ortho_region(tn) && return tn
   # TODO: Rewrite this in a more general way.
   if isone(length(ortho_region(tn)))
     edge_list = edge_path(tn, only(ortho_region(tn)), ortho_center)

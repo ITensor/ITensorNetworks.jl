@@ -163,8 +163,8 @@ using Test: @test, @test_broken, @testset
       return (inds...) -> itensor(randn(elt, dims(inds)...), inds...)
     end
     @test eltype(ψ[first(vertices(ψ))]) == elt
-    ψ = ITensorNetwork(g; link_space) do v, inds...
-      return itensor(randn(dims(inds)...), inds...)
+    ψ = ITensorNetwork(g; link_space) do v
+      return (inds...) -> itensor(randn(dims(inds)...), inds...)
     end
     @test eltype(ψ[first(vertices(ψ))]) == Float64
     ψ = random_tensornetwork(elt, g; link_space)
@@ -283,7 +283,7 @@ using Test: @test, @test_broken, @testset
     s = siteinds("S=1/2", g)
     state_map(v::Tuple) = iseven(sum(isodd.(v))) ? "↑" : "↓"
 
-    ψ = ITensorNetwork(s, state_map)
+    ψ = ITensorNetwork(state_map, s)
     t = ψ[2, 2]
     si = only(siteinds(ψ, (2, 2)))
     bi = map(e -> only(linkinds(ψ, e)), incident_edges(ψ, (2, 2)))
@@ -291,7 +291,7 @@ using Test: @test, @test_broken, @testset
     @test abs(t[si => "↑", [b => end for b in bi]...]) == 1.0 # insert_links introduces extra signs through factorization...
     @test t[si => "↓", [b => end for b in bi]...] == 0.0
 
-    ϕ = ITensorNetwork(elt, s, state_map)
+    ϕ = ITensorNetwork(elt, state_map, s)
     t = ϕ[2, 2]
     si = only(siteinds(ϕ, (2, 2)))
     bi = map(e -> only(linkinds(ϕ, e)), incident_edges(ϕ, (2, 2)))
