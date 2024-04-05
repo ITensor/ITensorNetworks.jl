@@ -157,7 +157,9 @@ function generic_state(a::AbstractArray, inds...)
   return itensor(a, inds...)
 end
 function generic_state(s::AbstractString, inds...)
-  return state(s, inds...)
+  tensor = state(s, inds[1])
+  # TODO: Remove this and handle with `insert_missing_linkinds`.
+  return contract(tensor, onehot.(vcat(inds[2:end]...) .=> 1)...)
 end
 
 # TODO: This is repeated from `ModelHamiltonians`, put into a
@@ -197,9 +199,11 @@ function ITensorNetwork(
       get(inds_network, edgetype(inds_network)(v, nv), indtype(inds_network)[]) for
       nv in neighbors(inds_network, v)
     ]
-    tensor_v = generic_state(itensor_constructor(v), siteinds...)
-    # TODO: Use `insert_missing_linkinds` instead.
-    tensor_v = contract(tensor_v, onehot.(vcat(linkinds...) .=> 1)...)
+    # TODO: Come up with a better interface besides flattening the indices.
+    # Maybe a namedtuple or dictionary, which indicates which indices
+    # are site and links, which edges the links are associated with, etc.
+    tensor_v = generic_state(itensor_constructor(v), siteinds..., vcat(linkinds...)...)
+    # TODO: Call `insert_missing_linkinds` instead.
     setindex_preserve_graph!(tn, tensor_v, v)
   end
   return tn

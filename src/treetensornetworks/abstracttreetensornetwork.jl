@@ -37,18 +37,18 @@ end
 # Orthogonalization
 # 
 
-function ITensorMPS.orthogonalize(tn::AbstractTTN, new_ortho_region; kwargs...)
+function ITensorMPS.orthogonalize(tn::AbstractTTN, ortho_center; kwargs...)
   new_ortho_region ∈ ortho_region(tn) && return tn
   # TODO: Rewrite this in a more general way.
   if isone(length(ortho_region(tn)))
-    edge_list = edge_path(tn, only(ortho_region(tn)), root_vertex)
+    edge_list = edge_path(tn, only(ortho_region(tn)), ortho_center)
   else
-    edge_list = post_order_dfs_edges(tn, root_vertex)
+    edge_list = post_order_dfs_edges(tn, ortho_center)
   end
   for e in edge_list
     tn = orthogonalize(tn, e)
   end
-  return set_ortho_region(tn, [root_vertex])
+  return set_ortho_region(tn, [ortho_center])
 end
 
 # For ambiguity error
