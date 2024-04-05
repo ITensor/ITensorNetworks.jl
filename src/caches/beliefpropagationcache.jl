@@ -30,7 +30,7 @@ function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}
-  partitioned_itensornetwork::PTN
+  partitioned_tensornetwork::PTN
   messages::MTS
   default_message::DM
 end
@@ -51,13 +51,13 @@ function BeliefPropagationCache(tn; kwargs...)
   return BeliefPropagationCache(tn, default_partitioning(tn); kwargs...)
 end
 
-function partitioned_itensornetwork(bp_cache::BeliefPropagationCache)
-  return bp_cache.partitioned_itensornetwork
+function partitioned_tensornetwork(bp_cache::BeliefPropagationCache)
+  return bp_cache.partitioned_tensornetwork
 end
 messages(bp_cache::BeliefPropagationCache) = bp_cache.messages
 default_message(bp_cache::BeliefPropagationCache) = bp_cache.default_message
 function tensornetwork(bp_cache::BeliefPropagationCache)
-  return unpartitioned_graph(partitioned_itensornetwork(bp_cache))
+  return unpartitioned_graph(partitioned_tensornetwork(bp_cache))
 end
 
 #Forward from partitioned graph
@@ -71,7 +71,7 @@ for f in [
 ]
   @eval begin
     function $f(bp_cache::BeliefPropagationCache, args...; kwargs...)
-      return $f(partitioned_itensornetwork(bp_cache), args...; kwargs...)
+      return $f(partitioned_tensornetwork(bp_cache), args...; kwargs...)
     end
   end
 end
@@ -92,7 +92,7 @@ end
 
 function Base.copy(bp_cache::BeliefPropagationCache)
   return BeliefPropagationCache(
-    copy(partitioned_itensornetwork(bp_cache)),
+    copy(partitioned_tensornetwork(bp_cache)),
     copy(messages(bp_cache)),
     default_message(bp_cache),
   )
@@ -102,12 +102,12 @@ function default_bp_maxiter(bp_cache::BeliefPropagationCache)
   return default_bp_maxiter(partitioned_graph(bp_cache))
 end
 function default_edge_sequence(bp_cache::BeliefPropagationCache)
-  return default_edge_sequence(partitioned_itensornetwork(bp_cache))
+  return default_edge_sequence(partitioned_tensornetwork(bp_cache))
 end
 
 function set_messages(cache::BeliefPropagationCache, messages)
   return BeliefPropagationCache(
-    partitioned_itensornetwork(cache), messages, default_message(cache)
+    partitioned_tensornetwork(cache), messages, default_message(cache)
   )
 end
 
@@ -137,7 +137,7 @@ function environment(bp_cache::BeliefPropagationCache, verts::Vector)
 end
 
 function factor(bp_cache::BeliefPropagationCache, vertex::PartitionVertex)
-  ptn = partitioned_itensornetwork(bp_cache)
+  ptn = partitioned_tensornetwork(bp_cache)
   return Vector{ITensor}(subgraph(ptn, vertex))
 end
 

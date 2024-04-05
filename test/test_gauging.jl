@@ -1,12 +1,21 @@
-using ITensors
-using ITensorNetworks
+@eval module $(gensym())
+using Compat: Compat
 using ITensorNetworks:
-  contract_inner, gauge_error, update, messages, BeliefPropagationCache, VidalITensorNetwork
-using NamedGraphs
-using Test
-using Compat
-using Random
-using SplitApplyCombine
+  BeliefPropagationCache,
+  ITensorNetwork,
+  VidalITensorNetwork,
+  contract_inner,
+  gauge_error,
+  messages,
+  random_tensornetwork,
+  siteinds,
+  update
+using ITensors: diagITensor, inds
+using ITensors.NDTensors: vector
+using LinearAlgebra: diag
+using NamedGraphs: named_grid
+using Random: Random
+using Test: @test, @testset
 
 @testset "gauging" begin
   n = 3
@@ -16,7 +25,7 @@ using SplitApplyCombine
   χ = 6
 
   Random.seed!(5467)
-  ψ = randomITensorNetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
 
   # Move directly to vidal gauge
   ψ_vidal = VidalITensorNetwork(ψ)
@@ -36,4 +45,5 @@ using SplitApplyCombine
   for m_e in values(messages(bp_cache))
     @test diagITensor(vector(diag(only(m_e))), inds(only(m_e))) ≈ only(m_e) atol = 1e-8
   end
+end
 end

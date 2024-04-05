@@ -14,7 +14,6 @@ include("sitetype.jl")
 include("abstractitensornetwork.jl")
 include("contraction_sequences.jl")
 include("expect.jl")
-include("models.jl")
 include("tebd.jl")
 include("itensornetwork.jl")
 include("mincut.jl")
@@ -71,6 +70,8 @@ include("solvers/sweep_plans/sweep_plans.jl")
 include("apply.jl")
 include("environment.jl")
 include("exports.jl")
+include("ModelHamiltonians/ModelHamiltonians.jl")
+include("ModelNetworks/ModelNetworks.jl")
 
 using PackageExtensionCompat: @require_extensions
 using Requires: @require

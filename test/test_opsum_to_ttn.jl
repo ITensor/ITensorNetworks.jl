@@ -13,10 +13,11 @@ using ITensors:
   dag,
   inds,
   removeqns
-using ITensors.ITensorMPS: MPO
+using ITensors.ITensorMPS: ITensorMPS
 using ITensors.NDTensors: matrix
-using ITensorGaussianMPS: hopping_hamiltonian
-using ITensorNetworks: ITensorNetworks, OpSum, TTN, relabel_sites, siteinds
+using ITensorGaussianMPS: ITensorGaussianMPS
+using ITensorNetworks: ITensorNetworks, OpSum, ttn, relabel_sites, siteinds
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using KrylovKit: eigsolve
 using LinearAlgebra: eigvals, norm
 using NamedGraphs: leaf_vertices, named_comb_tree, named_grid, post_order_dfs_vertices
@@ -48,7 +49,7 @@ end
     J1 = -1
     J2 = 2
     h = 0.5
-    H = ITensorNetworks.ising(c; J1=J1, J2=J2, h=h)
+    H = ModelHamiltonians.ising(c; J1=J1, J2=J2, h=h)
     # add combination of longer range interactions
     Hlr = copy(H)
     Hlr += 5, "Z", (1, 2), "Z", (2, 2), "Z", (3, 2)
@@ -61,9 +62,9 @@ end
 
     @testset "Svd approach" for root_vertex in leaf_vertices(is)
       # get TTN Hamiltonian directly
-      Hsvd = TTN(H, is; root_vertex=root_vertex, cutoff=1e-10)
+      Hsvd = ttn(H, is; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      Hline = MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
       # compare resulting dense Hamiltonians
       @disable_warn_order begin
         Tttno = prod(Hline)
@@ -72,8 +73,8 @@ end
       @test Tttno ≈ Tmpo rtol = 1e-6
 
       # this breaks for longer range interactions
-      Hsvd_lr = TTN(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)
-      Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
+      Hsvd_lr = ttn(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)
+      Hline_lr = ITensorMPS.MPO(relabel_sites(Hlr, vmap), sites)
       @disable_warn_order begin
         Tttno_lr = prod(Hline_lr)
         Tmpo_lr = contract(Hsvd_lr)
@@ -96,9 +97,9 @@ end
     os1 += 1.0, "Sx", (1, 1)
     os2 = OpSum()
     os2 += 1.0, "Sy", (1, 1)
-    H1 = TTN(os1, s)
-    H2 = TTN(os2, s)
-    H3 = TTN(os1 + os2, s)
+    H1 = ttn(os1, s)
+    H2 = ttn(os2, s)
+    H3 = ttn(os1 + os2, s)
 
     @test H1 + H2 ≈ H3 rtol = 1e-6
     if auto_fermion_enabled
@@ -125,7 +126,7 @@ end
     J1 = -1
     J2 = 2
     h = 0.5
-    H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)
+    H = ModelHamiltonians.heisenberg(c; J1=J1, J2=J2, h=h)
     # add combination of longer range interactions
     Hlr = copy(H)
     Hlr += 5, "Z", (1, 2), "Z", (2, 2)#, "Z", (3,2)
@@ -138,9 +139,9 @@ end
 
     @testset "Svd approach" for root_vertex in leaf_vertices(is)
       # get TTN Hamiltonian directly
-      Hsvd = TTN(H, is; root_vertex=root_vertex, cutoff=1e-10)
+      Hsvd = ttn(H, is; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      Hline = MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
       # compare resulting sparse Hamiltonians
 
       @disable_warn_order begin
@@ -150,8 +151,8 @@ end
       @test Tttno ≈ Tmpo rtol = 1e-6
 
       # this breaks for longer range interactions ###not anymore
-      Hsvd_lr = TTN(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)
-      Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
+      Hsvd_lr = ttn(Hlr, is; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10)
+      Hline_lr = ITensorMPS.MPO(relabel_sites(Hlr, vmap), sites)
       @disable_warn_order begin
         Tttno_lr = prod(Hline_lr)
         Tmpo_lr = contract(Hsvd_lr)
@@ -175,20 +176,20 @@ end
     tp = 0.4
     U = 0.0
     h = 0.5
-    H = ITensorNetworks.tight_binding(c; t, tp, h)
+    H = ModelHamiltonians.tight_binding(c; t, tp, h)
 
     # add combination of longer range interactions
     Hlr = copy(H)
 
     @testset "Svd approach" for root_vertex in leaf_vertices(is)
       # get TTN Hamiltonian directly
-      Hsvd = TTN(H, is; root_vertex=root_vertex, cutoff=1e-10)
+      Hsvd = ttn(H, is; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
       sites = [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
       vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
-      Hline = ITensors.MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
       # compare resulting sparse Hamiltonians
-      Hmat_sp = hopping_hamiltonian(relabel_sites(H, vmap))
+      Hmat_sp = ITensorGaussianMPS.hopping_hamiltonian(relabel_sites(H, vmap))
       @disable_warn_order begin
         Tmpo = prod(Hline)
         Tttno = contract(Hsvd)
@@ -241,7 +242,7 @@ end
     J2 = 2
     h = 0.5
     # connectivity of the Hamiltonian is that of the original comb graph
-    H = ITensorNetworks.heisenberg(c; J1=J1, J2=J2, h=h)
+    H = ModelHamiltonians.heisenberg(c; J1=J1, J2=J2, h=h)
 
     # add combination of longer range interactions
     Hlr = copy(H)
@@ -252,9 +253,9 @@ end
 
     @testset "Svd approach" for root_vertex in leaf_vertices(is)
       # get TTN Hamiltonian directly
-      Hsvd = TTN(H, is_missing_site; root_vertex=root_vertex, cutoff=1e-10)
+      Hsvd = ttn(H, is_missing_site; root_vertex=root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      Hline = MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
 
       # compare resulting sparse Hamiltonians
       @disable_warn_order begin
@@ -263,10 +264,10 @@ end
       end
       @test Tttno ≈ Tmpo rtol = 1e-6
 
-      Hsvd_lr = TTN(
+      Hsvd_lr = ttn(
         Hlr, is_missing_site; root_vertex=root_vertex, algorithm="svd", cutoff=1e-10
       )
-      Hline_lr = MPO(relabel_sites(Hlr, vmap), sites)
+      Hline_lr = ITensorMPS.MPO(relabel_sites(Hlr, vmap), sites)
       @disable_warn_order begin
         Tttno_lr = prod(Hline_lr)
         Tmpo_lr = contract(Hsvd_lr)

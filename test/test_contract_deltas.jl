@@ -1,6 +1,19 @@
-using ITensors
+@eval module $(gensym())
+using Graphs: dfs_tree, nv, vertices
+using ITensors: Index, ITensor, delta, noncommoninds, randomITensor
 using ITensorNetworks:
-  _contract_deltas, _contract_deltas_ignore_leaf_partitions, _noncommoninds, _root
+  _contract_deltas,
+  _contract_deltas_ignore_leaf_partitions,
+  _noncommoninds,
+  _partition,
+  _root,
+  binary_tree_structure,
+  IndsNetwork,
+  ITensorNetwork,
+  path_graph_structure,
+  random_tensornetwork
+using NamedGraphs: leaf_vertices, named_grid
+using Test: @test, @testset
 
 @testset "test _contract_deltas with no deltas" begin
   i = Index(2, "i")
@@ -25,7 +38,7 @@ end
 @testset "test _contract_deltas over partition" begin
   N = (3, 3, 3)
   linkdim = 2
-  network = randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  network = random_tensornetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
   tn = Array{ITensor,length(N)}(undef, N...)
   for v in vertices(network)
     tn[v...] = network[v...]
@@ -43,4 +56,5 @@ end
     # remaining tensors are all non-delta tensors
     @test nvs == 9
   end
+end
 end
