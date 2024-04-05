@@ -26,15 +26,6 @@ function DataGraphs.underlying_graph_type(TN::Type{<:ITensorNetwork})
   return fieldtype(data_graph_type(TN), :underlying_graph)
 end
 
-## function ITensorNetwork{V}(data_graph::DataGraph{V}) where {V}
-##   return ITensorNetwork{V}(Private(), copy(data_graph))
-## end
-## function ITensorNetwork{V}(data_graph::DataGraph) where {V}
-##   return ITensorNetwork{V}(Private(), DataGraph{V}(data_graph))
-## end
-## 
-## ITensorNetwork(data_graph::DataGraph) = ITensorNetwork{vertextype(data_graph)}(data_graph)
-
 # Versions taking vertex types.
 function ITensorNetwork{V}() where {V}
   # TODO: Is there a better way to write this?
@@ -52,12 +43,8 @@ end
 ITensorNetwork() = ITensorNetwork{Any}()
 
 # Conversion
+# TODO: Copy or not?
 ITensorNetwork(tn::ITensorNetwork) = copy(tn)
-## ITensorNetwork{V}(tn::ITensorNetwork{V}) where {V} = copy(tn)
-## function ITensorNetwork{V}(tn::AbstractITensorNetwork) where {V}
-##   return ITensorNetwork{V}(Private(), DataGraph{V}(data_graph(tn)))
-## end
-## ITensorNetwork(tn::AbstractITensorNetwork) = ITensorNetwork{vertextype(tn)}(tn)
 
 NamedGraphs.convert_vertextype(::Type{V}, tn::ITensorNetwork{V}) where {V} = tn
 NamedGraphs.convert_vertextype(V::Type, tn::ITensorNetwork) = ITensorNetwork{V}(tn)
@@ -67,10 +54,6 @@ Base.copy(tn::ITensorNetwork) = _ITensorNetwork(copy(data_graph(tn)))
 #
 # Construction from collections of ITensors
 #
-
-## function ITensorNetwork(ts::ITensorCollection)
-##   return ITensorNetwork{keytype(ts)}(ts)
-## end
 
 function itensors_to_itensornetwork(ts)
   g = NamedGraph(collect(eachindex(ts)))
@@ -110,39 +93,13 @@ function ITensorNetwork(
   return ITensorNetwork(eltype, undef, IndsNetwork(graph; kwargs...))
 end
 
-function ITensorNetwork(
-  f, graph::AbstractNamedGraph; kwargs...
-)
+function ITensorNetwork(f, graph::AbstractNamedGraph; kwargs...)
   return ITensorNetwork(f, IndsNetwork(graph; kwargs...))
 end
 
 function ITensorNetwork(graph::AbstractNamedGraph; kwargs...)
   return ITensorNetwork(IndsNetwork(graph; kwargs...))
 end
-
-## function ITensorNetwork(
-##   eltype::Type, undef::UndefInitializer, graph::AbstractNamedGraph; kwargs...
-## )
-##   return ITensorNetwork(eltype, undef, graph; kwargs...)
-## end
-## 
-## function ITensorNetwork(eltype::Type, graph::AbstractNamedGraph; kwargs...)
-##   return ITensorNetwork{vertextype(graph)}(eltype, graph; kwargs...)
-## end
-## 
-## function ITensorNetwork(undef::UndefInitializer, graph::AbstractNamedGraph; kwargs...)
-##   return ITensorNetwork{vertextype(graph)}(undef, graph; kwargs...)
-## end
-## 
-## function ITensorNetwork(graph::AbstractNamedGraph; kwargs...)
-##   return ITensorNetwork{vertextype(graph)}(graph; kwargs...)
-## end
-
-## function ITensorNetwork(
-##   itensor_constructor::Function, underlying_graph::AbstractNamedGraph; kwargs...
-## )
-##   return ITensorNetwork(itensor_constructor, IndsNetwork(underlying_graph; kwargs...))
-## end
 
 #
 # Construction from underyling simple graph
@@ -158,23 +115,9 @@ function ITensorNetwork(f, graph::AbstractSimpleGraph; kwargs...)
   return ITensorNetwork(f, IndsNetwork(graph); kwargs...)
 end
 
-## function ITensorNetwork(eltype::Type, graph::AbstractSimpleGraph; kwargs...)
-##   return ITensorNetwork(eltype, IndsNetwork(graph); kwargs...)
-## end
-## 
-## function ITensorNetwork(undef::UndefInitializer, graph::AbstractSimpleGraph; kwargs...)
-##   return ITensorNetwork(undef, IndsNetwork(graph); kwargs...)
-## end
-
 function ITensorNetwork(graph::AbstractSimpleGraph; kwargs...)
   return ITensorNetwork(IndsNetwork(graph); kwargs...)
 end
-
-## function ITensorNetwork(
-##   itensor_constructor::Function, underlying_graph::AbstractSimpleGraph; kwargs...
-## )
-##   return ITensorNetwork(itensor_constructor, NamedGraph(underlying_graph); kwargs...)
-## end
 
 #
 # Construction from IndsNetwork
@@ -194,9 +137,7 @@ function ITensorNetwork(eltype::Type, inds_network::IndsNetwork; kwargs...)
   end
 end
 
-function ITensorNetwork(
-  undef::UndefInitializer, inds_network::IndsNetwork; kwargs...
-)
+function ITensorNetwork(undef::UndefInitializer, inds_network::IndsNetwork; kwargs...)
   return ITensorNetwork(inds_network; kwargs...) do v
     return (inds...) -> ITensor(undef, inds...)
   end
@@ -225,12 +166,12 @@ to_callable(value::Type) = value
 to_callable(value::Function) = value
 to_callable(value::AbstractDict) = Base.Fix1(getindex, value)
 to_callable(value::AbstractDictionary) = Base.Fix1(getindex, value)
-to_callable(value::AbstractArray{<:Any,N}) where {N} = Base.Fix1(getindex, value) ∘ CartesianIndex
+function to_callable(value::AbstractArray{<:Any,N}) where {N}
+  return Base.Fix1(getindex, value) ∘ CartesianIndex
+end
 to_callable(value) = Returns(value)
 
-function ITensorNetwork(
-  value, inds_network::IndsNetwork; kwargs...
-)
+function ITensorNetwork(value, inds_network::IndsNetwork; kwargs...)
   return ITensorNetwork(to_callable(value), inds_network; kwargs...)
 end
 
@@ -263,49 +204,6 @@ function ITensorNetwork(
   end
   return tn
 end
-
-## function ITensorNetwork(inds_network::IndsNetwork; kwargs...)
-##   return ITensorNetwork{vertextype(inds_network)}(inds_network; kwargs...)
-## end
-## 
-## function ITensorNetwork(
-##   eltype::Type, undef::UndefInitializer, inds_network::IndsNetwork; kwargs...
-## )
-##   return ITensorNetwork{vertextype(inds_network)}(eltype, undef, inds_network; kwargs...)
-## end
-## 
-## function ITensorNetwork(eltype::Type, inds_network::IndsNetwork; kwargs...)
-##   return ITensorNetwork{vertextype(inds_network)}(eltype, inds_network; kwargs...)
-## end
-## 
-## function ITensorNetwork(undef::UndefInitializer, inds_network::IndsNetwork; kwargs...)
-##   return ITensorNetwork{vertextype(inds_network)}(undef, inds_network; kwargs...)
-## end
-
-## function ITensorNetwork(itensor_constructor::Function, inds_network::IndsNetwork; kwargs...)
-##   return ITensorNetwork{vertextype(inds_network)}(
-##     itensor_constructor, inds_network; kwargs...
-##   )
-## end
-
-## # TODO: Deprecate in favor of version above? Or use keyword argument?
-## # This can be handled by `ITensorNetwork((v, inds...) -> state(inds...), inds_network)`
-## function ITensorNetwork(eltype::Type, is::IndsNetwork, initstate::Function)
-##   ψ = ITensorNetwork(eltype, is)
-##   for v in vertices(ψ)
-##     ψ[v] = convert_eltype(eltype, state(initstate(v), only(is[v])))
-##   end
-##   ψ = insert_links(ψ, edges(is))
-##   return ψ
-## end
-
-## function ITensorNetwork(eltype::Type, is::IndsNetwork, initstate::Union{String,Integer})
-##   return ITensorNetwork(eltype, is, v -> initstate)
-## end
-## 
-## function ITensorNetwork(is::IndsNetwork, initstate::Union{String,Integer,Function})
-##   return ITensorNetwork(Number, is, initstate)
-## end
 
 # TODO: Remove this in favor of `insert_missing_internal_inds`
 # or call it a different name, such as `factorize_edges`.

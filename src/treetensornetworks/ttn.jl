@@ -4,27 +4,24 @@ using LinearAlgebra: normalize
 using NamedGraphs: named_path_graph, vertextype
 using Random: randn!
 
-
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
 """
 struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
   tensornetwork::ITensorNetwork{V}
   ortho_region::Vector{V}
-  global function _TreeTensorNetwork(
-    tensornetwork::ITensorNetwork, ortho_region
-  )
+  global function _TreeTensorNetwork(tensornetwork::ITensorNetwork, ortho_region)
     @assert is_tree(tensornetwork)
     return new{vertextype(tensornetwork)}(tensornetwork, ortho_region)
   end
-  global function _TreeTensorNetwork(
-    tensornetwork::ITensorNetwork
-  )
+  global function _TreeTensorNetwork(tensornetwork::ITensorNetwork)
     return _TreeTensorNetwork(tensornetwork, vertices(tensornetwork))
   end
 end
 
-TreeTensorNetwork(tn::ITensorNetwork; ortho_region=vertices(tn)) = _TreeTensorNetwork(tn, ortho_region)
+function TreeTensorNetwork(tn::ITensorNetwork; ortho_region=vertices(tn))
+  return _TreeTensorNetwork(tn, ortho_region)
+end
 
 const TTN = TreeTensorNetwork
 
@@ -78,159 +75,3 @@ function ttn(a::ITensor, is::IndsNetwork; ortho_region=[default_root_vertex(is)]
   ttn_a = ttn(tn)
   return orthogonalize(ttn_a, ortho_center)
 end
-
-## ttn(tn::ITensorNetwork, args...) = TTN{vertextype(tn)}(tn, args...)
-
-## # catch-all for default ElType
-## function ttn(g::AbstractGraph, args...; kwargs...)
-##   return ttn(Float64, g, args...; kwargs...)
-## end
-
-## function ttn(eltype::Type{<:Number}, graph::AbstractGraph, args...; kwargs...)
-##   itensornetwork = ITensorNetwork(eltype, graph; kwargs...)
-##   return ttn(itensornetwork, args...)
-## end
-
-## # construct from given state (map)
-## function ttn(::Type{ElT}, is::AbstractIndsNetwork, initstate, args...) where {ElT<:Number}
-##   itensornetwork = ITensorNetwork(ElT, is, initstate)
-##   return ttn(itensornetwork, args...)
-## end
-
-## # Constructor from a collection of ITensors.
-## # TODO: Support other collections like `Dictionary`,
-## # interface for custom vertex names.
-## function ttn(ts::ITensorCollection)
-##   return ttn(ITensorNetwork(ts))
-## end
-
-## # TODO: Implement `random_circuit_ttn` for non-trivial
-## # bond dimensions and correlations.
-## # TODO: Implement random_ttn for QN-Index
-## function random_ttn(args...; kwargs...)
-##   T = ttn(args...; kwargs...)
-##   randn!.(vertex_data(T))
-##   normalize!.(vertex_data(T))
-##   return T
-## end
-
-## function random_mps(
-##   external_inds::Vector{<:Index};
-##   states=nothing,
-##   internal_inds_space=trivial_space(external_inds),
-## )
-##   # TODO: Implement in terms of general
-##   # `random_ttn` constructor
-##   tn_mps = if isnothing(states)
-##     randomMPS(external_inds; linkdims=internal_inds_space)
-##   else
-##     randomMPS(external_inds, states; linkdims=internal_inds_space)
-##   end
-##   return ttn([tn_mps[v] for v in eachindex(tn_mps)])
-## end
-
-#
-# Construction from operator (map)
-#
-
-## function ttn(
-##   ::Type{ElT},
-##   sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork},
-##   ops::Dictionary;
-##   kwargs...,
-## ) where {ElT<:Number}
-##   s = first(sites_map) # TODO: Use the sites_map
-##   N = nv(sites)
-##   os = Prod{Op}()
-##   for v in vertices(sites)
-##     os *= Op(ops[v], v)
-##   end
-##   T = ttn(ElT, os, sites; kwargs...)
-##   # see https://github.com/ITensor/ITensors.jl/issues/526
-##   lognormT = lognorm(T)
-##   T /= exp(lognormT / N) # TODO: fix broadcasting for in-place assignment
-##   truncate!(T; cutoff=1e-15)
-##   T *= exp(lognormT / N)
-##   return T
-## end
-
-## function ttn(
-##   ::Type{ElT},
-##   sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork},
-##   fops::Function;
-##   kwargs...,
-## ) where {ElT<:Number}
-##   sites = first(sites_map) # TODO: Use the sites_map
-##   ops = Dictionary(vertices(sites), map(v -> fops(v), vertices(sites)))
-##   return ttn(ElT, sites, ops; kwargs...)
-## end
-
-## function ttn(
-##   ::Type{ElT},
-##   sites_map::Pair{<:AbstractIndsNetwork,<:AbstractIndsNetwork},
-##   op::String;
-##   kwargs...,
-## ) where {ElT<:Number}
-##   sites = first(sites_map) # TODO: Use the sites_map
-##   ops = Dictionary(vertices(sites), fill(op, nv(sites)))
-##   return ttn(ElT, sites, ops; kwargs...)
-## end
-
-# Special constructors
-
-## function mps(external_inds::Vector{<:Index}; states)
-##   return mps(map(i -> [i], external_inds); states)
-## end
-
-## function mps(external_inds::Vector{<:Vector{<:Index}}; states)
-##   g = named_path_graph(length(external_inds))
-##   tn = ITensorNetwork(g)
-##   for v in vertices(tn)
-##     tn[v] = state(only(external_inds[v]), states(v))
-##   end
-##   tn = insert_missing_internal_inds(
-##     tn, edges(g); internal_inds_space=trivial_space(indtype(external_inds))
-##   )
-##   return ttn(tn)
-## end
-
-# 
-# Utility
-# 
-
-## function ITensorMPS.replacebond!(T::TTN, edge::AbstractEdge, phi::ITensor; kwargs...)
-##   ortho::String = get(kwargs, :ortho, "left")
-##   swapsites::Bool = get(kwargs, :swapsites, false)
-##   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
-##   normalize::Bool = get(kwargs, :normalize, false)
-## 
-##   indsTe = inds(T[src(edge)])
-##   if swapsites
-##     sb = siteinds(M, src(edge))
-##     sbp1 = siteinds(M, dst(edge))
-##     indsTe = replaceinds(indsTe, sb, sbp1)
-##   end
-## 
-##   L, R, spec = factorize(
-##     phi, indsTe; which_decomp=which_decomp, tags=tags(T, edge), kwargs...
-##   )
-## 
-##   T[src(edge)] = L
-##   T[dst(edge)] = R
-##   if ortho == "left"
-##     normalize && (T[dst(edge)] ./= norm(T[dst(edge)]))
-##     isone(length(ortho_region(T))) && (T = set_ortho_region(T, [dst(edge)]))
-##   elseif ortho == "right"
-##     normalize && (T[src(edge)] ./= norm(T[src(edge)]))
-##     isone(length(ortho_region(T))) && (T = set_ortho_region(T, [src(edge)]))
-##   end
-##   return spec
-## end
-## 
-## function ITensorMPS.replacebond!(T::TTN, edge::Pair, phi::ITensor; kwargs...)
-##   return replacebond!(T, edgetype(T)(edge), phi; kwargs...)
-## end
-## 
-## function ITensorMPS.replacebond(T0::TTN, args...; kwargs...)
-##   return replacebond!(copy(T0), args...; kwargs...)
-## end

@@ -81,9 +81,7 @@ end
 #
 
 # TODO: decide on contraction order: reverse dfs vertices or forward dfs edges?
-function NDTensors.contract(
-  tn::AbstractTTN, root_vertex=default_root_vertex(tn); kwargs...
-)
+function NDTensors.contract(tn::AbstractTTN, root_vertex=default_root_vertex(tn); kwargs...)
   tn = copy(tn)
   # reverse post order vertices
   traversal_order = reverse(post_order_dfs_vertices(tn, root_vertex))
@@ -250,7 +248,9 @@ function Base.:+(
     dims_in = findall(e -> dst(e) == v, edges)
     dim_out = findfirst(e -> src(e) == v, edges)
     ls = [Tuple(only(linkinds(tn, e)) for e in edges) for tn in tns]
-    tnv, lv = directsum((tns[i][v] => ls[i] for i in 1:length(tns))...; tags=tags.(first(ls)))
+    tnv, lv = directsum(
+      (tns[i][v] => ls[i] for i in 1:length(tns))...; tags=tags.(first(ls))
+    )
     for din in dims_in
       link_space[edges[din]] = lv[din]
     end
@@ -366,7 +366,7 @@ function ITensorMPS.expect(
   # ToDo: verify that this is a sane default
   root_vertex=default_root_vertex(siteinds(state)),
 )
-  # ToDo: for performance it may be beneficial to also implement expect! and change the orthogonality center in place
+  # TODO: for performance it may be beneficial to also implement expect! and change the orthogonality center in place
   # assuming that the next algorithmic step can make use of the orthogonality center being moved to a different vertex
   # ToDo: Verify that this is indeed the correct order for performance
   sites = siteinds(state)
