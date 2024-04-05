@@ -9,7 +9,7 @@ Note that passing a link_space will mean the indices of the resulting network do
 """
 function delta_network(eltype::Type, s::IndsNetwork; link_space=nothing)
   return ITensorNetwork(s; link_space) do v
-    return (inds...) -> delta(eltype, inds...)
+    return inds -> delta(eltype, inds)
   end
 end
 
@@ -30,7 +30,7 @@ Build an ITensor network on a graph specified by the inds network s. Bond_dim is
 """
 function random_tensornetwork(eltype::Type, s::IndsNetwork; link_space=nothing)
   return ITensorNetwork(s; link_space) do v
-    return (inds...) -> itensor(randn(eltype, dim(inds)...), inds...)
+    return inds -> itensor(randn(eltype, dim.(inds)...), inds)
   end
 end
 
@@ -57,7 +57,7 @@ function random_tensornetwork(
   distribution::Distribution, s::IndsNetwork; link_space=nothing
 )
   return ITensorNetwork(s; link_space) do v
-    return (inds...) -> itensor(rand(distribution, dim(inds)...), inds...)
+    return inds -> itensor(rand(distribution, dim.(inds)...), inds)
   end
 end
 

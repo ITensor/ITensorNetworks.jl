@@ -29,7 +29,7 @@ using ITensors:
   order,
   sim,
   uniqueinds
-using ITensors.NDTensors: dims
+using ITensors.NDTensors: dim
 using ITensorNetworks:
   ITensorNetworks,
   ⊗,
@@ -160,11 +160,11 @@ using Test: @test, @test_broken, @testset
     )
 
     ψ = ITensorNetwork(g; link_space) do v
-      return (inds...) -> itensor(randn(elt, dims(inds)...), inds...)
+      return inds -> itensor(randn(elt, dim.(inds)...), inds)
     end
     @test eltype(ψ[first(vertices(ψ))]) == elt
     ψ = ITensorNetwork(g; link_space) do v
-      return (inds...) -> itensor(randn(dims(inds)...), inds...)
+      return inds -> itensor(randn(dim.(inds)...), inds)
     end
     @test eltype(ψ[first(vertices(ψ))]) == Float64
     ψ = random_tensornetwork(elt, g; link_space)
