@@ -276,16 +276,20 @@ function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
   return scalar(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))))
 end
 
-function vertex_scalars(bp_cache::BeliefPropagationCache, pvs::Vector)
+function vertex_scalars(
+  bp_cache::BeliefPropagationCache,
+  pvs::Vector=partitionvertices(partitioned_tensornetwork(bp_cache)),
+)
   return [region_scalar(bp_cache, pv) for pv in pvs]
 end
 
-function edge_scalars(bp_cache::BeliefPropagationCache, pes::Vector)
+function edge_scalars(
+  bp_cache::BeliefPropagationCache,
+  pes::Vector=partitionedges(partitioned_tensornetwork(bp_cache)),
+)
   return [region_scalar(bp_cache, pe) for pe in pes]
 end
 
 function scalar_factors_quotient(bp_cache::BeliefPropagationCache)
-  pvs = partitionvertices(partitioned_tensornetwork(bp_cache))
-  pes = partitionedges(partitioned_tensornetwork(bp_cache))
-  return vertex_scalars(bp_cache, pvs), edge_scalars(bp_cache, pes)
+  return vertex_scalars(bp_cache), edge_scalars(bp_cache)
 end
