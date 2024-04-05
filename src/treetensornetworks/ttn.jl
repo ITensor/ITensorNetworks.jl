@@ -64,7 +64,7 @@ function ttn(a::ITensor, is::IndsNetwork; ortho_region=[default_root_vertex(is)]
   for v in vertices(is)
     @assert hasinds(a, is[v])
   end
-  @assert ortho_region ∈ vertices(is)
+  @assert ortho_region ⊆ vertices(is)
   tn = ITensorNetwork(is)
   ortho_center = first(ortho_region)
   for e in post_order_dfs_edges(tn, ortho_center)
