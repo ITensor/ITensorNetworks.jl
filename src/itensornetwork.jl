@@ -1,6 +1,6 @@
 using DataGraphs: DataGraphs, DataGraph
 using Dictionaries: dictionary
-using ITensors: ITensor
+using ITensors: ITensors, ITensor
 using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
 
 struct Private end
@@ -29,14 +29,17 @@ end
 # Versions taking vertex types.
 function ITensorNetwork{V}() where {V}
   # TODO: Is there a better way to write this?
+  # Try using `convert_vertextype`.
   return _ITensorNetwork(data_graph_type(ITensorNetwork{V})())
 end
 function ITensorNetwork{V}(tn::ITensorNetwork) where {V}
   # TODO: Is there a better way to write this?
+  # Try using `convert_vertextype`.
   return _ITensorNetwork(DataGraph{V}(data_graph(tn)))
 end
 function ITensorNetwork{V}(g::NamedGraph) where {V}
   # TODO: Is there a better way to write this?
+  # Try using `convert_vertextype`.
   return ITensorNetwork(NamedGraph{V}(g))
 end
 
@@ -180,7 +183,9 @@ end
 function ITensorNetwork(elt::Type, f, inds_network::IndsNetwork; link_space=1, kwargs...)
   tn = ITensorNetwork(f, inds_network; kwargs...)
   for v in vertices(tn)
-    tn[v] = elt.(tn[v])
+    # TODO: Ideally we would use broadcasting, i.e. `elt.(tn[v])`,
+    # but that doesn't work right now on ITensors.
+    tn[v] = ITensors.convert_eltype(elt, tn[v])
   end
   return tn
 end
@@ -188,6 +193,10 @@ end
 function ITensorNetwork(
   itensor_constructor::Function, inds_network::IndsNetwork; link_space=1, kwargs...
 )
+  if isnothing(link_space)
+    # Make the the link space is set
+    link_space = 1
+  end
   # Graphs.jl uses `zero` to create a graph of the same type
   # without any vertices or edges.
   inds_network_merge = typeof(inds_network)(

@@ -30,8 +30,6 @@ Build an ITensor network on a graph specified by the inds network s. Bond_dim is
 """
 function random_tensornetwork(eltype::Type, s::IndsNetwork; link_space=nothing)
   return ITensorNetwork(s; link_space) do v
-    # TODO: This only makes a random product state right now!
-    # The rest is padded with zeros, if the bond domension is greater than 1.
     return (inds...) -> itensor(randn(eltype, dim(inds)...), inds...)
   end
 end
@@ -58,8 +56,8 @@ The random distribution is based on the input argument `distribution`.
 function random_tensornetwork(
   distribution::Distribution, s::IndsNetwork; link_space=nothing
 )
-  return ITensorNetwork(s; link_space) do v, inds...
-    itensor(rand(distribution, dim(inds)...), inds...)
+  return ITensorNetwork(s; link_space) do v
+    return (inds...) -> itensor(rand(distribution, dim(inds)...), inds...)
   end
 end
 
