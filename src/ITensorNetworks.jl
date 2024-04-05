@@ -38,7 +38,6 @@ include("contraction_tree_to_graph.jl")
 include("gauging.jl")
 include("utils.jl")
 include("tensornetworkoperators.jl")
-include("ITensorsExt/itensorutils.jl")
 include("solvers/local_solvers/eigsolve.jl")
 include("solvers/local_solvers/exponentiate.jl")
 include("solvers/local_solvers/dmrg_x.jl")
@@ -68,6 +67,7 @@ include("environment.jl")
 include("exports.jl")
 include("ModelHamiltonians/ModelHamiltonians.jl")
 include("ModelNetworks/ModelNetworks.jl")
+include("ITensorsExtensions/ITensorsExtensions.jl")
 
 using PackageExtensionCompat: @require_extensions
 using Requires: @require

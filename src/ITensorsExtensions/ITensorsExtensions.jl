@@ -1,3 +1,4 @@
+module ITensorsExtensions
 using LinearAlgebra: pinv
 using ITensors.NDTensors:
   Block,
