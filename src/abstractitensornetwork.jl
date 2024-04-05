@@ -466,7 +466,6 @@ function NDTensors.contract(
   neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
-
   # The following is equivalent to:
   #
   # tn[dst(edge)] = new_itensor
@@ -482,6 +481,7 @@ function NDTensors.contract(
   for n_dst in neighbors_dst
     add_edge!(tn, merged_vertex => n_dst)
   end
+
   setindex_preserve_graph!(tn, new_itensor, merged_vertex)
 
   return tn

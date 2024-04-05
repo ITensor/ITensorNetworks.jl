@@ -1,6 +1,6 @@
 using DataGraphs: DataGraphs, DataGraph
 using Dictionaries: Indices, dictionary
-using ITensors: ITensors, ITensor
+using ITensors: ITensors, ITensor, op, state
 using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
 
 struct Private end
@@ -164,8 +164,17 @@ end
 function generic_state(a::AbstractArray, inds::Vector)
   return itensor(a, inds)
 end
+function generic_state(x::Op, inds::NamedTuple)
+  # TODO: Figure out what to do if there is more than one site.
+  @assert length(inds.siteinds) == 2
+  i = inds.siteinds[findfirst(i -> plev(i) == 0, inds.siteinds)]
+  @assert i' ∈ inds.siteinds
+  site_tensors = [op(x.which_op, i)]
+  link_tensors = [[onehot(i => 1) for i in inds.linkinds[e]] for e in keys(inds.linkinds)]
+  return contract(reduce(vcat, link_tensors; init=site_tensors))
+end
 function generic_state(s::AbstractString, inds::NamedTuple)
-  # TODO: Handle the case of multiple site indices.
+  # TODO: Figure out what to do if there is more than one site.
   site_tensors = [state(s, only(inds.siteinds))]
   link_tensors = [[onehot(i => 1) for i in inds.linkinds[e]] for e in keys(inds.linkinds)]
   return contract(reduce(vcat, link_tensors; init=site_tensors))

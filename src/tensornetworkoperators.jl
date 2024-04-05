@@ -10,7 +10,8 @@ function gate_group_to_tno(s::IndsNetwork, gates::Vector{ITensor})
   #Construct indsnetwork for TNO
   s_O = union_all_inds(s, prime(s; links=[]))
 
-  O = delta_network(s_O)
+  # Make a TNO with `I` on every site.
+  O = ITensorNetwork(Op("I"), s_O)
 
   for gate in gates
     v⃗ = vertices(s)[findall(i -> (length(commoninds(s[i], inds(gate))) != 0), vertices(s))]
