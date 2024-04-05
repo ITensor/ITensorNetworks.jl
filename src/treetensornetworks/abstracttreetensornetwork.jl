@@ -38,7 +38,9 @@ end
 # 
 
 function ITensorMPS.orthogonalize(tn::AbstractTTN, ortho_center; kwargs...)
-  ortho_center ∈ ortho_region(tn) && return tn
+  if isone(length(ortho_region(tn))) && ortho_center == only(ortho_region(tn))
+    return tn
+  end
   # TODO: Rewrite this in a more general way.
   if isone(length(ortho_region(tn)))
     edge_list = edge_path(tn, only(ortho_region(tn)), ortho_center)
@@ -277,21 +279,6 @@ end
 
 function ITensors.add(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
   return +(tn1, tn2; kwargs...)
-end
-
-# TODO: Delete this
-function ITensors.permute(
-  tn::AbstractTTN, ::Tuple{typeof(linkind),typeof(siteinds),typeof(linkind)}
-)
-  tn = copy(tn)
-  for v in vertices(tn)
-    ls = [only(linkinds(tn, n => v)) for n in neighbors(tn, v)] # TODO: won't work for multiple indices per link...
-    ss = TupleTools.sort(Tuple(siteinds(tn, v)); by=plev)
-    setindex_preserve_graph!(
-      tn, permute(tn[v], filter(!isnothing, (ls[1], ss..., ls[2:end]...))), v
-    )
-  end
-  return set_ortho_region(tn, ortho_region(tn))
 end
 
 function Base.isapprox(
