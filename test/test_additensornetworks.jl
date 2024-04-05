@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using Graphs: rem_edge!, vertices
 using NamedGraphs: NamedEdge, hexagonal_lattice_graph, named_grid
-using ITensorNetworks: ITensorNetwork, inner_network, randomITensorNetwork, siteinds
+using ITensorNetworks: ITensorNetwork, inner_network, random_tensornetwork, siteinds
 using ITensors: ITensors, apply, op, scalar, inner
 using LinearAlgebra: norm_sqr
 using Random: Random

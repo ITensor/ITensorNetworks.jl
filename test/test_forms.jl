@@ -31,8 +31,8 @@ using Random: Random
   s_operator = union_all_inds(s, prime(s))
   χ, D = 2, 3
   Random.seed!(1234)
-  ψket = random_tensornetwork(s_ket; link_space=χ)
-  ψbra = random_tensornetwork(s_bra; link_space=χ)
+  ψket = random_tensornetwork(s; link_space=χ)
+  ψbra = random_tensornetwork(s; link_space=χ)
   A = random_tensornetwork(s_operator; link_space=D)
 
   blf = BilinearFormNetwork(A, ψbra, ψket)

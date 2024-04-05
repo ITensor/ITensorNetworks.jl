@@ -285,7 +285,7 @@ function edge_scalars(bp_cache::BeliefPropagationCache, pes::Vector)
 end
 
 function scalar_factors_quotient(bp_cache::BeliefPropagationCache)
-  pvs = partitionvertices(partitioned_itensornetwork(bp_cache))
-  pes = partitionedges(partitioned_itensornetwork(bp_cache))
+  pvs = partitionvertices(partitioned_tensornetwork(bp_cache))
+  pes = partitionedges(partitioned_tensornetwork(bp_cache))
   return vertex_scalars(bp_cache, pvs), edge_scalars(bp_cache, pes)
 end

@@ -39,7 +39,7 @@ julia> using ITensorNetworks: ITensorNetwork, siteinds
 julia> using NamedGraphs: named_grid, subgraph
 
 julia> tn = ITensorNetwork(named_grid(4); link_space=2)
-ITensorNetworks.ITensorNetwork{Int64} with 4 vertices:
+ITensorNetwork{Int64} with 4 vertices:
 4-element Vector{Int64}:
  1
  2
@@ -90,7 +90,7 @@ and here is a similar example for making a tensor network on a grid (a tensor pr
 
 ```julia
 julia> tn = ITensorNetwork(named_grid((2, 2)); link_space=2)
-ITensorNetworks.ITensorNetwork{Tuple{Int64, Int64}} with 4 vertices:
+ITensorNetwork{Tuple{Int64, Int64}} with 4 vertices:
 4-element Vector{Tuple{Int64, Int64}}:
  (1, 1)
  (2, 1)
@@ -125,7 +125,7 @@ julia> neighbors(tn, (1, 2))
  (2, 2)
 
 julia> tn_1 = subgraph(v -> v[1] == 1, tn)
-ITensorNetworks.ITensorNetwork{Tuple{Int64, Int64}} with 2 vertices:
+ITensorNetwork{Tuple{Int64, Int64}} with 2 vertices:
 2-element Vector{Tuple{Int64, Int64}}:
  (1, 1)
  (1, 2)
@@ -139,7 +139,7 @@ with vertex data:
  (1, 2) │ ((dim=2|id=598|"1×1,1×2"), (dim=2|id=683|"1×2,2×2"))
 
 julia> tn_2 = subgraph(v -> v[1] == 2, tn)
-ITensorNetworks.ITensorNetwork{Tuple{Int64, Int64}} with 2 vertices:
+ITensorNetwork{Tuple{Int64, Int64}} with 2 vertices:
 2-element Vector{Tuple{Int64, Int64}}:
  (2, 1)
  (2, 2)
@@ -184,7 +184,7 @@ and edge data:
 0-element Dictionaries.Dictionary{NamedGraphs.NamedEdge{Int64}, Vector{ITensors.Index}}
 
 julia> tn1 = ITensorNetwork(s; link_space=2)
-ITensorNetworks.ITensorNetwork{Int64} with 3 vertices:
+ITensorNetwork{Int64} with 3 vertices:
 3-element Vector{Int64}:
  1
  2
@@ -201,7 +201,7 @@ with vertex data:
  3 │ ((dim=2|id=558|"S=1/2,Site,n=3"), (dim=2|id=430|"2,3"))
 
 julia> tn2 = ITensorNetwork(s; link_space=2)
-ITensorNetworks.ITensorNetwork{Int64} with 3 vertices:
+ITensorNetwork{Int64} with 3 vertices:
 3-element Vector{Int64}:
  1
  2

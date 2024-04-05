@@ -2,7 +2,15 @@ using Test
 using ITensorNetworks
 
 using ITensorNetworks:
-  TTN, inner, inner_network, loginner, logscalar, randomITensorNetwork, scalar
+  inner,
+  inner_network,
+  loginner,
+  logscalar,
+  random_tensornetwork,
+  scalar,
+  ttn,
+  underlying_graph
+using ITensorNetworks.ModelHamiltonians: heisenberg
 using ITensors: dag, siteinds
 using SplitApplyCombine: group
 using Graphs: SimpleGraph, uniform_tree
@@ -15,8 +23,8 @@ using Random: Random
   χ = 2
   g = NamedGraph(SimpleGraph(uniform_tree(L)))
   s = siteinds("S=1/2", g)
-  y = randomITensorNetwork(s; link_space=χ)
-  x = randomITensorNetwork(s; link_space=χ)
+  y = random_tensornetwork(s; link_space=χ)
+  x = random_tensornetwork(s; link_space=χ)
 
   #First lets do it with the flattened version of the network
   xy = inner_network(x, y)
@@ -38,7 +46,7 @@ using Random: Random
   @test xy_scalar ≈ xy_scalar_logbp
 
   #test contraction of three layers for expectation values
-  A = ITensorNetwork(TTN(ITensorNetworks.heisenberg(s), s))
+  A = ITensorNetwork(ttn(heisenberg(g), s))
   xAy_scalar = inner(x, A, y; alg="exact")
   xAy_scalar_bp = inner(x, A, y; alg="bp")
   xAy_scalar_logbp = exp(loginner(x, A, y; alg="bp"))
