@@ -738,7 +738,6 @@ function inner_network(
   return BilinearFormNetwork(A, x, y; kwargs...)
 end
 
-inner_network(x::AbstractITensorNetwork; kwargs...) = inner_network(x, x; kwargs...)
 function norm_sqr_network(ψ::AbstractITensorNetwork)
   return disjoint_union("bra" => dag(prime(ψ; sites=[])), "ket" => ψ)
 end
