@@ -10,6 +10,7 @@ using NamedGraphs: boundary_partitionedges, partitionvertices, partitionedges
 
 default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()
+default_message_norm(m::ITensor) = norm(m)
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
@@ -29,12 +30,12 @@ function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITens
   return (; partitioned_vertices=default_partitioned_vertices(ψ))
 end
 
-#TODO: Define a version of this that works for QN supporting tensors
-function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
+function message_diff(
+  message_a::Vector{ITensor}, message_b::Vector{ITensor}; message_norm=default_message_norm
+)
   lhs, rhs = contract(message_a), contract(message_b)
-  tr_lhs = length(inds(lhs)) == 1 ? sum(lhs) : sum(diag(lhs))
-  tr_rhs = length(inds(rhs)) == 1 ? sum(rhs) : sum(diag(rhs))
-  return 0.5 * norm((denseblocks(lhs) / tr_lhs) - (denseblocks(rhs) / tr_rhs))
+  norm_lhs, norm_rhs = message_norm(lhs), message_norm(rhs)
+  return 0.5 * norm((denseblocks(lhs) / norm_lhs) - (denseblocks(rhs) / norm_rhs))
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}
@@ -229,12 +230,12 @@ function update(
   verbose=false,
   kwargs...,
 )
-  compute_error = !isnothing(tol) && !hasqns(tensornetwork(bp_cache))
-  diff = compute_error ? Ref(0.0) : nothing
+  compute_error = !isnothing(tol)
   if isnothing(maxiter)
     error("You need to specify a number of iterations for BP!")
   end
   for i in 1:maxiter
+    diff = compute_error ? Ref(0.0) : nothing
     bp_cache = update(bp_cache, edges; (update_diff!)=diff, kwargs...)
     if compute_error && (diff.x / length(edges)) <= tol
       if verbose
