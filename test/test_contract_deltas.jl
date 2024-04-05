@@ -11,7 +11,7 @@ using ITensorNetworks:
   IndsNetwork,
   ITensorNetwork,
   path_graph_structure,
-  randomITensorNetwork
+  random_tensornetwork
 using NamedGraphs: leaf_vertices, named_grid
 using Test: @test, @testset
 
@@ -38,7 +38,7 @@ end
 @testset "test _contract_deltas over partition" begin
   N = (3, 3, 3)
   linkdim = 2
-  network = randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  network = random_tensornetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
   tn = Array{ITensor,length(N)}(undef, N...)
   for v in vertices(network)
     tn[v...] = network[v...]

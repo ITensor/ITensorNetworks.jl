@@ -8,7 +8,7 @@ using ITensorNetworks:
   apply,
   environment,
   norm_sqr_network,
-  randomITensorNetwork,
+  random_tensornetwork,
   siteinds,
   update
 using ITensors: ITensors, inner, op
@@ -24,7 +24,7 @@ using Test: @test, @testset
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 2
-  ψ = randomITensorNetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
   v1, v2 = (2, 2), (1, 2)
   ψψ = norm_sqr_network(ψ)
   #Simple Belief Propagation Grouping

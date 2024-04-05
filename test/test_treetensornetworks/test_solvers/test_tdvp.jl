@@ -4,7 +4,7 @@ using ITensors: ITensor, contract, dag, inner, noprime, normalize, prime, scalar
 using ITensorNetworks:
   ITensorNetworks,
   OpSum,
-  TTN,
+  ttn,
   apply,
   expect,
   mpo,
@@ -14,6 +14,7 @@ using ITensorNetworks:
   random_ttn,
   siteinds,
   tdvp
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using LinearAlgebra: norm
 using NamedGraphs: named_binary_tree, named_comb_tree
 using Observers: observer
@@ -418,9 +419,9 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
+    os = ModelHamiltonians.heisenberg(c)
 
-    H = TTN(os, s)
+    H = ttn(os, s)
 
     ψ0 = normalize(random_ttn(s))
 
@@ -460,8 +461,8 @@ end
       os2 += "Sz", src(e), "Sz", dst(e)
     end
 
-    H1 = TTN(os1, s)
-    H2 = TTN(os2, s)
+    H1 = ttn(os1, s)
+    H2 = ttn(os2, s)
     Hs = [H1, H2]
 
     ψ0 = normalize(random_ttn(s; link_space=10))
@@ -495,13 +496,13 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
-    H = TTN(os, s)
+    os = ModelHamiltonians.heisenberg(c)
+    H = ttn(os, s)
     HM = contract(H)
 
     Ut = exp(-im * tau * HM)
 
-    state = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    state = ttn(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
     statex = contract(state)
 
     Sz_tdvp = Float64[]
@@ -543,8 +544,8 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
-    H = TTN(os, s)
+    os = ModelHamiltonians.heisenberg(c)
+    H = ttn(os, s)
 
     gates = ITensor[]
     for e in edges(c)
@@ -559,7 +560,7 @@ end
     end
     append!(gates, reverse(gates))
 
-    state = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    state = ttn(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
     phi = copy(state)
     c = (2, 1)
 
@@ -598,7 +599,7 @@ end
     # Evolve using TDVP
     # 
 
-    phi = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    phi = ttn(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
     obs = observer(
       "Sz" => (; state) -> expect("Sz", state; vertices=[c])[c],
       "En" => (; state) -> real(inner(state', H, state)),
@@ -629,8 +630,8 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
-    H = TTN(os, s)
+    os = ModelHamiltonians.heisenberg(c)
+    H = ttn(os, s)
 
     state = normalize(random_ttn(s; link_space=2))
 

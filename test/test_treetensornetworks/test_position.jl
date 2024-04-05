@@ -1,7 +1,8 @@
 @eval module $(gensym())
 using Graphs: vertices
 using ITensors: ITensors
-using ITensorNetworks: ITensorNetworks, ProjTTN, TTN, environments, position, siteinds
+using ITensorNetworks: ProjTTN, ttn, environments, position, siteinds
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using NamedGraphs: named_comb_tree
 using Test
 
@@ -21,16 +22,16 @@ using Test
   end
   s = siteinds("S=1/2", c; conserve_qns=use_qns)
 
-  os = ITensorNetworks.heisenberg(c)
+  os = ModelHamiltonians.heisenberg(c)
 
-  H = TTN(os, s)
+  H = ttn(os, s)
 
   d = Dict()
   for (i, v) in enumerate(vertices(s))
     d[v] = isodd(i) ? "Up" : "Dn"
   end
   states = v -> d[v]
-  psi = TTN(s, states)
+  psi = ttn(s, states)
 
   # actual test, verifies that position is out of place
   vs = vertices(s)
