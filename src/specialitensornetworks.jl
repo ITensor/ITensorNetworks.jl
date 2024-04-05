@@ -8,7 +8,9 @@ RETURN A TENSOR NETWORK WITH COPY TENSORS ON EACH VERTEX.
 Note that passing a link_space will mean the indices of the resulting network don't match those of the input indsnetwork
 """
 function delta_network(eltype::Type, s::IndsNetwork; link_space=nothing)
-  return ITensorNetwork((v, inds...) -> delta(eltype, inds...), s; link_space)
+  return ITensorNetwork(s; link_space) do v
+    return (inds...) -> delta(eltype, inds...)
+  end
 end
 
 function delta_network(s::IndsNetwork; link_space=nothing)
@@ -27,8 +29,10 @@ end
 Build an ITensor network on a graph specified by the inds network s. Bond_dim is given by link_space and entries are randomised (normal distribution, mean 0 std 1)
 """
 function random_tensornetwork(eltype::Type, s::IndsNetwork; link_space=nothing)
-  return ITensorNetwork(s; link_space) do v, inds...
-    itensor(randn(eltype, dim(inds)...), inds...)
+  return ITensorNetwork(s; link_space) do v
+    # TODO: This only makes a random product state right now!
+    # The rest is padded with zeros, if the bond domension is greater than 1.
+    return (inds...) -> itensor(randn(eltype, dim(inds)...), inds...)
   end
 end
 

@@ -126,7 +126,7 @@ using Test: @test, @test_broken, @testset
     dims = (2, 2)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
-    ψ = ITensorNetwork(s, v -> "↑")
+    ψ = ITensorNetwork(v -> "↑", s)
     tn = inner_network(ψ, ψ)
     tn_2 = contract(tn, ((1, 2), 2) => ((1, 2), 1))
     @test !has_vertex(tn_2, ((1, 2), 2))
@@ -137,7 +137,7 @@ using Test: @test, @test_broken, @testset
     dims = (2, 2)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
-    ψ = ITensorNetwork(s, v -> "↑")
+    ψ = ITensorNetwork(v -> "↑", s)
     rem_vertex!(ψ, (1, 2))
     tn = inner_network(ψ, ψ)
     @test !has_vertex(tn, ((1, 2), 1))
@@ -159,8 +159,8 @@ using Test: @test, @test_broken, @testset
       siteinds("S=1/2", named_grid((3, 3))),
     )
 
-    ψ = ITensorNetwork(g; link_space) do v, inds...
-      return itensor(randn(elt, dims(inds)...), inds...)
+    ψ = ITensorNetwork(g; link_space) do v
+      return (inds...) -> itensor(randn(elt, dims(inds)...), inds...)
     end
     @test eltype(ψ[first(vertices(ψ))]) == elt
     ψ = ITensorNetwork(g; link_space) do v, inds...

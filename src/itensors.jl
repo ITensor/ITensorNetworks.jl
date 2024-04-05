@@ -21,9 +21,6 @@ function tensor_sum(A::ITensor, B::ITensor)
   return A + B
 end
 
-# TODO: Replace with a trait?
-const ITensorCollection = Union{Vector{ITensor},Dictionary{<:Any,ITensor}}
-
 # Patch for contraction sequences with `Key`
 # leaf values.
 # TODO: Move patch to `ITensors.jl`.
