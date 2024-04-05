@@ -738,6 +738,9 @@ function inner_network(
   return BilinearFormNetwork(A, x, y; kwargs...)
 end
 
+# TODO: We should make this pass to inner_network and then to BiLinearForm. 
+# Parts of the code (tests relying on norm_sqr being two layer and the gauging code
+#  which relies on specific message tensors) currently would break in that case so we need to resolve
 function norm_sqr_network(ψ::AbstractITensorNetwork)
   return disjoint_union("bra" => dag(prime(ψ; sites=[])), "ket" => ψ)
 end
