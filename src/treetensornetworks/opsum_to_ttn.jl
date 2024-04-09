@@ -14,6 +14,7 @@ using ITensors.LazyApply: coefficient
 using ITensors.LazyApply: Sum
 using ITensors.LazyApply: Prod
 using ITensors.NDTensors: Block
+using ITensors.NDTensors: blockdim
 using ITensors.NDTensors: maxdim
 using ITensors.NDTensors: nblocks
 using ITensors.NDTensors: nnzblocks

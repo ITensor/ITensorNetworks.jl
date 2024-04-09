@@ -82,20 +82,26 @@ function heisenberg(g::AbstractGraph; J1=1, J2=0, h=0)
   (; J1, J2, h) = map(to_callable, (; J1, J2, h))
   ℋ = OpSum()
   for e in edges(g)
-    ℋ += J1(e) / 2, "S+", src(e), "S-", dst(e)
-    ℋ += J1(e) / 2, "S-", src(e), "S+", dst(e)
-    ℋ += J1(e), "Sz", src(e), "Sz", dst(e)
+    if !iszero(J1(e))
+      ℋ += J1(e) / 2, "S+", src(e), "S-", dst(e)
+      ℋ += J1(e) / 2, "S-", src(e), "S+", dst(e)
+      ℋ += J1(e), "Sz", src(e), "Sz", dst(e)
+    end
   end
   for v in vertices(g)
     for nn in next_nearest_neighbors(g, v)
       e = edgetype(g)(v, nn)
-      ℋ += J2(e) / 2, "S+", src(e), "S-", dst(e)
-      ℋ += J2(e) / 2, "S-", src(e), "S+", dst(e)
-      ℋ += J2(e), "Sz", src(e), "Sz", dst(e)
+      if !iszero(J2(e))
+        ℋ += J2(e) / 2, "S+", src(e), "S-", dst(e)
+        ℋ += J2(e) / 2, "S-", src(e), "S+", dst(e)
+        ℋ += J2(e), "Sz", src(e), "Sz", dst(e)
+      end
     end
   end
   for v in vertices(g)
-    ℋ += h(v), "Sz", v
+    if !iszero(h(v))
+      ℋ += h(v), "Sz", v
+    end
   end
   return ℋ
 end

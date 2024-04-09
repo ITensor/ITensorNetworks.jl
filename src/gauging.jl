@@ -40,7 +40,7 @@ function ITensorNetwork(
 
   for e in edges(ψ)
     vsrc, vdst = src(e), dst(e)
-    root_S = sqrt_diag(bond_tensor(ψ_vidal, e))
+    root_S = ITensorsExtensions.sqrt_diag(bond_tensor(ψ_vidal, e))
     setindex_preserve_graph!(ψ, noprime(root_S * ψ[vsrc]), vsrc)
     setindex_preserve_graph!(ψ, noprime(root_S * ψ[vdst]), vdst)
   end
@@ -88,11 +88,12 @@ function vidalitensornetwork_preserve_cache(
     Y_D, Y_U = eigen(
       only(message(cache, reverse(pe))); ishermitian=true, cutoff=message_cutoff
     )
-    X_D, Y_D = map_diag(x -> x + regularization, X_D),
-    map_diag(x -> x + regularization, Y_D)
+    X_D, Y_D = ITensorsExtensions.map_diag(x -> x + regularization, X_D),
+    ITensorsExtensions.map_diag(x -> x + regularization, Y_D)
 
-    rootX_D, rootY_D = sqrt_diag(X_D), sqrt_diag(Y_D)
-    inv_rootX_D, inv_rootY_D = invsqrt_diag(X_D), invsqrt_diag(Y_D)
+    rootX_D, rootY_D = ITensorsExtensions.sqrt_diag(X_D), ITensorsExtensions.sqrt_diag(Y_D)
+    inv_rootX_D, inv_rootY_D = ITensorsExtensions.invsqrt_diag(X_D),
+    ITensorsExtensions.invsqrt_diag(Y_D)
     rootX = X_U * rootX_D * prime(dag(X_U))
     rootY = Y_U * rootY_D * prime(dag(Y_U))
     inv_rootX = X_U * inv_rootX_D * prime(dag(X_U))

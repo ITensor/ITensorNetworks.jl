@@ -1,6 +1,6 @@
 using DataGraphs: DataGraphs, DataGraph
 using Dictionaries: dictionary
-using ITensors: ITensor
+using ITensors: ITensor, factorize
 using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
 
 struct Private end

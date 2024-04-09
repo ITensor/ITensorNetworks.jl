@@ -1,18 +1,37 @@
 module ITensorsExtensions
-using LinearAlgebra: pinv
+using LinearAlgebra: LinearAlgebra, eigen, pinv
+using ITensors:
+  ITensor,
+  Index,
+  commonind,
+  dag,
+  hasqns,
+  inds,
+  isdiag,
+  itensor,
+  map_diag,
+  noncommonind,
+  noprime,
+  replaceinds,
+  space,
+  sqrt_decomp
 using ITensors.NDTensors:
+  NDTensors,
   Block,
   Tensor,
   blockdim,
   blockoffsets,
+  denseblocks,
   diaglength,
   getdiagindex,
   nzblocks,
   setdiagindex!,
+  svd,
   tensor,
   DiagBlockSparseTensor,
   DenseTensor,
   BlockOffsets
+using Observers: update!, insert_function!
 
 function NDTensors.blockoffsets(dense::DenseTensor)
   return BlockOffsets{ndims(dense)}([Block(ntuple(Returns(1), ndims(dense)))], [0])
@@ -26,25 +45,24 @@ NDTensors.blockdim(i::Index{Int}, b::Block) = blockdim(space(i), b)
 
 LinearAlgebra.isdiag(it::ITensor) = isdiag(tensor(it))
 
-function map_diag!(f::Function, it_destination::ITensor, it_source::ITensor)
-  return itensor(map_diag!(f, tensor(it_destination), tensor(it_source)))
-end
-map_diag(f::Function, it::ITensor) = map_diag!(f, copy(it), it)
-
-function map_diag!(f::Function, t_destination::Tensor, t_source::Tensor)
-  for i in 1:diaglength(t_destination)
-    setdiagindex!(t_destination, f(getdiagindex(t_source, i)), i)
-  end
-  return t_destination
-end
-map_diag(f::Function, t::Tensor) = map_diag!(f, copy(t), t)
-
 # Convenience functions
 sqrt_diag(it::ITensor) = map_diag(sqrt, it)
 inv_diag(it::ITensor) = map_diag(inv, it)
 invsqrt_diag(it::ITensor) = map_diag(inv ∘ sqrt, it)
 pinv_diag(it::ITensor) = map_diag(pinv, it)
 pinvsqrt_diag(it::ITensor) = map_diag(pinv ∘ sqrt, it)
+
+function map_itensor(
+  f::Function, A::ITensor, lind=first(inds(A)); regularization=nothing, kwargs...
+)
+  USV = svd(A, lind; kwargs...)
+  U, S, V, spec, u, v = USV
+  S = map_diag(s -> f(s + regularization), S)
+  sqrtDL, δᵤᵥ, sqrtDR = sqrt_decomp(S, u, v)
+  sqrtDR = denseblocks(sqrtDR) * denseblocks(δᵤᵥ)
+  L, R = U * sqrtDL, V * sqrtDR
+  return L * R
+end
 
 # Analagous to `denseblocks`.
 # Extract the diagonal entries into a diagonal tensor.
@@ -88,4 +106,6 @@ function group_commuting_itensors(its::Vector{ITensor})
   end
 
   return it_groups
+end
+
 end
