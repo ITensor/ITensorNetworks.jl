@@ -11,7 +11,6 @@ using ITensorNetworks:
   combine_linkinds,
   contract,
   contract_boundary_mps,
-  contract_density_matrix,
   contraction_sequence,
   environment,
   flatten_networks,

@@ -741,7 +741,6 @@ end
 # TODO: We should make this use the QuadraticFormNetwork constructor here. 
 # Parts of the code (tests relying on norm_sqr being two layer and the gauging code
 #  which relies on specific message tensors) currently would break in that case so we need to resolve
-# We could have the option in the Form constructors to pre-contract the operator into the bra or ket
 function norm_sqr_network(ψ::AbstractITensorNetwork)
   return disjoint_union("bra" => dag(prime(ψ; sites=[])), "ket" => ψ)
 end
