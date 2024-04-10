@@ -26,24 +26,50 @@ end
 # TODO: Move patch to `ITensors.jl`.
 ITensors._contract(As, index::Key) = As[index]
 
-spacetype(::Type{Index}) = Int
+indtype(a::ITensor) = promote_indtype(typeof.(inds(a))...)
+
+spacetype(::Index{T}) where {T} = T
 spacetype(::Type{<:Index{T}}) where {T} = T
-spacetype(T::Type{<:Vector}) = spacetype(eltype(T))
 
-trivial_space(::Type{<:Integer}) = 1
-trivial_space(::Type{<:Pair{QN}}) = (QN() => 1)
-trivial_space(T::Type{<:Vector{<:Pair{QN}}}) = [trivial_space(eltype(T))]
+function promote_indtype(is::Vararg{Type{<:Index}})
+  return reduce(promote_indtype_rule, is; init=Index{Int})
+end
 
-_trivial_space(T::Type) = trivial_space(spacetype(T))
-_trivial_space(x::Any) = trivial_space(typeof(x))
+function promote_spacetype_rule(type1::Type, type2::Type)
+  return error("Not implemented")
+end
 
-trivial_space(T::Type{<:Index}) = _trivial_space(T)
-trivial_space(T::Type{<:Vector}) = _trivial_space(T)
+function promote_spacetype_rule(
+  type1::Type{<:Integer}, type2::Type{<:Vector{<:Pair{QN,T2}}}
+) where {T2<:Integer}
+  return Vector{Pair{QN,promote_type(type1, T2)}}
+end
 
-trivial_space(x::Index) = _trivial_space(x)
-trivial_space(x::Vector{<:Index}) = _trivial_space(x)
-trivial_space(x::ITensor) = trivial_space(inds(x))
-trivial_space(x::Tuple{Vararg{Index}}) = trivial_space(first(x))
+function promote_spacetype_rule(
+  type1::Type{<:Vector{<:Pair{QN,<:Integer}}}, type2::Type{<:Integer}
+)
+  return promote_spacetype_rule(type2, type1)
+end
+
+function promote_spacetype_rule(
+  type1::Type{<:Vector{<:Pair{QN,T1}}}, type2::Type{<:Vector{<:Pair{QN,T2}}}
+) where {T1<:Integer,T2<:Integer}
+  return Vector{Pair{QN,promote_type(T1, T2)}}
+end
+
+function promote_spacetype_rule(type1::Type{<:Integer}, type2::Type{<:Integer})
+  return promote_type(type1, type2)
+end
+
+function promote_indtype_rule(type1::Type{<:Index}, type2::Type{<:Index})
+  return Index{promote_spacetype_rule(spacetype(type1), spacetype(type2))}
+end
+
+trivial_space(x) = trivial_space(promote_indtypeof(x))
+trivial_space(x::Type) = trivial_space(promote_indtype(x))
+
+trivial_space(i::Type{<:Index{<:Integer}}) = 1
+trivial_space(i::Type{<:Index{<:Vector{<:Pair{<:QN,<:Integer}}}}) = [QN() => 1]
 
 """
 Given an input tensor and a Dict (ind_to_newind), replace inds of tensor that are also

@@ -151,7 +151,7 @@ using Test: @test, @test_broken, @testset
   end
 
   @testset "Custom element type" for elt in (Float32, Float64, ComplexF32, ComplexF64),
-    link_space in (nothing, 3),
+    kwargs in ((;), (; link_space=3)),
     g in (
       grid((4,)),
       named_grid((3, 3)),
@@ -159,19 +159,19 @@ using Test: @test, @test_broken, @testset
       siteinds("S=1/2", named_grid((3, 3))),
     )
 
-    ψ = ITensorNetwork(g; link_space) do v
+    ψ = ITensorNetwork(g; kwargs...) do v
       return inds -> itensor(randn(elt, dim.(inds)...), inds)
     end
     @test eltype(ψ[first(vertices(ψ))]) == elt
-    ψ = ITensorNetwork(g; link_space) do v
+    ψ = ITensorNetwork(g; kwargs...) do v
       return inds -> itensor(randn(dim.(inds)...), inds)
     end
     @test eltype(ψ[first(vertices(ψ))]) == Float64
-    ψ = random_tensornetwork(elt, g; link_space)
+    ψ = random_tensornetwork(elt, g; kwargs...)
     @test eltype(ψ[first(vertices(ψ))]) == elt
-    ψ = random_tensornetwork(g; link_space)
+    ψ = random_tensornetwork(g; kwargs...)
     @test eltype(ψ[first(vertices(ψ))]) == Float64
-    ψ = ITensorNetwork(elt, undef, g; link_space)
+    ψ = ITensorNetwork(elt, undef, g; kwargs...)
     @test eltype(ψ[first(vertices(ψ))]) == elt
     ψ = ITensorNetwork(undef, g)
     @test eltype(ψ[first(vertices(ψ))]) == Float64

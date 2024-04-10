@@ -121,7 +121,7 @@ function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kw
   # Add any new edges that are introduced during the union
   for v1 in vertices(tn1)
     for v2 in vertices(tn2)
-      if hascommoninds(tn[v1], tn[v2])
+      if hascommoninds(tn, v1 => v2)
         add_edge!(tn, v1 => v2)
       end
     end
@@ -174,6 +174,8 @@ function Base.Vector{ITensor}(tn::AbstractITensorNetwork)
 end
 
 # Convenience wrapper
+# TODO: Delete this and just use `Vector{ITensor}`, or maybe
+# it should output a dictionary or be called `eachtensor`?
 itensors(tn::AbstractITensorNetwork) = Vector{ITensor}(tn)
 
 #
@@ -184,10 +186,13 @@ function LinearAlgebra.promote_leaf_eltypes(tn::AbstractITensorNetwork)
   return LinearAlgebra.promote_leaf_eltypes(itensors(tn))
 end
 
-function trivial_space(tn::AbstractITensorNetwork)
-  return trivial_space(tn[first(vertices(tn))])
+function promote_indtypeof(tn::AbstractITensorNetwork)
+  return mapreduce(promote_indtype, vertices(tn)) do v
+    return indtype(tn[v])
+  end
 end
 
+# TODO: Delete in favor of `scalartype`.
 function ITensors.promote_itensor_eltype(tn::AbstractITensorNetwork)
   return LinearAlgebra.promote_leaf_eltypes(tn)
 end
@@ -871,27 +876,19 @@ function site_combiners(tn::AbstractITensorNetwork{V}) where {V}
   return Cs
 end
 
-# TODO: Combine with `insert_links`.
-function insert_missing_internal_inds(
-  tn::AbstractITensorNetwork, edges; internal_inds_space=trivial_space(tn)
+function insert_linkinds(
+  tn::AbstractITensorNetwork, edges=edges(tn); link_space=trivial_space(tn)
 )
   tn = copy(tn)
   for e in edges
-    if !hascommoninds(tn[src(e)], tn[dst(e)])
-      iₑ = Index(internal_inds_space, edge_tag(e))
+    if !hascommoninds(tn, e)
+      iₑ = Index(link_space, edge_tag(e))
       X = onehot(iₑ => 1)
       tn[src(e)] *= X
       tn[dst(e)] *= dag(X)
     end
   end
   return tn
-end
-
-# TODO: Combine with `insert_links`.
-function insert_missing_internal_inds(
-  tn::AbstractITensorNetwork; internal_inds_space=trivial_space(tn)
-)
-  return insert_internal_inds(tn, edges(tn); internal_inds_space)
 end
 
 # TODO: What to output? Could be an `IndsNetwork`. Or maybe
@@ -923,8 +920,8 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 
   if !issetequal(edges_tn1, edges_tn2)
     new_edges = union(edges_tn1, edges_tn2)
-    tn1 = insert_missing_internal_inds(tn1, new_edges)
-    tn2 = insert_missing_internal_inds(tn2, new_edges)
+    tn1 = insert_linkinds(tn1, new_edges)
+    tn2 = insert_linkinds(tn2, new_edges)
   end
 
   edges_tn1, edges_tn2 = edges(tn1), edges(tn2)

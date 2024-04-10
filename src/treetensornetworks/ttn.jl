@@ -1,3 +1,4 @@
+using Graphs: path_graph
 using ITensors: ITensor
 using NamedGraphs: vertextype
 
@@ -84,4 +85,15 @@ end
 function random_mps(args...; kwargs...)
   # TODO: Check it is a path graph.
   return random_tensornetwork(args...; kwargs...)
+end
+
+function random_mps(s::Vector{<:Index}; kwargs...)
+  g = path_graph(length(s))
+  # TODO: Specify data type is `eltype(s)`.
+  is = IndsNetwork(g)
+  for v in vertices(is)
+    # TODO: Allow setting with just `s[v]`.
+    is[v] = [s[v]]
+  end
+  return random_tensornetwork(is; kwargs...)
 end

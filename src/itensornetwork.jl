@@ -126,28 +126,26 @@ end
 # Construction from IndsNetwork
 #
 
-function ITensorNetwork(
-  eltype::Type, undef::UndefInitializer, inds_network::IndsNetwork; kwargs...
-)
-  return ITensorNetwork(inds_network; kwargs...) do v
+function ITensorNetwork(eltype::Type, undef::UndefInitializer, is::IndsNetwork; kwargs...)
+  return ITensorNetwork(is; kwargs...) do v
     return (inds...) -> ITensor(eltype, undef, inds...)
   end
 end
 
-function ITensorNetwork(eltype::Type, inds_network::IndsNetwork; kwargs...)
-  return ITensorNetwork(inds_network; kwargs...) do v
+function ITensorNetwork(eltype::Type, is::IndsNetwork; kwargs...)
+  return ITensorNetwork(is; kwargs...) do v
     return (inds...) -> ITensor(eltype, inds...)
   end
 end
 
-function ITensorNetwork(undef::UndefInitializer, inds_network::IndsNetwork; kwargs...)
-  return ITensorNetwork(inds_network; kwargs...) do v
+function ITensorNetwork(undef::UndefInitializer, is::IndsNetwork; kwargs...)
+  return ITensorNetwork(is; kwargs...) do v
     return (inds...) -> ITensor(undef, inds...)
   end
 end
 
-function ITensorNetwork(inds_network::IndsNetwork; kwargs...)
-  return ITensorNetwork(inds_network; kwargs...) do v
+function ITensorNetwork(is::IndsNetwork; kwargs...)
+  return ITensorNetwork(is; kwargs...) do v
     return (inds...) -> ITensor(inds...)
   end
 end
@@ -191,12 +189,14 @@ function to_callable(value::AbstractArray{<:Any,N}) where {N}
 end
 to_callable(value) = Returns(value)
 
-function ITensorNetwork(value, inds_network::IndsNetwork; kwargs...)
-  return ITensorNetwork(to_callable(value), inds_network; kwargs...)
+function ITensorNetwork(value, is::IndsNetwork; kwargs...)
+  return ITensorNetwork(to_callable(value), is; kwargs...)
 end
 
-function ITensorNetwork(elt::Type, f, inds_network::IndsNetwork; link_space=1, kwargs...)
-  tn = ITensorNetwork(f, inds_network; kwargs...)
+function ITensorNetwork(
+  elt::Type, f, is::IndsNetwork; link_space=trivial_space(is), kwargs...
+)
+  tn = ITensorNetwork(f, is; kwargs...)
   for v in vertices(tn)
     # TODO: Ideally we would use broadcasting, i.e. `elt.(tn[v])`,
     # but that doesn't work right now on ITensors.
@@ -206,46 +206,24 @@ function ITensorNetwork(elt::Type, f, inds_network::IndsNetwork; link_space=1, k
 end
 
 function ITensorNetwork(
-  itensor_constructor::Function, inds_network::IndsNetwork; link_space=1, kwargs...
+  itensor_constructor::Function, is::IndsNetwork; link_space=trivial_space(is), kwargs...
 )
-  if isnothing(link_space)
-    # Make sure the link space is set
-    link_space = 1
-  end
-  # Graphs.jl uses `zero` to create a graph of the same type
-  # without any vertices or edges.
-  inds_network_merge = typeof(inds_network)(
-    underlying_graph(inds_network); link_space, kwargs...
-  )
-  inds_network = union(inds_network_merge, inds_network)
-  tn = ITensorNetwork{vertextype(inds_network)}()
-  for v in vertices(inds_network)
+  is = insert_linkinds(is; link_space)
+  tn = ITensorNetwork{vertextype(is)}()
+  for v in vertices(is)
     add_vertex!(tn, v)
   end
-  for e in edges(inds_network)
+  for e in edges(is)
     add_edge!(tn, e)
   end
   for v in vertices(tn)
-    siteinds = get(inds_network, v, indtype(inds_network)[])
-    edges = [edgetype(inds_network)(v, nv) for nv in neighbors(inds_network, v)]
-    linkinds = map(e -> get(inds_network, e, indtype(inds_network)[]), Indices(edges))
+    siteinds = is[v]
+    edges = [edgetype(is)(v, nv) for nv in neighbors(is, v)]
+    linkinds = map(e -> is[e], Indices(edges))
     tensor_v = generic_state(itensor_constructor(v), (; siteinds, linkinds))
     setindex_preserve_graph!(tn, tensor_v, v)
   end
   return tn
-end
-
-# TODO: Remove this in favor of `insert_missing_internal_inds`
-# or call it a different name, such as `factorize_edges`.
-function insert_links(ψ::ITensorNetwork, edges::Vector=edges(ψ); cutoff=1e-15)
-  for e in edges
-    # Define this to work?
-    # ψ = factorize(ψ, e; cutoff)
-    ψᵥ₁, ψᵥ₂ = factorize(ψ[src(e)] * ψ[dst(e)], inds(ψ[src(e)]); cutoff, tags=edge_tag(e))
-    ψ[src(e)] = ψᵥ₁
-    ψ[dst(e)] = ψᵥ₂
-  end
-  return ψ
 end
 
 ITensorNetwork(itns::Vector{ITensorNetwork}) = reduce(⊗, itns)

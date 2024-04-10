@@ -19,7 +19,7 @@ function tebd(
     if step % print_frequency == 0
       @show step, (step - 1) * Δβ, β
     end
-    ψ = insert_links(ψ)
+    ψ = insert_linkinds(ψ)
     ψ = apply(u⃗, ψ; cutoff, maxdim, normalize=true, ortho, kwargs...)
     if ortho
       for v in vertices(ψ)
