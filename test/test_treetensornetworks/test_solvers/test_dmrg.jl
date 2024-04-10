@@ -43,7 +43,7 @@ ITensors.disable_auto_fermion()
 
   H = mpo(os, s)
 
-  psi = random_mps(s; internal_inds_space=20)
+  psi = random_mps(s; link_space=20)
 
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
@@ -85,7 +85,7 @@ end
     os += "Sz", j, "Sz", j + 1
   end
   H = mpo(os, s)
-  psi = random_mps(s; internal_inds_space=20)
+  psi = random_mps(s; link_space=20)
 
   nsweeps = 4
   maxdim = [20, 40, 80, 80]
@@ -121,7 +121,7 @@ end
     os += "Sz", j, "Sz", j + 1
   end
   H = mpo(os, s)
-  psi = random_mps(s; internal_inds_space=10)
+  psi = random_mps(s; link_space=10)
 
   nsweeps = 4
   maxdim = [10, 20, 40, 80]
@@ -153,7 +153,7 @@ end
 
   H = mpo(os, s)
 
-  psi = random_mps(s; internal_inds_space=20)
+  psi = random_mps(s; link_space=20)
 
   # Choose nsweeps to be less than length of arrays
   nsweeps = 5

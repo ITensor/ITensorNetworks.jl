@@ -1,8 +1,5 @@
-using ITensors.ITensorMPS: randomMPS, replacebond!
-using ITensors.NDTensors: truncate!
-using LinearAlgebra: normalize
-using NamedGraphs: named_path_graph, vertextype
-using Random: randn!
+using ITensors: ITensor
+using NamedGraphs: vertextype
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
@@ -77,4 +74,14 @@ function ttn(a::ITensor, is::IndsNetwork; ortho_region=[default_root_vertex(is)]
   tn[ortho_center] = a
   ttn_a = ttn(tn)
   return orthogonalize(ttn_a, ortho_center)
+end
+
+function random_ttn(args...; kwargs...)
+  # TODO: Check it is a tree graph.
+  return random_tensornetwork(args...; kwargs...)
+end
+
+function random_mps(args...; kwargs...)
+  # TODO: Check it is a path graph.
+  return random_tensornetwork(args...; kwargs...)
 end

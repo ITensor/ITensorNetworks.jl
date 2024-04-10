@@ -31,7 +31,7 @@ using Test
     d[v] = isodd(i) ? "Up" : "Dn"
   end
   states = v -> d[v]
-  psi = ttn(s, states)
+  psi = ttn(states, s)
 
   # actual test, verifies that position is out of place
   vs = vertices(s)

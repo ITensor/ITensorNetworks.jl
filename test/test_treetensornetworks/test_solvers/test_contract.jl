@@ -25,7 +25,7 @@ using Test: @test, @test_broken, @testset
 @testset "Contract MPO" begin
   N = 20
   s = siteinds("S=1/2", N)
-  psi = random_mps(s; internal_inds_space=8)
+  psi = random_mps(s; link_space=8)
 
   os = OpSum()
   for j in 1:(N - 1)
@@ -91,7 +91,7 @@ using Test: @test, @test_broken, @testset
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-5
 
   # Test with nsite=1
-  Hpsi_guess = random_mps(t; internal_inds_space=32)
+  Hpsi_guess = random_mps(t; link_space=32)
   Hpsi = contract(H, psi; alg="fit", init=Hpsi_guess, nsites=1, nsweeps=4)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-4
 end

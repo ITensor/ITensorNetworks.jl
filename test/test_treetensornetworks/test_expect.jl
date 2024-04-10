@@ -8,7 +8,7 @@ using Test: @test, @testset
 @testset "MPS expect comparison with ITensors" begin
   N = 25
   s = siteinds("S=1/2", N)
-  a = random_mps(s; internal_inds_space=100)
+  a = random_mps(s; link_space=100)
   b = MPS([a[v] for v in vertices(a)])
   res_a = expect("Sz", a)
   res_b = expect(b, "Sz")
@@ -27,7 +27,7 @@ end
     magnetization[v] = isodd(i) ? 0.5 : -0.5
   end
   states = v -> d[v]
-  state = ttn(s, states)
+  state = ttn(states, s)
   res = expect("Sz", state)
   @test all([isapprox(res[v], magnetization[v]; atol=1e-8) for v in vertices(s)])
 end

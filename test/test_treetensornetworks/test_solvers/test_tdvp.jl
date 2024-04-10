@@ -35,7 +35,7 @@ using Test: @testset, @test
 
     H = mpo(os, s)
 
-    ψ0 = random_mps(s; internal_inds_space=10)
+    ψ0 = random_mps(s; link_space=10)
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
@@ -96,7 +96,7 @@ using Test: @testset, @test
     H2 = mpo(os2, s)
     Hs = [H1, H2]
 
-    ψ0 = random_mps(s; internal_inds_space=10)
+    ψ0 = random_mps(s; link_space=10)
 
     ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
@@ -133,7 +133,7 @@ using Test: @testset, @test
 
     H = mpo(os, s)
 
-    ψ0 = random_mps(s; internal_inds_space=10)
+    ψ0 = random_mps(s; link_space=10)
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; time_step=-0.05im, order, cutoff, nsites=1)
@@ -329,7 +329,7 @@ using Test: @testset, @test
 
     H = mpo(os, s)
 
-    state = random_mps(s; internal_inds_space=2)
+    state = random_mps(s; link_space=2)
     en0 = inner(state', H, state)
     nsites = [repeat([2], 10); repeat([1], 10)]
     maxdim = 32
