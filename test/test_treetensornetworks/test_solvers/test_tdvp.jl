@@ -171,7 +171,7 @@ using Test: @testset, @test
 
     Ut = exp(-im * tau * HM)
 
-    state = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    state = mps(n -> isodd(n) ? "Up" : "Dn", s)
     psi2 = deepcopy(state)
     psix = contract(state)
 
@@ -250,7 +250,7 @@ using Test: @testset, @test
     end
     append!(gates, reverse(gates))
 
-    state = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    state = mps(n -> isodd(n) ? "Up" : "Dn", s)
     phi = deepcopy(state)
     c = div(N, 2)
 
@@ -289,7 +289,7 @@ using Test: @testset, @test
     # Evolve using TDVP
     # 
 
-    phi = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    phi = mps(n -> isodd(n) ? "Up" : "Dn", s)
 
     obs = observer(
       "Sz" => (; state) -> expect("Sz", state; vertices=[c])[c],
@@ -382,7 +382,7 @@ using Test: @testset, @test
       "Sz" => step_measure_sz, "En" => step_measure_en, "info" => get_info
     )
 
-    state2 = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    state2 = mps(n -> isodd(n) ? "Up" : "Dn", s)
     tdvp(
       H,
       -im * ttotal,
