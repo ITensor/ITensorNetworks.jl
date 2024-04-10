@@ -41,6 +41,8 @@ using ITensorNetworks:
   inner_network,
   internalinds,
   linkinds,
+  neighbor_itensors,
+  norm_sqr,
   norm_sqr_network,
   orthogonalize,
   random_tensornetwork,
@@ -49,8 +51,6 @@ using LinearAlgebra: factorize
 using NamedGraphs: NamedEdge, incident_edges, named_comb_tree, named_grid
 using Random: Random, randn!
 using Test: @test, @test_broken, @testset
-
-using ITensorNetworks: norm_sqr, neighbor_itensors
 
 @testset "ITensorNetwork tests" begin
   @testset "ITensorNetwork Basics" begin

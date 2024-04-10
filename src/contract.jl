@@ -15,10 +15,6 @@ function NDTensors.contract(
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
 end
 
-function NDTensors.contract(alg::Algorithm"exact", tensors::Vector{ITensor}; kwargs...)
-  return contract(tensors; kwargs...)
-end
-
 function NDTensors.contract(
   alg::Union{Algorithm"density_matrix",Algorithm"ttn_svd"},
   tn::AbstractITensorNetwork;
@@ -28,40 +24,19 @@ function NDTensors.contract(
   return approx_tensornetwork(alg, tn, output_structure; kwargs...)
 end
 
-function contract_density_matrix(
-  contract_list::Vector{ITensor}; normalize=true, contractor_kwargs...
-)
-  tn, _ = contract(
-    ITensorNetwork(contract_list); alg="density_matrix", contractor_kwargs...
-  )
-  out = Vector{ITensor}(tn)
-  if normalize
-    out .= normalize!.(copy.(out))
-  end
-  return out
-end
-
-function ITensors.scalar(
-  alg::Algorithm, tn::Union{AbstractITensorNetwork,Vector{ITensor}}; kwargs...
-)
+function ITensors.scalar(alg::Algorithm, tn::AbstractITensorNetwork; kwargs...)
   return contract(alg, tn; kwargs...)[]
 end
 
-function ITensors.scalar(
-  tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg="exact", kwargs...
-)
+function ITensors.scalar(tn::AbstractITensorNetwork; alg="exact", kwargs...)
   return scalar(Algorithm(alg), tn; kwargs...)
 end
 
-function logscalar(
-  tn::Union{AbstractITensorNetwork,Vector{ITensor}}; alg="exact", kwargs...
-)
+function logscalar(tn::AbstractITensorNetwork; alg="exact", kwargs...)
   return logscalar(Algorithm(alg), tn; kwargs...)
 end
 
-function logscalar(
-  alg::Algorithm"exact", tn::Union{AbstractITensorNetwork,Vector{ITensor}}; kwargs...
-)
+function logscalar(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
   s = scalar(alg, tn; kwargs...)
   s = real(s) < 0 ? complex(s) : s
   return log(s)

@@ -270,11 +270,11 @@ end
 function region_scalar(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
   incoming_mts = environment(bp_cache, [pv])
   local_state = factor(bp_cache, pv)
-  return scalar(vcat(incoming_mts, local_state))
+  return contract(vcat(incoming_mts, local_state))[]
 end
 
 function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
-  return scalar(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))))
+  return contract(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))))[]
 end
 
 function vertex_scalars(
