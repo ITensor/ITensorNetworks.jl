@@ -188,7 +188,7 @@ end
       d[v] = isodd(i) ? "Up" : "Dn"
     end
     states = v -> d[v]
-    psi = ttn(s, states)
+    psi = ttn(states, s)
 
     #    psi = random_ttn(s; link_space=20) #FIXME: random_ttn broken for QN conserving case
 
@@ -251,7 +251,7 @@ end
     d[v] = isodd(i) ? "Up" : "Dn"
   end
   states = v -> d[v]
-  psi = ttn(s, states)
+  psi = ttn(states, s)
   psi = dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )

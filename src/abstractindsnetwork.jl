@@ -23,54 +23,57 @@ end
 # TODO: Define a generic fallback for `AbstractDataGraph`?
 DataGraphs.edge_data_type(::Type{<:AbstractIndsNetwork{V,I}}) where {V,I} = Vector{I}
 
-function indsnetwork_getindex(is::AbstractIndsNetwork, index)
-  return get(data_graph(is), index, indtype(is)[])
-end
-
-function Base.getindex(is::AbstractIndsNetwork, index)
-  return indsnetwork_getindex(is, index)
-end
-
-function Base.getindex(is::AbstractIndsNetwork, index::Pair)
-  return indsnetwork_getindex(is, index)
-end
-
-function Base.getindex(is::AbstractIndsNetwork, index::AbstractEdge)
-  return indsnetwork_getindex(is, index)
-end
-
-function indsnetwork_setindex!(is::AbstractIndsNetwork, value, index)
-  data_graph(is)[index] = value
-  return is
-end
-
-function Base.setindex!(is::AbstractIndsNetwork, value, index)
-  indsnetwork_setindex!(is, value, index)
-  return is
-end
-
-function Base.setindex!(is::AbstractIndsNetwork, value, index::Pair)
-  indsnetwork_setindex!(is, value, index)
-  return is
-end
-
-function Base.setindex!(is::AbstractIndsNetwork, value, index::AbstractEdge)
-  indsnetwork_setindex!(is, value, index)
-  return is
-end
-
-function Base.setindex!(is::AbstractIndsNetwork, value::Index, index)
-  indsnetwork_setindex!(is, value, index)
-  return is
-end
+## TODO: Bring these back.
+## function indsnetwork_getindex(is::AbstractIndsNetwork, index)
+##   return get(data_graph(is), index, indtype(is)[])
+## end
+## 
+## function Base.getindex(is::AbstractIndsNetwork, index)
+##   return indsnetwork_getindex(is, index)
+## end
+## 
+## function Base.getindex(is::AbstractIndsNetwork, index::Pair)
+##   return indsnetwork_getindex(is, index)
+## end
+## 
+## function Base.getindex(is::AbstractIndsNetwork, index::AbstractEdge)
+##   return indsnetwork_getindex(is, index)
+## end
+## 
+## function indsnetwork_setindex!(is::AbstractIndsNetwork, value, index)
+##   data_graph(is)[index] = value
+##   return is
+## end
+## 
+## function Base.setindex!(is::AbstractIndsNetwork, value, index)
+##   indsnetwork_setindex!(is, value, index)
+##   return is
+## end
+## 
+## function Base.setindex!(is::AbstractIndsNetwork, value, index::Pair)
+##   indsnetwork_setindex!(is, value, index)
+##   return is
+## end
+## 
+## function Base.setindex!(is::AbstractIndsNetwork, value, index::AbstractEdge)
+##   indsnetwork_setindex!(is, value, index)
+##   return is
+## end
+## 
+## function Base.setindex!(is::AbstractIndsNetwork, value::Index, index)
+##   indsnetwork_setindex!(is, value, index)
+##   return is
+## end
 
 # 
 # Index access
 # 
 
 function ITensors.uniqueinds(is::AbstractIndsNetwork, edge::AbstractEdge)
+  # TODO: Replace with `is[v]` once `getindex(::IndsNetwork, ...)` is smarter.
   inds = IndexSet(get(is, src(edge), Index[]))
   for ei in setdiff(incident_edges(is, src(edge)), [edge])
+    # TODO: Replace with `is[v]` once `getindex(::IndsNetwork, ...)` is smarter.
     inds = unioninds(inds, get(is, ei, Index[]))
   end
   return inds
@@ -94,10 +97,12 @@ end
 
 function promote_indtypeof(is::AbstractIndsNetwork)
   sitetype = mapreduce(promote_indtype, vertices(is); init=Index{Int}) do v
-    return mapreduce(typeof, promote_indtype, is[v]; init=Index{Int})
+    # TODO: Replace with `is[v]` once `getindex(::IndsNetwork, ...)` is smarter.
+    return mapreduce(typeof, promote_indtype, get(is, v, Index[]); init=Index{Int})
   end
   linktype = mapreduce(promote_indtype, edges(is); init=Index{Int}) do e
-    return mapreduce(typeof, promote_indtype, is[e]; init=Index{Int})
+    # TODO: Replace with `is[e]` once `getindex(::IndsNetwork, ...)` is smarter.
+    return mapreduce(typeof, promote_indtype, get(is, e, Index[]); init=Index{Int})
   end
   return promote_indtype(sitetype, linktype)
 end

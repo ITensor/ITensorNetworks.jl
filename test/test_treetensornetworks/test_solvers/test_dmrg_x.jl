@@ -21,7 +21,7 @@ using Test: @test, @testset
   h = W * (2 * rand(n) .- 1)
   H = mpo(ModelHamiltonians.heisenberg(n; h), s)
 
-  ψ = mps(s; states=(v -> rand(["↑", "↓"])))
+  ψ = mps(v -> rand(["↑", "↓"]), s)
 
   dmrg_x_kwargs = (nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
 

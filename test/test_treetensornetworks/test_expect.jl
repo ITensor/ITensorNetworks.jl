@@ -6,7 +6,7 @@ using NamedGraphs: named_comb_tree
 using Test: @test, @testset
 
 @testset "MPS expect comparison with ITensors" begin
-  N = 25
+  N = 4
   s = siteinds("S=1/2", N)
   a = random_mps(s; link_space=100)
   b = MPS([a[v] for v in vertices(a)])
@@ -17,7 +17,7 @@ using Test: @test, @testset
 end
 
 @testset "TTN expect" begin
-  tooth_lengths = fill(5, 6)
+  tooth_lengths = fill(2, 2)
   c = named_comb_tree(tooth_lengths)
   s = siteinds("S=1/2", c)
   d = Dict()

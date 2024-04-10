@@ -217,7 +217,8 @@ function ITensorNetwork(
     add_edge!(tn, e)
   end
   for v in vertices(tn)
-    siteinds = is[v]
+    # TODO: Replace with `is[v]` once `getindex(::IndsNetwork, ...)` is smarter.
+    siteinds = get(is, v, Index[])
     edges = [edgetype(is)(v, nv) for nv in neighbors(is, v)]
     linkinds = map(e -> is[e], Indices(edges))
     tensor_v = generic_state(itensor_constructor(v), (; siteinds, linkinds))
