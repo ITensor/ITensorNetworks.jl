@@ -182,8 +182,12 @@ end
 # try merging the two.
 to_callable(value::Type) = value
 to_callable(value::Function) = value
-to_callable(value::AbstractDict) = Base.Fix1(getindex, value)
-to_callable(value::AbstractDictionary) = Base.Fix1(getindex, value)
+function to_callable(value::AbstractDict)
+  return Base.Fix1(getindex, value) ∘ keytype(value)
+end
+function to_callable(value::AbstractDictionary)
+  return Base.Fix1(getindex, value) ∘ keytype(value)
+end
 function to_callable(value::AbstractArray{<:Any,N}) where {N}
   return Base.Fix1(getindex, value) ∘ CartesianIndex
 end

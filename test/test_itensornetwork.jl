@@ -1,8 +1,8 @@
 @eval module $(gensym())
-using DataGraphs: vertex_data
 using Dictionaries: Dictionary
 using Distributions: Uniform
 using Graphs:
+  degree,
   dijkstra_shortest_paths,
   edges,
   grid,
@@ -18,6 +18,7 @@ using ITensors:
   ITensors,
   Index,
   ITensor,
+  Op,
   commonind,
   commoninds,
   contract,
@@ -26,7 +27,10 @@ using ITensors:
   hasinds,
   inds,
   itensor,
+  onehot,
   order,
+  randomITensor,
+  scalartype,
   sim,
   uniqueinds
 using ITensors.NDTensors: dim
@@ -42,11 +46,14 @@ using ITensorNetworks:
   linkinds,
   orthogonalize,
   random_tensornetwork,
-  siteinds
+  siteinds,
+  ttn
 using LinearAlgebra: factorize
 using NamedGraphs: NamedEdge, incident_edges, named_comb_tree, named_grid
 using Random: Random, randn!
 using Test: @test, @test_broken, @testset
+
+const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 
 @testset "ITensorNetwork tests" begin
   @testset "ITensorNetwork Basics" begin
@@ -87,7 +94,9 @@ using Test: @test, @test_broken, @testset
     # TODO: Support this syntax, maybe rename `subgraph`.
     @test_broken induced_subgraph(tn, [(1,), (2,)]) isa ITensorNetwork
 
-    randn!.(vertex_data(tn))
+    for v in vertices(tn)
+      tn[v] = randn!(tn[v])
+    end
     tn′ = sim(dag(tn); sites=[])
 
     @test tn′ isa ITensorNetwork
@@ -150,7 +159,7 @@ using Test: @test, @test_broken, @testset
     @test has_vertex(tn, ((2, 2), 2))
   end
 
-  @testset "Custom element type" for elt in (Float32, Float64, ComplexF32, ComplexF64),
+  @testset "Custom element type (eltype=$elt)" for elt in elts,
     kwargs in ((;), (; link_space=3)),
     g in (
       grid((4,)),
@@ -175,6 +184,73 @@ using Test: @test, @test_broken, @testset
     @test eltype(ψ[first(vertices(ψ))]) == elt
     ψ = ITensorNetwork(undef, g)
     @test eltype(ψ[first(vertices(ψ))]) == Float64
+  end
+
+  @testset "Product state constructors" for elt in elts
+    dims = (2, 2)
+    g = named_comb_tree(dims)
+    s = siteinds("S=1/2", g)
+    state1 = ["↑" "↓"; "↓" "↑"]
+    state2 = reshape([[1, 0], [0, 1], [0, 1], [1, 0]], 2, 2)
+    each_args = (;
+      ferro=(
+        ("↑",),
+        (elt, "↑"),
+        (Returns(i -> ITensor([1, 0], i)),),
+        (elt, Returns(i -> ITensor([1, 0], i))),
+        (Returns([1, 0]),),
+        (elt, Returns([1, 0])),
+      ),
+      antiferro=(
+        (state1,),
+        (elt, state1,),
+        (Dict(CartesianIndices(dims) .=> state1),),
+        (elt, Dict(CartesianIndices(dims) .=> state1)),
+        (Dict(Tuple.(CartesianIndices(dims)) .=> state1),),
+        (elt, Dict(Tuple.(CartesianIndices(dims)) .=> state1)),
+        (Dictionary(CartesianIndices(dims), state1),),
+        (elt, Dictionary(CartesianIndices(dims), state1)),
+        (Dictionary(Tuple.(CartesianIndices(dims)), state1),),
+        (elt, Dictionary(Tuple.(CartesianIndices(dims)), state1)),
+        (state2,),
+        (elt, state2,),
+        (Dict(CartesianIndices(dims) .=> state2),),
+        (elt, Dict(CartesianIndices(dims) .=> state2)),
+        (Dict(Tuple.(CartesianIndices(dims)) .=> state2),),
+        (elt, Dict(Tuple.(CartesianIndices(dims)) .=> state2)),
+        (Dictionary(CartesianIndices(dims), state2),),
+        (elt, Dictionary(CartesianIndices(dims), state2)),
+        (Dictionary(Tuple.(CartesianIndices(dims)), state2),),
+        (elt, Dictionary(Tuple.(CartesianIndices(dims)), state2)),
+      ),
+    )
+    for pattern in keys(each_args)
+      for args in each_args[pattern]
+        x = ITensorNetwork(args..., s)
+        if first(args) === elt
+          @test scalartype(x) === elt
+        else
+          @test scalartype(x) === Float64
+        end
+        for v in vertices(x)
+          xᵛ = x[v]
+          @test degree(x, v) + 1 == ndims(xᵛ)
+          sᵛ = only(siteinds(x, v))
+          for w in neighbors(x, v)
+            lʷ = only(linkinds(x, v => w))
+            @test dim(lʷ) == 1
+            xᵛ *= onehot(lʷ => 1)
+          end
+          @test ndims(xᵛ) == 1
+          a = if pattern == :ferro
+            [1, 0]
+          elseif pattern == :antiferro
+            iseven(sum(v)) ? [1, 0] : [0, 1]
+          end
+          @test xᵛ == ITensor(a, sᵛ)
+        end
+      end
+    end
   end
 
   @testset "random_tensornetwork with custom distributions" begin
