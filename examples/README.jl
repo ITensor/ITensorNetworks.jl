@@ -23,8 +23,8 @@
 
 #+ echo=false; term=false
 
-using Random
-using ITensors
+using Random: Random
+using ITensors: ITensors
 Random.seed!(ITensors.index_id_rng(), 1234);
 
 #' ## Examples
@@ -32,8 +32,9 @@ Random.seed!(ITensors.index_id_rng(), 1234);
 #' Here are is an example of making a tensor network on a chain graph (a tensor train or matrix product state):
 #+ term=true
 
-using ITensors
-using ITensorNetworks
+using Graphs: neighbors
+using ITensorNetworks: ITensorNetwork, siteinds
+using NamedGraphs: named_grid, subgraph
 tn = ITensorNetwork(named_grid(4); link_space=2)
 tn[1]
 tn[2]
@@ -55,7 +56,9 @@ tn_2 = subgraph(v -> v[1] == 2, tn)
 #' Networks can also be merged/unioned:
 #+ term=true
 
-using ITensorUnicodePlots
+using ITensors: prime
+using ITensorNetworks: ⊗, contract, contraction_sequence
+using ITensorUnicodePlots: @visualize
 s = siteinds("S=1/2", named_grid(3))
 tn1 = ITensorNetwork(s; link_space=2)
 tn2 = ITensorNetwork(s; link_space=2)
@@ -72,8 +75,9 @@ Z̃ = contract(Z, (1, 1) => (2, 1));
 #' This file was generated with [weave.jl](https://github.com/JunoLab/Weave.jl) with the following commands:
 #+ eval=false
 
-using ITensorNetworks, Weave
-weave(
+using ITensorNetworks: ITensorNetworks
+using Weave: Weave
+Weave.weave(
   joinpath(pkgdir(ITensorNetworks), "examples", "README.jl");
   doctype="github",
   out_path=pkgdir(ITensorNetworks),

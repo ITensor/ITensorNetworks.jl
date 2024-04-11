@@ -1,4 +1,5 @@
 using DataGraphs: DataGraphs, DataGraph
+using Dictionaries: dictionary
 using ITensors: ITensor
 using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
 

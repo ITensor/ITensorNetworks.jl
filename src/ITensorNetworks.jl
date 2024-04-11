@@ -1,51 +1,5 @@
 module ITensorNetworks
-
-using DataGraphs
-using DataStructures
-using Dictionaries
-using Distributions
-using DocStringExtensions
-using Graphs
-using GraphsFlows
-using Graphs.SimpleGraphs # AbstractSimpleGraph
-using IsApprox
-using ITensors
-using ITensors.ContractionSequenceOptimization
-using ITensors.ITensorVisualizationCore
-using ITensors.LazyApply
-using IterTools
-using KrylovKit: KrylovKit
-using LinearAlgebra
-using NamedGraphs
-using Observers
-using Observers.DataFrames: select!
-using PackageExtensionCompat
-using Printf
-using Requires
-using SimpleTraits
-using SparseArrayKit
-using SplitApplyCombine
-using StaticArrays
-using Suppressor
-using TimerOutputs
-
-using DataGraphs: IsUnderlyingGraph, edge_data_type, vertex_data_type
-using Graphs: AbstractEdge, AbstractGraph, Graph, add_edge!
-using ITensors:
-  @Algorithm_str,
-  @debug_check,
-  @timeit_debug,
-  δ,
-  AbstractMPS,
-  Algorithm,
-  OneITensor,
-  commontags,
-  dim,
-  orthocenter
-using KrylovKit: exponentiate, eigsolve, linsolve
-using NamedGraphs:
-  AbstractNamedGraph, parent_graph, parent_vertices_to_vertices, not_implemented
-
+include("usings.jl")
 include("Graphs/abstractgraph.jl")
 include("Graphs/abstractdatagraph.jl")
 include("observers.jl")
@@ -60,7 +14,6 @@ include("sitetype.jl")
 include("abstractitensornetwork.jl")
 include("contraction_sequences.jl")
 include("expect.jl")
-include("models.jl")
 include("tebd.jl")
 include("itensornetwork.jl")
 include("mincut.jl")
@@ -112,14 +65,16 @@ include("solvers/linsolve.jl")
 include("solvers/sweep_plans/sweep_plans.jl")
 include("apply.jl")
 include("environment.jl")
-
 include("exports.jl")
+include("ModelHamiltonians/ModelHamiltonians.jl")
+include("ModelNetworks/ModelNetworks.jl")
 
+using PackageExtensionCompat: @require_extensions
+using Requires: @require
 function __init__()
   @require_extensions
   @require OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715" include(
     "requires/omeinsumcontractionorders.jl"
   )
 end
-
 end

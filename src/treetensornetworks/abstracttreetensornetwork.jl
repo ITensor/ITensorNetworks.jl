@@ -1,3 +1,8 @@
+using Graphs: has_vertex
+using NamedGraphs: edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
+using IsApprox: IsApprox, Approx
+using ITensors: directsum, hasinds, permute, plev
+using ITensors.ITensorMPS: isortho, linkind, loginner, lognorm, orthogonalize
 using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
@@ -31,59 +36,6 @@ function set_ortho_center(ψ::AbstractTTN{V}, new_center::Vector{<:V}) where {V}
 end
 
 reset_ortho_center(ψ::AbstractTTN) = set_ortho_center(ψ, vertices(ψ))
-
-# 
-# Dense constructors
-# 
-
-# construct from dense ITensor, using IndsNetwork of site indices
-function (::Type{TTNT})(
-  A::ITensor, is::IndsNetwork; ortho_center=default_root_vertex(is), kwargs...
-) where {TTNT<:AbstractTTN}
-  for v in vertices(is)
-    @assert hasinds(A, is[v])
-  end
-  @assert ortho_center ∈ vertices(is)
-  ψ = ITensorNetwork(is)
-  Ã = A
-  for e in post_order_dfs_edges(ψ, ortho_center)
-    left_inds = uniqueinds(is, e)
-    L, R = factorize(Ã, left_inds; tags=edge_tag(e), ortho="left", kwargs...)
-    l = commonind(L, R)
-    ψ[src(e)] = L
-    is[e] = [l]
-    Ã = R
-  end
-  ψ[ortho_center] = Ã
-  T = TTNT(ψ)
-  T = orthogonalize(T, ortho_center)
-  return T
-end
-
-# construct from dense ITensor, using AbstractNamedGraph and vector of site indices
-# TODO: remove if it doesn't turn out to be useful
-function (::Type{TTNT})(
-  A::ITensor, sites::Vector, g::AbstractNamedGraph; vertex_order=vertices(g), kwargs...
-) where {TTNT<:AbstractTTN}
-  is = IndsNetwork(g; site_space=Dictionary(vertex_order, sites))
-  return TTNT(A, is; kwargs...)
-end
-
-# construct from dense array, using IndsNetwork
-# TODO: probably remove this one, doesn't seem very useful
-function (::Type{TTNT})(
-  A::AbstractArray{<:Number}, is::IndsNetwork; vertex_order=vertices(is), kwargs...
-) where {TTNT<:AbstractTTN}
-  sites = [is[v] for v in vertex_order]
-  return TTNT(itensor(A, sites...), is; kwargs...)
-end
-
-# construct from dense array, using NamedDimGraph and vector of site indices
-function (::Type{TTNT})(
-  A::AbstractArray{<:Number}, sites::Vector, args...; kwargs...
-) where {TTNT<:AbstractTTN}
-  return TTNT(itensor(A, sites...), sites, args...; kwargs...)
-end
 
 # 
 # Orthogonalization
@@ -290,7 +242,7 @@ function Base.:+(
   @assert all(ψ -> nv(first(ψs)) == nv(ψ), ψs)
 
   # Output state
-  ϕ = TTN(siteinds(ψs[1]))
+  ϕ = ttn(siteinds(ψs[1]))
 
   vs = post_order_dfs_vertices(ϕ, root_vertex)
   es = post_order_dfs_edges(ϕ, root_vertex)

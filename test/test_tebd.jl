@@ -1,6 +1,12 @@
-using ITensors
-using ITensorNetworks
-using Test
+@eval module $(gensym())
+using Graphs: vertices
+using ITensors: ITensors
+using ITensors.ITensorMPS: ITensorMPS
+using ITensorNetworks:
+  ITensorNetwork, cartesian_to_linear, dmrg, expect, group_terms, siteinds, tebd
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
+using NamedGraphs: named_grid, rename_vertices
+using Test: @test, @testset
 
 ITensors.disable_warn_order()
 
@@ -17,10 +23,10 @@ ITensors.disable_warn_order()
   # DMRG comparison
   #
   g_dmrg = rename_vertices(g, cartesian_to_linear(dims))
-  ℋ_dmrg = ising(g_dmrg; h)
+  ℋ_dmrg = ModelHamiltonians.ising(g_dmrg; h)
   s_dmrg = [only(s[v]) for v in vertices(s)]
-  H_dmrg = MPO(ℋ_dmrg, s_dmrg)
-  ψ_dmrg_init = MPS(s_dmrg, j -> "↑")
+  H_dmrg = ITensorMPS.MPO(ℋ_dmrg, s_dmrg)
+  ψ_dmrg_init = ITensorMPS.MPS(s_dmrg, j -> "↑")
   E_dmrg, ψ_dmrg = dmrg(
     H_dmrg, ψ_dmrg_init; nsweeps=20, maxdim=[fill(10, 10); 20], cutoff=1e-8, outputlevel=0
   )
@@ -28,7 +34,7 @@ ITensors.disable_warn_order()
   #
   # PEPS TEBD optimization
   #
-  ℋ = ising(g; h)
+  ℋ = ModelHamiltonians.ising(g; h)
   χ = 2
   β = 2.0
   Δβ = 0.2
@@ -63,4 +69,5 @@ ITensors.disable_warn_order()
   @show E0, E1, E2, E_dmrg
   @test (((abs((E2 - E1) / E2) < 1e-4) && (E1 < E0)) || (E2 < E1 < E0))
   @test E2 ≈ E_dmrg rtol = 1e-4
+end
 end

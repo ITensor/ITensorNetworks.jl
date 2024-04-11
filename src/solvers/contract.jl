@@ -22,7 +22,7 @@ function sum_contract(
   )
   any(ns .!= n) &&
     throw(DimensionMismatch("Number of sites in different operators ($n) do not match"))
-  # ToDo: Write test for single-vertex TTN, this implementation has not been tested.
+  # ToDo: Write test for single-vertex ttn, this implementation has not been tested.
   if n == 1
     res = 0
     for (tn1, tn2) in zip(tn1s, tn2s)

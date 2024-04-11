@@ -1,8 +1,12 @@
-using Dictionaries
-using ITensors
-using ITensorNetworks
-using Random
-using Test
+@eval module $(gensym())
+using DataGraphs: vertex_data
+using Dictionaries: Dictionary
+using Graphs: nv, vertices
+using ITensorNetworks: IndsNetwork, siteinds
+using ITensors: SiteType, hastags, space
+using ITensors.NDTensors: dim
+using NamedGraphs: named_grid
+using Test: @test, @testset
 
 @testset "Site ind system" begin
   g = named_grid((2, 2))
@@ -46,4 +50,5 @@ using Test
   @test s_fs isa IndsNetwork
   @test all(dim(only(s_fs[v])) == fdim(v) for v in vertices(g))
   @test all(hastags.(vertex_data(s_fs), Ref("$testtag,Site")))
+end
 end

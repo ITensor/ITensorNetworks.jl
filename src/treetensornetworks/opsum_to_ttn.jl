@@ -1,4 +1,28 @@
+using Graphs: degree
+using Graphs: is_tree
+using ITensors: flux
+using ITensors: has_fermion_string
+using ITensors: itensor
+using ITensors: ops
+using ITensors: removeqns
+using ITensors: space
+using ITensors: val
 using ITensors.ITensorMPS: ITensorMPS
+using ITensors.ITensorMPS: cutoff
+using ITensors.ITensorMPS: linkdims
+using ITensors.LazyApply: coefficient
+using ITensors.LazyApply: Sum
+using ITensors.LazyApply: Prod
+using ITensors.NDTensors: Block
+using ITensors.NDTensors: maxdim
+using ITensors.NDTensors: nblocks
+using ITensors.NDTensors: nnzblocks
+using ITensors.Ops: OpSum
+using ITensors.Ops: Op
+using NamedGraphs: degrees
+using NamedGraphs: is_leaf
+using NamedGraphs: vertex_path
+using StaticArrays: MVector
 
 # convert ITensors.OpSum to TreeTensorNetwork
 
@@ -221,7 +245,7 @@ function ttn_svd(
     link_space[e] = Index(qi...; tags=edge_tag(e), dir=linkdir_ref)
   end
 
-  H = TTN(sites0)   # initialize TTN without the dummy indices added
+  H = ttn(sites0)   # initialize TTN without the dummy indices added
   function qnblock(i::Index, q::QN)
     for b in 2:(nblocks(i) - 1)
       flux(i, Block(b)) == q && return b
@@ -484,12 +508,12 @@ function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) 
 end
 
 """
-    TTN(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
-    TTN(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
+    ttn(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
+    ttn(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
        
 Convert an OpSum object `os` to a TreeTensorNetwork, with indices given by `sites`.
 """
-function TTN(
+function ttn(
   os::OpSum,
   sites::IndsNetwork;
   root_vertex=default_root_vertex(sites),
@@ -518,37 +542,37 @@ function TTN(
 end
 
 function mpo(os::OpSum, external_inds::Vector; kwargs...)
-  return TTN(os, path_indsnetwork(external_inds); kwargs...)
+  return ttn(os, path_indsnetwork(external_inds); kwargs...)
 end
 
 # Conversion from other formats
-function TTN(o::Op, s::IndsNetwork; kwargs...)
-  return TTN(OpSum{Float64}() + o, s; kwargs...)
+function ttn(o::Op, s::IndsNetwork; kwargs...)
+  return ttn(OpSum{Float64}() + o, s; kwargs...)
 end
 
-function TTN(o::Scaled{C,Op}, s::IndsNetwork; kwargs...) where {C}
-  return TTN(OpSum{C}() + o, s; kwargs...)
+function ttn(o::Scaled{C,Op}, s::IndsNetwork; kwargs...) where {C}
+  return ttn(OpSum{C}() + o, s; kwargs...)
 end
 
-function TTN(o::Sum{Op}, s::IndsNetwork; kwargs...)
-  return TTN(OpSum{Float64}() + o, s; kwargs...)
+function ttn(o::Sum{Op}, s::IndsNetwork; kwargs...)
+  return ttn(OpSum{Float64}() + o, s; kwargs...)
 end
 
-function TTN(o::Prod{Op}, s::IndsNetwork; kwargs...)
-  return TTN(OpSum{Float64}() + o, s; kwargs...)
+function ttn(o::Prod{Op}, s::IndsNetwork; kwargs...)
+  return ttn(OpSum{Float64}() + o, s; kwargs...)
 end
 
-function TTN(o::Scaled{C,Prod{Op}}, s::IndsNetwork; kwargs...) where {C}
-  return TTN(OpSum{C}() + o, s; kwargs...)
+function ttn(o::Scaled{C,Prod{Op}}, s::IndsNetwork; kwargs...) where {C}
+  return ttn(OpSum{C}() + o, s; kwargs...)
 end
 
-function TTN(o::Sum{Scaled{C,Op}}, s::IndsNetwork; kwargs...) where {C}
-  return TTN(OpSum{C}() + o, s; kwargs...)
+function ttn(o::Sum{Scaled{C,Op}}, s::IndsNetwork; kwargs...) where {C}
+  return ttn(OpSum{C}() + o, s; kwargs...)
 end
 
 # Catch-all for leaf eltype specification
-function TTN(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
-  return NDTensors.convert_scalartype(eltype, TTN(os, sites; kwargs...))
+function ttn(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
+  return NDTensors.convert_scalartype(eltype, ttn(os, sites; kwargs...))
 end
 
 # 

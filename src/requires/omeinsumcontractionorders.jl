@@ -1,3 +1,5 @@
+using Dictionaries: index
+
 # OMEinsumContractionOrders wrapper for ITensors
 # Slicing is not supported, because it might require extra work to slice an `ITensor` correctly.
 

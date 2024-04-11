@@ -1,3 +1,5 @@
+using NamedGraphs: parent_vertex
+using Graphs: dfs_tree
 """
 For a given ITensorNetwork `tn` and a `root` vertex, remove leaf vertices in the directed tree
 with root `root` without changing the tensor represented by tn.
@@ -27,17 +29,13 @@ Contract of a vector of tensors, `network`, with a contraction sequence generate
 function _optcontract(
   network::Vector; contraction_sequence_alg="optimal", contraction_sequence_kwargs=(;)
 )
-  @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: _optcontract" begin
-    if length(network) == 0
-      return ITensor(1.0)
-    end
-    @assert network isa Vector{ITensor}
-    @timeit_debug ITensors.timer "[approx_binary_tree_itensornetwork]: contraction_sequence" begin
-      seq = contraction_sequence(
-        network; alg=contraction_sequence_alg, contraction_sequence_kwargs...
-      )
-    end
-    output = contract(network; sequence=seq)
-    return output
+  if length(network) == 0
+    return ITensor(1.0)
   end
+  @assert network isa Vector{ITensor}
+  seq = contraction_sequence(
+    network; alg=contraction_sequence_alg, contraction_sequence_kwargs...
+  )
+  output = contract(network; sequence=seq)
+  return output
 end

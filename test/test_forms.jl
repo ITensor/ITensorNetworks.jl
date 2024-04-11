@@ -1,22 +1,29 @@
-using ITensors
+@eval module $(gensym())
+using DataGraphs: underlying_graph
 using Graphs: nv
 using NamedGraphs
-using ITensorNetworks
 using ITensorNetworks:
-  delta_network,
-  update,
-  tensornetwork,
-  bra_vertex,
-  ket_vertex,
-  dual_index_map,
+  BeliefPropagationCache,
+  BilinearFormNetwork,
+  QuadraticFormNetwork,
   bra_network,
-  ket_network,
-  operator_network,
+  bra_vertex,
+  delta_network,
+  dual_index_map,
   environment,
-  BeliefPropagationCache
-using Test
-using Random
-using SplitApplyCombine
+  externalinds,
+  ket_network,
+  ket_vertex,
+  operator_network,
+  random_tensornetwork,
+  siteinds,
+  tensornetwork,
+  union_all_inds,
+  update
+using ITensors: contract, dag, inds, prime, randomITensor
+using LinearAlgebra: norm
+using Test: @test, @testset
+using Random: Random
 
 @testset "FormNetworks" begin
   g = named_grid((1, 4))
@@ -25,9 +32,9 @@ using SplitApplyCombine
   s_operator = union_all_inds(s_bra, s_ket)
   χ, D = 2, 3
   Random.seed!(1234)
-  ψket = randomITensorNetwork(s_ket; link_space=χ)
-  ψbra = randomITensorNetwork(s_bra; link_space=χ)
-  A = randomITensorNetwork(s_operator; link_space=D)
+  ψket = random_tensornetwork(s_ket; link_space=χ)
+  ψbra = random_tensornetwork(s_bra; link_space=χ)
+  A = random_tensornetwork(s_operator; link_space=D)
 
   blf = BilinearFormNetwork(A, ψbra, ψket)
   @test nv(blf) == nv(ψket) + nv(ψbra) + nv(A)
@@ -65,4 +72,5 @@ using SplitApplyCombine
   ∂qf_∂v_bp = contract(∂qf_∂v_bp)
   ∂qf_∂v_bp /= norm(∂qf_∂v_bp)
   @test ∂qf_∂v_bp ≈ ∂qf_∂v
+end
 end

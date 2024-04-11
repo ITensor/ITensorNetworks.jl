@@ -1,4 +1,4 @@
-using ITensors.ITensorMPS: ITensorMPS
+using ITensors.ITensorMPS: ITensorMPS, expect, promote_itensor_eltype, OpSum
 
 function ITensorMPS.expect(
   op::String,
