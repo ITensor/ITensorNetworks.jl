@@ -353,9 +353,8 @@ function ITensorMPS.expect(
   # ToDo: verify that this is a sane default
   root_vertex=default_root_vertex(siteinds(state)),
 )
-  # TODO: for performance it may be beneficial to also implement expect! and change the orthogonality center in place
-  # assuming that the next algorithmic step can make use of the orthogonality center being moved to a different vertex
-  # ToDo: Verify that this is indeed the correct order for performance
+  # TODO: Optimize this with proper caching.
+  state /= norm(state)
   sites = siteinds(state)
   ordered_vertices = reverse(post_order_dfs_vertices(sites, root_vertex))
   res = Dictionary(vertices, undef)

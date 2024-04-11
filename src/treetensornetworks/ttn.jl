@@ -1,5 +1,6 @@
 using Graphs: path_graph
 using ITensors: ITensor
+using LinearAlgebra: normalize
 using NamedGraphs: vertextype
 
 """
@@ -92,12 +93,12 @@ end
 
 function random_ttn(args...; kwargs...)
   # TODO: Check it is a tree graph.
-  return _TreeTensorNetwork(random_tensornetwork(args...; kwargs...))
+  return normalize(_TreeTensorNetwork(random_tensornetwork(args...; kwargs...)))
 end
 
 function random_mps(args...; kwargs...)
   # TODO: Check it is a path graph.
-  return _TreeTensorNetwork(random_tensornetwork(args...; kwargs...))
+  return random_ttn(args...; kwargs...)
 end
 
 function random_mps(f, is::Vector{<:Index}; kwargs...)
@@ -105,12 +106,5 @@ function random_mps(f, is::Vector{<:Index}; kwargs...)
 end
 
 function random_mps(s::Vector{<:Index}; kwargs...)
-  g = path_graph(length(s))
-  # TODO: Specify data type is `eltype(s)`.
-  is = IndsNetwork(g)
-  for v in vertices(is)
-    # TODO: Allow setting with just `s[v]`.
-    is[v] = [s[v]]
-  end
-  return _TreeTensorNetwork(random_tensornetwork(is; kwargs...))
+  return random_mps(path_indsnetwork(s); kwargs...)
 end
