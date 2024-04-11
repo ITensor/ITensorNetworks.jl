@@ -203,7 +203,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
       ),
       antiferro=(
         (state1,),
-        (elt, state1,),
+        (elt, state1),
         (Dict(CartesianIndices(dims) .=> state1),),
         (elt, Dict(CartesianIndices(dims) .=> state1)),
         (Dict(Tuple.(CartesianIndices(dims)) .=> state1),),
@@ -213,7 +213,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         (Dictionary(Tuple.(CartesianIndices(dims)), state1),),
         (elt, Dictionary(Tuple.(CartesianIndices(dims)), state1)),
         (state2,),
-        (elt, state2,),
+        (elt, state2),
         (Dict(CartesianIndices(dims) .=> state2),),
         (elt, Dict(CartesianIndices(dims) .=> state2)),
         (Dict(Tuple.(CartesianIndices(dims)) .=> state2),),
