@@ -502,7 +502,7 @@ end
 
     Ut = exp(-im * tau * HM)
 
-    state = ttn(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    state = ttn(ComplexF64, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn", s)
     statex = contract(state)
 
     Sz_tdvp = Float64[]
@@ -560,7 +560,7 @@ end
     end
     append!(gates, reverse(gates))
 
-    state = ttn(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    state = ttn(v -> iseven(sum(isodd.(v))) ? "Up" : "Dn", s)
     phi = copy(state)
     c = (2, 1)
 
@@ -599,7 +599,7 @@ end
     # Evolve using TDVP
     # 
 
-    phi = ttn(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    phi = ttn(v -> iseven(sum(isodd.(v))) ? "Up" : "Dn", s)
     obs = observer(
       "Sz" => (; state) -> expect("Sz", state; vertices=[c])[c],
       "En" => (; state) -> real(inner(state', H, state)),

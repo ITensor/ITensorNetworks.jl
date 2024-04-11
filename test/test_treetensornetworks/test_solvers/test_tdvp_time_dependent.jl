@@ -194,7 +194,7 @@ end
   ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
   H⃗₀ = [ttn(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 
-  ψ₀ = ttn(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "↑" : "↓")
+  ψ₀ = ttn(ComplexF64, v -> iseven(sum(isodd.(v))) ? "↑" : "↓", s)
 
   ψₜ_ode = tdvp(
     H⃗₀,

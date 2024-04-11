@@ -66,6 +66,10 @@ function mps(args...; ortho_region=nothing)
   return _TreeTensorNetwork(tn, ortho_region)
 end
 
+function mps(f, is::Vector{<:Index}; kwargs...)
+  return mps(f, path_indsnetwork(is); kwargs...)
+end
+
 # Construct from dense ITensor, using IndsNetwork of site indices.
 function ttn(a::ITensor, is::IndsNetwork; ortho_region=[default_root_vertex(is)], kwargs...)
   for v in vertices(is)
@@ -94,6 +98,10 @@ end
 function random_mps(args...; kwargs...)
   # TODO: Check it is a path graph.
   return _TreeTensorNetwork(random_tensornetwork(args...; kwargs...))
+end
+
+function random_mps(f, is::Vector{<:Index}; kwargs...)
+  return random_mps(f, path_indsnetwork(is); kwargs...)
 end
 
 function random_mps(s::Vector{<:Index}; kwargs...)

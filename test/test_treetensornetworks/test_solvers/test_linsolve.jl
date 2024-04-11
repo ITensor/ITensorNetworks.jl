@@ -22,13 +22,17 @@ using Test: @test, @test_broken, @testset
     end
     H = mpo(os, s)
 
-    states = [isodd(n) ? "Up" : "Dn" for n in 1:N]
-
     #
     # Test complex case
     #
     Random.seed!(1234)
-    x_c = random_mps(states, s; link_space=4) + 0.1im * random_mps(states, s; link_space=2)
+
+    ## TODO: Need to add support for `random_mps`/`random_tensornetwork` with state input.
+    ## states = [isodd(n) ? "Up" : "Dn" for n in 1:N]
+    ## x_c = random_mps(states, s; link_space=4) + 0.1im * random_mps(states, s; link_space=2)
+
+    x_c = random_mps(s; link_space=4) + 0.1im * random_mps(s; link_space=2)
+
     b = apply(H, x_c; alg="fit", nsweeps=3, init=x_c) #cutoff is unsupported kwarg for apply/contract
 
     x0 = random_mps(states, s; link_space=10)

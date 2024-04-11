@@ -52,10 +52,7 @@ end
   h = Dictionary(vertices(c), W * (2 * rand(nv(c)) .- 1))
 
   H = ttn(ModelHamiltonians.heisenberg(c; h), s)
-
-  # TODO: Use `ttn(s; states=v -> rand(["↑", "↓"]))` or
-  # `ttns(s; states=v -> rand(["↑", "↓"]))`
-  ψ = normalize(ttn(s, v -> rand(["↑", "↓"])))
+  ψ = normalize(ttn(v -> rand(["↑", "↓"]), s))
 
   dmrg_x_kwargs = (nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
 
