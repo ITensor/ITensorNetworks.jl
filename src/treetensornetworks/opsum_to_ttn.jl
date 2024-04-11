@@ -6,14 +6,7 @@ using ITensors.ITensorMPS: ITensorMPS
 # Utility methods
 # 
 
-# linear ordering of vertices in tree graph relative to chosen root, chosen outward from root
-function find_index_in_tree(site, g::AbstractGraph, root_vertex)
-  ordering = reverse(post_order_dfs_vertices(g, root_vertex))
-  return findfirst(x -> x == site, ordering)
-end
-function find_index_in_tree(o::Op, g::AbstractGraph, root_vertex)
-  return find_index_in_tree(ITensors.site(o), g, root_vertex)
-end
+
 
 # determine 'support' of product operator on tree graph
 function span(t::Scaled{C,Prod{Op}}, g::AbstractGraph) where {C}
@@ -64,9 +57,9 @@ function ttn_svd(
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
   # traverse tree outwards from root vertex
-  vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
+  vs = _default_vertex_ordering(sites,root_vertex)
   # ToDo: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
-  es = reverse(reverse.(post_order_dfs_edges(sites, root_vertex)))                          # store edges in fixed ordering relative to root
+  es = _default_edge_ordering(sites,root_vertex)                          # store edges in fixed ordering relative to root
   # some things to keep track of
   degrees = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
   Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in es)                                    # link isometries for SVD compression of TTN
@@ -402,11 +395,29 @@ function computeSiteProd(sites::IndsNetwork{V,<:Index}, ops::Prod{Op})::ITensor 
   return T
 end
 
+function _default_vertex_ordering(g::AbstractGraph,root_vertex)
+  return reverse(post_order_dfs_vertices(g, root_vertex))
+end
+
+function _default_edge_ordering(g::AbstractGraph,root_vertex)
+  return reverse(reverse.(post_order_dfs_edges(g, root_vertex)))
+end
+
 # This is almost an exact copy of ITensors/src/opsum_to_mpo_generic:sorteachterm except for the site ordering being
 # given via find_index_in_tree
 # changed `isless_site` to use tree vertex ordering relative to root
 function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) where {V}
+  println("in sort")
   os = copy(os)
+  ordering = _default_vertex_ordering(sites,root_vertex)
+  site2pos=Dict(zip(ordering,1:length(ordering)))
+  # linear ordering of vertices in tree graph relative to chosen root, chosen outward from root
+  function find_index_in_tree(site, g::AbstractGraph, root_vertex)
+    return site2pos[site]
+  end
+  function find_index_in_tree(o::Op, g::AbstractGraph, root_vertex)
+    return find_index_in_tree(ITensors.site(o), g, root_vertex)
+  end
   findpos(op::Op) = find_index_in_tree(op, sites, root_vertex)
   isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
   N = nv(sites)
@@ -468,6 +479,7 @@ function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) 
     t *= ITensors.parity_sign(perm)
     ITensors.terms(os)[n] = t
   end
+  println("out sort")
   return os
 end
 
@@ -490,10 +502,10 @@ function TTN(
   is_leaf(sites, root_vertex) || error("Tree root must be a leaf vertex.")
 
   os = deepcopy(os)
-  os = sorteachterm(os, sites, root_vertex)
-  os = ITensorMPS.sortmergeterms(os) # not exported
+  @time os = sorteachterm(os, sites, root_vertex)
+  @time os = ITensorMPS.sortmergeterms(os) # not exported
   if algorithm == "svd"
-    T = ttn_svd(os, sites, root_vertex; kwargs...)
+    @time T = ttn_svd(os, sites, root_vertex; kwargs...)
   else
     error("Currently only SVD is supported as TTN constructor backend.")
   end
