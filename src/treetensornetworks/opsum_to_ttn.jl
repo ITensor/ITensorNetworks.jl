@@ -34,12 +34,25 @@ using StaticArrays: MVector
 
 # determine 'support' of product operator on tree graph
 function span(t::Scaled{C,Prod{Op}}, g::AbstractGraph) where {C}
-  spn = eltype(g)[]
+  spn = Set{eltype(g)}()
   nterms = length(t)
-  for i in 1:nterms, j in i:nterms
-    path = vertex_path(g, ITensors.site(t[i]), ITensors.site(t[j]))
+  nterms == 1 && return [ITensors.site(t[1])]
+  #sites=[ITensors.site(t[i]) for i in 1:nterms]
+  # ToDo: figure out better implementation, maybe via steiner_tree
+  
+  #steiner_spn=ITensorNetworks.NamedGraphs.steiner_tree(g,sites)
+  for i in 1:nterms, j in i+1:nterms
+    path = Set(vertex_path(g, ITensors.site(t[i]), ITensors.site(t[j])))
     spn = union(spn, path)
   end
+  #nspn = eltype(g)[]
+  #for i in 1:nterms, j in i:nterms
+  #  path = vertex_path(g, ITensors.site(t[i]), ITensors.site(t[j]))
+  #  nspn = union(spn, path)
+  #end
+  #@assert nspn==spn
+  #@show vertices(steiner_spn), spn
+  #@assert issetequal(vertices(steiner_spn),spn)
   return spn
 end
 
@@ -115,6 +128,8 @@ function ttn_svd(
   for v in vs
     is_internal[v] = isempty(sites[v])
     if isempty(sites[v])
+      # FIXME: This logic only works for trivial flux, breaks for nonzero flux
+      # ToDo: add assert or fix and add test!
       sites[v] = [Index(Hflux => 1)]
     end
   end
@@ -124,113 +139,216 @@ function ttn_svd(
   site_coef_done = Prod{Op}[] # list of terms for which the coefficient has been added to a site factor
   # temporary symbolic representation of TTN Hamiltonian
   tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
-
+  #ToDo: precompute span of each term and store
+  # compute span of each term
+  spans=Dict{eltype(os),Set{vertextype_sites}}()
+  @time "span" begin
+  for term in os
+    spans[term]=span(term,sites)
+  end
+  end
   # build compressed finite state machine representation
-  for v in vs
-    # for every vertex, find all edges that contain this vertex
-    edges = filter(e -> dst(e) == v || src(e) == v, es)
-    # use the corresponding ordering as index order for tensor elements at this site
-    dim_in = findfirst(e -> dst(e) == v, edges)
-    edge_in = (isnothing(dim_in) ? [] : edges[dim_in])
-    dims_out = findall(e -> src(e) == v, edges)
-    edges_out = edges[dims_out]
+  @time "first" begin
+    for v in vs
+      #copy(sites)
+      _g=deepcopy(ITensorNetworks.underlying_graph(sites))
+      NamedGraphs.rem_vertex!(_g,v)
+      subgraphs=NamedGraphs.connected_components(_g)
+      # for every vertex, find all edges that contain this vertex
+      # ToDo: use neighborhood instead of going through all edges
+      #       slight complication is to preserve directionality of edge?
+      alledges=es
+      edges=edgetype_sites[]
+      edge_ordering=Int[]
 
-    # sanity check, leaves only have single incoming or outgoing edge
-    @assert !isempty(dims_out) || !isnothing(dim_in)
-    (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf(sites, v)
-
-    for term in os
-      # loop over OpSum and pick out terms that act on current vertex
-      crosses_vertex(term, sites, v) || continue
-
-      # filter out factors that come in from the direction of the incoming edge
-      incoming = filter(
-        t -> edge_in ∈ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
-      )
-      # also store all non-incoming factors in standard order, used for channel merging
-      not_incoming = filter(
-        t -> edge_in ∉ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
-      )
-      # filter out factor that acts on current vertex
-      onsite = filter(t -> (ITensors.site(t) == v), ITensors.terms(term))
-      # for every outgoing edge, filter out factors that go out along that edge
-      outgoing = Dict(
-        e => filter(t -> e ∈ edge_path(sites, v, ITensors.site(t)), ITensors.terms(term))
-        for e in edges_out
-      )
-
-      # compute QNs
-      incoming_qn = calc_qn(incoming)
-      not_incoming_qn = calc_qn(not_incoming)
-      outgoing_qns = Dict(e => calc_qn(outgoing[e]) for e in edges_out)
-      site_qn = calc_qn(onsite)
-
-      # initialize QNArrayElement indices and quantum numbers 
-      T_inds = MVector{degrees[v]}(fill(-1, degrees[v]))
-      T_qns = MVector{degrees[v]}(fill(QN(), degrees[v]))
-      # initialize ArrayElement indices for inbond_coefs
-      bond_row = -1
-      bond_col = -1
-      if !isempty(incoming)
-        # get the correct map from edge=>QN to term and channel
-        # this checks if term exists on edge=>QN ( otherwise insert it) and returns it's index
-        coutmap = get!(outmaps, edge_in => not_incoming_qn, Dict{Vector{Op},Int}())
-        cinmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
-
-        bond_row = ITensorMPS.posInLink!(cinmap, incoming)
-        bond_col = ITensorMPS.posInLink!(coutmap, not_incoming) # get incoming channel
-        bond_coef = convert(coefficient_type, ITensors.coefficient(term))
-        q_inbond_coefs = get!(
-          inbond_coefs[edge_in], incoming_qn, ITensorMPS.MatElem{coefficient_type}[]
-        )
-        push!(q_inbond_coefs, ITensorMPS.MatElem(bond_row, bond_col, bond_coef))
-        T_inds[dim_in] = bond_col
-        T_qns[dim_in] = -incoming_qn
-      end
-      for dout in dims_out
-        coutmap = get!(
-          outmaps, edges[dout] => outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
-        )
-        T_inds[dout] = ITensorMPS.posInLink!(coutmap, outgoing[edges[dout]]) # add outgoing channel
-        T_qns[dout] = outgoing_qns[edges[dout]]
-      end
-      # if term starts at this site, add its coefficient as a site factor
-      site_coef = one(coefficient_type)
-      if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
-        ITensors.argument(term) ∉ site_coef_done
-        site_coef = ITensors.coefficient(term)
-        site_coef = convert(coefficient_type, site_coef) # required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
-        push!(site_coef_done, ITensors.argument(term))
-      end
-      # add onsite identity for interactions passing through vertex
-      if isempty(onsite)
-        if !ITensors.using_auto_fermion() && isfermionic(incoming, sites)
-          error("No verified fermion support for automatic TTN constructor!")
+      for other_v in NamedGraphs.neighbors(sites,v)
+        e=edgetype_sites(v,other_v)
+        if e in es
+          push!(edges,e)
+          push!(edge_ordering, findfirst(isequal(e),es))
         else
-          push!(onsite, Op("Id", v))
+          @assert reverse(e) in es
+          push!(edges,reverse(e))
+          push!(edge_ordering,findfirst(isequal(reverse(e)),es))
         end
       end
-      # save indices and value of symbolic tensor entry
-      el = QNArrElem(T_qns, T_inds, site_coef * Prod(onsite))
+      edges=edges[sortperm(edge_ordering)]
+      #edges=sort(edges,by=index(es))
+      #ref_edges = filter(e -> dst(e) == v || src(e) == v, es)
+      #@assert issetequal(edges,ref_edges)
+      # use the corresponding ordering as index order for tensor elements at this site
+      dim_in = findfirst(e -> dst(e) == v, edges)
+      edge_in = (isnothing(dim_in) ? [] : edges[dim_in])
+      dims_out = findall(e -> src(e) == v, edges)
+      edges_out = edges[dims_out]
+      if !(typeof(edge_in)<:Vector)
+        v_in=only(setdiff([src(edge_in),dst(edge_in)],[v,]))
+      end
+      v_outs=vertextype_sites[]
+      for e_out in edges_out
+        push!(v_outs,only(setdiff([src(e_out),dst(e_out)],[v,])))
+      end
+      in_graphs=[]
+      out_graphs=[]
+      which_edges=edgetype_sites[]
+      _vs=vertextype_sites[]
+      for subgraph in subgraphs
+        is_incoming=false
+        typeof(edge_in)<:Vector || (is_incoming = v_in in subgraph)
+        if !is_incoming
+          
+          for i in eachindex(v_outs)
+            if v_outs[i] in subgraph
+              _e = edges_out[i]
+              break
+            end
+          end
+        else
+          _e=edge_in
+        end
+        append!(_vs,subgraph)
+        append!(which_edges,fill(_e,length(subgraph)))
+      end
+      
+      which_subtree=Dict{vertextype_sites,edgetype_sites}(zip(_vs,which_edges))
+      
+      # sanity check, leaves only have single incoming or outgoing edge
+      @assert !isempty(dims_out) || !isnothing(dim_in)
+      (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf(sites, v)
+      
+      for term in os
+        # loop over OpSum and pick out terms that act on current vertex
+        v in spans[term] || continue
+        #crosses_vertex(term, sites, v) || continue
+        
+        # filter out factors that come in from the direction of the incoming edge
+        # ToDo: edge_path could compute over spanning tree of term instead of full graph
+        #       not sure if this affects the performance of edge_path 
+        # ToDo: possibly precompute edge_path once for all entrie in term
+        # and reuse in each of the calls
+        #@show term
+        #@show v
+        #edge_paths=map(t->edge_path(sites, ITensors.site(t), v),ITensors.terms(term))
+        #in principle converting to set should be faster since O(1) access
+        #edge_paths=map(t->Set(edge_path(sites, ITensors.site(t), v)),ITensors.terms(term))
+        
+        #@show  typeof(edge_paths)
+        #for i in 1:length(ITensors.terms(term))
+        #  @show i,ITensors.terms(term)[i]
+        #end
+        factors=ITensors.terms(term)
+        onsite = filter(t -> (ITensors.site(t) == v), factors)
+        not_onsite_factors=setdiff(factors,onsite)
+        #incoming= ITensors.terms(term)[map(_edges -> edge_in in _edges,edge_paths)]
+        incoming=filter(t->which_subtree[ITensors.site(t)]==edge_in, not_onsite_factors)
+        #@show incoming
+        #@show incoming_alt
+        #@assert incoming==incoming_alt
+        #incoming = filter(
+        #  t -> edge_in ∈ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
+        #)
+        
+        #incoming_alt = ITensors.terms(term)[(in.(edge_in,edge_paths))...]
+        #@show incoming
+        #@show incoming_alt
+        #@assert incoming_alt==collect(incoming)
+        # also store all non-incoming factors in standard order, used for channel merging
+        #show v
+        #not_incoming = ITensors.terms(term)[map(_edges -> edge_in ∉ _edges,edge_paths)]
+        
+        not_incoming = filter(t-> (ITensors.site(t) == v) || which_subtree[ITensors.site(t)]!=edge_in,factors)
+        #not_incoming = filter(
+        #  t -> edge_in ∉ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
+        #)
+        # filter out factor that acts on current vertex
+        
+        
+        # for every outgoing edge, filter out factors that go out along that edge
+        #outgoing = Dict(
+        #  e => filter(t -> e ∈ edge_path(sites, v, ITensors.site(t)), ITensors.terms(term))
+        #  for e in edges_out
+        #)
+        #outgoing = Dict(
+        #    e => ITensors.terms(term)[map(_edges -> e in reverse.(_edges), edge_paths)]
+        #    for e in edges_out
+        #)
+        outgoing = Dict(
+            e => filter(t->which_subtree[ITensors.site(t)]==e,not_onsite_factors)
+            for e in edges_out
+        )
+        #@assert  outgoing==outgoing_alt
+        # compute QNs
+        incoming_qn = calc_qn(incoming)
+        not_incoming_qn = calc_qn(not_incoming)
+        outgoing_qns = Dict(e => calc_qn(outgoing[e]) for e in edges_out)
+        site_qn = calc_qn(onsite)
 
-      push!(tempTTN[v], el)
-    end
+        # initialize QNArrayElement indices and quantum numbers 
+        T_inds = MVector{degrees[v]}(fill(-1, degrees[v]))
+        T_qns = MVector{degrees[v]}(fill(QN(), degrees[v]))
+        # initialize ArrayElement indices for inbond_coefs
+        bond_row = -1
+        bond_col = -1
+        if !isempty(incoming)
+          # get the correct map from edge=>QN to term and channel
+          # this checks if term exists on edge=>QN ( otherwise insert it) and returns it's index
+          coutmap = get!(outmaps, edge_in => not_incoming_qn, Dict{Vector{Op},Int}())
+          cinmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
 
-    ITensorMPS.remove_dups!(tempTTN[v])
-    # manual truncation: isometry on incoming edge
-    if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
-      for (q, mat) in inbond_coefs[edges[dim_in]]
-        M = ITensorMPS.toMatrix(mat)
-        U, S, V = svd(M)
-        P = S .^ 2
-        truncate!(P; maxdim, cutoff, mindim)
-        tdim = length(P)
-        nc = size(M, 2)
-        Vs[edges[dim_in]][q] = Matrix{coefficient_type}(V[1:nc, 1:tdim])
+          bond_row = ITensorMPS.posInLink!(cinmap, incoming)
+          bond_col = ITensorMPS.posInLink!(coutmap, not_incoming) # get incoming channel
+          bond_coef = convert(coefficient_type, ITensors.coefficient(term))
+          q_inbond_coefs = get!(
+            inbond_coefs[edge_in], incoming_qn, ITensorMPS.MatElem{coefficient_type}[]
+          )
+          push!(q_inbond_coefs, ITensorMPS.MatElem(bond_row, bond_col, bond_coef))
+          T_inds[dim_in] = bond_col
+          T_qns[dim_in] = -incoming_qn
+        end
+        for dout in dims_out
+          coutmap = get!(
+            outmaps, edges[dout] => outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
+          )
+          T_inds[dout] = ITensorMPS.posInLink!(coutmap, outgoing[edges[dout]]) # add outgoing channel
+          T_qns[dout] = outgoing_qns[edges[dout]]
+        end
+        # if term starts at this site, add its coefficient as a site factor
+        site_coef = one(coefficient_type)
+        if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
+          ITensors.argument(term) ∉ site_coef_done
+          site_coef = ITensors.coefficient(term)
+          site_coef = convert(coefficient_type, site_coef) # required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
+          push!(site_coef_done, ITensors.argument(term))
+        end
+        # add onsite identity for interactions passing through vertex
+        if isempty(onsite)
+          if !ITensors.using_auto_fermion() && isfermionic(incoming, sites)
+            error("No verified fermion support for automatic TTN constructor!")
+          else
+            push!(onsite, Op("Id", v))
+          end
+        end
+        # save indices and value of symbolic tensor entry
+        el = QNArrElem(T_qns, T_inds, site_coef * Prod(onsite))
+
+        push!(tempTTN[v], el)
+      end
+
+      ITensorMPS.remove_dups!(tempTTN[v])
+      # manual truncation: isometry on incoming edge
+      if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
+        for (q, mat) in inbond_coefs[edges[dim_in]]
+          M = ITensorMPS.toMatrix(mat)
+          U, S, V = svd(M)
+          P = S .^ 2
+          truncate!(P; maxdim, cutoff, mindim)
+          tdim = length(P)
+          nc = size(M, 2)
+          Vs[edges[dim_in]][q] = Matrix{coefficient_type}(V[1:nc, 1:tdim])
+        end
       end
     end
   end
-
   # compress this tempTTN representation into dense form
 
   link_space = Dict{edgetype_sites,Index}()
@@ -256,6 +374,7 @@ function ttn_svd(
 
   for v in vs
     # redo the whole thing like before
+    # ToDo: use neighborhood instead of going through all edges, see above
     edges = filter(e -> dst(e) == v || src(e) == v, es)
     dim_in = findfirst(e -> dst(e) == v, edges)
     dims_out = findall(e -> src(e) == v, edges)
@@ -350,9 +469,10 @@ function ttn_svd(
       if is_internal[v]
         H[v] += iT
       else
-        if hasqns(iT)
-          @assert flux(iT * Op) == Hflux
-        end
+        #ToDo: Remove this assert since it seems to be costly
+        #if hasqns(iT)
+        #  @assert flux(iT * Op) == Hflux
+        #end
         H[v] += (iT * Op)
       end
     end
@@ -433,11 +553,12 @@ end
 function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) where {V}
   println("in sort")
   os = copy(os)
-  ordering = _default_vertex_ordering(sites,root_vertex)
-  site2pos=Dict(zip(ordering,1:length(ordering)))
+
   # linear ordering of vertices in tree graph relative to chosen root, chosen outward from root
+  ordering = _default_vertex_ordering(sites,root_vertex)
+  site_positions=Dict(zip(ordering,1:length(ordering)))
   function find_index_in_tree(site, g::AbstractGraph, root_vertex)
-    return site2pos[site]
+    return site_positions[site]
   end
   function find_index_in_tree(o::Op, g::AbstractGraph, root_vertex)
     return find_index_in_tree(ITensors.site(o), g, root_vertex)
