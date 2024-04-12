@@ -29,9 +29,9 @@ Random.seed!(1234)
       A = randn(eltype, (n, n))
       A = A * A'
       P = ITensor(A, i, j)
-      sqrtP = map_itensor(sqrt, P; ishermitian=true)
-      inv_P = dag(map_itensor(inv, P; ishermitian=true))
-      inv_sqrtP = dag(map_itensor(inv ∘ sqrt, P; ishermitian=true))
+      sqrtP = map_itensor(sqrt, P)
+      inv_P = dag(map_itensor(inv, P))
+      inv_sqrtP = dag(map_itensor(inv ∘ sqrt, P))
 
       sqrtPdag = replaceind(dag(sqrtP), i, i')
       P2 = replaceind(sqrtP * sqrtPdag, i', j)

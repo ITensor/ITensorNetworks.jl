@@ -55,20 +55,17 @@ pinv_diag(it::ITensor) = map_diag(pinv, it)
 pinvsqrt_diag(it::ITensor) = map_diag(pinv ∘ sqrt, it)
 
 function map_itensor(
-  f::Function,
-  A::ITensor,
-  lind=first(inds(A));
-  regularization=nothing,
-  kwargs...,
+  f::Function, A::ITensor, lind=first(inds(A)); regularization=nothing, kwargs...
 )
   USV = svd(A, lind; kwargs...)
   U, S, V, spec, u, v = USV
 
   if !isnothing(regularization)
-    f = s -> f(s + regularization)
+    S = map_diag(s -> f(s + regularization), S)
+  else
+    S = map_diag(s -> f(s), S)
   end
 
-  S = map_diag(s -> f(s), S)
   sqrtDL, δᵤᵥ, sqrtDR = sqrt_decomp(S, u, v)
   sqrtDR = denseblocks(sqrtDR) * denseblocks(δᵤᵥ)
   L, R = U * sqrtDL, V * sqrtDR
