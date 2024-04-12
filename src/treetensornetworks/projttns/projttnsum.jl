@@ -1,4 +1,4 @@
-using ITensors: ITensors, contract
+using ITensors: ITensors, contract, product
 using ITensors.LazyApply: LazyApply, terms
 using NamedGraphs: NamedGraphs, incident_edges
 

@@ -10,7 +10,7 @@ using ITensorNetworks:
   bra_vertex,
   dual_index_map,
   environment,
-  externalinds,
+  flatten_siteinds,
   ket_network,
   ket_vertex,
   operator_network,
@@ -36,7 +36,7 @@ using Random: Random
 
   blf = BilinearFormNetwork(A, ψbra, ψket)
   @test nv(blf) == nv(ψket) + nv(ψbra) + nv(A)
-  @test isempty(externalinds(blf))
+  @test isempty(flatten_siteinds(blf))
 
   @test underlying_graph(ket_network(blf)) == underlying_graph(ψket)
   @test underlying_graph(operator_network(blf)) == underlying_graph(A)
@@ -44,7 +44,7 @@ using Random: Random
 
   qf = QuadraticFormNetwork(A, ψket)
   @test nv(qf) == 2 * nv(ψbra) + nv(A)
-  @test isempty(externalinds(qf))
+  @test isempty(flatten_siteinds(qf))
 
   v = (1, 1)
   new_tensor = randomITensor(inds(ψket[v]))
