@@ -285,9 +285,7 @@ function Base.isapprox(
   x::AbstractTTN,
   y::AbstractTTN;
   atol::Real=0,
-  rtol::Real=Base.rtoldefault(
-    LinearAlgebra.promote_leaf_eltypes(x), LinearAlgebra.promote_leaf_eltypes(y), atol
-  ),
+  rtol::Real=Base.rtoldefault(scalartype(x), scalartype(y), atol),
 )
   d = norm(x - y)
   if isfinite(d)
