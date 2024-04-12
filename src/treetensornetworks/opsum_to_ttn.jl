@@ -15,11 +15,11 @@ using StaticArrays: MVector
 
 # determine 'support' of product operator on tree graph
 function span(t::Scaled{C,Prod{Op}}, g::AbstractGraph) where {C}
-  spn = eltype(g)[]
+  spn = Set{eltype(g)}()
   nterms = length(t)
-  nterms == 1 && return [ITensors.site(t[1])]
+  nterms == 1 && return Set([ITensors.site(t[1])])
   for i in 1:nterms, j in (i + 1):nterms
-    path = vertex_path(g, ITensors.site(t[i]), ITensors.site(t[j]))
+    path = Set(vertex_path(g, ITensors.site(t[i]), ITensors.site(t[j])))
     spn = union(spn, path)
   end
   return spn
@@ -35,7 +35,7 @@ end
 function map_vertices_to_incident_edges(g::AbstractGraph, v, es)
   _g = copy(underlying_graph(g))
   rem_vertex!(_g, v)
-  subgraphs = connected_components(_g)
+  subgraphs = Set.(connected_components(_g))
 
   vs = vertextype(g)[]
   for e in es
@@ -145,7 +145,7 @@ function ttn_svd(
   tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
   #ToDo: precompute span of each term and store
   # compute span of each term
-  spans = Dict{eltype(os),Vector{vertextype_sites}}()
+  spans = Dict{eltype(os),Set{vertextype_sites}}()
   for term in os
     spans[term] = span(term, sites)
   end
