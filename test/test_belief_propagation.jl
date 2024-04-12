@@ -5,11 +5,11 @@ using ITensorNetworks:
   ITensorNetworks,
   BeliefPropagationCache,
   IndsNetwork,
+  ITensorNetwork,
   ⊗,
   apply,
   combine_linkinds,
   contract,
-  contract_inner,
   contract_boundary_mps,
   contraction_sequence,
   environment,
@@ -21,8 +21,8 @@ using ITensorNetworks:
   tensornetwork,
   update,
   update_factor
+using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, randomITensor
 using ITensorNetworks.ModelNetworks: ModelNetworks
-using ITensors: ITensors, ITensor, combiner, dag, inds, op, prime, randomITensor
 using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
 using NamedGraphs: NamedEdge, PartitionVertex, named_comb_tree, named_grid
@@ -30,9 +30,8 @@ using Random: Random
 using SplitApplyCombine: group
 using Test: @test, @testset
 
-ITensors.disable_warn_order()
-
 @testset "belief_propagation" begin
+  ITensors.disable_warn_order()
 
   #First test on an MPS, should be exact
   g_dims = (1, 6)
@@ -48,7 +47,7 @@ ITensors.disable_warn_order()
 
   Oψ = copy(ψ)
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
-  exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
+  exact_sz = inner(Oψ, ψ) / inner(ψ, ψ)
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bpc = update(bpc)
@@ -78,7 +77,7 @@ ITensors.disable_warn_order()
 
   Oψ = copy(ψ)
   Oψ[v] = apply(op("Sz", s[v]), ψ[v])
-  exact_sz = contract_inner(Oψ, ψ) / contract_inner(ψ, ψ)
+  exact_sz = inner(Oψ, ψ) / inner(ψ, ψ)
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bpc = update(bpc)
@@ -88,21 +87,21 @@ ITensors.disable_warn_order()
 
   @test abs.((numerator / denominator) - exact_sz) <= 1e-14
 
-  # # #Now test two-site expec taking on the partition function of the Ising model. Not exact, but close
+  #Now test two-site expec taking on the partition function of the Ising model. Not exact, but close
   g_dims = (3, 4)
   g = named_grid(g_dims)
   s = IndsNetwork(g; link_space=2)
-  beta = 0.2
+  beta, h = 0.3, 0.5
   vs = [(2, 3), (3, 3)]
-  ψψ = ModelNetworks.ising_network(s, beta)
-  ψOψ = ModelNetworks.ising_network(s, beta; szverts=vs)
+  ψψ = ModelNetworks.ising_network(s, beta; h)
+  ψOψ = ModelNetworks.ising_network(s, beta; h, szverts=vs)
 
   contract_seq = contraction_sequence(ψψ)
   actual_szsz =
     contract(ψOψ; sequence=contract_seq)[] / contract(ψψ; sequence=contract_seq)[]
 
-  bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
-  bpc = update(bpc; maxiter=20)
+  bpc = BeliefPropagationCache(ψψ, group(v -> v, vertices(ψψ)))
+  bpc = update(bpc; maxiter=20, verbose=true, tol=1e-5)
 
   env_tensors = environment(bpc, vs)
   numerator = contract(vcat(env_tensors, ITensor[ψOψ[v] for v in vs]))[]
@@ -110,7 +109,7 @@ ITensors.disable_warn_order()
 
   @test abs.((numerator / denominator) - actual_szsz) <= 0.05
 
-  # # #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
+  #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
   g_dims = (3, 3)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
@@ -133,7 +132,7 @@ ITensors.disable_warn_order()
   @test size(rdm) == (2^length(vs), 2^length(vs))
   @test all(>=(0), real(eigs)) && all(==(0), imag(eigs))
 
-  # # #Test more advanced block BP with MPS message tensors on a grid 
+  #Test more advanced block BP with MPS message tensors on a grid 
   g_dims = (4, 3)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
@@ -151,10 +150,10 @@ ITensors.disable_warn_order()
   ψOψ = combine_linkinds(ψOψ, combiners)
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+  message_update_func(tns; kwargs...) =
+    Vector{ITensor}(first(contract(ITensorNetwork(tns); alg="density_matrix", kwargs...)))
   bpc = update(
-    bpc;
-    message_update=ITensorNetworks.contract_density_matrix,
-    message_update_kwargs=(; cutoff=1e-6, maxdim=4),
+    bpc; message_update=message_update_func, message_update_kwargs=(; cutoff=1e-6, maxdim=4)
   )
 
   env_tensors = environment(bpc, [v])

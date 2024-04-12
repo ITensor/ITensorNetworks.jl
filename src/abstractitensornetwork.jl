@@ -735,66 +735,22 @@ function flatten_networks(
   return flatten_networks(flatten_networks(tn1, tn2; kwargs...), tn3, tn_tail...; kwargs...)
 end
 
-#Ideally this will dispatch to inner_network but this is a temporary fast version for now
-function norm_network(tn::AbstractITensorNetwork)
-  tnbra = rename_vertices(v -> (v, 1), data_graph(tn))
-  tndag = copy(tn)
-  for v in vertices(tndag)
-    setindex_preserve_graph!(tndag, dag(tndag[v]), v)
-  end
-  tnket = rename_vertices(v -> (v, 2), data_graph(prime(tndag; sites=[])))
-  # TODO: Use a different constructor here?
-  tntn = _ITensorNetwork(union(tnbra, tnket))
-  for v in vertices(tn)
-    if !isempty(commoninds(tntn[(v, 1)], tntn[(v, 2)]))
-      add_edge!(tntn, (v, 1) => (v, 2))
-    end
-  end
-  return tntn
+function inner_network(x::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...)
+  return BilinearFormNetwork(x, y; kwargs...)
 end
 
-# TODO: Use or replace with `flatten_networks`
 function inner_network(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork;
-  map_bra_linkinds=sim,
-  combine_linkinds=false,
-  flatten=combine_linkinds,
-  kwargs...,
+  x::AbstractITensorNetwork, A::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...
 )
-  @assert issetequal(vertices(tn1), vertices(tn2))
-  tn1 = map_bra_linkinds(tn1; sites=[])
-  inner_net = ⊗(dag(tn1), tn2; kwargs...)
-  if flatten
-    for v in vertices(tn1)
-      inner_net = contract(inner_net, (v, 2) => (v, 1); merged_vertex=v)
-    end
-  end
-  if combine_linkinds
-    inner_net = ITensorNetworks.combine_linkinds(inner_net)
-  end
-  return inner_net
+  return BilinearFormNetwork(A, x, y; kwargs...)
 end
 
-# TODO: Rename `inner`.
-function contract_inner(
-  ϕ::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  sequence=nothing,
-  contraction_sequence_kwargs=(;),
-)
-  tn = inner_network(ϕ, ψ; combine_linkinds=true)
-  if isnothing(sequence)
-    sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
-  end
-  return contract(tn; sequence)[]
+# TODO: We should make this use the QuadraticFormNetwork constructor here. 
+# Parts of the code (tests relying on norm_sqr being two layer and the gauging code
+#  which relies on specific message tensors) currently would break in that case so we need to resolve
+function norm_sqr_network(ψ::AbstractITensorNetwork)
+  return disjoint_union("bra" => dag(prime(ψ; sites=[])), "ket" => ψ)
 end
-
-# TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
-# or `norm_sqr` to match `LinearAlgebra.norm_sqr`
-norm_sqr(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)
-
-norm_sqr_network(ψ::AbstractITensorNetwork; kwargs...) = inner_network(ψ, ψ; kwargs...)
 
 #
 # Printing
@@ -942,7 +898,7 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 
   #Create vertices of tn12 as direct sum of tn1[v] and tn2[v]. Work out the matching indices by matching edges. Make index tags those of tn1[v]
   for v in vertices(tn1)
-    @assert siteinds(tn1, v) == siteinds(tn2, v)
+    @assert issetequal(siteinds(tn1, v), siteinds(tn2, v))
 
     e1_v = filter(x -> src(x) == v || dst(x) == v, edges_tn1)
     e2_v = filter(x -> src(x) == v || dst(x) == v, edges_tn2)
@@ -966,3 +922,5 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 end
 
 Base.:+(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)
+
+ITensors.hasqns(tn::AbstractITensorNetwork) = any(v -> hasqns(tn[v]), vertices(tn))

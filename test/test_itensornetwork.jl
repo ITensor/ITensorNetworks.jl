@@ -26,6 +26,7 @@ using ITensors:
   hascommoninds,
   hasinds,
   inds,
+  inner,
   itensor,
   onehot,
   order,
@@ -44,6 +45,9 @@ using ITensorNetworks:
   inner_network,
   internalinds,
   linkinds,
+  neighbor_itensors,
+  norm_sqr,
+  norm_sqr_network,
   orthogonalize,
   random_tensornetwork,
   siteinds,
@@ -136,10 +140,10 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
     ψ = ITensorNetwork(v -> "↑", s)
-    tn = inner_network(ψ, ψ)
-    tn_2 = contract(tn, ((1, 2), 2) => ((1, 2), 1))
-    @test !has_vertex(tn_2, ((1, 2), 2))
-    @test tn_2[((1, 2), 1)] ≈ tn[((1, 2), 2)] * tn[((1, 2), 1)]
+    tn = norm_sqr_network(ψ)
+    tn_2 = contract(tn, ((1, 2), "ket") => ((1, 2), "bra"))
+    @test !has_vertex(tn_2, ((1, 2), "ket"))
+    @test tn_2[((1, 2), "bra")] ≈ tn[((1, 2), "ket")] * tn[((1, 2), "bra")]
   end
 
   @testset "Remove edge (regression test for issue #5)" begin
@@ -148,15 +152,15 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     s = siteinds("S=1/2", g)
     ψ = ITensorNetwork(v -> "↑", s)
     rem_vertex!(ψ, (1, 2))
-    tn = inner_network(ψ, ψ)
-    @test !has_vertex(tn, ((1, 2), 1))
-    @test !has_vertex(tn, ((1, 2), 2))
-    @test has_vertex(tn, ((1, 1), 1))
-    @test has_vertex(tn, ((1, 1), 2))
-    @test has_vertex(tn, ((2, 1), 1))
-    @test has_vertex(tn, ((2, 1), 2))
-    @test has_vertex(tn, ((2, 2), 1))
-    @test has_vertex(tn, ((2, 2), 2))
+    tn = norm_sqr_network(ψ)
+    @test !has_vertex(tn, ((1, 2), "bra"))
+    @test !has_vertex(tn, ((1, 2), "ket"))
+    @test has_vertex(tn, ((1, 1), "bra"))
+    @test has_vertex(tn, ((1, 1), "ket"))
+    @test has_vertex(tn, ((2, 1), "bra"))
+    @test has_vertex(tn, ((2, 1), "ket"))
+    @test has_vertex(tn, ((2, 2), "bra"))
+    @test has_vertex(tn, ((2, 2), "ket"))
   end
 
   @testset "Custom element type (eltype=$elt)" for elt in elts,
@@ -263,26 +267,26 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 
   @testset "orthogonalize" begin
     tn = random_tensornetwork(named_grid(4); link_space=2)
-    Z = contract(inner_network(tn, tn))[]
+    Z = norm_sqr(tn)
 
     tn_ortho = factorize(tn, 4 => 3)
 
     # TODO: Error here in arranging the edges. Arrange by hash?
-    Z̃ = contract(inner_network(tn_ortho, tn_ortho))[]
+    Z̃ = norm_sqr(tn_ortho)
     @test nv(tn_ortho) == 5
     @test nv(tn) == 4
     @test Z ≈ Z̃
 
     tn_ortho = orthogonalize(tn, 4 => 3)
-    Z̃ = contract(inner_network(tn_ortho, tn_ortho))[]
+    Z̃ = norm_sqr(tn_ortho)
     @test nv(tn_ortho) == 4
     @test nv(tn) == 4
     @test Z ≈ Z̃
 
     tn_ortho = orthogonalize(tn, 1)
-    Z̃ = contract(inner_network(tn_ortho, tn_ortho))[]
+    Z̃ = norm_sqr(tn_ortho)
     @test Z ≈ Z̃
-    Z̃ = contract(inner_network(tn_ortho, tn))[]
+    Z̃ = inner(tn_ortho, tn)
     @test Z ≈ Z̃
   end
 
@@ -319,7 +323,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     s = siteinds("S=1/2", g)
     ψ = ITensorNetwork(s; link_space=2)
 
-    nt = ITensorNetworks.neighbor_itensors(ψ, (1, 1))
+    nt = neighbor_itensors(ψ, (1, 1))
     @test length(nt) == 2
     @test all(map(hascommoninds(ψ[1, 1]), nt))
 

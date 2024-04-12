@@ -164,10 +164,14 @@ function generic_state(a::AbstractArray, inds::Vector)
 end
 function generic_state(x::Op, inds::NamedTuple)
   # TODO: Figure out what to do if there is more than one site.
-  @assert length(inds.siteinds) == 2
-  i = inds.siteinds[findfirst(i -> plev(i) == 0, inds.siteinds)]
-  @assert i' ∈ inds.siteinds
-  site_tensors = [op(x.which_op, i)]
+  if !isempty(inds.siteinds)
+    @assert length(inds.siteinds) == 2
+    i = inds.siteinds[findfirst(i -> plev(i) == 0, inds.siteinds)]
+    @assert i' ∈ inds.siteinds
+    site_tensors = [op(x.which_op, i)]
+  else
+    site_tensors = []
+  end
   link_tensors = [[onehot(i => 1) for i in inds.linkinds[e]] for e in keys(inds.linkinds)]
   return contract(reduce(vcat, link_tensors; init=site_tensors))
 end
