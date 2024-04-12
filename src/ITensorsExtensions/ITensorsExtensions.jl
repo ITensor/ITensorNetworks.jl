@@ -12,7 +12,9 @@ using ITensors:
   map_diag,
   noncommonind,
   noprime,
+  replaceind,
   replaceinds,
+  sim,
   space,
   sqrt_decomp
 using ITensors.NDTensors:
@@ -53,15 +55,24 @@ pinv_diag(it::ITensor) = map_diag(pinv, it)
 pinvsqrt_diag(it::ITensor) = map_diag(pinv ∘ sqrt, it)
 
 function map_itensor(
-  f::Function, A::ITensor, lind=first(inds(A)); regularization=nothing, kwargs...
+  f::Function, A::ITensor, linds=Index[first(inds(A))]; regularization=nothing, kwargs...
 )
-  USV = svd(A, lind; kwargs...)
-  U, S, V, spec, u, v = USV
-  S = map_diag(s -> f(s + regularization), S)
-  sqrtDL, δᵤᵥ, sqrtDR = sqrt_decomp(S, u, v)
-  sqrtDR = denseblocks(sqrtDR) * denseblocks(δᵤᵥ)
-  L, R = U * sqrtDL, V * sqrtDR
-  return L * R
+  rinds = setdiff(inds(A), linds)
+
+  D, U = eigen(A, linds, rinds; kwargs...)
+  ul, ur = noncommonind(D, U), commonind(D, U)
+  ulnew = sim(noprime(ul))
+
+  Ur = dag(U)
+  Ul = replaceinds(U, (rinds..., ur), (linds..., ulnew))
+
+  D_mapped = map_diag(s -> f(s + regularization), D)
+  D_mapped = replaceind(D_mapped, ul, ulnew)
+
+  sqrtD_mapped_L, δᵤᵥ, sqrtD_mapped_R = sqrt_decomp(D_mapped, ulnew, ur)
+  sqrtD_mapped_R = denseblocks(sqrtD_mapped_R) * denseblocks(δᵤᵥ)
+
+  return Ul * sqrtD_mapped_L * sqrtD_mapped_R * Ur
 end
 
 # Analagous to `denseblocks`.
