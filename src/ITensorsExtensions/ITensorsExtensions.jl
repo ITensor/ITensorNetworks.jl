@@ -58,7 +58,6 @@ function map_itensor(
   f::Function,
   A::ITensor,
   lind=first(inds(A));
-  ishermitian=false,
   regularization=nothing,
   kwargs...,
 )
