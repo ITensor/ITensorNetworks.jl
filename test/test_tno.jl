@@ -35,10 +35,12 @@ using Test: @test, @testset
   ψ = random_tensornetwork(s; link_space=2)
 
   ψ_gated = copy(ψ)
+
   for gate in gates
     ψ_gated = apply(gate, ψ_gated)
   end
   ψ_tnod = copy(ψ)
+
   for tno in tnos
     ψ_tnod = flatten_networks(ψ_tnod, tno)
     for v in vertices(ψ_tnod)
@@ -54,6 +56,7 @@ using Test: @test, @testset
   z1 = contract_inner(ψ_gated, ψ_gated)
   z2 = contract_inner(ψ_tnod, ψ_tnod)
   z3 = contract_inner(ψ_tno, ψ_tno)
+
   f12 = contract_inner(ψ_tnod, ψ_gated) / sqrt(z1 * z2)
   f13 = contract_inner(ψ_tno, ψ_gated) / sqrt(z1 * z3)
   f23 = contract_inner(ψ_tno, ψ_tnod) / sqrt(z2 * z3)

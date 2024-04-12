@@ -116,11 +116,12 @@ end
 # TODO: broadcasting
 
 function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
-  tn = ITensorNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
+  # TODO: Use a different constructor call here?
+  tn = _ITensorNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
   # Add any new edges that are introduced during the union
   for v1 in vertices(tn1)
     for v2 in vertices(tn2)
-      if hascommoninds(tn[v1], tn[v2])
+      if hascommoninds(tn, v1 => v2)
         add_edge!(tn, v1 => v2)
       end
     end
@@ -129,7 +130,8 @@ function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kw
 end
 
 function NamedGraphs.rename_vertices(f::Function, tn::AbstractITensorNetwork)
-  return ITensorNetwork(rename_vertices(f, data_graph(tn)))
+  # TODO: Use a different constructor call here?
+  return _ITensorNetwork(rename_vertices(f, data_graph(tn)))
 end
 
 #
@@ -172,6 +174,8 @@ function Base.Vector{ITensor}(tn::AbstractITensorNetwork)
 end
 
 # Convenience wrapper
+# TODO: Delete this and just use `Vector{ITensor}`, or maybe
+# it should output a dictionary or be called `eachtensor`?
 itensors(tn::AbstractITensorNetwork) = Vector{ITensor}(tn)
 
 #
@@ -182,10 +186,13 @@ function LinearAlgebra.promote_leaf_eltypes(tn::AbstractITensorNetwork)
   return LinearAlgebra.promote_leaf_eltypes(itensors(tn))
 end
 
-function trivial_space(tn::AbstractITensorNetwork)
-  return trivial_space(tn[first(vertices(tn))])
+function promote_indtypeof(tn::AbstractITensorNetwork)
+  return mapreduce(promote_indtype, vertices(tn)) do v
+    return indtype(tn[v])
+  end
 end
 
+# TODO: Delete in favor of `scalartype`.
 function ITensors.promote_itensor_eltype(tn::AbstractITensorNetwork)
   return LinearAlgebra.promote_leaf_eltypes(tn)
 end
@@ -464,7 +471,6 @@ function NDTensors.contract(
   neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
-
   # The following is equivalent to:
   #
   # tn[dst(edge)] = new_itensor
@@ -480,6 +486,7 @@ function NDTensors.contract(
   for n_dst in neighbors_dst
     add_edge!(tn, merged_vertex => n_dst)
   end
+
   setindex_preserve_graph!(tn, new_itensor, merged_vertex)
 
   return tn
@@ -736,7 +743,8 @@ function norm_network(tn::AbstractITensorNetwork)
     setindex_preserve_graph!(tndag, dag(tndag[v]), v)
   end
   tnket = rename_vertices(v -> (v, 2), data_graph(prime(tndag; sites=[])))
-  tntn = ITensorNetwork(union(tnbra, tnket))
+  # TODO: Use a different constructor here?
+  tntn = _ITensorNetwork(union(tnbra, tnket))
   for v in vertices(tn)
     if !isempty(commoninds(tntn[(v, 1)], tntn[(v, 2)]))
       add_edge!(tntn, (v, 1) => (v, 2))
@@ -809,6 +817,9 @@ end
 
 Base.show(io::IO, graph::AbstractITensorNetwork) = show(io, MIME"text/plain"(), graph)
 
+# TODO: Move to an `ITensorNetworksVisualizationInterfaceExt`
+# package extension (and define a `VisualizationInterface` package
+# based on `ITensorVisualizationCore`.).
 function ITensorVisualizationCore.visualize(
   tn::AbstractITensorNetwork,
   args...;
@@ -865,13 +876,13 @@ function site_combiners(tn::AbstractITensorNetwork{V}) where {V}
   return Cs
 end
 
-function insert_missing_internal_inds(
-  tn::AbstractITensorNetwork, edges; internal_inds_space=trivial_space(tn)
+function insert_linkinds(
+  tn::AbstractITensorNetwork, edges=edges(tn); link_space=trivial_space(tn)
 )
   tn = copy(tn)
   for e in edges
-    if !hascommoninds(tn[src(e)], tn[dst(e)])
-      iₑ = Index(internal_inds_space, edge_tag(e))
+    if !hascommoninds(tn, e)
+      iₑ = Index(link_space, edge_tag(e))
       X = onehot(iₑ => 1)
       tn[src(e)] *= X
       tn[dst(e)] *= dag(X)
@@ -880,12 +891,10 @@ function insert_missing_internal_inds(
   return tn
 end
 
-function insert_missing_internal_inds(
-  tn::AbstractITensorNetwork; internal_inds_space=trivial_space(tn)
-)
-  return insert_internal_inds(tn, edges(tn); internal_inds_space)
-end
-
+# TODO: What to output? Could be an `IndsNetwork`. Or maybe
+# that would be a different function `commonindsnetwork`.
+# Even in that case, this could output a `Dictionary`
+# from the edges to the common inds on that edge.
 function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   inds = Index[]
   for v1 in vertices(tn1)
@@ -911,8 +920,8 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 
   if !issetequal(edges_tn1, edges_tn2)
     new_edges = union(edges_tn1, edges_tn2)
-    tn1 = insert_missing_internal_inds(tn1, new_edges)
-    tn2 = insert_missing_internal_inds(tn2, new_edges)
+    tn1 = insert_linkinds(tn1, new_edges)
+    tn2 = insert_linkinds(tn2, new_edges)
   end
 
   edges_tn1, edges_tn2 = edges(tn1), edges(tn2)

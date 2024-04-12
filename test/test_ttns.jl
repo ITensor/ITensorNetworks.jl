@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using DataGraphs: vertex_data
 using Graphs: vertices
-using ITensorNetworks: ttn, contract, ortho_center, siteinds
+using ITensorNetworks: ttn, contract, ortho_region, siteinds
 using ITensors: @disable_warn_order, randomITensor
 using LinearAlgebra: norm
 using NamedGraphs: named_comb_tree
@@ -25,7 +25,7 @@ using Test: @test, @testset
     S = randomITensor(vertex_data(is)...)
     # dense TTN constructor from IndsNetwork
     @disable_warn_order s1 = ttn(S, is; cutoff)
-    root_vertex = only(ortho_center(s1))
+    root_vertex = only(ortho_region(s1))
     @disable_warn_order begin
       S1 = contract(s1, root_vertex)
     end

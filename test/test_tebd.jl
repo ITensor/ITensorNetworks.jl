@@ -42,7 +42,7 @@ ITensors.disable_warn_order()
   # Sequence for contracting expectation values
   inner_sequence = reduce((x, y) -> [x, y], vec(Tuple.(CartesianIndices(dims))))
 
-  ψ_init = ITensorNetwork(s, v -> "↑")
+  ψ_init = ITensorNetwork(v -> "↑", s)
   E0 = expect(ℋ, ψ_init; sequence=inner_sequence)
   ψ = tebd(
     group_terms(ℋ, g),
