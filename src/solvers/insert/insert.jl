@@ -2,7 +2,7 @@
 # are essentially inverse operations, adapted for different kinds of 
 # algorithms and networks.
 
-# sort of 2-site replacebond!; TODO: use dense TTN constructor instead
+# TODO: use dense TTN constructor to make this more general.
 function default_inserter(
   state::AbstractTTN,
   phi::ITensor,
@@ -27,9 +27,8 @@ function default_inserter(
     v = ortho_vert
   end
   state[v] = phi
-  state = set_ortho_center(state, [v])
-  @assert isortho(state) && only(ortho_center(state)) == v
-  normalize && (state[v] ./= norm(state[v]))
+  state = set_ortho_region(state, [v])
+  normalize && (state[v] /= norm(state[v]))
   return state, spec
 end
 
@@ -46,6 +45,6 @@ function default_inserter(
 )
   v = only(setdiff(support(region), [ortho]))
   state[v] *= phi
-  state = set_ortho_center(state, [v])
+  state = set_ortho_region(state, [v])
   return state, nothing
 end

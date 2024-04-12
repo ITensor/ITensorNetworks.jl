@@ -2,10 +2,10 @@ using DataGraphs: DataGraphs, DataGraph, IsUnderlyingGraph, map_data, vertex_dat
 using Dictionaries: AbstractDictionary, Indices
 using Graphs: Graphs
 using Graphs.SimpleGraphs: AbstractSimpleGraph
-# using LinearAlgebra: I # Not sure if this is needed
 using ITensors: Index, dag
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph, vertextype
+using NamedGraphs:
+  NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph, named_path_graph, vertextype
 
 struct IndsNetwork{V,I} <: AbstractIndsNetwork{V,I}
   data_graph::DataGraph{V,Vector{I},Vector{I},NamedGraph{V},NamedEdge{V}}

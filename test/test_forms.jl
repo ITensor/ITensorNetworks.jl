@@ -8,7 +8,6 @@ using ITensorNetworks:
   QuadraticFormNetwork,
   bra_network,
   bra_vertex,
-  delta_network,
   dual_index_map,
   environment,
   externalinds,
@@ -27,13 +26,12 @@ using Random: Random
 
 @testset "FormNetworks" begin
   g = named_grid((1, 4))
-  s_ket = siteinds("S=1/2", g)
-  s_bra = prime(s_ket; links=[])
-  s_operator = union_all_inds(s_bra, s_ket)
+  s = siteinds("S=1/2", g)
+  s_operator = union_all_inds(s, prime(s))
   χ, D = 2, 3
   Random.seed!(1234)
-  ψket = random_tensornetwork(s_ket; link_space=χ)
-  ψbra = random_tensornetwork(s_bra; link_space=χ)
+  ψket = random_tensornetwork(s; link_space=χ)
+  ψbra = random_tensornetwork(s; link_space=χ)
   A = random_tensornetwork(s_operator; link_space=D)
 
   blf = BilinearFormNetwork(A, ψbra, ψket)
