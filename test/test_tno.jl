@@ -34,10 +34,12 @@ using Test: @test, @testset
   ψ = random_tensornetwork(s; link_space=2)
 
   ψ_gated = copy(ψ)
+
   for gate in gates
     ψ_gated = apply(gate, ψ_gated)
   end
   ψ_tnod = copy(ψ)
+
   for tno in tnos
     ψ_tnod = flatten_networks(ψ_tnod, tno)
     for v in vertices(ψ_tnod)

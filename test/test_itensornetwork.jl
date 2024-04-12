@@ -1,8 +1,8 @@
 @eval module $(gensym())
-using DataGraphs: vertex_data
 using Dictionaries: Dictionary
 using Distributions: Uniform
 using Graphs:
+  degree,
   dijkstra_shortest_paths,
   edges,
   grid,
@@ -18,6 +18,7 @@ using ITensors:
   ITensors,
   Index,
   ITensor,
+  Op,
   commonind,
   commoninds,
   contract,
@@ -27,10 +28,13 @@ using ITensors:
   inds,
   inner,
   itensor,
+  onehot,
   order,
+  randomITensor,
+  scalartype,
   sim,
   uniqueinds
-using ITensors.NDTensors: dims
+using ITensors.NDTensors: dim
 using ITensorNetworks:
   ITensorNetworks,
   ⊗,
@@ -46,11 +50,14 @@ using ITensorNetworks:
   norm_sqr_network,
   orthogonalize,
   random_tensornetwork,
-  siteinds
+  siteinds,
+  ttn
 using LinearAlgebra: factorize
 using NamedGraphs: NamedEdge, incident_edges, named_comb_tree, named_grid
 using Random: Random, randn!
 using Test: @test, @test_broken, @testset
+
+const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 
 @testset "ITensorNetwork tests" begin
   @testset "ITensorNetwork Basics" begin
@@ -91,7 +98,9 @@ using Test: @test, @test_broken, @testset
     # TODO: Support this syntax, maybe rename `subgraph`.
     @test_broken induced_subgraph(tn, [(1,), (2,)]) isa ITensorNetwork
 
-    randn!.(vertex_data(tn))
+    for v in vertices(tn)
+      tn[v] = randn!(tn[v])
+    end
     tn′ = sim(dag(tn); sites=[])
 
     @test tn′ isa ITensorNetwork
@@ -130,7 +139,7 @@ using Test: @test, @test_broken, @testset
     dims = (2, 2)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
-    ψ = ITensorNetwork(s, v -> "↑")
+    ψ = ITensorNetwork(v -> "↑", s)
     tn = norm_sqr_network(ψ)
     tn_2 = contract(tn, ((1, 2), "ket") => ((1, 2), "bra"))
     @test !has_vertex(tn_2, ((1, 2), "ket"))
@@ -141,7 +150,7 @@ using Test: @test, @test_broken, @testset
     dims = (2, 2)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
-    ψ = ITensorNetwork(s, v -> "↑")
+    ψ = ITensorNetwork(v -> "↑", s)
     rem_vertex!(ψ, (1, 2))
     tn = norm_sqr_network(ψ)
     @test !has_vertex(tn, ((1, 2), "bra"))
@@ -154,8 +163,8 @@ using Test: @test, @test_broken, @testset
     @test has_vertex(tn, ((2, 2), "ket"))
   end
 
-  @testset "Custom element type" for elt in (Float32, Float64, ComplexF32, ComplexF64),
-    link_space in (nothing, 3),
+  @testset "Custom element type (eltype=$elt)" for elt in elts,
+    kwargs in ((;), (; link_space=3)),
     g in (
       grid((4,)),
       named_grid((3, 3)),
@@ -163,22 +172,89 @@ using Test: @test, @test_broken, @testset
       siteinds("S=1/2", named_grid((3, 3))),
     )
 
-    ψ = ITensorNetwork(g; link_space) do v, inds...
-      return itensor(randn(elt, dims(inds)...), inds...)
+    ψ = ITensorNetwork(g; kwargs...) do v
+      return inds -> itensor(randn(elt, dim.(inds)...), inds)
     end
     @test eltype(ψ[first(vertices(ψ))]) == elt
-    ψ = ITensorNetwork(g; link_space) do v, inds...
-      return itensor(randn(dims(inds)...), inds...)
+    ψ = ITensorNetwork(g; kwargs...) do v
+      return inds -> itensor(randn(dim.(inds)...), inds)
     end
     @test eltype(ψ[first(vertices(ψ))]) == Float64
-    ψ = random_tensornetwork(elt, g; link_space)
+    ψ = random_tensornetwork(elt, g; kwargs...)
     @test eltype(ψ[first(vertices(ψ))]) == elt
-    ψ = random_tensornetwork(g; link_space)
+    ψ = random_tensornetwork(g; kwargs...)
     @test eltype(ψ[first(vertices(ψ))]) == Float64
-    ψ = ITensorNetwork(elt, undef, g; link_space)
+    ψ = ITensorNetwork(elt, undef, g; kwargs...)
     @test eltype(ψ[first(vertices(ψ))]) == elt
     ψ = ITensorNetwork(undef, g)
     @test eltype(ψ[first(vertices(ψ))]) == Float64
+  end
+
+  @testset "Product state constructors" for elt in elts
+    dims = (2, 2)
+    g = named_comb_tree(dims)
+    s = siteinds("S=1/2", g)
+    state1 = ["↑" "↓"; "↓" "↑"]
+    state2 = reshape([[1, 0], [0, 1], [0, 1], [1, 0]], 2, 2)
+    each_args = (;
+      ferro=(
+        ("↑",),
+        (elt, "↑"),
+        (Returns(i -> ITensor([1, 0], i)),),
+        (elt, Returns(i -> ITensor([1, 0], i))),
+        (Returns([1, 0]),),
+        (elt, Returns([1, 0])),
+      ),
+      antiferro=(
+        (state1,),
+        (elt, state1),
+        (Dict(CartesianIndices(dims) .=> state1),),
+        (elt, Dict(CartesianIndices(dims) .=> state1)),
+        (Dict(Tuple.(CartesianIndices(dims)) .=> state1),),
+        (elt, Dict(Tuple.(CartesianIndices(dims)) .=> state1)),
+        (Dictionary(CartesianIndices(dims), state1),),
+        (elt, Dictionary(CartesianIndices(dims), state1)),
+        (Dictionary(Tuple.(CartesianIndices(dims)), state1),),
+        (elt, Dictionary(Tuple.(CartesianIndices(dims)), state1)),
+        (state2,),
+        (elt, state2),
+        (Dict(CartesianIndices(dims) .=> state2),),
+        (elt, Dict(CartesianIndices(dims) .=> state2)),
+        (Dict(Tuple.(CartesianIndices(dims)) .=> state2),),
+        (elt, Dict(Tuple.(CartesianIndices(dims)) .=> state2)),
+        (Dictionary(CartesianIndices(dims), state2),),
+        (elt, Dictionary(CartesianIndices(dims), state2)),
+        (Dictionary(Tuple.(CartesianIndices(dims)), state2),),
+        (elt, Dictionary(Tuple.(CartesianIndices(dims)), state2)),
+      ),
+    )
+    for pattern in keys(each_args)
+      for args in each_args[pattern]
+        x = ITensorNetwork(args..., s)
+        if first(args) === elt
+          @test scalartype(x) === elt
+        else
+          @test scalartype(x) === Float64
+        end
+        for v in vertices(x)
+          xᵛ = x[v]
+          @test degree(x, v) + 1 == ndims(xᵛ)
+          sᵛ = only(siteinds(x, v))
+          for w in neighbors(x, v)
+            lʷ = only(linkinds(x, v => w))
+            @test dim(lʷ) == 1
+            xᵛ *= onehot(lʷ => 1)
+          end
+          @test ndims(xᵛ) == 1
+          a = if pattern == :ferro
+            [1, 0]
+          elseif pattern == :antiferro
+            iseven(sum(v)) ? [1, 0] : [0, 1]
+          end
+          @test xᵛ == ITensor(a, sᵛ)
+        end
+      end
+    end
   end
 
   @testset "random_tensornetwork with custom distributions" begin
@@ -287,7 +363,7 @@ using Test: @test, @test_broken, @testset
     s = siteinds("S=1/2", g)
     state_map(v::Tuple) = iseven(sum(isodd.(v))) ? "↑" : "↓"
 
-    ψ = ITensorNetwork(s, state_map)
+    ψ = ITensorNetwork(state_map, s)
     t = ψ[2, 2]
     si = only(siteinds(ψ, (2, 2)))
     bi = map(e -> only(linkinds(ψ, e)), incident_edges(ψ, (2, 2)))
@@ -295,7 +371,7 @@ using Test: @test, @test_broken, @testset
     @test abs(t[si => "↑", [b => end for b in bi]...]) == 1.0 # insert_links introduces extra signs through factorization...
     @test t[si => "↓", [b => end for b in bi]...] == 0.0
 
-    ϕ = ITensorNetwork(elt, s, state_map)
+    ϕ = ITensorNetwork(elt, state_map, s)
     t = ϕ[2, 2]
     si = only(siteinds(ϕ, (2, 2)))
     bi = map(e -> only(linkinds(ϕ, e)), incident_edges(ϕ, (2, 2)))

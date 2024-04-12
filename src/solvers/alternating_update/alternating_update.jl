@@ -100,9 +100,6 @@ function alternating_update(
 end
 
 function alternating_update(operator::AbstractTTN, init_state::AbstractTTN; kwargs...)
-  # Permute the indices to have a better memory layout
-  # and minimize permutations
-  operator = ITensors.permute(operator, (linkind, siteinds, linkind))
   projected_operator = ProjTTN(operator)
   return alternating_update(projected_operator, init_state; kwargs...)
 end
@@ -110,9 +107,6 @@ end
 function alternating_update(
   operator::AbstractTTN, init_state::AbstractTTN, sweep_plans; kwargs...
 )
-  # Permute the indices to have a better memory layout
-  # and minimize permutations
-  operator = ITensors.permute(operator, (linkind, siteinds, linkind))
   projected_operator = ProjTTN(operator)
   return alternating_update(projected_operator, init_state, sweep_plans; kwargs...)
 end
@@ -140,7 +134,6 @@ Returns:
 function alternating_update(
   operators::Vector{<:AbstractTTN}, init_state::AbstractTTN; kwargs...
 )
-  operators .= ITensors.permute.(operators, Ref((linkind, siteinds, linkind)))
   projected_operators = ProjTTNSum(operators)
   return alternating_update(projected_operators, init_state; kwargs...)
 end
@@ -148,7 +141,6 @@ end
 function alternating_update(
   operators::Vector{<:AbstractTTN}, init_state::AbstractTTN, sweep_plans; kwargs...
 )
-  operators .= ITensors.permute.(operators, Ref((linkind, siteinds, linkind)))
   projected_operators = ProjTTNSum(operators)
   return alternating_update(projected_operators, init_state, sweep_plans; kwargs...)
 end

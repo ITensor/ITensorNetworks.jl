@@ -11,8 +11,8 @@ using Test: @test, @testset
   Random.seed!(5623)
   g = named_grid((2, 2))
   s = siteinds("S=1/2", g)
-  ψ1 = ITensorNetwork(s, v -> "↑")
-  ψ2 = ITensorNetwork(s, v -> "↓")
+  ψ1 = ITensorNetwork(v -> "↑", s)
+  ψ2 = ITensorNetwork(v -> "↓", s)
 
   ψ_GHZ = ψ1 + ψ2
 

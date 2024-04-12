@@ -1,6 +1,6 @@
 module ModelNetworks
 using Graphs: degree, dst, edges, src
-using ..ITensorNetworks: IndsNetwork, delta_network, insert_missing_internal_inds, itensor
+using ..ITensorNetworks: IndsNetwork, delta_network, insert_linkinds, itensor
 using ITensors: commoninds, diagITensor, inds, noprime
 using LinearAlgebra: Diagonal, eigen
 using NamedGraphs: NamedGraph
@@ -17,7 +17,7 @@ OPTIONAL ARGUMENT:
 function ising_network(
   eltype::Type, s::IndsNetwork, beta::Number; h::Number=0.0, szverts=nothing
 )
-  s = insert_missing_internal_inds(s, edges(s); internal_inds_space=2)
+  s = insert_linkinds(s; link_space=2)
   tn = delta_network(eltype, s)
   if (szverts != nothing)
     for v in szverts
