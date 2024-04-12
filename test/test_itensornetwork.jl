@@ -40,9 +40,9 @@ using ITensorNetworks:
   IndsNetwork,
   ITensorNetwork,
   contraction_sequence,
-  externalinds,
+  flatten_linkinds,
+  flatten_siteinds,
   inner_network,
-  internalinds,
   linkinds,
   neighbor_tensors,
   norm_sqr,
@@ -342,8 +342,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 
     @test linkinds(ψ, e) == commoninds(ψ[1, 1], ψ[2, 1])
 
-    @test length(externalinds(ψ)) == length(vertices(g))
-    @test length(internalinds(ψ)) == length(edges(g))
+    @test length(flatten_siteinds(ψ)) == length(vertices(g))
+    @test length(flatten_linkinds(ψ)) == length(edges(g))
   end
 
   @testset "eltype conversion, $new_eltype" for new_eltype in (Float32, ComplexF64)
