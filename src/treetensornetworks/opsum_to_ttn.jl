@@ -20,7 +20,7 @@ function span(t::Scaled{C,Prod{Op}}, g::AbstractGraph) where {C}
   nterms == 1 && return Set([ITensors.site(t[1])])
   for i in 1:nterms, j in (i + 1):nterms
     path = Set(vertex_path(g, ITensors.site(t[i]), ITensors.site(t[j])))
-    spn = union(spn, path)
+    spn = union!(spn, path)
   end
   return spn
 end
@@ -30,21 +30,28 @@ function crosses_vertex(t::Scaled{C,Prod{Op}}, g::AbstractGraph, v) where {C}
   return v ∈ span(t, g)
 end
 
-# map all vertices `w` of `g` except for `v` to the incident edge of `v`
+function align_edges(reference_edges, edges)
+  return intersect(reference_edges, Iterators.flatten((edges, reverse.(edges))))
+end
+
+# return a dict from vertices `w` of `g`, except for `v`, to the incident edge of `v`
 # which lies in edge_path(g,w,v)
-function map_vertices_to_incident_edges(g::AbstractGraph, v, es)
+function vertices_to_incident_edges_dict(g::AbstractGraph, v, incident_edges)
+  #split graph into subtrees by removing vertex v
   _g = copy(underlying_graph(g))
   rem_vertex!(_g, v)
   subgraphs = Set.(connected_components(_g))
 
+  #for each incident edge, store the vertex that's not `v`
   vs = vertextype(g)[]
-  for e in es
+  for e in incident_edges
     push!(vs, only(setdiff([src(e), dst(e)], [v])))
   end
+
+  #return a Dictionary from vertices to incident_edges
   _vs = vertextype(g)[]
   _es = edgetype(g)[]
-
-  for (e, v) in zip(es, vs)
+  for (e, v) in zip(incident_edges, vs)
     for i in eachindex(subgraphs)
       if v in subgraphs[i]
         append!(_vs, subgraphs[i])
@@ -56,13 +63,6 @@ function map_vertices_to_incident_edges(g::AbstractGraph, v, es)
   end
   @assert isempty(subgraphs)
   return Dict(zip(_vs, _es))
-end
-
-function ordered_incident_edges(g::AbstractGraph, v, ordered_edges)
-  edges = incident_edges(g, v)
-  edges = map(e -> e in ordered_edges ? e : reverse(e), edges)
-  edge_positions = map(e -> findfirst(isequal(e), ordered_edges), edges)
-  return edges[sortperm(edge_positions)]
 end
 
 # 
@@ -152,7 +152,7 @@ function ttn_svd(
   # build compressed finite state machine representation
   for v in vs
     # for every vertex, find all edges that contain this vertex
-    edges = ordered_incident_edges(sites, v, es)
+    edges = align_edges(es, incident_edges(sites, v))
 
     # use the corresponding ordering as index order for tensor elements at this site
     dim_in = findfirst(e -> dst(e) == v, edges)
@@ -160,8 +160,7 @@ function ttn_svd(
     dims_out = findall(e -> src(e) == v, edges)
     edges_out = edges[dims_out]
 
-    which_incident_edge = map_vertices_to_incident_edges(sites, v, edges)
-    factor_to_edge(t) = which_incident_edge[ITensors.site(t)]
+    which_incident_edge = vertices_to_incident_edges_dict(sites, v, edges)
     # sanity check, leaves only have single incoming or outgoing edge
     @assert !isempty(dims_out) || !isnothing(dim_in)
     (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf(sites, v)
@@ -177,16 +176,20 @@ function ttn_svd(
       not_onsite_factors = setdiff(factors, onsite)
 
       # filter out factors that come in from the direction of the incoming edge
-      incoming = filter(t -> factor_to_edge(t) == edge_in, not_onsite_factors)
+      incoming = filter(
+        t -> which_incident_edge[ITensors.site(t)] == edge_in, not_onsite_factors
+      )
 
       # also store all non-incoming factors in standard order, used for channel merging
       not_incoming = filter(
-        t -> (ITensors.site(t) == v) || factor_to_edge(t) != edge_in, factors
+        t -> (ITensors.site(t) == v) || which_incident_edge[ITensors.site(t)] != edge_in,
+        factors,
       )
 
       # for every outgoing edge, filter out factors that go out along that edge
       outgoing = Dict(
-        e => filter(t -> factor_to_edge(t) == e, not_onsite_factors) for e in edges_out
+        e => filter(t -> which_incident_edge[ITensors.site(t)] == e, not_onsite_factors) for
+        e in edges_out
       )
 
       # compute QNs
@@ -287,7 +290,7 @@ function ttn_svd(
   for v in vs
     # redo the whole thing like before
     # ToDo: use neighborhood instead of going through all edges, see above
-    edges = ordered_incident_edges(sites, v, es)
+    edges = align_edges(es, incident_edges(sites, v))
     dim_in = findfirst(e -> dst(e) == v, edges)
     dims_out = findall(e -> src(e) == v, edges)
     # slice isometries at this vertex
