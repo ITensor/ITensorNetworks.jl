@@ -59,7 +59,7 @@ function BilinearFormNetwork(
 )
   @assert issetequal(externalinds(bra), externalinds(ket))
   operator_inds = union_all_inds(siteinds(ket), dual_site_index_map(siteinds(ket)))
-  O = delta_network(operator_inds)
+  O = ITensorNetwork(Op("I"), operator_inds)
   return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end
 

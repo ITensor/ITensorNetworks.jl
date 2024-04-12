@@ -8,7 +8,6 @@ using ITensorNetworks:
   QuadraticFormNetwork,
   bra_network,
   bra_vertex,
-  delta_network,
   dual_index_map,
   environment,
   externalinds,
