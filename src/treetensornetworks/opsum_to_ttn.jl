@@ -30,7 +30,7 @@ function crosses_vertex(t::Scaled{C,Prod{Op}}, g::AbstractGraph, v) where {C}
   return v ∈ span(t, g)
 end
 
-function align_edges(reference_edges, edges)
+function align_edges(edges, reference_edges)
   return intersect(reference_edges, Iterators.flatten((edges, reverse.(edges))))
 end
 
@@ -152,7 +152,7 @@ function ttn_svd(
   # build compressed finite state machine representation
   for v in vs
     # for every vertex, find all edges that contain this vertex
-    edges = align_edges(es, incident_edges(sites, v))
+    edges = align_edges(incident_edges(sites, v), es)
 
     # use the corresponding ordering as index order for tensor elements at this site
     dim_in = findfirst(e -> dst(e) == v, edges)
@@ -290,7 +290,7 @@ function ttn_svd(
   for v in vs
     # redo the whole thing like before
     # ToDo: use neighborhood instead of going through all edges, see above
-    edges = align_edges(es, incident_edges(sites, v))
+    edges = align_edges(incident_edges(sites, v), es)
     dim_in = findfirst(e -> dst(e) == v, edges)
     dims_out = findall(e -> src(e) == v, edges)
     # slice isometries at this vertex
