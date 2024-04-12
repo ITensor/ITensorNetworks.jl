@@ -1,27 +1,10 @@
-using Graphs: degree
-using Graphs: is_tree
-using ITensors: flux
-using ITensors: has_fermion_string
-using ITensors: itensor
-using ITensors: ops
-using ITensors: removeqns
-using ITensors: space
-using ITensors: val
-using ITensors.ITensorMPS: ITensorMPS
-using ITensors.ITensorMPS: cutoff
-using ITensors.ITensorMPS: linkdims
-using ITensors.LazyApply: coefficient
-using ITensors.LazyApply: Sum
-using ITensors.LazyApply: Prod
-using ITensors.NDTensors: Block
-using ITensors.NDTensors: maxdim
-using ITensors.NDTensors: nblocks
-using ITensors.NDTensors: nnzblocks
-using ITensors.Ops: OpSum
-using ITensors.Ops: Op
-using NamedGraphs: degrees
-using NamedGraphs: is_leaf
-using NamedGraphs: vertex_path
+using Graphs: degree, is_tree
+using ITensors: flux, has_fermion_string, itensor, ops, removeqns, space, val
+using ITensors.ITensorMPS: ITensorMPS, cutoff, linkdims, truncate!
+using ITensors.LazyApply: Prod, Sum, coefficient
+using ITensors.NDTensors: Block, maxdim, nblocks, nnzblocks
+using ITensors.Ops: Op, OpSum
+using NamedGraphs: degrees, is_leaf, vertex_path
 using StaticArrays: MVector
 
 # convert ITensors.OpSum to TreeTensorNetwork

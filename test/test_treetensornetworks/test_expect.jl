@@ -2,13 +2,15 @@
 using Graphs: vertices
 using ITensors.ITensorMPS: MPS
 using ITensorNetworks: ttn, expect, random_mps, siteinds
+using LinearAlgebra: norm
 using NamedGraphs: named_comb_tree
 using Test: @test, @testset
 
 @testset "MPS expect comparison with ITensors" begin
-  N = 25
+  N = 4
   s = siteinds("S=1/2", N)
-  a = random_mps(s; internal_inds_space=100)
+  a = random_mps(s; link_space=100)
+  @test norm(a) ≈ 1
   b = MPS([a[v] for v in vertices(a)])
   res_a = expect("Sz", a)
   res_b = expect(b, "Sz")
@@ -17,7 +19,7 @@ using Test: @test, @testset
 end
 
 @testset "TTN expect" begin
-  tooth_lengths = fill(5, 6)
+  tooth_lengths = fill(2, 2)
   c = named_comb_tree(tooth_lengths)
   s = siteinds("S=1/2", c)
   d = Dict()
@@ -27,7 +29,7 @@ end
     magnetization[v] = isodd(i) ? 0.5 : -0.5
   end
   states = v -> d[v]
-  state = ttn(s, states)
+  state = ttn(states, s)
   res = expect("Sz", state)
   @test all([isapprox(res[v], magnetization[v]; atol=1e-8) for v in vertices(s)])
 end

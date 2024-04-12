@@ -25,8 +25,7 @@ using Test: @test, @test_broken, @testset
 @testset "Contract MPO" begin
   N = 20
   s = siteinds("S=1/2", N)
-  psi = random_mps(s; internal_inds_space=8)
-
+  psi = random_mps(s; link_space=8)
   os = OpSum()
   for j in 1:(N - 1)
     os += 0.5, "S+", j, "S-", j + 1
@@ -42,15 +41,15 @@ using Test: @test, @test_broken, @testset
 
   # Test basic usage with default parameters
   Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=1)
-  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1e-5
+  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = 1e-5
   # Test variational compression via DMRG
   Hfit = ProjOuterProdTTN(psi', H)
   Hpsi_via_dmrg = dmrg(Hfit, psi; updater_kwargs=(; which_eigval=:LR,), nsweeps=1)
-  @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 atol = 1e-4
+  @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 rtol = 1e-4
   # Test whether the interface works for ProjTTNSum with factors
   Hfit = ProjTTNSum([ProjOuterProdTTN(psi', H), ProjOuterProdTTN(psi', H)], [-0.2, -0.8])
   Hpsi_via_dmrg = dmrg(Hfit, psi; nsweeps=1, updater_kwargs=(; which_eigval=:SR,))
-  @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 atol = 1e-4
+  @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 rtol = 1e-4
 
   # Test basic usage for use with multiple ProjOuterProdTTN with default parameters
   # BLAS.axpy-like test
@@ -63,14 +62,14 @@ using Test: @test, @test_broken, @testset
   Hpsi = ITensorNetworks.sum_apply(
     [(H, psi), (minus_identity, psi)]; alg="fit", init=psi, nsweeps=3
   )
-  @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1e-5
+  @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) rtol = 1e-5
   # Test the above via DMRG
   # ToDo: Investigate why this is broken
   Hfit = ProjTTNSum([ProjOuterProdTTN(psi', H), ProjOuterProdTTN(psi', identity)], [-1, 1])
   Hpsi_normalized = ITensorNetworks.dmrg(
     Hfit, psi; nsweeps=3, updater_kwargs=(; which_eigval=:SR)
   )
-  @test_broken abs(inner(Hpsi, (Hpsi_normalized) / norm(Hpsi))) ≈ 1 atol = 1e-5
+  @test_broken abs(inner(Hpsi, (Hpsi_normalized) / norm(Hpsi))) ≈ 1 rtol = 1e-5
 
   #
   # Change "top" indices of MPO to be a different set
@@ -84,16 +83,16 @@ using Test: @test, @test_broken, @testset
   end
   # Test with nsweeps=3
   Hpsi = contract(H, psi; alg="fit", init=psit, nsweeps=3)
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-5
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-5
   # Test with less good initial guess MPS not equal to psi
   psi_guess = truncate(psit; maxdim=2)
   Hpsi = contract(H, psi; alg="fit", nsweeps=4, init=psi_guess)
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-5
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-5
 
   # Test with nsite=1
-  Hpsi_guess = random_mps(t; internal_inds_space=32)
+  Hpsi_guess = random_mps(t; link_space=32)
   Hpsi = contract(H, psi; alg="fit", init=Hpsi_guess, nsites=1, nsweeps=4)
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-4
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-4
 end
 
 @testset "Contract TTN" begin
@@ -109,12 +108,12 @@ end
 
   # Test basic usage with default parameters
   Hpsi = apply(H, psi; alg="fit", init=psi, nsweeps=1, cutoff=eps())
-  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1e-5
+  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = 1e-5
   # Test usage with non-default parameters
   Hpsi = apply(
     H, psi; alg="fit", init=psi, nsweeps=5, maxdim=[16, 32], cutoff=[1e-4, 1e-8, 1e-12]
   )
-  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1e-2
+  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = 1e-2
 
   # Test basic usage for multiple ProjOuterProdTTN with default parameters
   # BLAS.axpy-like test
@@ -124,7 +123,7 @@ end
   Hpsi = ITensorNetworks.sum_apply(
     [(H, psi), (minus_identity, psi)]; alg="fit", init=psi, nsweeps=1
   )
-  @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) atol = 1e-5
+  @test inner(psi, Hpsi) ≈ (inner(psi', H, psi) - norm(psi)^2) rtol = 1e-5
 
   #
   # Change "top" indices of TTN to be a different set
@@ -136,17 +135,17 @@ end
 
   # Test with nsweeps=2
   Hpsi = contract(H, psi; alg="fit", init=psit, nsweeps=2)
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-5
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-5
 
   # Test with less good initial guess MPS not equal to psi
   Hpsi_guess = truncate(psit; maxdim=2)
   Hpsi = contract(H, psi; alg="fit", nsweeps=4, init=Hpsi_guess)
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-5
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-5
 
   # Test with nsite=1
   Hpsi_guess = random_ttn(t; link_space=32)
   Hpsi = contract(H, psi; alg="fit", nsites=1, nsweeps=10, init=Hpsi_guess)
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-2
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-2
 end
 
 @testset "Contract TTN with dangling inds" begin

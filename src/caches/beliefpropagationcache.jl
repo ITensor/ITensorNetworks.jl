@@ -6,10 +6,11 @@ using NamedGraphs: PartitionVertex
 using LinearAlgebra: diag
 using ITensors: dir
 using ITensors.ITensorMPS: ITensorMPS
-using NamedGraphs: boundary_partitionedges
+using NamedGraphs: boundary_partitionedges, partitionvertices, partitionedges
 
 default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()
+default_message_norm(m::ITensor) = norm(m)
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
@@ -21,12 +22,20 @@ end
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end
 default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
+function default_partitioned_vertices(f::AbstractFormNetwork)
+  return group(v -> original_state_vertex(f, v), vertices(f))
+end
 default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
+function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
+  return (; partitioned_vertices=default_partitioned_vertices(ψ))
+end
 
-function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
+function message_diff(
+  message_a::Vector{ITensor}, message_b::Vector{ITensor}; message_norm=default_message_norm
+)
   lhs, rhs = contract(message_a), contract(message_b)
-  return 0.5 *
-         norm((denseblocks(lhs) / sum(diag(lhs))) - (denseblocks(rhs) / sum(diag(rhs))))
+  norm_lhs, norm_rhs = message_norm(lhs), message_norm(rhs)
+  return 0.5 * norm((denseblocks(lhs) / norm_lhs) - (denseblocks(rhs) / norm_rhs))
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}
@@ -47,8 +56,14 @@ function BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
   return BeliefPropagationCache(ptn; kwargs...)
 end
 
-function BeliefPropagationCache(tn; kwargs...)
-  return BeliefPropagationCache(tn, default_partitioning(tn); kwargs...)
+function BeliefPropagationCache(
+  tn; partitioned_vertices=default_partitioned_vertices(tn), kwargs...
+)
+  return BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
+end
+
+function cache(alg::Algorithm"bp", tn; kwargs...)
+  return BeliefPropagationCache(tn; kwargs...)
 end
 
 function partitioned_tensornetwork(bp_cache::BeliefPropagationCache)
@@ -118,7 +133,7 @@ function environment(
 )
   bpes = boundary_partitionedges(bp_cache, partition_vertices; dir=:in)
   ms = messages(bp_cache, setdiff(bpes, ignore_edges))
-  return reduce(vcat, ms; init=[])
+  return reduce(vcat, ms; init=ITensor[])
 end
 
 function environment(
@@ -216,11 +231,11 @@ function update(
   kwargs...,
 )
   compute_error = !isnothing(tol)
-  diff = compute_error ? Ref(0.0) : nothing
   if isnothing(maxiter)
     error("You need to specify a number of iterations for BP!")
   end
   for i in 1:maxiter
+    diff = compute_error ? Ref(0.0) : nothing
     bp_cache = update(bp_cache, edges; (update_diff!)=diff, kwargs...)
     if compute_error && (diff.x / length(edges)) <= tol
       if verbose
@@ -250,4 +265,32 @@ end
 
 function update_factor(bp_cache, vertex, factor)
   return update_factors(bp_cache, [vertex], ITensor[factor])
+end
+
+function region_scalar(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
+  incoming_mts = environment(bp_cache, [pv])
+  local_state = factor(bp_cache, pv)
+  return contract(vcat(incoming_mts, local_state))[]
+end
+
+function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
+  return contract(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))))[]
+end
+
+function vertex_scalars(
+  bp_cache::BeliefPropagationCache,
+  pvs::Vector=partitionvertices(partitioned_tensornetwork(bp_cache)),
+)
+  return [region_scalar(bp_cache, pv) for pv in pvs]
+end
+
+function edge_scalars(
+  bp_cache::BeliefPropagationCache,
+  pes::Vector=partitionedges(partitioned_tensornetwork(bp_cache)),
+)
+  return [region_scalar(bp_cache, pe) for pe in pes]
+end
+
+function scalar_factors_quotient(bp_cache::BeliefPropagationCache)
+  return vertex_scalars(bp_cache), edge_scalars(bp_cache)
 end
