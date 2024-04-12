@@ -33,9 +33,9 @@ end
 # map all vertices `w` of `g` except for `v` to the incident edge of `v`
 # which lies in edge_path(g,w,v)
 function map_vertices_to_incident_edges(g::AbstractGraph, v, es)
-  _g = deepcopy(ITensorNetworks.underlying_graph(g))
-  NamedGraphs.rem_vertex!(_g, v)
-  subgraphs = NamedGraphs.connected_components(_g)
+  _g = copy(underlying_graph(g))
+  rem_vertex!(_g, v)
+  subgraphs = connected_components(_g)
 
   vs = vertextype(g)[]
   for e in es
@@ -59,7 +59,7 @@ function map_vertices_to_incident_edges(g::AbstractGraph, v, es)
 end
 
 function ordered_incident_edges(g::AbstractGraph, v, ordered_edges)
-  edges = ITensorNetworks.incident_edges(g, v)
+  edges = incident_edges(g, v)
   edges = map(e -> e in ordered_edges ? e : reverse(e), edges)
   edge_positions = map(e -> findfirst(isequal(e), ordered_edges), edges)
   return edges[sortperm(edge_positions)]
