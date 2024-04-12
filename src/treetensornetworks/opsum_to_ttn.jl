@@ -17,25 +17,13 @@ using StaticArrays: MVector
 
 # determine 'support' of product operator on tree graph
 function span(t::Scaled{C,Prod{Op}}, g::AbstractGraph) where {C}
-  spn = Set{eltype(g)}()
+  spn = eltype(g)[]
   nterms = length(t)
   nterms == 1 && return [ITensors.site(t[1])]
-  #sites=[ITensors.site(t[i]) for i in 1:nterms]
-  # ToDo: figure out better implementation, maybe via steiner_tree
-  
-  #steiner_spn=ITensorNetworks.NamedGraphs.steiner_tree(g,sites)
   for i in 1:nterms, j in i+1:nterms
-    path = Set(vertex_path(g, ITensors.site(t[i]), ITensors.site(t[j])))
+    path = vertex_path(g, ITensors.site(t[i]), ITensors.site(t[j]))
     spn = union(spn, path)
   end
-  #nspn = eltype(g)[]
-  #for i in 1:nterms, j in i:nterms
-  #  path = vertex_path(g, ITensors.site(t[i]), ITensors.site(t[j]))
-  #  nspn = union(spn, path)
-  #end
-  #@assert nspn==spn
-  #@show vertices(steiner_spn), spn
-  #@assert issetequal(vertices(steiner_spn),spn)
   return spn
 end
 
@@ -44,6 +32,40 @@ function crosses_vertex(t::Scaled{C,Prod{Op}}, g::AbstractGraph, v) where {C}
   return v ∈ span(t, g)
 end
 
+# map all vertices `w` of `g` except for `v` to the incident edge of `v`
+# which lies in edge_path(g,w,v)
+function map_vertices_to_incident_edges(g::AbstractGraph,v,es)
+  _g=deepcopy(ITensorNetworks.underlying_graph(g))
+  NamedGraphs.rem_vertex!(_g,v)
+  subgraphs=NamedGraphs.connected_components(_g)
+  
+  vs=vertextype(g)[]
+  for e in es
+    push!(vs,only(setdiff([src(e),dst(e)],[v,])))
+  end
+  _vs=vertextype(g)[]
+  _es=edgetype(g)[]
+  
+  for (e,v) in zip(es,vs)
+    for i in eachindex(subgraphs)
+      if v in subgraphs[i]
+        append!(_vs,subgraphs[i])
+        append!(_es,fill(e,length(subgraphs[i])))
+        deleteat!(subgraphs,i)
+        break
+      end
+    end
+  end
+  @assert isempty(subgraphs)
+  return Dict(zip(_vs,_es))
+end
+
+function ordered_incident_edges(g::AbstractGraph,v,ordered_edges)
+  edges=ITensorNetworks.incident_edges(g,v)
+  edges=map(e -> e in ordered_edges ? e : reverse(e), edges)
+  edge_positions=map(e -> findfirst(isequal(e),ordered_edges),edges)
+  return edges[sortperm(edge_positions)]
+end
 # 
 # Tree adaptations of functionalities in ITensors.jl/src/physics/autompo/opsum_to_mpo.jl
 # 
@@ -124,7 +146,7 @@ function ttn_svd(
   tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
   #ToDo: precompute span of each term and store
   # compute span of each term
-  spans=Dict{eltype(os),Set{vertextype_sites}}()
+  spans=Dict{eltype(os),Vector{vertextype_sites}}()
   @time "span" begin
   for term in os
     spans[term]=span(term,sites)
@@ -133,133 +155,43 @@ function ttn_svd(
   # build compressed finite state machine representation
   @time "first" begin
     for v in vs
-      #copy(sites)
-      _g=deepcopy(ITensorNetworks.underlying_graph(sites))
-      NamedGraphs.rem_vertex!(_g,v)
-      subgraphs=NamedGraphs.connected_components(_g)
       # for every vertex, find all edges that contain this vertex
-      # ToDo: use neighborhood instead of going through all edges
-      #       slight complication is to preserve directionality of edge?
-      alledges=es
-      edges=edgetype_sites[]
-      edge_ordering=Int[]
-
-      for other_v in NamedGraphs.neighbors(sites,v)
-        e=edgetype_sites(v,other_v)
-        if e in es
-          push!(edges,e)
-          push!(edge_ordering, findfirst(isequal(e),es))
-        else
-          @assert reverse(e) in es
-          push!(edges,reverse(e))
-          push!(edge_ordering,findfirst(isequal(reverse(e)),es))
-        end
-      end
-      edges=edges[sortperm(edge_ordering)]
-      #edges=sort(edges,by=index(es))
-      #ref_edges = filter(e -> dst(e) == v || src(e) == v, es)
-      #@assert issetequal(edges,ref_edges)
+      edges=ordered_incident_edges(sites,v,es)
+      
       # use the corresponding ordering as index order for tensor elements at this site
       dim_in = findfirst(e -> dst(e) == v, edges)
       edge_in = (isnothing(dim_in) ? [] : edges[dim_in])
       dims_out = findall(e -> src(e) == v, edges)
       edges_out = edges[dims_out]
-      if !(typeof(edge_in)<:Vector)
-        v_in=only(setdiff([src(edge_in),dst(edge_in)],[v,]))
-      end
-      v_outs=vertextype_sites[]
-      for e_out in edges_out
-        push!(v_outs,only(setdiff([src(e_out),dst(e_out)],[v,])))
-      end
-      in_graphs=[]
-      out_graphs=[]
-      which_edges=edgetype_sites[]
-      _vs=vertextype_sites[]
-      for subgraph in subgraphs
-        is_incoming=false
-        typeof(edge_in)<:Vector || (is_incoming = v_in in subgraph)
-        if !is_incoming
-          
-          for i in eachindex(v_outs)
-            if v_outs[i] in subgraph
-              _e = edges_out[i]
-              break
-            end
-          end
-        else
-          _e=edge_in
-        end
-        append!(_vs,subgraph)
-        append!(which_edges,fill(_e,length(subgraph)))
-      end
       
-      which_subtree=Dict{vertextype_sites,edgetype_sites}(zip(_vs,which_edges))
-      
+      which_incident_edge=map_vertices_to_incident_edges(sites,v,edges)
+      factor_to_edge(t)=which_incident_edge[ITensors.site(t)]
       # sanity check, leaves only have single incoming or outgoing edge
       @assert !isempty(dims_out) || !isnothing(dim_in)
       (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf(sites, v)
       
       for term in os
         # loop over OpSum and pick out terms that act on current vertex
+        
         v in spans[term] || continue
-        #crosses_vertex(term, sites, v) || continue
-        
-        # filter out factors that come in from the direction of the incoming edge
-        # ToDo: edge_path could compute over spanning tree of term instead of full graph
-        #       not sure if this affects the performance of edge_path 
-        # ToDo: possibly precompute edge_path once for all entrie in term
-        # and reuse in each of the calls
-        #@show term
-        #@show v
-        #edge_paths=map(t->edge_path(sites, ITensors.site(t), v),ITensors.terms(term))
-        #in principle converting to set should be faster since O(1) access
-        #edge_paths=map(t->Set(edge_path(sites, ITensors.site(t), v)),ITensors.terms(term))
-        
-        #@show  typeof(edge_paths)
-        #for i in 1:length(ITensors.terms(term))
-        #  @show i,ITensors.terms(term)[i]
-        #end
         factors=ITensors.terms(term)
+
+        # filter out factor that acts on current vertex
         onsite = filter(t -> (ITensors.site(t) == v), factors)
         not_onsite_factors=setdiff(factors,onsite)
-        #incoming= ITensors.terms(term)[map(_edges -> edge_in in _edges,edge_paths)]
-        incoming=filter(t->which_subtree[ITensors.site(t)]==edge_in, not_onsite_factors)
-        #@show incoming
-        #@show incoming_alt
-        #@assert incoming==incoming_alt
-        #incoming = filter(
-        #  t -> edge_in ∈ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
-        #)
+
+        # filter out factors that come in from the direction of the incoming edge
+        incoming=filter(t->factor_to_edge(t)==edge_in, not_onsite_factors)
         
-        #incoming_alt = ITensors.terms(term)[(in.(edge_in,edge_paths))...]
-        #@show incoming
-        #@show incoming_alt
-        #@assert incoming_alt==collect(incoming)
         # also store all non-incoming factors in standard order, used for channel merging
-        #show v
-        #not_incoming = ITensors.terms(term)[map(_edges -> edge_in ∉ _edges,edge_paths)]
-        
-        not_incoming = filter(t-> (ITensors.site(t) == v) || which_subtree[ITensors.site(t)]!=edge_in,factors)
-        #not_incoming = filter(
-        #  t -> edge_in ∉ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
-        #)
-        # filter out factor that acts on current vertex
-        
+        not_incoming = filter(t-> (ITensors.site(t) == v) || factor_to_edge(t)!=edge_in,factors)
         
         # for every outgoing edge, filter out factors that go out along that edge
-        #outgoing = Dict(
-        #  e => filter(t -> e ∈ edge_path(sites, v, ITensors.site(t)), ITensors.terms(term))
-        #  for e in edges_out
-        #)
-        #outgoing = Dict(
-        #    e => ITensors.terms(term)[map(_edges -> e in reverse.(_edges), edge_paths)]
-        #    for e in edges_out
-        #)
         outgoing = Dict(
-            e => filter(t->which_subtree[ITensors.site(t)]==e,not_onsite_factors)
+            e => filter(t->factor_to_edge(t)==e,not_onsite_factors)
             for e in edges_out
         )
-        #@assert  outgoing==outgoing_alt
+        
         # compute QNs
         incoming_qn = calc_qn(incoming)
         not_incoming_qn = calc_qn(not_incoming)
@@ -358,7 +290,7 @@ function ttn_svd(
   for v in vs
     # redo the whole thing like before
     # ToDo: use neighborhood instead of going through all edges, see above
-    edges = filter(e -> dst(e) == v || src(e) == v, es)
+    edges=ordered_incident_edges(sites,v,es)
     dim_in = findfirst(e -> dst(e) == v, edges)
     dims_out = findall(e -> src(e) == v, edges)
     # slice isometries at this vertex
@@ -534,19 +466,12 @@ end
 # given via find_index_in_tree
 # changed `isless_site` to use tree vertex ordering relative to root
 function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) where {V}
-  println("in sort")
   os = copy(os)
 
   # linear ordering of vertices in tree graph relative to chosen root, chosen outward from root
   ordering = _default_vertex_ordering(sites,root_vertex)
   site_positions=Dict(zip(ordering,1:length(ordering)))
-  function find_index_in_tree(site, g::AbstractGraph, root_vertex)
-    return site_positions[site]
-  end
-  function find_index_in_tree(o::Op, g::AbstractGraph, root_vertex)
-    return find_index_in_tree(ITensors.site(o), g, root_vertex)
-  end
-  findpos(op::Op) = find_index_in_tree(op, sites, root_vertex)
+  findpos(op::Op) = site_positions[ITensors.site(op)]
   isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
   N = nv(sites)
   for n in eachindex(os)
@@ -607,7 +532,6 @@ function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) 
     t *= ITensors.parity_sign(perm)
     ITensors.terms(os)[n] = t
   end
-  println("out sort")
   return os
 end
 
