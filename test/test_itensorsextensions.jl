@@ -47,7 +47,7 @@ Random.seed!(1234)
   end
 
   @testset "Test map eigvals with QNS" begin
-    for eltype in [Float64, ComplexF64]
+    for eltype in (Float64, ComplexF64)
       for n in [2, 3, 5, 10]
         i, j = Index.(([QN() => n], [QN() => n]))
         A = randomITensor(eltype, i, j)
