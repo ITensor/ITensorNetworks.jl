@@ -1,3 +1,4 @@
+@eval module $(gensym())
 using ITensors:
   ITensors,
   ITensor,
