@@ -20,7 +20,7 @@ using Test: @test, @testset
 Random.seed!(1234)
 @testset "ITensorsExtensions" begin
   @testset "Test map eigvals without QNS" begin
-    for eltype in [Float64, ComplexF64]
+    for eltype in (Float64, ComplexF64)
       for n in [2, 3, 5, 10]
         i, j = Index(n, "i"), Index(n, "j")
         linds, rinds = Index[i], Index[j]
