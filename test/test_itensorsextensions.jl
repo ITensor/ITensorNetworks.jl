@@ -19,7 +19,9 @@ using Test: @test, @testset
 
 Random.seed!(1234)
 @testset "ITensorsExtensions" begin
-  @testset "Test map eigvals without QNS" begin
+  @testset "Test map eigvals without QNS (eltype=$elt, dim=$n)" for elt in (Float32, Float64, Complex{Float32}, Complex{Float64}), n in [2, 3, 5, 10]
+    ...
+  end
     for eltype in (Float64, ComplexF64)
       for n in [2, 3, 5, 10]
         i, j = Index(n, "i"), Index(n, "j")
