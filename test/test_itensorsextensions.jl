@@ -13,7 +13,7 @@ using ITensors:
   replaceinds,
   sim
 using ITensorNetworks.ITensorsExtensions: map_eigvals
-using Random
+using Random: Random
 using Test: @test, @testset
 
 Random.seed!(1234)
