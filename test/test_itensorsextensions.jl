@@ -2,24 +2,19 @@ using ITensors:
   ITensors,
   ITensor,
   Index,
-  randomITensor,
+  QN,
   dag,
-  replaceind,
+  delta,
+  inds,
   noprime,
   prime,
-  inds,
-  delta,
-  QN,
-  denseblocks,
+  randomITensor,
+  replaceind,
   replaceinds,
-  dir,
-  array
+  sim
 using ITensorNetworks.ITensorsExtensions: map_eigvals
-using ITensorNetworks: siteinds, random_tensornetwork
-using NamedGraphs: named_grid
 using Random
 using Test: @test, @testset
-using LinearAlgebra: ishermitian, isposdef
 
 Random.seed!(1234)
 @testset "ITensorsExtensions" begin
