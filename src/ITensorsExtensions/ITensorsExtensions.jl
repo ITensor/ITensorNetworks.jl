@@ -54,26 +54,26 @@ invsqrt_diag(it::ITensor) = map_diag(inv ∘ sqrt, it)
 pinv_diag(it::ITensor) = map_diag(pinv, it)
 pinvsqrt_diag(it::ITensor) = map_diag(pinv ∘ sqrt, it)
 
-function map_eigenvalues(
-  f::Function, A::ITensor, linds=Index[first(inds(A))]; ishermitian=false, kwargs...
-)
-  if isdiag(A)
-    return map_diag(s -> f(s), A)
-  end
-
+#TODO: Make this work for non-hermitian A
+function eigendecomp(A::ITensor, linds, rinds; ishermitian=false, kwargs...)
   @assert ishermitian
-  rinds = setdiff(inds(A), linds)
-
   D, U = eigen(A, linds, rinds; ishermitian, kwargs...)
   ul, ur = noncommonind(D, U), commonind(D, U)
   ulnew = sim(ul)
 
-  Ul = replaceinds(U, (rinds..., ur), (linds..., ulnew))
+  Ul = replaceinds(U, vcat(rinds, ur), vcat(linds, ulnew))
+  D = replaceind(D, ul, ulnew)
+  return Ul, D, dag(U)
+end
 
-  D_mapped = map_diag(f, D)
-  D_mapped = replaceind(D_mapped, ul, ulnew)
+function map_eigvals(f::Function, A::ITensor, inds...; ishermitian=false, kwargs...)
+  if isdiag(A)
+    return map_diag(f, A)
+  end
 
-  return Ul * D_mapped * dag(U)
+  Ul, D, Ur = eigendecomp(A, inds...; ishermitian, kwargs...)
+
+  return Ul * map_diag(f, D) * Ur
 end
 
 # Analagous to `denseblocks`.
