@@ -54,22 +54,26 @@ invsqrt_diag(it::ITensor) = map_diag(inv ∘ sqrt, it)
 pinv_diag(it::ITensor) = map_diag(pinv, it)
 pinvsqrt_diag(it::ITensor) = map_diag(pinv ∘ sqrt, it)
 
-function map_itensor(
-  f::Function, A::ITensor, lind=first(inds(A)); regularization=nothing, kwargs...
+function map_eigenvalues(
+  f::Function, A::ITensor, linds=Index[first(inds(A))]; ishermitian=false, kwargs...
 )
-  USV = svd(A, lind; kwargs...)
-  U, S, V, spec, u, v = USV
-
-  if !isnothing(regularization)
-    S = map_diag(s -> f(s + regularization), S)
-  else
-    S = map_diag(s -> f(s), S)
+  if isdiag(A)
+    return map_diag(s -> f(s), A)
   end
 
-  sqrtDL, δᵤᵥ, sqrtDR = sqrt_decomp(S, u, v)
-  sqrtDR = denseblocks(sqrtDR) * denseblocks(δᵤᵥ)
-  L, R = U * sqrtDL, V * sqrtDR
-  return L * R
+  @assert ishermitian
+  rinds = setdiff(inds(A), linds)
+
+  D, U = eigen(A, linds, rinds; ishermitian, kwargs...)
+  ul, ur = noncommonind(D, U), commonind(D, U)
+  ulnew = sim(ul)
+
+  Ul = replaceinds(U, (rinds..., ur), (linds..., ulnew))
+
+  D_mapped = map_diag(f, D)
+  D_mapped = replaceind(D_mapped, ul, ulnew)
+
+  return Ul * D_mapped * dag(U)
 end
 
 # Analagous to `denseblocks`.

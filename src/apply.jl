@@ -83,21 +83,22 @@ end
 
 function simple_update_bp_full(o, ψ, v⃗; envs, (singular_values!)=nothing, apply_kwargs...)
   cutoff = 10 * eps(real(scalartype(ψ)))
-  regularization = 10 * eps(real(scalartype(ψ)))
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
   sqrt_envs_v1 = [
-    ITensorsExtensions.map_itensor(sqrt, env; cutoff, regularization) for env in envs_v1
+    ITensorsExtensions.map_eigenvalues(sqrt, env; cutoff, ishermitian=true) for
+    env in envs_v1
   ]
   sqrt_envs_v2 = [
-    ITensorsExtensions.map_itensor(sqrt, env; cutoff, regularization) for env in envs_v2
+    ITensorsExtensions.map_eigenvalues(sqrt, env; cutoff, ishermitian=true) for
+    env in envs_v2
   ]
   inv_sqrt_envs_v1 = [
-    ITensorsExtensions.map_itensor(inv ∘ sqrt, env; cutoff, regularization) for
+    ITensorsExtensions.map_eigenvalues(inv ∘ sqrt, env; cutoff, ishermitian=true) for
     env in envs_v1
   ]
   inv_sqrt_envs_v2 = [
-    ITensorsExtensions.map_itensor(inv ∘ sqrt, env; cutoff, regularization) for
+    ITensorsExtensions.map_eigenvalues(inv ∘ sqrt, env; cutoff, ishermitian=true) for
     env in envs_v2
   ]
   ψᵥ₁ᵥ₂_tn = [ψ[v⃗[1]]; ψ[v⃗[2]]; sqrt_envs_v1; sqrt_envs_v2]
@@ -127,21 +128,22 @@ end
 # Reduced version
 function simple_update_bp(o, ψ, v⃗; envs, (singular_values!)=nothing, apply_kwargs...)
   cutoff = 10 * eps(real(scalartype(ψ)))
-  regularization = 10 * eps(real(scalartype(ψ)))
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
   sqrt_envs_v1 = [
-    ITensorsExtensions.map_itensor(sqrt, env; cutoff, regularization) for env in envs_v1
+    ITensorsExtensions.map_eigenvalues(sqrt, env; cutoff, ishermitian=true) for
+    env in envs_v1
   ]
   sqrt_envs_v2 = [
-    ITensorsExtensions.map_itensor(sqrt, env; cutoff, regularization) for env in envs_v2
+    ITensorsExtensions.map_eigenvalues(sqrt, env; cutoff, ishermitian=true) for
+    env in envs_v2
   ]
   inv_sqrt_envs_v1 = [
-    ITensorsExtensions.map_itensor(inv ∘ sqrt, env; cutoff, regularization) for
+    ITensorsExtensions.map_eigenvalues(inv ∘ sqrt, env; cutoff, ishermitian=true) for
     env in envs_v1
   ]
   inv_sqrt_envs_v2 = [
-    ITensorsExtensions.map_itensor(inv ∘ sqrt, env; cutoff, regularization) for
+    ITensorsExtensions.map_eigenvalues(inv ∘ sqrt, env; cutoff, ishermitian=true) for
     env in envs_v2
   ]
   ψᵥ₁ = contract([ψ[v⃗[1]]; sqrt_envs_v1])

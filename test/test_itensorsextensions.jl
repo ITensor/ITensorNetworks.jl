@@ -14,7 +14,7 @@ using ITensors:
   replaceinds,
   dir,
   array
-using ITensorNetworks.ITensorsExtensions: map_itensor
+using ITensorNetworks.ITensorsExtensions: map_eigenvalues
 using ITensorNetworks: siteinds, random_tensornetwork
 using NamedGraphs: named_grid
 using Random
@@ -29,9 +29,9 @@ Random.seed!(1234)
       A = randn(eltype, (n, n))
       A = A * A'
       P = ITensor(A, i, j)
-      sqrtP = map_itensor(sqrt, P)
-      inv_P = dag(map_itensor(inv, P))
-      inv_sqrtP = dag(map_itensor(inv ∘ sqrt, P))
+      sqrtP = map_eigenvalues(sqrt, P)
+      inv_P = dag(map_eigenvalues(inv, P))
+      inv_sqrtP = dag(map_eigenvalues(inv ∘ sqrt, P))
 
       sqrtPdag = replaceind(dag(sqrtP), i, i')
       P2 = replaceind(sqrtP * sqrtPdag, i', j)
