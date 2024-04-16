@@ -22,9 +22,9 @@ function align_and_reorder_edges(edges, reference_edges)
 end
 
 function split_at_vertex(g::AbstractGraph, v)
-  _g = copy(g)
-  rem_vertex!(_g, v)
-  return Set.(connected_components(_g))
+  g = copy(g)
+  rem_vertex!(g, v)
+  return Set.(connected_components(g))
 end
 
 # 
