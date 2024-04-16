@@ -23,7 +23,6 @@ using ITensors:
   commoninds,
   commontags,
   contract,
-  convert_eltype,
   dag,
   hascommoninds,
   noprime,
@@ -39,18 +38,18 @@ using ITensors:
   swaptags
 using ITensors.ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-using ITensors.NDTensors: NDTensors, dim
-using LinearAlgebra: LinearAlgebra
+using LinearAlgebra: LinearAlgebra, factorize
 using NamedGraphs:
   NamedGraphs,
   NamedGraph,
   ⊔,
+  directed_graph,
   incident_edges,
   not_implemented,
   rename_vertices,
   vertex_to_parent_vertex,
   vertextype
-using NamedGraphs: directed_graph
+using NDTensors: NDTensors, dim
 using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
@@ -174,41 +173,26 @@ function Base.Vector{ITensor}(tn::AbstractITensorNetwork)
 end
 
 # Convenience wrapper
-# TODO: Delete this and just use `Vector{ITensor}`, or maybe
-# it should output a dictionary or be called `eachtensor`?
-itensors(tn::AbstractITensorNetwork) = Vector{ITensor}(tn)
+function tensors(tn::AbstractITensorNetwork, vertices=vertices(tn))
+  return map(v -> tn[v], Indices(vertices))
+end
 
 #
 # Promotion and conversion
 #
 
-function LinearAlgebra.promote_leaf_eltypes(tn::AbstractITensorNetwork)
-  return LinearAlgebra.promote_leaf_eltypes(itensors(tn))
-end
-
 function promote_indtypeof(tn::AbstractITensorNetwork)
-  return mapreduce(promote_indtype, vertices(tn)) do v
-    return indtype(tn[v])
+  return mapreduce(promote_indtype, tensors(tn)) do t
+    return indtype(t)
   end
 end
 
-# TODO: Delete in favor of `scalartype`.
-function ITensors.promote_itensor_eltype(tn::AbstractITensorNetwork)
-  return LinearAlgebra.promote_leaf_eltypes(tn)
+function NDTensors.scalartype(tn::AbstractITensorNetwork)
+  return mapreduce(eltype, promote_type, tensors(tn); init=Bool)
 end
 
-NDTensors.scalartype(tn::AbstractITensorNetwork) = LinearAlgebra.promote_leaf_eltypes(tn)
+# TODO: Define `eltype(::AbstractITensorNetwork)` as `ITensor`?
 
-# TODO: eltype(::AbstractITensorNetwork) (cannot behave the same as eltype(::ITensors.AbstractMPS))
-
-# TODO: mimic ITensors.AbstractMPS implementation using map
-function ITensors.convert_leaf_eltype(eltype::Type, tn::AbstractITensorNetwork)
-  tn = copy(tn)
-  vertex_data(tn) .= convert_eltype.(Ref(eltype), vertex_data(tn))
-  return tn
-end
-
-# TODO: Mimic ITensors.AbstractMPS implementation using map
 # TODO: Implement using `adapt`
 function NDTensors.convert_scalartype(eltype::Type{<:Number}, tn::AbstractITensorNetwork)
   tn = copy(tn)
@@ -217,7 +201,7 @@ function NDTensors.convert_scalartype(eltype::Type{<:Number}, tn::AbstractITenso
 end
 
 function Base.complex(tn::AbstractITensorNetwork)
-  return NDTensors.convert_scalartype(complex(LinearAlgebra.promote_leaf_eltypes(tn)), tn)
+  return NDTensors.convert_scalartype(complex(scalartype(tn)), tn)
 end
 
 #
@@ -251,7 +235,9 @@ end
 # Alias
 indsnetwork(tn::AbstractITensorNetwork) = IndsNetwork(tn)
 
-function external_indsnetwork(tn::AbstractITensorNetwork)
+# TODO: Output a `VertexDataGraph`? Unfortunately
+# `IndsNetwork` doesn't allow iterating over vertex data.
+function ITensorMPS.siteinds(tn::AbstractITensorNetwork)
   is = IndsNetwork(underlying_graph(tn))
   for v in vertices(tn)
     is[v] = uniqueinds(tn, v)
@@ -259,25 +245,12 @@ function external_indsnetwork(tn::AbstractITensorNetwork)
   return is
 end
 
-# For backwards compatibility
-# TODO: Delete this
-ITensorMPS.siteinds(tn::AbstractITensorNetwork) = external_indsnetwork(tn)
-
-# External indsnetwork of the flattened network, with vertices
-# mapped back to `tn1`.
-function flatten_external_indsnetwork(
-  tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
-)
-  is = external_indsnetwork(sim(tn1; sites=[]) ⊗ tn2)
-  flattened_is = IndsNetwork(underlying_graph(tn1))
-  for v in vertices(flattened_is)
-    # setindex_preserve_graph!(flattened_is, unioninds(is[v, 1], is[v, 2]), v)
-    flattened_is[v] = unioninds(is[v, 1], is[v, 2])
-  end
-  return flattened_is
+function flatten_siteinds(tn::AbstractITensorNetwork)
+  # reduce(noncommoninds, tensors(tn))
+  return unique(flatten([uniqueinds(tn, v) for v in vertices(tn)]))
 end
 
-function internal_indsnetwork(tn::AbstractITensorNetwork)
+function ITensorMPS.linkinds(tn::AbstractITensorNetwork)
   is = IndsNetwork(underlying_graph(tn))
   for e in edges(tn)
     is[e] = commoninds(tn, e)
@@ -285,20 +258,22 @@ function internal_indsnetwork(tn::AbstractITensorNetwork)
   return is
 end
 
-# For backwards compatibility
-# TODO: Delete this
-ITensorMPS.linkinds(tn::AbstractITensorNetwork) = internal_indsnetwork(tn)
+function flatten_linkinds(tn::AbstractITensorNetwork)
+  return unique(flatten([commoninds(tn, e) for e in edges(tn)]))
+end
 
 #
 # Index access
 #
 
-function neighbor_itensors(tn::AbstractITensorNetwork, vertex)
-  return [tn[vn] for vn in neighbors(tn, vertex)]
+function neighbor_tensors(tn::AbstractITensorNetwork, vertex)
+  return tensors(tn, neighbors(tn, vertex))
 end
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, vertex)
-  return uniqueinds(tn[vertex], neighbor_itensors(tn, vertex)...)
+  # TODO: Splatting here isn't good, make a version that works for
+  # collections of ITensors.
+  return reduce(uniqueinds, Iterators.flatten(([tn[vertex]], neighbor_tensors(tn, vertex))))
 end
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
@@ -320,14 +295,6 @@ end
 
 function ITensorMPS.linkinds(tn::AbstractITensorNetwork, edge)
   return commoninds(tn, edge)
-end
-
-function internalinds(tn::AbstractITensorNetwork)
-  return unique(flatten([commoninds(tn, e) for e in edges(tn)]))
-end
-
-function externalinds(tn::AbstractITensorNetwork)
-  return unique(flatten([uniqueinds(tn, v) for v in vertices(tn)]))
 end
 
 # Priming and tagging (changing Index identifiers)
@@ -439,9 +406,7 @@ function Base.isapprox(
   x::AbstractITensorNetwork,
   y::AbstractITensorNetwork;
   atol::Real=0,
-  rtol::Real=Base.rtoldefault(
-    LinearAlgebra.promote_leaf_eltypes(x), LinearAlgebra.promote_leaf_eltypes(y), atol
-  ),
+  rtol::Real=Base.rtoldefault(scalartype(x), scalartype(y), atol),
 )
   error("Not implemented")
   d = norm(x - y)

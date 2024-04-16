@@ -34,18 +34,17 @@ using ITensors:
   scalartype,
   sim,
   uniqueinds
-using ITensors.NDTensors: dim
 using ITensorNetworks:
   ITensorNetworks,
   ⊗,
   IndsNetwork,
   ITensorNetwork,
   contraction_sequence,
-  externalinds,
+  flatten_linkinds,
+  flatten_siteinds,
   inner_network,
-  internalinds,
   linkinds,
-  neighbor_itensors,
+  neighbor_tensors,
   norm_sqr,
   norm_sqr_network,
   orthogonalize,
@@ -54,6 +53,7 @@ using ITensorNetworks:
   ttn
 using LinearAlgebra: factorize
 using NamedGraphs: NamedEdge, incident_edges, named_comb_tree, named_grid
+using NDTensors: NDTensors, dim
 using Random: Random, randn!
 using Test: @test, @test_broken, @testset
 
@@ -323,7 +323,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     s = siteinds("S=1/2", g)
     ψ = ITensorNetwork(s; link_space=2)
 
-    nt = neighbor_itensors(ψ, (1, 1))
+    nt = neighbor_tensors(ψ, (1, 1))
     @test length(nt) == 2
     @test all(map(hascommoninds(ψ[1, 1]), nt))
 
@@ -342,8 +342,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 
     @test linkinds(ψ, e) == commoninds(ψ[1, 1], ψ[2, 1])
 
-    @test length(externalinds(ψ)) == length(vertices(g))
-    @test length(internalinds(ψ)) == length(edges(g))
+    @test length(flatten_siteinds(ψ)) == length(vertices(g))
+    @test length(flatten_linkinds(ψ)) == length(edges(g))
   end
 
   @testset "eltype conversion, $new_eltype" for new_eltype in (Float32, ComplexF64)
@@ -351,10 +351,10 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
     ψ = random_tensornetwork(s; link_space=2)
-    @test ITensors.scalartype(ψ) == Float64
+    @test scalartype(ψ) == Float64
 
-    ϕ = ITensors.convert_leaf_eltype(new_eltype, ψ)
-    @test ITensors.scalartype(ϕ) == new_eltype
+    ϕ = NDTensors.convert_scalartype(new_eltype, ψ)
+    @test scalartype(ϕ) == new_eltype
   end
 
   @testset "Construction from state map" for elt in (Float32, ComplexF64)

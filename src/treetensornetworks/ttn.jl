@@ -1,6 +1,6 @@
 using Graphs: path_graph
 using ITensors: ITensor
-using LinearAlgebra: normalize
+using LinearAlgebra: factorize, normalize
 using NamedGraphs: vertextype
 
 """
