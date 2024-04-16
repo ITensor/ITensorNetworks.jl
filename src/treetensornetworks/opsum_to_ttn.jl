@@ -6,7 +6,6 @@ using ITensors.NDTensors: Block, maxdim, nblocks, nnzblocks
 using ITensors.Ops: Op, OpSum
 using NamedGraphs: degrees, is_leaf, vertex_path
 using StaticArrays: MVector
-using DataGraphs: AbstractDataGraph
 using NamedGraphs: boundary_edges
 # convert ITensors.OpSum to TreeTensorNetwork
 
@@ -28,8 +27,6 @@ function split_at_vertex(g::AbstractGraph, v)
   return Set.(connected_components(_g))
 end
 
-split_at_vertex(g::AbstractDataGraph, v) = split_at_vertex(underlying_graph(g), v)
-
 # 
 # Tree adaptations of functionalities in ITensors.jl/src/physics/autompo/opsum_to_mpo.jl
 # 
@@ -37,7 +34,7 @@ split_at_vertex(g::AbstractDataGraph, v) = split_at_vertex(underlying_graph(g), 
 """
     ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex, kwargs...)
 
-Construct a dense TreeTensorNetwork from a symbolic OpSum representation of a
+Construct a TreeTensorNetwork from a symbolic OpSum representation of a
 Hamiltonian, compressing shared interaction channels.
 """
 function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kwargs...)
