@@ -37,18 +37,10 @@ using ITensors:
   sim,
   swaptags
 using ITensors.ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
-using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
 using LinearAlgebra: LinearAlgebra, factorize
-using NamedGraphs:
-  NamedGraphs,
-  NamedGraph,
-  ⊔,
-  directed_graph,
-  incident_edges,
-  not_implemented,
-  rename_vertices,
-  vertex_to_parent_vertex,
-  vertextype
+using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, vertex_to_parent_vertex
+using NamedGraphs.GraphsExtensions:
+  ⊔, directed_graph, incident_edges, rename_vertices, vertextype
 using NDTensors: NDTensors, dim
 using SplitApplyCombine: flatten
 
@@ -59,7 +51,7 @@ data_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
 data_graph(graph::AbstractITensorNetwork) = not_implemented()
 
 # TODO: Define a generic fallback for `AbstractDataGraph`?
-DataGraphs.edge_data_type(::Type{<:AbstractITensorNetwork}) = ITensor
+DataGraphs.edge_data_eltype(::Type{<:AbstractITensorNetwork}) = ITensor
 
 # Graphs.jl overloads
 function Graphs.weights(graph::AbstractITensorNetwork)
@@ -741,6 +733,7 @@ Base.show(io::IO, graph::AbstractITensorNetwork) = show(io, MIME"text/plain"(), 
 # TODO: Move to an `ITensorNetworksVisualizationInterfaceExt`
 # package extension (and define a `VisualizationInterface` package
 # based on `ITensorVisualizationCore`.).
+using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
 function ITensorVisualizationCore.visualize(
   tn::AbstractITensorNetwork,
   args...;

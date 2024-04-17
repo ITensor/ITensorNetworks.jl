@@ -1,8 +1,9 @@
 using ITensors: IndexSet
-using DataGraphs: DataGraphs, AbstractDataGraph, edge_data, edge_data_type, vertex_data
+using DataGraphs: DataGraphs, AbstractDataGraph, edge_data, vertex_data
 using Graphs: Graphs, AbstractEdge
 using ITensors: ITensors, unioninds, uniqueinds
-using NamedGraphs: NamedGraphs, incident_edges, rename_vertices
+using NamedGraphs: NamedGraphs
+using NamedGraphs.GraphsExtensions: incident_edges, rename_vertices
 
 abstract type AbstractIndsNetwork{V,I} <: AbstractDataGraph{V,Vector{I},Vector{I}} end
 
@@ -21,7 +22,7 @@ function DataGraphs.edge_data(graph::AbstractIndsNetwork, args...)
 end
 
 # TODO: Define a generic fallback for `AbstractDataGraph`?
-DataGraphs.edge_data_type(::Type{<:AbstractIndsNetwork{V,I}}) where {V,I} = Vector{I}
+DataGraphs.edge_data_eltype(::Type{<:AbstractIndsNetwork{V,I}}) where {V,I} = Vector{I}
 
 ## TODO: Bring these back.
 ## function indsnetwork_getindex(is::AbstractIndsNetwork, index)

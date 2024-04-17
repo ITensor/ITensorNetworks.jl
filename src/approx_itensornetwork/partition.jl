@@ -1,4 +1,4 @@
-using DataGraphs: AbstractDataGraph, DataGraph, edge_data, vertex_data
+using DataGraphs: AbstractDataGraph, DataGraph, edge_data, edge_data_eltype, vertex_data
 using Dictionaries: Dictionary
 using Graphs: AbstractGraph, add_edge!, has_edge, dst, edges, edgetype, src, vertices
 using ITensors: ITensor, noncommoninds
@@ -16,7 +16,7 @@ function _partition(g::AbstractGraph, subgraph_vertices)
       add_edge!(partitioned_graph, s1, s2)
       partitioned_graph[s1 => s2] = Dictionary(
         [:edges, :edge_data],
-        [Vector{edgetype(g)}(), Dictionary{edgetype(g),edge_data_type(g)}()],
+        [Vector{edgetype(g)}(), Dictionary{edgetype(g),edge_data_eltype(g)}()],
       )
     end
     if has_edge(partitioned_graph, s1, s2)

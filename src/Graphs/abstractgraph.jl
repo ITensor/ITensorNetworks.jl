@@ -1,5 +1,5 @@
 using Graphs: AbstractGraph, IsDirected, a_star
-using NamedGraphs: child_vertices, undirected_graph
+using NamedGraphs.GraphsExtensions: child_vertices, undirected_graph
 using SimpleTraits: @traitfn
 
 """Determine if an edge involves a leaf (at src or dst)"""

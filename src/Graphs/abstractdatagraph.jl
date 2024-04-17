@@ -10,7 +10,8 @@ for f in [:_root, :_is_rooted, :_is_rooted_directed_binary_tree]
   end
 end
 
-DataGraphs.edge_data_type(::AbstractNamedGraph) = Any
+# TODO: Move to `DataGraphsNamedGraphsExt`.
+DataGraphs.edge_data_eltype(::AbstractNamedGraph) = Any
 
 Base.isassigned(::AbstractNamedGraph, ::Any) = false
 

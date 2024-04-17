@@ -3,9 +3,9 @@ using Dictionaries: AbstractDictionary, Indices
 using Graphs: Graphs
 using Graphs.SimpleGraphs: AbstractSimpleGraph
 using ITensors: Index, dag
-using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-using NamedGraphs:
-  NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph, named_path_graph, vertextype
+using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph
+using NamedGraphs.GraphsExtensions: vertextype
+using NamedGraphs.NamedGraphGenerators: named_path_graph
 
 struct IndsNetwork{V,I} <: AbstractIndsNetwork{V,I}
   data_graph::DataGraph{V,Vector{I},Vector{I},NamedGraph{V},NamedEdge{V}}
@@ -319,6 +319,10 @@ end
 # Visualization
 #
 
+# TODO: Move to an `ITensorNetworksVisualizationInterfaceExt`
+# package extension (and define a `VisualizationInterface` package
+# based on `ITensorVisualizationCore`.).
+using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
 function ITensorVisualizationCore.visualize(is::IndsNetwork, args...; kwargs...)
   return visualize(ITensorNetwork(is), args...; kwargs...)
 end
