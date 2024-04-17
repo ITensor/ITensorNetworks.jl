@@ -25,6 +25,9 @@ end
 function TreeTensorNetwork{V}(tn::ITensorNetwork) where {V}
   return TreeTensorNetwork(ITensorNetwork{V}(tn))
 end
+function TreeTensorNetwork{V,OrthoRegion}(tn::ITensorNetwork) where {V,OrthoRegion}
+  return TreeTensorNetwork(ITensorNetwork{V}(tn); ortho_region=OrthoRegion(vertices(tn)))
+end
 
 const TTN = TreeTensorNetwork
 

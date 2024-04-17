@@ -5,7 +5,8 @@ using ITensors.ITensorMPS: ITensorMPS
 using ITensorNetworks:
   ITensorNetwork, cartesian_to_linear, dmrg, expect, group_terms, siteinds, tebd
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
-using NamedGraphs: named_grid, rename_vertices
+using NamedGraphs.GraphsExtensions: rename_vertices
+using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @testset
 
 ITensors.disable_warn_order()
