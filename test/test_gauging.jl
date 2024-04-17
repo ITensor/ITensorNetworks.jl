@@ -12,7 +12,7 @@ using ITensorNetworks:
 using ITensors: diagITensor, inds, inner
 using ITensors.NDTensors: vector
 using LinearAlgebra: diag
-using NamedGraphs: named_grid
+using NamedGraphs.NamedGraphGenerators: named_grid
 using Random: Random
 using Test: @test, @testset
 

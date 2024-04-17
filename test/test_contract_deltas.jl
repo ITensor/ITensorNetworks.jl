@@ -12,7 +12,8 @@ using ITensorNetworks:
   ITensorNetwork,
   path_graph_structure,
   random_tensornetwork
-using NamedGraphs: leaf_vertices, named_grid
+using NamedGraphs.GraphsExtensions: leaf_vertices
+using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @testset
 
 @testset "test _contract_deltas with no deltas" begin

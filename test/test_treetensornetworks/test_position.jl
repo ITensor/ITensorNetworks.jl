@@ -3,8 +3,8 @@ using Graphs: vertices
 using ITensors: ITensors
 using ITensorNetworks: ProjTTN, ttn, environments, position, siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
-using NamedGraphs: named_comb_tree
-using Test
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using Test: @test, @testset
 
 @testset "ProjTTN position" begin
   # make a nontrivial TTN state and TTN operator

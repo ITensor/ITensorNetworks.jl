@@ -30,7 +30,9 @@ end
 function ITensorNetwork{V}() where {V}
   # TODO: Is there a better way to write this?
   # Try using `convert_vertextype`.
-  return _ITensorNetwork(data_graph_type(ITensorNetwork{V})())
+  new_data_graph_type = data_graph_type(ITensorNetwork{V})
+  new_underlying_graph_type = underlying_graph_type(new_data_graph_type)
+  return _ITensorNetwork(new_data_graph_type(new_underlying_graph_type()))
 end
 function ITensorNetwork{V}(tn::ITensorNetwork) where {V}
   # TODO: Is there a better way to write this?

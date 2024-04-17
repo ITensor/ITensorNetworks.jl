@@ -20,7 +20,8 @@ using ITensorNetworks: ITensorNetworks, OpSum, ttn, relabel_sites, siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using KrylovKit: eigsolve
 using LinearAlgebra: eigvals, norm
-using NamedGraphs: leaf_vertices, named_comb_tree, named_grid, post_order_dfs_vertices
+using NamedGraphs.GraphsExtensions: leaf_vertices, post_order_dfs_vertices
+using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using Test: @test, @test_broken, @testset
 
 function to_matrix(t::ITensor)

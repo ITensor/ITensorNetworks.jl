@@ -3,7 +3,7 @@ using Graphs: vertices
 using ITensorNetworks: ttn, contract, ortho_region, siteinds, union_all_inds
 using ITensors: @disable_warn_order, prime, randomITensor
 using LinearAlgebra: norm
-using NamedGraphs: named_comb_tree
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Random: shuffle
 using Test: @test, @testset
 

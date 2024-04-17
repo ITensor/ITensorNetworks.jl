@@ -1,6 +1,10 @@
-using NamedGraphs.PartitionedGraphs: PartitionEdge, PartitionedGraph, partitioned_graph
+using Graphs: IsDirected, connected_components, edges, edgetype
 using ITensors.NDTensors: Algorithm, @Algorithm_str
-using Graphs: IsDirected, connected_components
+using NamedGraphs: NamedGraphs
+using NamedGraphs.GraphsExtensions: undirected_graph
+using NamedGraphs.PartitionedGraphs: PartitionEdge, PartitionedGraph, partitioned_graph
+using SimpleTraits: SimpleTraits, @traitfn, Not
+using SimpleTraits
 
 default_edge_sequence_alg() = "forest_cover"
 function default_edge_sequence(pg::PartitionedGraph)
@@ -33,7 +37,6 @@ end
       push!(edges, vcat(tree_edges, reverse(reverse.(tree_edges)))...)
     end
   end
-
   return edges
 end
 

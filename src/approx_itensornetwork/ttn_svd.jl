@@ -1,4 +1,7 @@
-using IterTools: partition
+using DataGraphs: DataGraph
+using Graphs: add_vertex!, vertices
+using LinearAlgebra: norm
+
 """
 Approximate a `partition` into an output ITensorNetwork
 with the binary tree structure defined by `out_tree` by
@@ -18,11 +21,11 @@ function _approx_itensornetwork_ttn_svd!(
     add_vertex!(tn, v)
     tn[v] = _optcontract(
       Vector{ITensor}(input_partition[v]);
-      contraction_sequence_alg=contraction_sequence_alg,
-      contraction_sequence_kwargs=contraction_sequence_kwargs,
+      contraction_sequence_alg,
+      contraction_sequence_kwargs,
     )
   end
-  truncate_ttn = truncate(ttn(tn); cutoff=cutoff, maxdim=maxdim, root_vertex=root)
+  truncate_ttn = truncate(ttn(tn); cutoff, maxdim, root_vertex=root)
   out_tn = ITensorNetwork(truncate_ttn)
   root_tensor = out_tn[root]
   root_norm = norm(root_tensor)

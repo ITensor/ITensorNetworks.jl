@@ -1,6 +1,5 @@
 using ITensors: tags
 using ITensors.NDTensors: dense, scalartype
-using IterTools: cache
 using NamedGraphs.PartitionedGraphs: partitionedge
 
 function default_bond_tensors(ψ::ITensorNetwork)

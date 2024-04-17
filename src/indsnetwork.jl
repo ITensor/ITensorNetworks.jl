@@ -6,6 +6,8 @@ using ITensors: Index, dag
 using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph
 using NamedGraphs.GraphsExtensions: vertextype
 using NamedGraphs.NamedGraphGenerators: named_path_graph
+using SimpleTraits: SimpleTraits, Not, @traitfn
+using SimpleTraits
 
 struct IndsNetwork{V,I} <: AbstractIndsNetwork{V,I}
   data_graph::DataGraph{V,Vector{I},Vector{I},NamedGraph{V},NamedEdge{V}}
@@ -76,7 +78,7 @@ function IndsNetwork{V,I}(
   link_space::Dictionary{<:Any,<:Vector{<:Index}},
   site_space::Dictionary{<:Any,<:Vector{<:Index}},
 ) where {V,I}
-  dg = DataGraph{V,Vector{I},Vector{I}}(g)
+  dg = DataGraph{V}(g; vertex_data_eltype=Vector{I}, edge_data_eltype=Vector{I})
   for e in keys(link_space)
     dg[e] = link_space[e]
   end

@@ -617,7 +617,7 @@ function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
 end
 
 function linkinds_combiners(tn::AbstractITensorNetwork; edges=edges(tn))
-  combiners = DataGraph(directed_graph(underlying_graph(tn)), ITensor, ITensor)
+  combiners = DataGraph(directed_graph(underlying_graph(tn)); vertex_data_eltype=ITensor, edge_data_eltype=ITensor)
   for e in edges
     C = combiner(linkinds(tn, e); tags=edge_tag(e))
     combiners[e] = C

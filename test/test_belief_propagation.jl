@@ -25,7 +25,9 @@ using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, random
 using ITensorNetworks.ModelNetworks: ModelNetworks
 using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
-using NamedGraphs: NamedEdge, PartitionVertex, named_comb_tree, named_grid
+using NamedGraphs: NamedEdge
+using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
+using NamedGraphs.PartitionedGraphs: PartitionVertex
 using Random: Random
 using SplitApplyCombine: group
 using Test: @test, @testset

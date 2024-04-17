@@ -13,7 +13,8 @@ using ITensorNetworks:
   random_tensornetwork,
   siteinds
 using Test: @test, @testset
-using NamedGraphs: is_leaf, leaf_vertices, named_grid
+using NamedGraphs.GraphsExtensions: is_leaf, leaf_vertices
+using NamedGraphs.NamedGraphGenerators: named_grid
 
 @testset "contraction_sequence_to_graph" begin
   n = 3

@@ -6,12 +6,13 @@ using NamedGraphs: vertextype
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
 """
-struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
+struct TreeTensorNetwork{V,OrthoRegion} <: AbstractTreeTensorNetwork{V}
   tensornetwork::ITensorNetwork{V}
-  ortho_region::Vector{V}
+  ortho_region::OrthoRegion
   global function _TreeTensorNetwork(tensornetwork::ITensorNetwork, ortho_region)
     @assert is_tree(tensornetwork)
-    return new{vertextype(tensornetwork)}(tensornetwork, ortho_region)
+    @assert vertextype(tensornetwork) === eltype(ortho_region)
+    return new{vertextype(tensornetwork),typeof(ortho_region)}(tensornetwork, ortho_region)
   end
   global function _TreeTensorNetwork(tensornetwork::ITensorNetwork)
     return _TreeTensorNetwork(tensornetwork, vertices(tensornetwork))

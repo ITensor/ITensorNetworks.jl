@@ -3,7 +3,7 @@ using EinExprs: Exhaustive, Greedy, HyPar
 using ITensorNetworks:
   contraction_sequence, norm_sqr_network, random_tensornetwork, siteinds
 using ITensors: ITensors, contract
-using NamedGraphs: named_grid
+using NamedGraphs.NamedGraphGenerators: named_grid
 using OMEinsumContractionOrders: OMEinsumContractionOrders
 using Random: Random
 using Test: @test, @testset

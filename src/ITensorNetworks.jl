@@ -1,5 +1,4 @@
 module ITensorNetworks
-include("usings.jl")
 include("Graphs/abstractgraph.jl")
 include("Graphs/abstractdatagraph.jl")
 include("observers.jl")
