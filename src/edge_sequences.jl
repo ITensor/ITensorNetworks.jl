@@ -3,8 +3,7 @@ using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs: NamedGraphs
 using NamedGraphs.GraphsExtensions: GraphsExtensions, forest_cover, undirected_graph
 using NamedGraphs.PartitionedGraphs: PartitionEdge, PartitionedGraph, partitioned_graph
-using SimpleTraits: SimpleTraits, @traitfn, Not
-using SimpleTraits
+using SimpleTraits: SimpleTraits, Not, @traitfn
 
 default_edge_sequence_alg() = "forest_cover"
 function default_edge_sequence(pg::PartitionedGraph)

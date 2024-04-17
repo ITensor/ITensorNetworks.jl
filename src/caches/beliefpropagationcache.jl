@@ -11,8 +11,7 @@ using NamedGraphs.PartitionedGraphs:
   partitionvertices,
   partitionedges,
   unpartitioned_graph
-using SimpleTraits: SimpleTraits, @traitfn, Not
-using SimpleTraits
+using SimpleTraits: SimpleTraits, Not, @traitfn
 
 default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()

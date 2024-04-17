@@ -1,6 +1,7 @@
+# TODO: Move to `Graphs.GraphsExtensions`.
 using Graphs: AbstractGraph, IsDirected, a_star
 using NamedGraphs.GraphsExtensions: child_vertices, is_leaf, undirected_graph, parent_vertex
-using SimpleTraits: @traitfn
+using SimpleTraits: SimpleTraits, Not, @traitfn
 
 """Determine if an edge involves a leaf (at src or dst)"""
 function is_leaf_edge(g::AbstractGraph, e)

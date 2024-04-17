@@ -7,7 +7,6 @@ using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph
 using NamedGraphs.GraphsExtensions: vertextype
 using NamedGraphs.NamedGraphGenerators: named_path_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
-using SimpleTraits
 
 struct IndsNetwork{V,I} <: AbstractIndsNetwork{V,I}
   data_graph::DataGraph{V,Vector{I},Vector{I},NamedGraph{V},NamedEdge{V}}
