@@ -1,7 +1,7 @@
 using Graphs: IsDirected, connected_components, edges, edgetype
 using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs: NamedGraphs
-using NamedGraphs.GraphsExtensions: GraphsExtensions, undirected_graph
+using NamedGraphs.GraphsExtensions: GraphsExtensions, forest_cover, undirected_graph
 using NamedGraphs.PartitionedGraphs: PartitionEdge, PartitionedGraph, partitioned_graph
 using SimpleTraits: SimpleTraits, @traitfn, Not
 using SimpleTraits
@@ -30,7 +30,7 @@ end
   g::::(!IsDirected);
   root_vertex=GraphsExtensions.default_root_vertex,
 )
-  forests = NamedGraphs.forest_cover(g)
+  forests = forest_cover(g)
   edges = edgetype(g)[]
   for forest in forests
     trees = [forest[vs] for vs in connected_components(forest)]

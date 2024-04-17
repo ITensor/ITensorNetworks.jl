@@ -1,6 +1,6 @@
 @eval module $(gensym())
 using DataGraphs: vertex_data
-using Dictionaries: Dictionary
+using Dictionaries: Dictionary, getindices
 using Graphs: add_vertex!, rem_vertex!, add_edge!, rem_edge!, vertices
 using ITensors:
   ITensors,
@@ -236,7 +236,7 @@ end
 
     # linearized version
     linear_order = [4, 1, 2, 5, 3, 6]
-    vmap = Dictionary(vertices(is)[linear_order], 1:length(linear_order))
+    vmap = Dictionary(getindices(vertices(is), linear_order), eachindex(linear_order))
     sites = only.(filter(d -> !isempty(d), collect(vertex_data(is_missing_site))))[linear_order]
 
     J1 = -1

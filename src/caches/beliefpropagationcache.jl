@@ -105,10 +105,8 @@ function message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
   mts = messages(bp_cache)
   return get(mts, edge, default_message(bp_cache, edge))
 end
-function messages(
-  bp_cache::BeliefPropagationCache, edges::Vector{<:PartitionEdge}; kwargs...
-)
-  return [message(bp_cache, edge; kwargs...) for edge in edges]
+function messages(bp_cache::BeliefPropagationCache, edges; kwargs...)
+  return map(edge -> message(bp_cache, edge; kwargs...), edges)
 end
 
 function Base.copy(bp_cache::BeliefPropagationCache)
@@ -256,21 +254,18 @@ end
 """
 Update the tensornetwork inside the cache
 """
-function update_factors(
-  bp_cache::BeliefPropagationCache, vertices::Vector, factors::Vector{ITensor}
-)
+function update_factors(bp_cache::BeliefPropagationCache, factors)
   bp_cache = copy(bp_cache)
   tn = tensornetwork(bp_cache)
-
-  for (vertex, factor) in zip(vertices, factors)
+  for vertex in eachindex(factors)
     # TODO: Add a check that this preserves the graph structure.
-    setindex_preserve_graph!(tn, factor, vertex)
+    setindex_preserve_graph!(tn, factors[vertex], vertex)
   end
   return bp_cache
 end
 
 function update_factor(bp_cache, vertex, factor)
-  return update_factors(bp_cache, [vertex], ITensor[factor])
+  return update_factors(bp_cache, Dictionary([vertex], [factor]))
 end
 
 function region_scalar(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
@@ -285,16 +280,15 @@ end
 
 function vertex_scalars(
   bp_cache::BeliefPropagationCache,
-  pvs::Vector=partitionvertices(partitioned_tensornetwork(bp_cache)),
+  pvs=partitionvertices(partitioned_tensornetwork(bp_cache)),
 )
-  return [region_scalar(bp_cache, pv) for pv in pvs]
+  return map(pv -> region_scalar(bp_cache, pv), pvs)
 end
 
 function edge_scalars(
-  bp_cache::BeliefPropagationCache,
-  pes::Vector=partitionedges(partitioned_tensornetwork(bp_cache)),
+  bp_cache::BeliefPropagationCache, pes=partitionedges(partitioned_tensornetwork(bp_cache))
 )
-  return [region_scalar(bp_cache, pe) for pe in pes]
+  return map(pe -> region_scalar(bp_cache, pe), pes)
 end
 
 function scalar_factors_quotient(bp_cache::BeliefPropagationCache)

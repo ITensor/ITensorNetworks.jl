@@ -17,7 +17,7 @@ using ITensorNetworks:
   binary_tree_structure,
   path_graph_structure,
   random_tensornetwork
-using NamedGraphs: NamedEdge
+using NamedGraphs: NamedEdge, NamedGraph
 using NamedGraphs.NamedGraphGenerators: named_grid
 using NamedGraphs.GraphsExtensions: post_order_dfs_vertices
 using OMEinsumContractionOrders: OMEinsumContractionOrders
@@ -130,7 +130,7 @@ end
   underlying_tree = underlying_graph(input_partition)
   # Change type of each partition[v] since they will be updated
   # with potential data type chage.
-  p = DataGraph()
+  p = DataGraph(NamedGraph())
   for v in vertices(input_partition)
     add_vertex!(p, v)
     p[v] = ITensorNetwork{Any}(input_partition[v])

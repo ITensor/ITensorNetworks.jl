@@ -3,7 +3,9 @@ using ITensors.NDTensors: dense, scalartype
 using NamedGraphs.PartitionedGraphs: partitionedge
 
 function default_bond_tensors(ψ::ITensorNetwork)
-  return DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))
+  return DataGraph(
+    underlying_graph(ψ); edge_data_eltype=Nothing, vertex_data_eltype=ITensor
+  )
 end
 
 struct VidalITensorNetwork{V,BTS} <: AbstractITensorNetwork{V}

@@ -5,10 +5,10 @@ using ITensors: ITensor, noncommoninds
 using NamedGraphs: NamedGraph, subgraph
 
 function _partition(g::AbstractGraph, subgraph_vertices)
-  partitioned_graph = DataGraph(
-    NamedGraph(eachindex(subgraph_vertices)),
-    map(vs -> subgraph(g, vs), Dictionary(subgraph_vertices)),
-  )
+  partitioned_graph = DataGraph(NamedGraph(eachindex(subgraph_vertices)))
+  for v in vertices(partitioned_graph)
+    partitioned_graph[v] = subgraph(g, subgraph_vertices[v])
+  end
   for e in edges(g)
     s1 = findfirst_on_vertices(subgraph -> src(e) ∈ vertices(subgraph), partitioned_graph)
     s2 = findfirst_on_vertices(subgraph -> dst(e) ∈ vertices(subgraph), partitioned_graph)
