@@ -4,9 +4,9 @@ using ITensors.ITensorMPS: ITensorMPS, cutoff, linkdims, truncate!
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, maxdim, nblocks, nnzblocks
 using ITensors.Ops: Op, OpSum
-using NamedGraphs: degrees, is_leaf, vertex_path
+using NamedGraphs.GraphsExtensions: boundary_edges, degrees, is_leaf, vertex_path
 using StaticArrays: MVector
-using NamedGraphs: boundary_edges
+
 # convert ITensors.OpSum to TreeTensorNetwork
 
 # 

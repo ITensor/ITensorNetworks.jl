@@ -1,5 +1,6 @@
 using Graphs: has_vertex
-using NamedGraphs: edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
+using NamedGraphs.GraphsExtensions:
+  edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
 using IsApprox: IsApprox, Approx
 using ITensors: @Algorithm_str, directsum, hasinds, permute, plev
 using ITensors.ITensorMPS: linkind, loginner, lognorm, orthogonalize

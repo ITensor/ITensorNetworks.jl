@@ -1,6 +1,7 @@
-using NamedGraphs: partitioned_graph
-using Graphs: connected_components
-using Graphs: IsDirected
+using NamedGraphs.PartitionedGraphs: PartitionEdge, PartitionedGraph, partitioned_graph
+using ITensors.NDTensors: Algorithm, @Algorithm_str
+using Graphs: IsDirected, connected_components
+
 default_edge_sequence_alg() = "forest_cover"
 function default_edge_sequence(pg::PartitionedGraph)
   return PartitionEdge.(edge_sequence(partitioned_graph(pg)))

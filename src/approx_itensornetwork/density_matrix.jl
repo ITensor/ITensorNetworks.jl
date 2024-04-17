@@ -3,7 +3,7 @@ using Graphs: vertices
 using ITensors: ITensor, inds
 using LinearAlgebra: ishermitian, norm
 using NamedGraphs: NamedEdge
-using NamedGraphs.GraphsExtensions: child_vertices, post_order_dfs_vertices
+using NamedGraphs.GraphsExtensions: child_vertices, parent_vertex, post_order_dfs_vertices
 
 """
 The struct contains cached density matrices and cached partial density matrices

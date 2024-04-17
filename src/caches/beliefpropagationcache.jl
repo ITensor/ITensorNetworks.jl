@@ -1,12 +1,16 @@
 using Graphs: IsDirected
 using SplitApplyCombine: group
-using NamedGraphs: unpartitioned_graph
-using NamedGraphs: partitionvertices
-using NamedGraphs: PartitionVertex
 using LinearAlgebra: diag
 using ITensors: dir
 using ITensors.ITensorMPS: ITensorMPS
-using NamedGraphs: boundary_partitionedges, partitionvertices, partitionedges
+using NamedGraphs.PartitionedGraphs:
+  PartitionedGraphs,
+  PartitionedGraph,
+  PartitionVertex,
+  boundary_partitionedges,
+  partitionvertices,
+  partitionedges,
+  unpartitioned_graph
 
 default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()
@@ -77,11 +81,11 @@ end
 
 #Forward from partitioned graph
 for f in [
-  :(NamedGraphs.partitioned_graph),
-  :(NamedGraphs.partitionedge),
-  :(NamedGraphs.partitionvertices),
-  :(NamedGraphs.vertices),
-  :(NamedGraphs.boundary_partitionedges),
+  :(PartitionedGraphs.partitioned_graph),
+  :(PartitionedGraphs.partitionedge),
+  :(PartitionedGraphs.partitionvertices),
+  :(PartitionedGraphs.vertices),
+  :(PartitionedGraphs.boundary_partitionedges),
   :(ITensorMPS.linkinds),
 ]
   @eval begin

@@ -1,5 +1,7 @@
-using NamedGraphs: parent_vertex
-using Graphs: dfs_tree
+using NamedGraphs.GraphsExtensions: leaf_vertices, parent_vertex
+using Graphs: dfs_tree, rem_vertex!, vertices
+using ITensors: ITensor
+
 """
 For a given ITensorNetwork `tn` and a `root` vertex, remove leaf vertices in the directed tree
 with root `root` without changing the tensor represented by tn.
@@ -30,7 +32,7 @@ function _optcontract(
   network::Vector; contraction_sequence_alg="optimal", contraction_sequence_kwargs=(;)
 )
   if length(network) == 0
-    return ITensor(1.0)
+    return ITensor(1)
   end
   @assert network isa Vector{ITensor}
   seq = contraction_sequence(
