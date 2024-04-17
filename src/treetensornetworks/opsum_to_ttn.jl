@@ -4,7 +4,8 @@ using ITensors.ITensorMPS: ITensorMPS, cutoff, linkdims, truncate!
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, maxdim, nblocks, nnzblocks
 using ITensors.Ops: Op, OpSum
-using NamedGraphs.GraphsExtensions: boundary_edges, degrees, is_leaf, vertex_path
+using NamedGraphs.GraphsExtensions:
+  GraphsExtensions, boundary_edges, degrees, is_leaf, vertex_path
 using StaticArrays: MVector
 
 # convert ITensors.OpSum to TreeTensorNetwork
@@ -522,29 +523,17 @@ Convert an OpSum object `os` to a TreeTensorNetwork, with indices given by `site
 function ttn(
   os::OpSum,
   sites::IndsNetwork;
-  root_vertex=default_root_vertex(sites),
-  splitblocks=false,
-  algorithm="svd",
+  root_vertex=GraphsExtensions.default_root_vertex(sites),
   kwargs...,
-)::TTN
+)
   length(ITensors.terms(os)) == 0 && error("OpSum has no terms")
   is_tree(sites) || error("Site index graph must be a tree.")
   is_leaf(sites, root_vertex) || error("Tree root must be a leaf vertex.")
 
   os = deepcopy(os)
   os = sorteachterm(os, sites, root_vertex)
-  os = ITensorMPS.sortmergeterms(os) # not exported
-  if algorithm == "svd"
-    T = ttn_svd(os, sites, root_vertex; kwargs...)
-  else
-    error("Currently only SVD is supported as TTN constructor backend.")
-  end
-
-  if splitblocks
-    error("splitblocks not yet implemented for AbstractTreeTensorNetwork.")
-    T = ITensors.splitblocks(linkinds, T) # TODO: make this work
-  end
-  return T
+  os = ITensorMPS.sortmergeterms(os)
+  return ttn_svd(os, sites, root_vertex; kwargs...)
 end
 
 function mpo(os::OpSum, external_inds::Vector; kwargs...)

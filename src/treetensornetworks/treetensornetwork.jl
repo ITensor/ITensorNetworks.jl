@@ -1,7 +1,7 @@
 using Graphs: path_graph
 using ITensors: ITensor
 using LinearAlgebra: factorize, normalize
-using NamedGraphs: vertextype
+using NamedGraphs.GraphsExtensions: GraphsExtensions, vertextype
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
@@ -76,7 +76,12 @@ function mps(f, is::Vector{<:Index}; kwargs...)
 end
 
 # Construct from dense ITensor, using IndsNetwork of site indices.
-function ttn(a::ITensor, is::IndsNetwork; ortho_region=[default_root_vertex(is)], kwargs...)
+function ttn(
+  a::ITensor,
+  is::IndsNetwork;
+  ortho_region=[GraphsExtensions.default_root_vertex(is)],
+  kwargs...,
+)
   for v in vertices(is)
     @assert hasinds(a, is[v])
   end
