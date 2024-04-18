@@ -44,7 +44,7 @@ Return the root vertex of a rooted directed graph
 """
 @traitfn function _root(graph::AbstractGraph::IsDirected)
   @assert _is_rooted(graph) "the input $(graph) has to be rooted"
-  v = vertices(graph)[1]
+  v = first(vertices(graph))
   while parent_vertex(graph, v) != nothing
     v = parent_vertex(graph, v)
   end
@@ -52,8 +52,7 @@ Return the root vertex of a rooted directed graph
 end
 
 @traitfn function _is_rooted(graph::AbstractGraph::IsDirected)
-  roots = [v for v in vertices(graph) if parent_vertex(graph, v) == nothing]
-  return length(roots) == 1
+  return isone(length(filter(v -> isnothing(parent_vertex(graph, v)), vertices(graph))))
 end
 
 @traitfn function _is_rooted_directed_binary_tree(graph::AbstractGraph::IsDirected)

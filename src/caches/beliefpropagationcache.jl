@@ -132,7 +132,7 @@ end
 function environment(
   bp_cache::BeliefPropagationCache,
   partition_vertices::Vector{<:PartitionVertex};
-  ignore_edges=PartitionEdge[],
+  ignore_edges=(),
 )
   bpes = boundary_partitionedges(bp_cache, partition_vertices; dir=:in)
   ms = messages(bp_cache, setdiff(bpes, ignore_edges))

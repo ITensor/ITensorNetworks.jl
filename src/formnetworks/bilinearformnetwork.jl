@@ -38,8 +38,10 @@ end
 operator_vertex_suffix(blf::BilinearFormNetwork) = blf.operator_vertex_suffix
 bra_vertex_suffix(blf::BilinearFormNetwork) = blf.bra_vertex_suffix
 ket_vertex_suffix(blf::BilinearFormNetwork) = blf.ket_vertex_suffix
+# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 tensornetwork(blf::BilinearFormNetwork) = blf.tensornetwork
 data_graph_type(::Type{<:BilinearFormNetwork}) = data_graph_type(tensornetwork(blf))
+# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 data_graph(blf::BilinearFormNetwork) = data_graph(tensornetwork(blf))
 
 function Base.copy(blf::BilinearFormNetwork)
