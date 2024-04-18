@@ -46,7 +46,7 @@ function ITensorMPS.orthogonalize(tn::AbstractTTN, ortho_center; kwargs...)
   for e in edge_list
     tn = orthogonalize(tn, e)
   end
-  return set_ortho_region(tn, [ortho_center])
+  return set_ortho_region(tn, typeof(ortho_region(tn))([ortho_center]))
 end
 
 # For ambiguity error
@@ -66,7 +66,7 @@ function Base.truncate(
     # always orthogonalize towards source first to make truncations controlled
     tn = orthogonalize(tn, src(e))
     tn = truncate(tn, e; kwargs...)
-    tn = set_ortho_region(tn, [dst(e)])
+    tn = set_ortho_region(tn, typeof(ortho_region(tn))([dst(e)]))
   end
   return tn
 end

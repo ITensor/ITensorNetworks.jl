@@ -1,6 +1,6 @@
 using DataGraphs: DataGraph
 using Graphs: add_vertex!, vertices
-using LinearAlgebra: normalize
+using LinearAlgebra: norm
 using NamedGraphs.GraphsExtensions: vertextype
 
 """
@@ -23,6 +23,7 @@ function _approx_itensornetwork_ttn_svd!(
   end
   truncate_ttn = truncate(ttn(tn); cutoff, maxdim, root_vertex=root)
   out_tn = ITensorNetwork(truncate_ttn)
-  out_tn[root] = normalize(out_tn[root])
+  root_norm = norm(out_tn[root])
+  out_tn[root] /= root_norm
   return out_tn, log(root_norm)
 end

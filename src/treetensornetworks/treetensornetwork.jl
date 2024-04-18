@@ -79,7 +79,7 @@ end
 function ttn(
   a::ITensor,
   is::IndsNetwork;
-  ortho_region=[GraphsExtensions.default_root_vertex(is)],
+  ortho_region=Indices([GraphsExtensions.default_root_vertex(is)]),
   kwargs...,
 )
   for v in vertices(is)
