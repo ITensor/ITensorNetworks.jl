@@ -1,6 +1,6 @@
 using DataGraphs: DataGraph
 using Graphs: add_vertex!, vertices
-using LinearAlgebra: norm
+using LinearAlgebra: normalize
 
 """
 Approximate a `partition` into an output ITensorNetwork
@@ -13,23 +13,15 @@ function _approx_itensornetwork_ttn_svd!(
   root=first(vertices(partition)),
   cutoff=1e-15,
   maxdim=10000,
-  contraction_sequence_alg,
   contraction_sequence_kwargs,
 )
   tn = ITensorNetwork()
   for v in vertices(input_partition)
     add_vertex!(tn, v)
-    tn[v] = _optcontract(
-      Vector{ITensor}(input_partition[v]);
-      contraction_sequence_alg,
-      contraction_sequence_kwargs,
-    )
+    tn[v] = _optcontract(Vector{ITensor}(input_partition[v]); contraction_sequence_kwargs)
   end
   truncate_ttn = truncate(ttn(tn); cutoff, maxdim, root_vertex=root)
   out_tn = ITensorNetwork(truncate_ttn)
-  root_tensor = out_tn[root]
-  root_norm = norm(root_tensor)
-  root_tensor /= root_norm
-  out_tn[root] = root_tensor
+  out_tn[root] = normalize(out_tn[root])
   return out_tn, log(root_norm)
 end

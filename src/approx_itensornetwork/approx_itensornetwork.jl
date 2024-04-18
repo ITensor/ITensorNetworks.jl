@@ -10,7 +10,6 @@ function approx_tensornetwork(
   root,
   cutoff=1e-15,
   maxdim=10000,
-  contraction_sequence_alg,
   contraction_sequence_kwargs,
 )
   @assert is_tree(binary_tree_partition)
@@ -28,7 +27,6 @@ function approx_tensornetwork(
     root,
     cutoff,
     maxdim,
-    contraction_sequence_alg,
     contraction_sequence_kwargs,
   )
 end
@@ -39,19 +37,13 @@ function approx_tensornetwork(
   root,
   cutoff=1e-15,
   maxdim=10000,
-  contraction_sequence_alg,
   contraction_sequence_kwargs,
 )
   @assert is_tree(binary_tree_partition)
   @assert root in vertices(binary_tree_partition)
   @assert _is_rooted_directed_binary_tree(dfs_tree(binary_tree_partition, root))
   return _approx_itensornetwork_ttn_svd!(
-    binary_tree_partition;
-    root,
-    cutoff,
-    maxdim,
-    contraction_sequence_alg,
-    contraction_sequence_kwargs,
+    binary_tree_partition; root, cutoff, maxdim, contraction_sequence_kwargs
   )
 end
 
@@ -66,28 +58,16 @@ function approx_tensornetwork(
   inds_btree::DataGraph;
   cutoff=1e-15,
   maxdim=10000,
-  contraction_sequence_alg="optimal",
   contraction_sequence_kwargs=(;),
 )
   par = _partition(tn, inds_btree; alg="mincut_recursive_bisection")
   output_tn, log_root_norm = approx_tensornetwork(
-    alg,
-    par;
-    root=_root(inds_btree),
-    cutoff=cutoff,
-    maxdim=maxdim,
-    contraction_sequence_alg=contraction_sequence_alg,
-    contraction_sequence_kwargs=contraction_sequence_kwargs,
+    alg, par; root=_root(inds_btree), cutoff, maxdim, contraction_sequence_kwargs
   )
   # Each leaf vertex in `output_tn` is adjacent to one output index.
   # We remove these leaf vertices so that each non-root vertex in `output_tn`
   # is an order 3 tensor.
-  _rem_leaf_vertices!(
-    output_tn;
-    root=_root(inds_btree),
-    contraction_sequence_alg=contraction_sequence_alg,
-    contraction_sequence_kwargs=contraction_sequence_kwargs,
-  )
+  _rem_leaf_vertices!(output_tn; root=_root(inds_btree), contraction_sequence_kwargs)
   return output_tn, log_root_norm
 end
 
@@ -101,18 +81,11 @@ function approx_tensornetwork(
   output_structure::Function=path_graph_structure;
   cutoff=1e-15,
   maxdim=10000,
-  contraction_sequence_alg="optimal",
   contraction_sequence_kwargs=(;),
 )
   inds_btree = output_structure(tn)
   return approx_tensornetwork(
-    alg,
-    tn,
-    inds_btree;
-    cutoff=cutoff,
-    maxdim=maxdim,
-    contraction_sequence_alg=contraction_sequence_alg,
-    contraction_sequence_kwargs=contraction_sequence_kwargs,
+    alg, tn, inds_btree; cutoff, maxdim, contraction_sequence_kwargs
   )
 end
 
@@ -123,17 +96,10 @@ function approx_tensornetwork(
   root,
   cutoff=1e-15,
   maxdim=10000,
-  contraction_sequence_alg="optimal",
   contraction_sequence_kwargs=(;),
 )
   return approx_tensornetwork(
-    Algorithm(alg),
-    partitioned_tn;
-    root,
-    cutoff,
-    maxdim,
-    contraction_sequence_alg,
-    contraction_sequence_kwargs,
+    Algorithm(alg), partitioned_tn; root, cutoff, maxdim, contraction_sequence_kwargs
   )
 end
 
@@ -143,17 +109,10 @@ function approx_tensornetwork(
   alg::String,
   cutoff=1e-15,
   maxdim=10000,
-  contraction_sequence_alg="optimal",
   contraction_sequence_kwargs=(;),
 )
   return approx_tensornetwork(
-    Algorithm(alg),
-    tn,
-    inds_btree;
-    cutoff,
-    maxdim,
-    contraction_sequence_alg,
-    contraction_sequence_kwargs,
+    Algorithm(alg), tn, inds_btree; cutoff, maxdim, contraction_sequence_kwargs
   )
 end
 
@@ -163,16 +122,9 @@ function approx_tensornetwork(
   alg::String,
   cutoff=1e-15,
   maxdim=10000,
-  contraction_sequence_alg="optimal",
   contraction_sequence_kwargs=(;),
 )
   return approx_tensornetwork(
-    Algorithm(alg),
-    tn,
-    output_structure;
-    cutoff,
-    maxdim,
-    contraction_sequence_alg,
-    contraction_sequence_kwargs,
+    Algorithm(alg), tn, output_structure; cutoff, maxdim, contraction_sequence_kwargs
   )
 end

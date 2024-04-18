@@ -196,7 +196,6 @@ function _update!(
   children::Vector,
   network::Vector{ITensor},
   inds_to_sim;
-  contraction_sequence_alg,
   contraction_sequence_kwargs,
 )
   v = dst(edge)
@@ -210,7 +209,7 @@ function _update!(
     es = Set(vcat(es, [edge]))
     if !haskey(caches.es_to_pdm, es)
       caches.es_to_pdm[es] = _optcontract(
-        [dm_tensor, network...]; contraction_sequence_alg, contraction_sequence_kwargs
+        [dm_tensor, network...]; contraction_sequence_kwargs
       )
     end
     push!(pdms, caches.es_to_pdm[es])
@@ -218,21 +217,15 @@ function _update!(
   if length(pdms) == 0
     sim_network = map(x -> replaceinds(x, inds_to_sim), network)
     sim_network = map(dag, sim_network)
-    density_matrix = _optcontract(
-      [network..., sim_network...]; contraction_sequence_alg, contraction_sequence_kwargs
-    )
+    density_matrix = _optcontract([network..., sim_network...]; contraction_sequence_kwargs)
   elseif length(pdms) == 1
     sim_network = map(x -> replaceinds(x, inds_to_sim), network)
     sim_network = map(dag, sim_network)
-    density_matrix = _optcontract(
-      [pdms[1], sim_network...]; contraction_sequence_alg, contraction_sequence_kwargs
-    )
+    density_matrix = _optcontract([pdms[1], sim_network...]; contraction_sequence_kwargs)
   else
     simtensor = _sim(pdms[2], inds_to_sim)
     simtensor = dag(simtensor)
-    density_matrix = _optcontract(
-      [pdms[1], simtensor]; contraction_sequence_alg, contraction_sequence_kwargs
-    )
+    density_matrix = _optcontract([pdms[1], simtensor]; contraction_sequence_kwargs)
   end
   caches.e_to_dm[edge] = density_matrix
   return nothing
@@ -264,12 +257,7 @@ Example:
   and the returned tensor `U` will be the projector at vertex 4 in the output tn.
 """
 function _rem_vertex!(
-  alg_graph::_DensityMartrixAlgGraph,
-  root;
-  cutoff,
-  maxdim,
-  contraction_sequence_alg,
-  contraction_sequence_kwargs,
+  alg_graph::_DensityMartrixAlgGraph, root; cutoff, maxdim, contraction_sequence_kwargs
 )
   caches = alg_graph.caches
   outinds_root_to_sim = _densitymatrix_outinds_to_sim(alg_graph.partition, root)
@@ -286,7 +274,6 @@ function _rem_vertex!(
       children,
       Vector{ITensor}(network),
       inds_to_sim;
-      contraction_sequence_alg,
       contraction_sequence_kwargs,
     )
   end
@@ -299,9 +286,7 @@ function _rem_vertex!(
   )
   # update partition and out_tree
   root_tensor = _optcontract(
-    [Vector{ITensor}(alg_graph.partition[root])..., dag(U)];
-    contraction_sequence_alg,
-    contraction_sequence_kwargs,
+    [Vector{ITensor}(alg_graph.partition[root])..., dag(U)]; contraction_sequence_kwargs
   )
   new_root = child_vertices(dm_dfs_tree, root)[1]
   alg_graph.partition[new_root] = disjoint_union(
@@ -324,9 +309,7 @@ function _rem_vertex!(
       end
       @assert length(new_es) >= 1
       caches.es_to_pdm[new_es] = _optcontract(
-        [caches.es_to_pdm[es], root_tensor];
-        contraction_sequence_alg,
-        contraction_sequence_kwargs,
+        [caches.es_to_pdm[es], root_tensor]; contraction_sequence_kwargs
       )
     end
     # Remove old caches since they won't be used anymore,
@@ -350,12 +333,11 @@ function _approx_itensornetwork_density_matrix!(
   root=first(vertices(partition)),
   cutoff=1e-15,
   maxdim=10000,
-  contraction_sequence_alg,
   contraction_sequence_kwargs,
 )
   # Change type of each partition[v] since they will be updated
   # with potential data type chage.
-  partition = DataGraph()
+  partition = DataGraph(NamedGraph())
   for v in vertices(input_partition)
     add_vertex!(partition, v)
     partition[v] = ITensorNetwork{Any}(input_partition[v])
@@ -364,17 +346,13 @@ function _approx_itensornetwork_density_matrix!(
   alg_graph = _DensityMartrixAlgGraph(partition, out_tree, root)
   output_tn = ITensorNetwork()
   for v in post_order_dfs_vertices(out_tree, root)[1:(end - 1)]
-    U = _rem_vertex!(
-      alg_graph, v; cutoff, maxdim, contraction_sequence_alg, contraction_sequence_kwargs
-    )
+    U = _rem_vertex!(alg_graph, v; cutoff, maxdim, contraction_sequence_kwargs)
     add_vertex!(output_tn, v)
     output_tn[v] = U
   end
   @assert length(vertices(partition)) == 1
   add_vertex!(output_tn, root)
-  root_tensor = _optcontract(
-    Vector{ITensor}(partition[root]); contraction_sequence_alg, contraction_sequence_kwargs
-  )
+  root_tensor = _optcontract(Vector{ITensor}(partition[root]); contraction_sequence_kwargs)
   root_norm = norm(root_tensor)
   root_tensor /= root_norm
   output_tn[root] = root_tensor

@@ -103,7 +103,10 @@ end
     for structure in [path_graph_structure, binary_tree_structure]
       for alg in ["density_matrix", "ttn_svd"]
         approx_tn, lognorm = contract(
-          tn; alg=alg, output_structure=structure, contraction_sequence_alg="sa_bipartite"
+          tn;
+          alg=alg,
+          output_structure=structure,
+          contraction_sequence_kwargs=(; alg="sa_bipartite"),
         )
         network3 = Vector{ITensor}(approx_tn)
         out3 = contract(network3...) * exp(lognorm)
@@ -143,8 +146,7 @@ end
       v;
       cutoff=1e-15,
       maxdim=10000,
-      contraction_sequence_alg="optimal",
-      contraction_sequence_kwargs=(;),
+      contraction_sequence_kwargs=(; alg="optimal"),
     )
   end
   # Check that a specific density matrix info has been cached

@@ -10,15 +10,10 @@ function environment(
 end
 
 function environment(
-  ::Algorithm"exact",
-  ψ::AbstractITensorNetwork,
-  verts::Vector;
-  contraction_sequence_alg="optimal",
-  kwargs...,
+  ::Algorithm"exact", ψ::AbstractITensorNetwork, verts::Vector; kwargs...
 )
   ψ_reduced = Vector{ITensor}(subgraph(ψ, setdiff(vertices(ψ), verts)))
-  sequence = contraction_sequence(ψ_reduced; alg=contraction_sequence_alg)
-  return ITensor[contract(ψ_reduced; sequence, kwargs...)]
+  return ITensor[contract(ψ_reduced; kwargs...)]
 end
 
 function environment(
