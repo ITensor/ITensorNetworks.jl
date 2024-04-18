@@ -9,7 +9,11 @@ function NDTensors.contract(tn::AbstractITensorNetwork; alg="exact", kwargs...)
 end
 
 function NDTensors.contract(
-  alg::Algorithm"exact", tn::AbstractITensorNetwork; sequence=vertices(tn), kwargs...
+  alg::Algorithm"exact",
+  tn::AbstractITensorNetwork;
+  contraction_sequence_kwargs=(;),
+  sequence=contraction_sequence(tn; contraction_sequence_kwargs...),
+  kwargs...,
 )
   sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn, v), sequence)
   return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)

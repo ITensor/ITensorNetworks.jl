@@ -4,7 +4,7 @@ using NamedGraphs.PartitionedGraphs: partitionedge
 
 function default_bond_tensors(ψ::ITensorNetwork)
   return DataGraph(
-    underlying_graph(ψ); edge_data_eltype=Nothing, vertex_data_eltype=ITensor
+    underlying_graph(ψ); vertex_data_eltype=Nothing, edge_data_eltype=ITensor
   )
 end
 

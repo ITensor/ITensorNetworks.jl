@@ -2,6 +2,7 @@ using Graphs: vertices
 using ITensors: ITensor, contract
 using ITensors.ContractionSequenceOptimization: deepmap, optimal_contraction_sequence
 using ITensors.NDTensors: Algorithm, @Algorithm_str
+using NamedGraphs: parent_vertex_to_vertex
 using NamedGraphs.Keys: Key
 
 function contraction_sequence(tn::Vector{ITensor}; alg="optimal", kwargs...)
@@ -10,8 +11,8 @@ end
 
 function contraction_sequence(tn::AbstractITensorNetwork; kwargs...)
   seq_linear_index = contraction_sequence(Vector{ITensor}(tn); kwargs...)
-  # TODO: Use Functors.fmap?
-  return deepmap(n -> Key(vertices(tn)[n]), seq_linear_index)
+  # TODO: Use `Functors.fmap` or `StructWalk`?
+  return deepmap(n -> Key(parent_vertex_to_vertex(tn, n)), seq_linear_index)
 end
 
 function contraction_sequence(::Algorithm"optimal", tn::Vector{ITensor})
