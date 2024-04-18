@@ -5,7 +5,13 @@ using ITensors: ITensor, noncommoninds
 using NamedGraphs: NamedGraph, subgraph
 
 function _partition(g::AbstractGraph, subgraph_vertices)
-  partitioned_graph = DataGraph(NamedGraph(eachindex(subgraph_vertices)))
+  partitioned_graph = DataGraph(
+    NamedGraph(eachindex(subgraph_vertices));
+    vertex_data_eltype=typeof(g),
+    edge_data_eltype=@NamedTuple{
+      edges::Vector{edgetype(g)}, edge_data::Dictionary{edgetype(g),edge_data_eltype(g)}
+    }
+  )
   for v in vertices(partitioned_graph)
     partitioned_graph[v] = subgraph(g, subgraph_vertices[v])
   end
@@ -14,15 +20,14 @@ function _partition(g::AbstractGraph, subgraph_vertices)
     s2 = findfirst_on_vertices(subgraph -> dst(e) ∈ vertices(subgraph), partitioned_graph)
     if (!has_edge(partitioned_graph, s1, s2) && s1 ≠ s2)
       add_edge!(partitioned_graph, s1, s2)
-      partitioned_graph[s1 => s2] = Dictionary(
-        [:edges, :edge_data],
-        [Vector{edgetype(g)}(), Dictionary{edgetype(g),edge_data_eltype(g)}()],
+      partitioned_graph[s1 => s2] = (;
+        edges=Vector{edgetype(g)}(), edge_data=Dictionary{edgetype(g),edge_data_eltype(g)}()
       )
     end
     if has_edge(partitioned_graph, s1, s2)
-      push!(partitioned_graph[s1 => s2][:edges], e)
+      push!(partitioned_graph[s1 => s2].edges, e)
       if isassigned(g, e)
-        set!(partitioned_graph[s1 => s2][:edge_data], e, g[e])
+        set!(partitioned_graph[s1 => s2].edge_data, e, g[e])
       end
     end
   end

@@ -69,15 +69,15 @@ function _partition(
   ::Algorithm"mincut_recursive_bisection", tn::ITensorNetwork, inds_btree::DataGraph
 )
   @assert _is_rooted_directed_binary_tree(inds_btree)
-  output_tns = Vector{ITensorNetwork}()
+  output_tns = Vector{ITensorNetwork{vertextype(tn)}}()
   output_deltas_vector = Vector{Vector{ITensor}}()
   scalars_vector = Vector{Vector{ITensor}}()
   # Mapping each vertex of the binary tree to a tn representing the partition
   # of the subtree containing this vertex and its descendant vertices.
   leaves = leaf_vertices(inds_btree)
   root = _root(inds_btree)
-  v_to_subtree_tn = Dict{vertextype(inds_btree),ITensorNetwork}()
-  v_to_subtree_tn[root] = disjoint_union(tn, ITensorNetwork())
+  v_to_subtree_tn = Dict{eltype(inds_btree),ITensorNetwork{Tuple{vertextype(tn),Int}}}()
+  v_to_subtree_tn[root] = disjoint_union(tn, ITensorNetwork{vertextype(tn)}())
   for v in pre_order_dfs_vertices(inds_btree, root)
     @assert haskey(v_to_subtree_tn, v)
     input_tn = v_to_subtree_tn[v]
@@ -101,18 +101,18 @@ function _partition(
   end
   # In subgraph_vertices, each element is a vector of vertices to be
   # grouped in one partition.
-  subgraph_vs = Vector{Vector{Tuple}}()
+  subgraph_vs = Vector{Vector{Tuple{vertextype(tn),Int}}}()
   delta_num = 0
   scalar_num = 0
   for (tn, deltas, scalars) in zip(output_tns, output_deltas_vector, scalars_vector)
-    vs = Vector{Tuple}([(v, 1) for v in vertices(tn)])
+    vs = [(v, 1) for v in vertices(tn)]
     vs = vcat(vs, [(i + delta_num, 2) for i in 1:length(deltas)])
     vs = vcat(vs, [(i + scalar_num, 3) for i in 1:length(scalars)])
     push!(subgraph_vs, vs)
     delta_num += length(deltas)
     scalar_num += length(scalars)
   end
-  out_tn = ITensorNetwork()
+  out_tn = ITensorNetwork{vertextype(tn)}()
   for tn in output_tns
     for v in vertices(tn)
       add_vertex!(out_tn, v)
@@ -123,7 +123,7 @@ function _partition(
   tn_scalars = ITensorNetwork(vcat(scalars_vector...))
   par = _partition(disjoint_union(out_tn, tn_deltas, tn_scalars), subgraph_vs)
   @assert is_tree(par)
-  name_map = Dict()
+  name_map = Dict{Int,vertextype(tn)}()
   for (i, v) in enumerate(pre_order_dfs_vertices(inds_btree, root))
     name_map[i] = v
   end

@@ -1,3 +1,5 @@
+using ITensors: ITensor, Op, prime, sim
+
 default_dual_site_index_map = prime
 default_dual_link_index_map = sim
 
@@ -40,6 +42,7 @@ bra_vertex_suffix(blf::BilinearFormNetwork) = blf.bra_vertex_suffix
 ket_vertex_suffix(blf::BilinearFormNetwork) = blf.ket_vertex_suffix
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 tensornetwork(blf::BilinearFormNetwork) = blf.tensornetwork
+# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph_type`.
 data_graph_type(::Type{<:BilinearFormNetwork}) = data_graph_type(tensornetwork(blf))
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 data_graph(blf::BilinearFormNetwork) = data_graph(tensornetwork(blf))
@@ -61,6 +64,7 @@ function BilinearFormNetwork(
 )
   @assert issetequal(flatten_siteinds(bra), flatten_siteinds(ket))
   operator_inds = union_all_inds(siteinds(ket), dual_site_index_map(siteinds(ket)))
+  # TODO: Define and use `identity_network` here.
   O = ITensorNetwork(Op("I"), operator_inds)
   return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end

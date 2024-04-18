@@ -1,6 +1,7 @@
 using DataGraphs: DataGraph
 using Graphs: add_vertex!, vertices
 using LinearAlgebra: normalize
+using NamedGraphs.GraphsExtensions: vertextype
 
 """
 Approximate a `partition` into an output ITensorNetwork
@@ -15,7 +16,7 @@ function _approx_itensornetwork_ttn_svd!(
   maxdim=10000,
   contraction_sequence_kwargs,
 )
-  tn = ITensorNetwork()
+  tn = ITensorNetwork{vertextype(input_partition)}()
   for v in vertices(input_partition)
     add_vertex!(tn, v)
     tn[v] = _optcontract(Vector{ITensor}(input_partition[v]); contraction_sequence_kwargs)
