@@ -201,7 +201,7 @@ end
 
     # Compare to `ITensors.MPO` version of `dmrg`
     linear_order = [4, 1, 2, 5, 3, 6]
-    vmap = Dictionary(collec(vertices(s))[linear_order], 1:length(linear_order))
+    vmap = Dictionary(collect(vertices(s))[linear_order], 1:length(linear_order))
     sline = only.(collect(vertex_data(s)))[linear_order]
     Hline = ITensorMPS.MPO(relabel_sites(os, vmap), sline)
     psiline = ITensorMPS.randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
