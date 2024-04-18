@@ -3,6 +3,7 @@ using Dictionaries: Dictionary
 using Graphs: AbstractGraph, add_edge!, has_edge, dst, edges, edgetype, src, vertices
 using ITensors: ITensor, noncommoninds
 using NamedGraphs: NamedGraph, subgraph
+using SplitApplyCombine: flatten
 
 function _partition(g::AbstractGraph, subgraph_vertices)
   partitioned_graph = DataGraph(
@@ -91,20 +92,13 @@ end
 #   return subgraphs(g, subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...))
 # end
 
-"""
-  TODO: do we want to make it a public function?
-"""
 function _noncommoninds(partition::DataGraph)
-  networks = [Vector{ITensor}(partition[v]) for v in vertices(partition)]
-  network = vcat(networks...)
-  return noncommoninds(network...)
+  tn = mapreduce(v -> collect(eachtensor(partition[v])), vcat, vertices(partition))
+  return unique(flatten_siteinds(ITensorNetwork(tn)))
 end
 
 # Util functions for partition
 function _commoninds(partition::DataGraph)
-  networks = [Vector{ITensor}(partition[v]) for v in vertices(partition)]
-  network = vcat(networks...)
-  outinds = noncommoninds(network...)
-  allinds = mapreduce(t -> [i for i in inds(t)], vcat, network)
-  return Vector(setdiff(allinds, outinds))
+  tn = mapreduce(v -> collect(eachtensor(partition[v])), vcat, vertices(partition))
+  return unique(flatten_linkinds(ITensorNetwork(tn)))
 end

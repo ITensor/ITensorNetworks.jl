@@ -1,20 +1,21 @@
 using DataGraphs: DataGraph
-using ITensors: Index, ITensor, delta, noncommoninds, replaceinds, sim
+using ITensors: Index, ITensor, delta, replaceinds, sim
 using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs.GraphsExtensions:
   disjoint_union, pre_order_dfs_vertices, rename_vertices, subgraph
 
 function _binary_partition(tn::ITensorNetwork, source_inds::Vector{<:Index})
-  external_inds = noncommoninds(Vector{ITensor}(tn)...)
+  external_inds = flatten_siteinds(tn)
   # add delta tensor to each external ind
   external_sim_ind = [sim(ind) for ind in external_inds]
   tn = map_data(t -> replaceinds(t, external_inds => external_sim_ind), tn; edges=[])
   tn_wo_deltas = rename_vertices(v -> v[1], subgraph(v -> v[2] == 1, tn))
-  deltas = Vector{ITensor}(subgraph(v -> v[2] == 2, tn))
+  deltas = collect(eachtensor(subgraph(v -> v[2] == 2, tn)))
   scalars = rename_vertices(v -> v[1], subgraph(v -> v[2] == 3, tn))
   new_deltas = [
     delta(external_inds[i], external_sim_ind[i]) for i in 1:length(external_inds)
   ]
+  # TODO: Combine in a more elegant way, so with `disjoint_union`.
   deltas = [deltas..., new_deltas...]
   tn = disjoint_union(tn_wo_deltas, ITensorNetwork(deltas), scalars)
   p1, p2 = _mincut_partition_maxweightoutinds(
@@ -22,8 +23,8 @@ function _binary_partition(tn::ITensorNetwork, source_inds::Vector{<:Index})
   )
   source_tn = _contract_deltas(subgraph(tn, p1))
   remain_tn = _contract_deltas(subgraph(tn, p2))
-  outinds_source = noncommoninds(Vector{ITensor}(source_tn)...)
-  outinds_remain = noncommoninds(Vector{ITensor}(remain_tn)...)
+  outinds_source = flatten_siteinds(source_tn)
+  outinds_remain = flatten_siteinds(remain_tn)
   common_inds = intersect(outinds_source, outinds_remain)
   @assert (
     length(external_inds) ==
@@ -93,8 +94,8 @@ function _partition(
       v_to_subtree_tn[c2] = tn1
     end
     tn = rename_vertices(u -> u[1], subgraph(u -> u[2] == 1, input_tn))
-    deltas = Vector{ITensor}(subgraph(u -> u[2] == 2, input_tn))
-    scalars = Vector{ITensor}(subgraph(u -> u[2] == 3, input_tn))
+    deltas = collect(eachtensor(subgraph(u -> u[2] == 2, input_tn)))
+    scalars = collect(eachtensor(subgraph(u -> u[2] == 3, input_tn)))
     push!(output_tns, tn)
     push!(output_deltas_vector, deltas)
     push!(scalars_vector, scalars)

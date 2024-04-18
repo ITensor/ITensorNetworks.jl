@@ -11,6 +11,7 @@ using ITensorNetworks:
   _root,
   binary_tree_structure,
   eachtensor,
+  flatten_siteinds,
   path_graph_structure,
   random_tensornetwork
 using NamedGraphs.GraphsExtensions: leaf_vertices
@@ -33,8 +34,7 @@ end
   tn = ITensorNetwork([a, b, delta1, delta2])
   tn2 = _contract_deltas(tn)
   @test nv(tn2) == 3
-  @test Set(noncommoninds(collect(eachtensor(tn))...)) ==
-    Set(noncommoninds(collect(eachtensor(tn2))...))
+  @test issetequal(flatten_siteinds(tn), flatten_siteinds(tn2))
 end
 
 @testset "test _contract_deltas over partition" begin

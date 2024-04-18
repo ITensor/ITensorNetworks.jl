@@ -15,6 +15,7 @@ using ITensorNetworks:
   IndsNetwork,
   ITensorNetwork,
   binary_tree_structure,
+  eachtensor,
   path_graph_structure,
   random_tensornetwork
 using NamedGraphs: NamedEdge, NamedGraph
@@ -75,9 +76,8 @@ end
   inds = [Index(2, "$i") for i in 1:5]
   tn = ITensorNetwork([randomITensor(i) for i in inds])
   par = _partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
-  networks = map(v -> collect(eachtensor(par[v])), vertices(par))
-  network = vcat(networks...)
-  @test isapprox(contract(tn), contract(network...))
+  network = mapreduce(v -> collect(eachtensor(par[v])), vcat, vertices(par))
+  @test isapprox(contract(tn), contract(network))
 end
 
 @testset "test partition with mincut_recursive_bisection alg and approx_itensornetwork" begin
@@ -96,8 +96,8 @@ end
     par = _partition(tn, inds_btree; alg="mincut_recursive_bisection")
     par = _contract_deltas_ignore_leaf_partitions(par; root=_root(inds_btree))
     networks = map(v -> par[v], vertices(par))
-    network2 = ITensorNetwork(networks)
-    out2 = contract(network2...)
+    network2 = reduce(union, networks)
+    out2 = contract(network2)
     @test isapprox(out1, out2)
     # test approx_itensornetwork (here we call `contract` to test the interface)
     for structure in [path_graph_structure, binary_tree_structure]

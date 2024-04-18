@@ -85,19 +85,19 @@ Example:
    4 │ ((dim=2|id=626|"6"), (dim=2|id=237|"5"))
 """
 function _contract_deltas(tn::ITensorNetwork)
-  network = Vector{ITensor}(tn)
-  deltas = filter(t -> is_delta(t), network)
+  deltas = filter(is_delta, collect(eachtensor(tn)))
   if isempty(deltas)
     return tn
   end
   tn = copy(tn)
-  outinds = noncommoninds(network...)
+  outinds = flatten_siteinds(tn)
   ds = _delta_inds_disjointsets(deltas, outinds)
   deltainds = [ds...]
   sim_deltainds = [find_root!(ds, i) for i in deltainds]
   # `rem_vertex!(tn, v)` changes `vertices(tn)` in place.
   # We copy it here so that the enumeration won't be affected.
-  for v in copy(vertices(tn))
+  vs = copy(vertices(tn))
+  for v in vs
     if !is_delta(tn[v])
       tn[v] = replaceinds(tn[v], deltainds, sim_deltainds)
       continue

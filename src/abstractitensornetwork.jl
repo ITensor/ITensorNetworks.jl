@@ -163,14 +163,9 @@ function Base.setindex!(tn::AbstractITensorNetwork, value, v)
   return tn
 end
 
-# Convert to a collection of ITensors (`Vector{ITensor}`).
-function Base.Vector{ITensor}(tn::AbstractITensorNetwork)
-  return [tn[v] for v in vertices(tn)]
-end
-
 # Convenience wrapper
-function tensors(tn::AbstractITensorNetwork, vertices=vertices(tn))
-  return map(v -> tn[v], Indices(vertices))
+function eachtensor(tn::AbstractITensorNetwork, vertices=vertices(tn))
+  return map(v -> tn[v], vertices)
 end
 
 #
@@ -178,13 +173,13 @@ end
 #
 
 function promote_indtypeof(tn::AbstractITensorNetwork)
-  return mapreduce(promote_indtype, tensors(tn)) do t
+  return mapreduce(promote_indtype, eachtensor(tn)) do t
     return indtype(t)
   end
 end
 
 function NDTensors.scalartype(tn::AbstractITensorNetwork)
-  return mapreduce(eltype, promote_type, tensors(tn); init=Bool)
+  return mapreduce(eltype, promote_type, eachtensor(tn); init=Bool)
 end
 
 # TODO: Define `eltype(::AbstractITensorNetwork)` as `ITensor`?
@@ -242,7 +237,8 @@ function ITensorMPS.siteinds(tn::AbstractITensorNetwork)
 end
 
 function flatten_siteinds(tn::AbstractITensorNetwork)
-  return flatten(map(v -> siteinds(tn, v), vertices(tn)))
+  # `identity.(...)` narrows the type, maybe there is a better way.
+  return identity.(flatten(map(v -> siteinds(tn, v), vertices(tn))))
 end
 
 function ITensorMPS.linkinds(tn::AbstractITensorNetwork)
@@ -254,7 +250,8 @@ function ITensorMPS.linkinds(tn::AbstractITensorNetwork)
 end
 
 function flatten_linkinds(tn::AbstractITensorNetwork)
-  return flatten(map(e -> linkinds(tn, e), edges(tn)))
+  # `identity.(...)` narrows the type, maybe there is a better way.
+  return identity.(flatten(map(e -> linkinds(tn, e), edges(tn))))
 end
 
 #
@@ -262,13 +259,12 @@ end
 #
 
 function neighbor_tensors(tn::AbstractITensorNetwork, vertex)
-  return tensors(tn, neighbors(tn, vertex))
+  return eachtensor(tn, neighbors(tn, vertex))
 end
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, vertex)
-  # TODO: Splatting here isn't good, make a version that works for
-  # collections of ITensors.
-  return reduce(uniqueinds, Iterators.flatten(([tn[vertex]], neighbor_tensors(tn, vertex))))
+  tn_vertex = [tn[vertex]; collect(neighbor_tensors(tn, vertex))]
+  return reduce(setdiff, inds.(tn_vertex))
 end
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
@@ -751,7 +747,8 @@ function ITensorVisualizationCore.visualize(
   if !isnothing(vertex_labels_prefix)
     vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
   end
-  return visualize(Vector{ITensor}(tn), args...; vertex_labels, kwargs...)
+  # TODO: Use `tokenize_vertex`.
+  return visualize(collect(eachtensor(tn)), args...; vertex_labels, kwargs...)
 end
 
 # 
@@ -776,7 +773,9 @@ function ITensorMPS.linkdim(tn::AbstractITensorNetwork{V}, edge::AbstractEdge{V}
 end
 
 function ITensorMPS.linkdims(tn::AbstractITensorNetwork{V}) where {V}
-  ld = DataGraph{V,Any,Int}(copy(underlying_graph(tn)))
+  ld = DataGraph{V}(
+    copy(underlying_graph(tn)); vertex_data_eltype=Nothing, edge_data_eltype=Int
+  )
   for e in edges(ld)
     ld[e] = linkdim(tn, e)
   end

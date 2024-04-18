@@ -19,7 +19,9 @@ function _approx_itensornetwork_ttn_svd!(
   tn = ITensorNetwork{vertextype(input_partition)}()
   for v in vertices(input_partition)
     add_vertex!(tn, v)
-    tn[v] = _optcontract(Vector{ITensor}(input_partition[v]); contraction_sequence_kwargs)
+    tn[v] = _optcontract(
+      collect(eachtensor(input_partition[v])); contraction_sequence_kwargs
+    )
   end
   truncate_ttn = truncate(ttn(tn); cutoff, maxdim, root_vertex=root)
   out_tn = ITensorNetwork(truncate_ttn)

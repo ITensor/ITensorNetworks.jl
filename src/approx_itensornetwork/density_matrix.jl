@@ -151,7 +151,7 @@ end
 
 function _get_low_rank_projector(tensor, inds1, inds2; cutoff, maxdim)
   @assert length(inds(tensor)) <= 4
-  F = eigen(tensor, inds1, inds2; cutoff=cutoff, maxdim=maxdim, ishermitian=true)
+  F = eigen(tensor, inds1, inds2; cutoff, maxdim, ishermitian=true)
   return F.Vt
 end
 
@@ -160,7 +160,7 @@ Returns a dict that maps the partition's outinds that are adjacent to `partition
 """
 function _densitymatrix_outinds_to_sim(partition, root)
   outinds = _noncommoninds(partition)
-  outinds_root = intersect(outinds, noncommoninds(Vector{ITensor}(partition[root])...))
+  outinds_root = intersect(outinds, flatten_siteinds(partition[root]))
   outinds_root_to_sim = Dict(zip(outinds_root, [sim(ind) for ind in outinds_root]))
   return outinds_root_to_sim
 end
@@ -208,20 +208,18 @@ function _update!(
     es = [NamedEdge(src_v, v) for src_v in setdiff(children, child_v)]
     es = Set(vcat(es, [edge]))
     if !haskey(caches.es_to_pdm, es)
-      caches.es_to_pdm[es] = _optcontract(
-        [dm_tensor, network...]; contraction_sequence_kwargs
-      )
+      caches.es_to_pdm[es] = _optcontract([dm_tensor; network]; contraction_sequence_kwargs)
     end
     push!(pdms, caches.es_to_pdm[es])
   end
   if length(pdms) == 0
     sim_network = map(x -> replaceinds(x, inds_to_sim), network)
     sim_network = map(dag, sim_network)
-    density_matrix = _optcontract([network..., sim_network...]; contraction_sequence_kwargs)
+    density_matrix = _optcontract([network; sim_network]; contraction_sequence_kwargs)
   elseif length(pdms) == 1
     sim_network = map(x -> replaceinds(x, inds_to_sim), network)
     sim_network = map(dag, sim_network)
-    density_matrix = _optcontract([pdms[1], sim_network...]; contraction_sequence_kwargs)
+    density_matrix = _optcontract([pdms[1]; sim_network]; contraction_sequence_kwargs)
   else
     simtensor = _sim(pdms[2], inds_to_sim)
     simtensor = dag(simtensor)
@@ -267,12 +265,12 @@ function _rem_vertex!(
   for v in post_order_dfs_vertices(dm_dfs_tree, root)
     children = sort(child_vertices(dm_dfs_tree, v))
     @assert length(children) <= 2
-    network = Vector{ITensor}(alg_graph.partition[v])
+    network = collect(eachtensor(alg_graph.partition[v]))
     _update!(
       caches,
       NamedEdge(parent_vertex(dm_dfs_tree, v), v),
       children,
-      Vector{ITensor}(network),
+      network,
       inds_to_sim;
       contraction_sequence_kwargs,
     )
@@ -286,7 +284,7 @@ function _rem_vertex!(
   )
   # update partition and out_tree
   root_tensor = _optcontract(
-    [Vector{ITensor}(alg_graph.partition[root])..., dag(U)]; contraction_sequence_kwargs
+    [collect(eachtensor(alg_graph.partition[root])); dag(U)]; contraction_sequence_kwargs
   )
   new_root = child_vertices(dm_dfs_tree, root)[1]
   alg_graph.partition[new_root] = disjoint_union(
@@ -352,7 +350,9 @@ function _approx_itensornetwork_density_matrix!(
   end
   @assert length(vertices(partition)) == 1
   add_vertex!(output_tn, root)
-  root_tensor = _optcontract(Vector{ITensor}(partition[root]); contraction_sequence_kwargs)
+  root_tensor = _optcontract(
+    collect(eachtensor(partition[root])); contraction_sequence_kwargs
+  )
   root_norm = norm(root_tensor)
   root_tensor /= root_norm
   output_tn[root] = root_tensor
