@@ -12,6 +12,7 @@ using ITensorNetworks:
   contract,
   contract_boundary_mps,
   contraction_sequence,
+  eachtensor,
   environment,
   flatten_networks,
   linkinds_combiners,
@@ -152,8 +153,9 @@ using Test: @test, @testset
   ψOψ = combine_linkinds(ψOψ, combiners)
 
   bpc = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
-  message_update_func(tns; kwargs...) =
-    Vector{ITensor}(first(contract(ITensorNetwork(tns); alg="density_matrix", kwargs...)))
+  message_update_func(tns; kwargs...) = collect(
+    eachtensor(first(contract(ITensorNetwork(tns); alg="density_matrix", kwargs...)))
+  )
   bpc = update(
     bpc; message_update=message_update_func, message_update_kwargs=(; cutoff=1e-6, maxdim=4)
   )

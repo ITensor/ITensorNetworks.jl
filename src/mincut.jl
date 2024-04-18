@@ -11,7 +11,7 @@ MAX_WEIGHT = 1e32
 Outputs a maximimally unbalanced directed binary tree DataGraph defining the desired graph structure
 """
 function path_graph_structure(tn::ITensorNetwork)
-  return path_graph_structure(tn, noncommoninds(Vector{ITensor}(tn)...))
+  return path_graph_structure(tn, flatten_siteinds(tn))
 end
 
 """
@@ -26,7 +26,7 @@ end
 Outputs a directed binary tree DataGraph defining the desired graph structure
 """
 function binary_tree_structure(tn::ITensorNetwork)
-  return binary_tree_structure(tn, noncommoninds(Vector{ITensor}(tn)...))
+  return binary_tree_structure(tn, noncommoninds(collect(eachtensor(tn))...))
 end
 
 """
@@ -48,7 +48,8 @@ function _mincut(
 )
   @assert length(source_inds) >= 1
   @assert length(terminal_inds) >= 1
-  noncommon_inds = noncommoninds(Vector{ITensor}(tn)...)
+  # TODO: Use `reduce(noncommoninds, eachtensor(tn))`?
+  noncommon_inds = noncommoninds(collect(eachtensor(tn))...)
   @assert issubset(source_inds, noncommon_inds)
   @assert issubset(terminal_inds, noncommon_inds)
   tn = disjoint_union(

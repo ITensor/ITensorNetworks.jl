@@ -34,7 +34,7 @@ using Test: @test, @testset
   psi = ttn(states, s)
 
   # actual test, verifies that position is out of place
-  vs = vertices(s)
+  vs = collect(vertices(s))
   PH = ProjTTN(H)
   PH = position(PH, psi, [vs[2]])
   original_keys = deepcopy(keys(environments(PH)))

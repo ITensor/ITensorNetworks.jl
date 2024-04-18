@@ -6,7 +6,7 @@ using ITensorNetworks:
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: @disable_warn_order, array, dag, onehot, uniqueind
 using LinearAlgebra: eigen, normalize
-using NamedGraphs: named_comb_tree
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Random: Random
 using Test: @test, @testset
 

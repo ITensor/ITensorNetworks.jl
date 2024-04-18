@@ -156,7 +156,7 @@ end
 
 function factor(bp_cache::BeliefPropagationCache, vertex::PartitionVertex)
   ptn = partitioned_tensornetwork(bp_cache)
-  return Vector{ITensor}(subgraph(ptn, vertex))
+  return collect(eachtensor(subgraph(ptn, vertex)))
 end
 
 """

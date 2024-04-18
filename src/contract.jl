@@ -15,8 +15,11 @@ function NDTensors.contract(
   sequence=contraction_sequence(tn; contraction_sequence_kwargs...),
   kwargs...,
 )
+  # TODO: Use `vertex`.
   sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn, v), sequence)
-  return contract(Vector{ITensor}(tn); sequence=sequence_linear_index, kwargs...)
+  # TODO: Use `tokenized_vertex`.
+  ts = map(pv -> tn[parent_vertex_to_vertex(tn, pv)], 1:nv(tn))
+  return contract(ts; sequence=sequence_linear_index, kwargs...)
 end
 
 function NDTensors.contract(

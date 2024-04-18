@@ -10,7 +10,9 @@ function contraction_sequence(tn::Vector{ITensor}; alg="optimal", kwargs...)
 end
 
 function contraction_sequence(tn::AbstractITensorNetwork; kwargs...)
-  seq_linear_index = contraction_sequence(Vector{ITensor}(tn); kwargs...)
+  # TODO: Use `token_vertex` and/or `token_vertices` here.
+  ts = map(pv -> tn[parent_vertex_to_vertex(tn, pv)], 1:nv(tn))
+  seq_linear_index = contraction_sequence(ts; kwargs...)
   # TODO: Use `Functors.fmap` or `StructWalk`?
   return deepmap(n -> Key(parent_vertex_to_vertex(tn, n)), seq_linear_index)
 end

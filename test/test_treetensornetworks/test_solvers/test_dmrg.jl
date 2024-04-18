@@ -19,7 +19,7 @@ using ITensorNetworks:
   siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using KrylovKit: eigsolve
-using NamedGraphs: named_comb_tree
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Observers: observer
 using Test: @test, @test_broken, @testset
 

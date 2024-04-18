@@ -2,14 +2,15 @@
 using Graphs: dfs_tree, nv, vertices
 using ITensors: Index, ITensor, delta, noncommoninds, randomITensor
 using ITensorNetworks:
+  IndsNetwork,
+  ITensorNetwork,
   _contract_deltas,
   _contract_deltas_ignore_leaf_partitions,
   _noncommoninds,
   _partition,
   _root,
   binary_tree_structure,
-  IndsNetwork,
-  ITensorNetwork,
+  eachtensor,
   path_graph_structure,
   random_tensornetwork
 using NamedGraphs.GraphsExtensions: leaf_vertices
@@ -32,8 +33,8 @@ end
   tn = ITensorNetwork([a, b, delta1, delta2])
   tn2 = _contract_deltas(tn)
   @test nv(tn2) == 3
-  @test Set(noncommoninds(Vector{ITensor}(tn)...)) ==
-    Set(noncommoninds(Vector{ITensor}(tn2)...))
+  @test Set(noncommoninds(collect(eachtensor(tn))...)) ==
+    Set(noncommoninds(collect(eachtensor(tn2))...))
 end
 
 @testset "test _contract_deltas over partition" begin

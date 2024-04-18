@@ -75,9 +75,9 @@ end
   inds = [Index(2, "$i") for i in 1:5]
   tn = ITensorNetwork([randomITensor(i) for i in inds])
   par = _partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
-  networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
+  networks = map(v -> collect(eachtensor(par[v])), vertices(par))
   network = vcat(networks...)
-  @test isapprox(contract(Vector{ITensor}(tn)), contract(network...))
+  @test isapprox(contract(tn), contract(network...))
 end
 
 @testset "test partition with mincut_recursive_bisection alg and approx_itensornetwork" begin
@@ -86,7 +86,7 @@ end
   k = Index(2, "k")
   l = Index(2, "l")
   m = Index(2, "m")
-  for dtype in [Float64, ComplexF64]
+  for dtype in (Float64, Complex{Float64})
     T = randomITensor(dtype, i, j, k, l, m)
     M = MPS(T, (i, j, k, l, m); cutoff=1e-5, maxdim=5)
     network = M[:]
@@ -95,8 +95,8 @@ end
     inds_btree = binary_tree_structure(tn)
     par = _partition(tn, inds_btree; alg="mincut_recursive_bisection")
     par = _contract_deltas_ignore_leaf_partitions(par; root=_root(inds_btree))
-    networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
-    network2 = vcat(networks...)
+    networks = map(v -> par[v], vertices(par))
+    network2 = ITensorNetwork(networks)
     out2 = contract(network2...)
     @test isapprox(out1, out2)
     # test approx_itensornetwork (here we call `contract` to test the interface)
@@ -108,7 +108,7 @@ end
           output_structure=structure,
           contraction_sequence_kwargs=(; alg="sa_bipartite"),
         )
-        network3 = Vector{ITensor}(approx_tn)
+        network3 = collect(eachtensor(approx_tn))
         out3 = contract(network3...) * exp(lognorm)
         i1 = noncommoninds(network...)
         i3 = noncommoninds(network3...)

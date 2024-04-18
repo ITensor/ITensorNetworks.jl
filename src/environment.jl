@@ -12,8 +12,7 @@ end
 function environment(
   ::Algorithm"exact", ψ::AbstractITensorNetwork, verts::Vector; kwargs...
 )
-  ψ_reduced = Vector{ITensor}(subgraph(ψ, setdiff(vertices(ψ), verts)))
-  return ITensor[contract(ψ_reduced; kwargs...)]
+  return [contract(subgraph(ψ, setdiff(vertices(ψ), verts)); kwargs...)]
 end
 
 function environment(

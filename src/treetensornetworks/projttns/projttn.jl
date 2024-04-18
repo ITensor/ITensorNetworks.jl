@@ -1,5 +1,5 @@
 using DataGraphs: DataGraphs, underlying_graph
-using Dictionaries: Dictionary
+using Dictionaries: Dictionary, Indices
 using Graphs: edgetype, vertices
 using ITensors: ITensor
 using NamedGraphs: NamedEdge, incident_edges
@@ -7,10 +7,14 @@ using NamedGraphs: NamedEdge, incident_edges
 """
 ProjTTN
 """
-struct ProjTTN{V} <: AbstractProjTTN{V}
-  pos::Union{Vector{<:V},NamedEdge{V}} # TODO: cleanest way to specify effective Hamiltonian position?
+struct ProjTTN{V,Pos<:Union{Indices{V},NamedEdge{V}}} <: AbstractProjTTN{V}
+  pos::Pos
   operator::TTN{V}
   environments::Dictionary{NamedEdge{V},ITensor}
+end
+
+function ProjTTN(pos::Vector, operator::TTN, environments::Dictionary)
+  return ProjTTN(Indices(pos), operator, environments)
 end
 
 function ProjTTN(operator::TTN)

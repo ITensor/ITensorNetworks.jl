@@ -239,6 +239,13 @@ end
 
 ITensorNetwork(itns::Vector{ITensorNetwork}) = reduce(⊗, itns)
 
+# TODO: Use `vertex_data` here?
+function eachtensor(ψ::ITensorNetwork)
+  return map(v -> ψ[v], vertices(ψ))
+end
+
 function Base.Vector{ITensor}(ψ::ITensorNetwork)
-  return ITensor[ψ[v] for v in vertices(ψ)]
+  error()
+  # TODO: Use `tokenized_vertex(ψ, pv)`.
+  return map(pv -> ψ[parent_vertex_to_vertex(ψ, pv)], 1:nv(ψ))
 end

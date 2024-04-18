@@ -242,8 +242,7 @@ function ITensorMPS.siteinds(tn::AbstractITensorNetwork)
 end
 
 function flatten_siteinds(tn::AbstractITensorNetwork)
-  # reduce(noncommoninds, tensors(tn))
-  return unique(flatten([uniqueinds(tn, v) for v in vertices(tn)]))
+  return flatten(map(v -> siteinds(tn, v), vertices(tn)))
 end
 
 function ITensorMPS.linkinds(tn::AbstractITensorNetwork)
@@ -255,7 +254,7 @@ function ITensorMPS.linkinds(tn::AbstractITensorNetwork)
 end
 
 function flatten_linkinds(tn::AbstractITensorNetwork)
-  return unique(flatten([commoninds(tn, e) for e in edges(tn)]))
+  return flatten(map(e -> linkinds(tn, e), edges(tn)))
 end
 
 #

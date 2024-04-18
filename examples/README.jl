@@ -32,10 +32,9 @@ Random.seed!(ITensors.index_id_rng(), 1234);
 #' Here are is an example of making a tensor network on a chain graph (a tensor train or matrix product state):
 #+ term=true
 
-using Graphs: neighbors
-using ITensorNetworks: ITensorNetwork, siteinds
-using NamedGraphs: named_grid, subgraph
-tn = ITensorNetwork(named_grid(4); link_space=2)
+using Graphs: neighbors, path_graph
+using ITensorNetworks: ITensorNetwork
+tn = ITensorNetwork(path_graph(4); link_space=2)
 tn[1]
 tn[2]
 neighbors(tn, 1)
@@ -46,6 +45,8 @@ neighbors(tn, 4)
 #' and here is a similar example for making a tensor network on a grid (a tensor product state or project entangled pair state (PEPS)):
 #+ term=true
 
+using NamedGraphs.GraphsExtensions: subgraph
+using NamedGraphs.NamedGraphGenerators: named_grid
 tn = ITensorNetwork(named_grid((2, 2)); link_space=2)
 tn[1, 1]
 neighbors(tn, (1, 1))
@@ -57,7 +58,7 @@ tn_2 = subgraph(v -> v[1] == 2, tn)
 #+ term=true
 
 using ITensors: prime
-using ITensorNetworks: ⊗, contract, contraction_sequence
+using ITensorNetworks: ⊗, contract, contraction_sequence, siteinds
 using ITensorUnicodePlots: @visualize
 s = siteinds("S=1/2", named_grid(3))
 tn1 = ITensorNetwork(s; link_space=2)
@@ -72,7 +73,7 @@ Z̃ = contract(Z, (1, 1) => (2, 1));
 
 #' ## Generating this README
 
-#' This file was generated with [weave.jl](https://github.com/JunoLab/Weave.jl) with the following commands:
+#' This file was generated with [Weave.jl](https://github.com/JunoLab/Weave.jl) with the following commands:
 #+ eval=false
 
 using ITensorNetworks: ITensorNetworks
