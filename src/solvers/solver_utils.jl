@@ -89,11 +89,10 @@ function cache_operator_to_disk(
 end
 
 #ToDo: Move? This belongs more into local_solvers
-function compose_updaters(; kwargs...#solver=eigsolve_updater, expander=local_subspace_expansion)
+function compose_updaters(;kwargs...)
   funcs=values(kwargs)
   kwarg_symbols=Symbol.(keys(kwargs),"_kwargs")
   info_symbols=Symbol.(keys(kwargs),"_info")
-  
   function composed_updater(init; kwargs...)
     info=(;)
     kwargs_for_updaters=map(x -> kwargs[x], kwarg_symbols)
@@ -106,7 +105,8 @@ function compose_updaters(; kwargs...#solver=eigsolve_updater, expander=local_su
       )
       #figure out a better way to handle composing the info?
       info=(;info...,NamedTuple((info_symbol=>new_info,))...)
-    
+    end
     return init, info
+  end
   return composed_updater
 end
