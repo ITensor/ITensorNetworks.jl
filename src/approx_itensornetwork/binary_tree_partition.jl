@@ -130,6 +130,6 @@ function _partition(
   return rename_vertices(par, name_map)
 end
 
-function _partition(tn::ITensorNetwork, inds_btree::DataGraph; alg::String)
+function _partition(tn::ITensorNetwork, inds_btree::DataGraph; alg)
   return _partition(Algorithm(alg), tn, inds_btree)
 end

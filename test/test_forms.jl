@@ -8,10 +8,9 @@ using ITensorNetworks:
   QuadraticFormNetwork,
   bra_network,
   bra_vertex,
-  delta_network,
   dual_index_map,
   environment,
-  externalinds,
+  flatten_siteinds,
   ket_network,
   ket_vertex,
   operator_network,
@@ -27,18 +26,17 @@ using Random: Random
 
 @testset "FormNetworks" begin
   g = named_grid((1, 4))
-  s_ket = siteinds("S=1/2", g)
-  s_bra = prime(s_ket; links=[])
-  s_operator = union_all_inds(s_bra, s_ket)
+  s = siteinds("S=1/2", g)
+  s_operator = union_all_inds(s, prime(s))
   χ, D = 2, 3
   Random.seed!(1234)
-  ψket = random_tensornetwork(s_ket; link_space=χ)
-  ψbra = random_tensornetwork(s_bra; link_space=χ)
+  ψket = random_tensornetwork(s; link_space=χ)
+  ψbra = random_tensornetwork(s; link_space=χ)
   A = random_tensornetwork(s_operator; link_space=D)
 
   blf = BilinearFormNetwork(A, ψbra, ψket)
   @test nv(blf) == nv(ψket) + nv(ψbra) + nv(A)
-  @test isempty(externalinds(blf))
+  @test isempty(flatten_siteinds(blf))
 
   @test underlying_graph(ket_network(blf)) == underlying_graph(ψket)
   @test underlying_graph(operator_network(blf)) == underlying_graph(A)
@@ -46,7 +44,7 @@ using Random: Random
 
   qf = QuadraticFormNetwork(A, ψket)
   @test nv(qf) == 2 * nv(ψbra) + nv(A)
-  @test isempty(externalinds(qf))
+  @test isempty(flatten_siteinds(qf))
 
   v = (1, 1)
   new_tensor = randomITensor(inds(ψket[v]))

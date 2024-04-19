@@ -1,3 +1,9 @@
+using DataGraphs: AbstractDataGraph, DataGraph, edge_data, vertex_data
+using Dictionaries: Dictionary
+using Graphs: AbstractGraph, add_edge!, has_edge, dst, edges, edgetype, src, vertices
+using ITensors: ITensor, noncommoninds
+using NamedGraphs: NamedGraph, subgraph
+
 function _partition(g::AbstractGraph, subgraph_vertices)
   partitioned_graph = DataGraph(
     NamedGraph(eachindex(subgraph_vertices)),

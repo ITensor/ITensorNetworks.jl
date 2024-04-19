@@ -1,6 +1,6 @@
 using DataGraphs: DataGraphs, underlying_graph
 using Graphs: neighbors
-using ITensors: ITensor, contract, order
+using ITensors: ITensor, contract, order, product
 using ITensors.ITensorMPS: ITensorMPS, nsite
 using NamedGraphs: NamedGraphs, NamedEdge, incident_edges, vertextype
 

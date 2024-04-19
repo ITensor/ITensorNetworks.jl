@@ -1,8 +1,8 @@
 using Graphs: has_vertex
 using NamedGraphs: edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
 using IsApprox: IsApprox, Approx
-using ITensors: directsum, hasinds, permute, plev
-using ITensors.ITensorMPS: isortho, linkind, loginner, lognorm, orthogonalize
+using ITensors: @Algorithm_str, directsum, hasinds, permute, plev
+using ITensors.ITensorMPS: linkind, loginner, lognorm, orthogonalize
 using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
@@ -17,8 +17,8 @@ end
 # Field access
 # 
 
-ITensorNetwork(ψ::AbstractTTN) = ψ.itensor_network
-ortho_center(ψ::AbstractTTN) = ψ.ortho_center
+ITensorNetwork(tn::AbstractTTN) = error("Not implemented")
+ortho_region(tn::AbstractTTN) = error("Not implemented")
 
 function default_root_vertex(gs::AbstractGraph...)
   # @assert all(is_tree.(gs))
@@ -29,29 +29,28 @@ end
 # Orthogonality center
 # 
 
-ITensorMPS.isortho(ψ::AbstractTTN) = isone(length(ortho_center(ψ)))
-
-function set_ortho_center(ψ::AbstractTTN{V}, new_center::Vector{<:V}) where {V}
-  return typeof(ψ)(itensor_network(ψ), new_center)
+function set_ortho_region(tn::AbstractTTN, new_region)
+  return error("Not implemented")
 end
-
-reset_ortho_center(ψ::AbstractTTN) = set_ortho_center(ψ, vertices(ψ))
 
 # 
 # Orthogonalization
 # 
 
-function ITensorMPS.orthogonalize(ψ::AbstractTTN{V}, root_vertex::V; kwargs...) where {V}
-  (isortho(ψ) && only(ortho_center(ψ)) == root_vertex) && return ψ
-  if isortho(ψ)
-    edge_list = edge_path(ψ, only(ortho_center(ψ)), root_vertex)
+function ITensorMPS.orthogonalize(tn::AbstractTTN, ortho_center; kwargs...)
+  if isone(length(ortho_region(tn))) && ortho_center == only(ortho_region(tn))
+    return tn
+  end
+  # TODO: Rewrite this in a more general way.
+  if isone(length(ortho_region(tn)))
+    edge_list = edge_path(tn, only(ortho_region(tn)), ortho_center)
   else
-    edge_list = post_order_dfs_edges(ψ, root_vertex)
+    edge_list = post_order_dfs_edges(tn, ortho_center)
   end
   for e in edge_list
-    ψ = orthogonalize(ψ, e)
+    tn = orthogonalize(tn, e)
   end
-  return set_ortho_center(ψ, [root_vertex])
+  return set_ortho_region(tn, [ortho_center])
 end
 
 # For ambiguity error
@@ -64,14 +63,14 @@ end
 # Truncation
 # 
 
-function Base.truncate(ψ::AbstractTTN; root_vertex=default_root_vertex(ψ), kwargs...)
-  for e in post_order_dfs_edges(ψ, root_vertex)
+function Base.truncate(tn::AbstractTTN; root_vertex=default_root_vertex(tn), kwargs...)
+  for e in post_order_dfs_edges(tn, root_vertex)
     # always orthogonalize towards source first to make truncations controlled
-    ψ = orthogonalize(ψ, src(e))
-    ψ = truncate(ψ, e; kwargs...)
-    ψ = set_ortho_center(ψ, [dst(e)])
+    tn = orthogonalize(tn, src(e))
+    tn = truncate(tn, e; kwargs...)
+    tn = set_ortho_region(tn, [dst(e)])
   end
-  return ψ
+  return tn
 end
 
 # For ambiguity error
@@ -84,127 +83,125 @@ end
 #
 
 # TODO: decide on contraction order: reverse dfs vertices or forward dfs edges?
-function NDTensors.contract(
-  ψ::AbstractTTN{V}, root_vertex::V=default_root_vertex(ψ); kwargs...
-) where {V}
-  ψ = copy(ψ)
+function NDTensors.contract(tn::AbstractTTN, root_vertex=default_root_vertex(tn); kwargs...)
+  tn = copy(tn)
   # reverse post order vertices
-  traversal_order = reverse(post_order_dfs_vertices(ψ, root_vertex))
-  return contract(ITensorNetwork(ψ); sequence=traversal_order, kwargs...)
+  traversal_order = reverse(post_order_dfs_vertices(tn, root_vertex))
+  return contract(ITensorNetwork(tn); sequence=traversal_order, kwargs...)
   # # forward post order edges
-  # ψ = copy(ψ)
-  # for e in post_order_dfs_edges(ψ, root_vertex)
-  #   ψ = contract(ψ, e)
+  # tn = copy(tn)
+  # for e in post_order_dfs_edges(tn, root_vertex)
+  #   tn = contract(tn, e)
   # end
-  # return ψ[root_vertex]
+  # return tn[root_vertex]
 end
 
 function ITensors.inner(
-  ϕ::AbstractTTN, ψ::AbstractTTN; root_vertex=default_root_vertex(ϕ, ψ)
+  x::AbstractTTN, y::AbstractTTN; root_vertex=default_root_vertex(x, y)
 )
-  ϕᴴ = sim(dag(ϕ); sites=[])
-  ψ = sim(ψ; sites=[])
-  ϕψ = ϕᴴ ⊗ ψ
+  xᴴ = sim(dag(x); sites=[])
+  y = sim(y; sites=[])
+  xy = xᴴ ⊗ y
   # TODO: find the largest tensor and use it as
   # the `root_vertex`.
-  for e in post_order_dfs_edges(ψ, root_vertex)
-    if has_vertex(ϕψ, (src(e), 2))
-      ϕψ = contract(ϕψ, (src(e), 2) => (src(e), 1))
+  for e in post_order_dfs_edges(y, root_vertex)
+    if has_vertex(xy, (src(e), 2))
+      xy = contract(xy, (src(e), 2) => (src(e), 1))
     end
-    ϕψ = contract(ϕψ, (src(e), 1) => (dst(e), 1))
-    if has_vertex(ϕψ, (dst(e), 2))
-      ϕψ = contract(ϕψ, (dst(e), 2) => (dst(e), 1))
+    xy = contract(xy, (src(e), 1) => (dst(e), 1))
+    if has_vertex(xy, (dst(e), 2))
+      xy = contract(xy, (dst(e), 2) => (dst(e), 1))
     end
   end
-  return ϕψ[root_vertex, 1][]
+  return xy[root_vertex, 1][]
 end
 
-function LinearAlgebra.norm(ψ::AbstractTTN)
-  if isortho(ψ)
-    return norm(ψ[only(ortho_center(ψ))])
+function LinearAlgebra.norm(tn::AbstractTTN)
+  if isone(length(ortho_region(tn)))
+    return norm(tn[only(ortho_region(tn))])
   end
-  return √(abs(real(inner(ψ, ψ))))
+  return √(abs(real(inner(tn, tn))))
 end
 
 # 
 # Utility
 # 
 
-function LinearAlgebra.normalize!(ψ::AbstractTTN)
-  c = ortho_center(ψ)
-  lognorm_ψ = lognorm(ψ)
-  if lognorm_ψ == -Inf
-    return ψ
+function LinearAlgebra.normalize!(tn::AbstractTTN)
+  c = ortho_region(tn)
+  lognorm_tn = lognorm(tn)
+  if lognorm_tn == -Inf
+    return tn
   end
-  z = exp(lognorm_ψ / length(c))
+  z = exp(lognorm_tn / length(c))
   for v in c
-    ψ[v] ./= z
+    tn[v] ./= z
   end
-  return ψ
+  return tn
 end
 
-function LinearAlgebra.normalize(ψ::AbstractTTN)
-  return normalize!(copy(ψ))
+function LinearAlgebra.normalize(tn::AbstractTTN)
+  return normalize!(copy(tn))
 end
 
-function _apply_to_orthocenter!(f, ψ::AbstractTTN, x)
-  v = first(ortho_center(ψ))
-  ψ[v] = f(ψ[v], x)
-  return ψ
+function _apply_to_ortho_region!(f, tn::AbstractTTN, x)
+  v = first(ortho_region(tn))
+  tn[v] = f(tn[v], x)
+  return tn
 end
 
-function _apply_to_orthocenter(f, ψ::AbstractTTN, x)
-  return _apply_to_orthocenter!(f, copy(ψ), x)
+function _apply_to_ortho_region(f, tn::AbstractTTN, x)
+  return _apply_to_ortho_region!(f, copy(tn), x)
 end
 
-Base.:*(ψ::AbstractTTN, α::Number) = _apply_to_orthocenter(*, ψ, α)
+Base.:*(tn::AbstractTTN, α::Number) = _apply_to_ortho_region(*, tn, α)
 
-Base.:*(α::Number, ψ::AbstractTTN) = ψ * α
+Base.:*(α::Number, tn::AbstractTTN) = tn * α
 
-Base.:/(ψ::AbstractTTN, α::Number) = _apply_to_orthocenter(/, ψ, α)
+Base.:/(tn::AbstractTTN, α::Number) = _apply_to_ortho_region(/, tn, α)
 
-Base.:-(ψ::AbstractTTN) = -1 * ψ
+Base.:-(tn::AbstractTTN) = -1 * tn
 
-function LinearAlgebra.rmul!(ψ::AbstractTTN, α::Number)
-  return _apply_to_orthocenter!(*, ψ, α)
+function LinearAlgebra.rmul!(tn::AbstractTTN, α::Number)
+  return _apply_to_ortho_region!(*, tn, α)
 end
 
-function ITensorMPS.lognorm(ψ::AbstractTTN)
-  if isortho(ψ)
-    return log(norm(ψ[only(ortho_center(ψ))]))
+function ITensorMPS.lognorm(tn::AbstractTTN)
+  if isone(length(ortho_region(tn)))
+    return log(norm(tn[only(ortho_region(tn))]))
   end
-  lognorm2_ψ = loginner(ψ, ψ)
-  rtol = eps(real(scalartype(ψ))) * 10
+  lognorm2_tn = loginner(tn, tn)
+  rtol = eps(real(scalartype(tn))) * 10
   atol = rtol
-  if !IsApprox.isreal(lognorm2_ψ, Approx(; rtol=rtol, atol=atol))
+  if !IsApprox.isreal(lognorm2_tn, Approx(; rtol=rtol, atol=atol))
     @warn "log(norm²) is $lognorm2_T, which is not real up to a relative tolerance of $rtol and an absolute tolerance of $atol. Taking the real part, which may not be accurate."
   end
-  return 0.5 * real(lognorm2_ψ)
+  return 0.5 * real(lognorm2_tn)
 end
 
-function logdot(ψ1::TTNT, ψ2::TTNT; kwargs...) where {TTNT<:AbstractTTN}
-  return loginner(ψ1, ψ2; kwargs...)
+function logdot(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
+  return loginner(tn1, tn2; kwargs...)
 end
 
 # TODO: stick with this traversal or find optimal contraction sequence?
 function ITensorMPS.loginner(
-  ψ1::TTNT, ψ2::TTNT; root_vertex=default_root_vertex(ψ1, ψ2)
-)::Number where {TTNT<:AbstractTTN}
-  N = nv(ψ1)
-  if nv(ψ2) != N
-    throw(DimensionMismatch("inner: mismatched number of vertices $N and $(nv(ψ2))"))
+  tn1::AbstractTTN, tn2::AbstractTTN; root_vertex=default_root_vertex(tn1, tn2)
+)
+  N = nv(tn1)
+  if nv(tn2) != N
+    throw(DimensionMismatch("inner: mismatched number of vertices $N and $(nv(tn2))"))
   end
-  ψ1dag = sim(dag(ψ1); sites=[])
-  traversal_order = reverse(post_order_dfs_vertices(ψ1, root_vertex))
+  tn1dag = sim(dag(tn1); sites=[])
+  traversal_order = reverse(post_order_dfs_vertices(tn1, root_vertex))
 
-  O = ψ1dag[root_vertex] * ψ2[root_vertex]
+  O = tn1dag[root_vertex] * tn2[root_vertex]
 
   normO = norm(O)
   log_inner_tot = log(normO)
   O ./= normO
 
   for v in traversal_order[2:end]
-    O = (O * ψ1dag[v]) * ψ2[v]
+    O = (O * tn1dag[v]) * tn2[v]
     normO = norm(O)
     log_inner_tot += log(normO)
     O ./= normO
@@ -216,10 +213,10 @@ function ITensorMPS.loginner(
   return log_inner_tot
 end
 
-function _add_maxlinkdims(ψs::AbstractTTN...)
-  maxdims = Dictionary{edgetype(ψs[1]),Int}()
-  for e in edges(ψs[1])
-    maxdims[e] = sum(ψ -> linkdim(ψ, e), ψs)
+function _add_maxlinkdims(tns::AbstractTTN...)
+  maxdims = Dictionary{edgetype(tns[1]),Int}()
+  for e in edges(tns[1])
+    maxdims[e] = sum(tn -> linkdim(tn, e), tns)
     maxdims[reverse(e)] = maxdims[e]
   end
   return maxdims
@@ -227,86 +224,68 @@ end
 
 # TODO: actually implement this?
 function Base.:+(
-  ::ITensors.Algorithm"densitymatrix",
-  ψs::TTNT...;
+  ::Algorithm"densitymatrix",
+  tns::AbstractTTN...;
   cutoff=1e-15,
-  root_vertex=default_root_vertex(ψs...),
+  root_vertex=default_root_vertex(tns...),
   kwargs...,
-) where {TTNT<:AbstractTTN}
+)
   return error("Not implemented (yet) for trees.")
 end
 
 function Base.:+(
-  ::ITensors.Algorithm"directsum", ψs::TTNT...; root_vertex=default_root_vertex(ψs...)
-) where {TTNT<:AbstractTTN}
-  @assert all(ψ -> nv(first(ψs)) == nv(ψ), ψs)
+  ::Algorithm"directsum", tns::AbstractTTN...; root_vertex=default_root_vertex(tns...)
+)
+  @assert all(tn -> nv(first(tns)) == nv(tn), tns)
 
   # Output state
-  ϕ = ttn(siteinds(ψs[1]))
+  tn = ttn(siteinds(tns[1]))
 
-  vs = post_order_dfs_vertices(ϕ, root_vertex)
-  es = post_order_dfs_edges(ϕ, root_vertex)
-  link_space = Dict{edgetype(ϕ),Index}()
+  vs = post_order_dfs_vertices(tn, root_vertex)
+  es = post_order_dfs_edges(tn, root_vertex)
+  link_space = Dict{edgetype(tn),Index}()
 
   for v in reverse(vs)
     edges = filter(e -> dst(e) == v || src(e) == v, es)
     dims_in = findall(e -> dst(e) == v, edges)
     dim_out = findfirst(e -> src(e) == v, edges)
-
-    ls = [Tuple(only(linkinds(ψ, e)) for e in edges) for ψ in ψs]
-    ϕv, lv = directsum((ψs[i][v] => ls[i] for i in 1:length(ψs))...; tags=tags.(first(ls)))
+    ls = [Tuple(only(linkinds(tn, e)) for e in edges) for tn in tns]
+    tnv, lv = directsum(
+      (tns[i][v] => ls[i] for i in 1:length(tns))...; tags=tags.(first(ls))
+    )
     for din in dims_in
       link_space[edges[din]] = lv[din]
     end
     if !isnothing(dim_out)
-      ϕv = replaceind(ϕv, lv[dim_out] => dag(link_space[edges[dim_out]]))
+      tnv = replaceind(tnv, lv[dim_out] => dag(link_space[edges[dim_out]]))
     end
-
-    ϕ[v] = ϕv
+    tn[v] = tnv
   end
-  return convert(TTNT, ϕ)
+  return tn
 end
 
 # TODO: switch default algorithm once more are implemented
-function Base.:+(ψs::AbstractTTN...; alg=ITensors.Algorithm"directsum"(), kwargs...)
-  return +(ITensors.Algorithm(alg), ψs...; kwargs...)
+function Base.:+(tns::AbstractTTN...; alg=Algorithm"directsum"(), kwargs...)
+  return +(Algorithm(alg), tns...; kwargs...)
 end
 
-Base.:+(ψ::AbstractTTN) = ψ
+Base.:+(tn::AbstractTTN) = tn
 
-ITensors.add(ψs::AbstractTTN...; kwargs...) = +(ψs...; kwargs...)
+ITensors.add(tns::AbstractTTN...; kwargs...) = +(tns...; kwargs...)
 
-function Base.:-(ψ1::AbstractTTN, ψ2::AbstractTTN; kwargs...)
-  return +(ψ1, -ψ2; kwargs...)
+function Base.:-(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
+  return +(tn1, -tn2; kwargs...)
 end
 
 function ITensors.add(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
   return +(tn1, tn2; kwargs...)
 end
 
-# TODO: Delete this
-function ITensors.permute(
-  ψ::AbstractTTN, ::Tuple{typeof(linkind),typeof(siteinds),typeof(linkind)}
-)
-  ψ̃ = copy(ψ)
-  for v in vertices(ψ)
-    ls = [only(linkinds(ψ, n => v)) for n in neighbors(ψ, v)] # TODO: won't work for multiple indices per link...
-    ss = TupleTools.sort(Tuple(siteinds(ψ, v)); by=plev)
-    setindex_preserve_graph!(
-      ψ̃, permute(ψ[v], filter(!isnothing, (ls[1], ss..., ls[2:end]...))), v
-    )
-  end
-  ψ̃ = set_ortho_center(ψ̃, ortho_center(ψ))
-  return ψ̃
-end
-
 function Base.isapprox(
   x::AbstractTTN,
   y::AbstractTTN;
   atol::Real=0,
-  rtol::Real=Base.rtoldefault(
-    LinearAlgebra.promote_leaf_eltypes(x), LinearAlgebra.promote_leaf_eltypes(y), atol
-  ),
+  rtol::Real=Base.rtoldefault(scalartype(x), scalartype(y), atol),
 )
   d = norm(x - y)
   if isfinite(d)
@@ -372,9 +351,8 @@ function ITensorMPS.expect(
   # ToDo: verify that this is a sane default
   root_vertex=default_root_vertex(siteinds(state)),
 )
-  # ToDo: for performance it may be beneficial to also implement expect! and change the orthogonality center in place
-  # assuming that the next algorithmic step can make use of the orthogonality center being moved to a different vertex
-  # ToDo: Verify that this is indeed the correct order for performance
+  # TODO: Optimize this with proper caching.
+  state /= norm(state)
   sites = siteinds(state)
   ordered_vertices = reverse(post_order_dfs_vertices(sites, root_vertex))
   res = Dictionary(vertices, undef)

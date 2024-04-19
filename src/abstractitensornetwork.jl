@@ -23,7 +23,6 @@ using ITensors:
   commoninds,
   commontags,
   contract,
-  convert_eltype,
   dag,
   hascommoninds,
   noprime,
@@ -39,18 +38,18 @@ using ITensors:
   swaptags
 using ITensors.ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-using ITensors.NDTensors: NDTensors, dim
-using LinearAlgebra: LinearAlgebra
+using LinearAlgebra: LinearAlgebra, factorize
 using NamedGraphs:
   NamedGraphs,
   NamedGraph,
   ⊔,
+  directed_graph,
   incident_edges,
   not_implemented,
   rename_vertices,
   vertex_to_parent_vertex,
   vertextype
-using NamedGraphs: directed_graph
+using NDTensors: NDTensors, dim
 using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
@@ -116,11 +115,12 @@ end
 # TODO: broadcasting
 
 function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
-  tn = ITensorNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
+  # TODO: Use a different constructor call here?
+  tn = _ITensorNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
   # Add any new edges that are introduced during the union
   for v1 in vertices(tn1)
     for v2 in vertices(tn2)
-      if hascommoninds(tn[v1], tn[v2])
+      if hascommoninds(tn, v1 => v2)
         add_edge!(tn, v1 => v2)
       end
     end
@@ -129,7 +129,8 @@ function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kw
 end
 
 function NamedGraphs.rename_vertices(f::Function, tn::AbstractITensorNetwork)
-  return ITensorNetwork(rename_vertices(f, data_graph(tn)))
+  # TODO: Use a different constructor call here?
+  return _ITensorNetwork(rename_vertices(f, data_graph(tn)))
 end
 
 #
@@ -172,36 +173,26 @@ function Base.Vector{ITensor}(tn::AbstractITensorNetwork)
 end
 
 # Convenience wrapper
-itensors(tn::AbstractITensorNetwork) = Vector{ITensor}(tn)
+function tensors(tn::AbstractITensorNetwork, vertices=vertices(tn))
+  return map(v -> tn[v], Indices(vertices))
+end
 
 #
 # Promotion and conversion
 #
 
-function LinearAlgebra.promote_leaf_eltypes(tn::AbstractITensorNetwork)
-  return LinearAlgebra.promote_leaf_eltypes(itensors(tn))
+function promote_indtypeof(tn::AbstractITensorNetwork)
+  return mapreduce(promote_indtype, tensors(tn)) do t
+    return indtype(t)
+  end
 end
 
-function trivial_space(tn::AbstractITensorNetwork)
-  return trivial_space(tn[first(vertices(tn))])
+function NDTensors.scalartype(tn::AbstractITensorNetwork)
+  return mapreduce(eltype, promote_type, tensors(tn); init=Bool)
 end
 
-function ITensors.promote_itensor_eltype(tn::AbstractITensorNetwork)
-  return LinearAlgebra.promote_leaf_eltypes(tn)
-end
+# TODO: Define `eltype(::AbstractITensorNetwork)` as `ITensor`?
 
-NDTensors.scalartype(tn::AbstractITensorNetwork) = LinearAlgebra.promote_leaf_eltypes(tn)
-
-# TODO: eltype(::AbstractITensorNetwork) (cannot behave the same as eltype(::ITensors.AbstractMPS))
-
-# TODO: mimic ITensors.AbstractMPS implementation using map
-function ITensors.convert_leaf_eltype(eltype::Type, tn::AbstractITensorNetwork)
-  tn = copy(tn)
-  vertex_data(tn) .= convert_eltype.(Ref(eltype), vertex_data(tn))
-  return tn
-end
-
-# TODO: Mimic ITensors.AbstractMPS implementation using map
 # TODO: Implement using `adapt`
 function NDTensors.convert_scalartype(eltype::Type{<:Number}, tn::AbstractITensorNetwork)
   tn = copy(tn)
@@ -210,7 +201,7 @@ function NDTensors.convert_scalartype(eltype::Type{<:Number}, tn::AbstractITenso
 end
 
 function Base.complex(tn::AbstractITensorNetwork)
-  return NDTensors.convert_scalartype(complex(LinearAlgebra.promote_leaf_eltypes(tn)), tn)
+  return NDTensors.convert_scalartype(complex(scalartype(tn)), tn)
 end
 
 #
@@ -244,7 +235,9 @@ end
 # Alias
 indsnetwork(tn::AbstractITensorNetwork) = IndsNetwork(tn)
 
-function external_indsnetwork(tn::AbstractITensorNetwork)
+# TODO: Output a `VertexDataGraph`? Unfortunately
+# `IndsNetwork` doesn't allow iterating over vertex data.
+function ITensorMPS.siteinds(tn::AbstractITensorNetwork)
   is = IndsNetwork(underlying_graph(tn))
   for v in vertices(tn)
     is[v] = uniqueinds(tn, v)
@@ -252,25 +245,12 @@ function external_indsnetwork(tn::AbstractITensorNetwork)
   return is
 end
 
-# For backwards compatibility
-# TODO: Delete this
-ITensorMPS.siteinds(tn::AbstractITensorNetwork) = external_indsnetwork(tn)
-
-# External indsnetwork of the flattened network, with vertices
-# mapped back to `tn1`.
-function flatten_external_indsnetwork(
-  tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
-)
-  is = external_indsnetwork(sim(tn1; sites=[]) ⊗ tn2)
-  flattened_is = IndsNetwork(underlying_graph(tn1))
-  for v in vertices(flattened_is)
-    # setindex_preserve_graph!(flattened_is, unioninds(is[v, 1], is[v, 2]), v)
-    flattened_is[v] = unioninds(is[v, 1], is[v, 2])
-  end
-  return flattened_is
+function flatten_siteinds(tn::AbstractITensorNetwork)
+  # reduce(noncommoninds, tensors(tn))
+  return unique(flatten([uniqueinds(tn, v) for v in vertices(tn)]))
 end
 
-function internal_indsnetwork(tn::AbstractITensorNetwork)
+function ITensorMPS.linkinds(tn::AbstractITensorNetwork)
   is = IndsNetwork(underlying_graph(tn))
   for e in edges(tn)
     is[e] = commoninds(tn, e)
@@ -278,20 +258,22 @@ function internal_indsnetwork(tn::AbstractITensorNetwork)
   return is
 end
 
-# For backwards compatibility
-# TODO: Delete this
-ITensorMPS.linkinds(tn::AbstractITensorNetwork) = internal_indsnetwork(tn)
+function flatten_linkinds(tn::AbstractITensorNetwork)
+  return unique(flatten([commoninds(tn, e) for e in edges(tn)]))
+end
 
 #
 # Index access
 #
 
-function neighbor_itensors(tn::AbstractITensorNetwork, vertex)
-  return [tn[vn] for vn in neighbors(tn, vertex)]
+function neighbor_tensors(tn::AbstractITensorNetwork, vertex)
+  return tensors(tn, neighbors(tn, vertex))
 end
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, vertex)
-  return uniqueinds(tn[vertex], neighbor_itensors(tn, vertex)...)
+  # TODO: Splatting here isn't good, make a version that works for
+  # collections of ITensors.
+  return reduce(uniqueinds, Iterators.flatten(([tn[vertex]], neighbor_tensors(tn, vertex))))
 end
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
@@ -313,14 +295,6 @@ end
 
 function ITensorMPS.linkinds(tn::AbstractITensorNetwork, edge)
   return commoninds(tn, edge)
-end
-
-function internalinds(tn::AbstractITensorNetwork)
-  return unique(flatten([commoninds(tn, e) for e in edges(tn)]))
-end
-
-function externalinds(tn::AbstractITensorNetwork)
-  return unique(flatten([uniqueinds(tn, v) for v in vertices(tn)]))
 end
 
 # Priming and tagging (changing Index identifiers)
@@ -432,9 +406,7 @@ function Base.isapprox(
   x::AbstractITensorNetwork,
   y::AbstractITensorNetwork;
   atol::Real=0,
-  rtol::Real=Base.rtoldefault(
-    LinearAlgebra.promote_leaf_eltypes(x), LinearAlgebra.promote_leaf_eltypes(y), atol
-  ),
+  rtol::Real=Base.rtoldefault(scalartype(x), scalartype(y), atol),
 )
   error("Not implemented")
   d = norm(x - y)
@@ -464,7 +436,6 @@ function NDTensors.contract(
   neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
   neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
   new_itensor = tn[src(edge)] * tn[dst(edge)]
-
   # The following is equivalent to:
   #
   # tn[dst(edge)] = new_itensor
@@ -480,6 +451,7 @@ function NDTensors.contract(
   for n_dst in neighbors_dst
     add_edge!(tn, merged_vertex => n_dst)
   end
+
   setindex_preserve_graph!(tn, new_itensor, merged_vertex)
 
   return tn
@@ -728,65 +700,22 @@ function flatten_networks(
   return flatten_networks(flatten_networks(tn1, tn2; kwargs...), tn3, tn_tail...; kwargs...)
 end
 
-#Ideally this will dispatch to inner_network but this is a temporary fast version for now
-function norm_network(tn::AbstractITensorNetwork)
-  tnbra = rename_vertices(v -> (v, 1), data_graph(tn))
-  tndag = copy(tn)
-  for v in vertices(tndag)
-    setindex_preserve_graph!(tndag, dag(tndag[v]), v)
-  end
-  tnket = rename_vertices(v -> (v, 2), data_graph(prime(tndag; sites=[])))
-  tntn = ITensorNetwork(union(tnbra, tnket))
-  for v in vertices(tn)
-    if !isempty(commoninds(tntn[(v, 1)], tntn[(v, 2)]))
-      add_edge!(tntn, (v, 1) => (v, 2))
-    end
-  end
-  return tntn
+function inner_network(x::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...)
+  return BilinearFormNetwork(x, y; kwargs...)
 end
 
-# TODO: Use or replace with `flatten_networks`
 function inner_network(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork;
-  map_bra_linkinds=sim,
-  combine_linkinds=false,
-  flatten=combine_linkinds,
-  kwargs...,
+  x::AbstractITensorNetwork, A::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...
 )
-  @assert issetequal(vertices(tn1), vertices(tn2))
-  tn1 = map_bra_linkinds(tn1; sites=[])
-  inner_net = ⊗(dag(tn1), tn2; kwargs...)
-  if flatten
-    for v in vertices(tn1)
-      inner_net = contract(inner_net, (v, 2) => (v, 1); merged_vertex=v)
-    end
-  end
-  if combine_linkinds
-    inner_net = ITensorNetworks.combine_linkinds(inner_net)
-  end
-  return inner_net
+  return BilinearFormNetwork(A, x, y; kwargs...)
 end
 
-# TODO: Rename `inner`.
-function contract_inner(
-  ϕ::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  sequence=nothing,
-  contraction_sequence_kwargs=(;),
-)
-  tn = inner_network(ϕ, ψ; combine_linkinds=true)
-  if isnothing(sequence)
-    sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
-  end
-  return contract(tn; sequence)[]
+# TODO: We should make this use the QuadraticFormNetwork constructor here. 
+# Parts of the code (tests relying on norm_sqr being two layer and the gauging code
+#  which relies on specific message tensors) currently would break in that case so we need to resolve
+function norm_sqr_network(ψ::AbstractITensorNetwork)
+  return disjoint_union("bra" => dag(prime(ψ; sites=[])), "ket" => ψ)
 end
-
-# TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
-# or `norm_sqr` to match `LinearAlgebra.norm_sqr`
-norm_sqr(ψ::AbstractITensorNetwork; sequence) = contract_inner(ψ, ψ; sequence)
-
-norm_sqr_network(ψ::AbstractITensorNetwork; kwargs...) = inner_network(ψ, ψ; kwargs...)
 
 #
 # Printing
@@ -809,6 +738,9 @@ end
 
 Base.show(io::IO, graph::AbstractITensorNetwork) = show(io, MIME"text/plain"(), graph)
 
+# TODO: Move to an `ITensorNetworksVisualizationInterfaceExt`
+# package extension (and define a `VisualizationInterface` package
+# based on `ITensorVisualizationCore`.).
 function ITensorVisualizationCore.visualize(
   tn::AbstractITensorNetwork,
   args...;
@@ -865,13 +797,13 @@ function site_combiners(tn::AbstractITensorNetwork{V}) where {V}
   return Cs
 end
 
-function insert_missing_internal_inds(
-  tn::AbstractITensorNetwork, edges; internal_inds_space=trivial_space(tn)
+function insert_linkinds(
+  tn::AbstractITensorNetwork, edges=edges(tn); link_space=trivial_space(tn)
 )
   tn = copy(tn)
   for e in edges
-    if !hascommoninds(tn[src(e)], tn[dst(e)])
-      iₑ = Index(internal_inds_space, edge_tag(e))
+    if !hascommoninds(tn, e)
+      iₑ = Index(link_space, edge_tag(e))
       X = onehot(iₑ => 1)
       tn[src(e)] *= X
       tn[dst(e)] *= dag(X)
@@ -880,12 +812,10 @@ function insert_missing_internal_inds(
   return tn
 end
 
-function insert_missing_internal_inds(
-  tn::AbstractITensorNetwork; internal_inds_space=trivial_space(tn)
-)
-  return insert_internal_inds(tn, edges(tn); internal_inds_space)
-end
-
+# TODO: What to output? Could be an `IndsNetwork`. Or maybe
+# that would be a different function `commonindsnetwork`.
+# Even in that case, this could output a `Dictionary`
+# from the edges to the common inds on that edge.
 function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   inds = Index[]
   for v1 in vertices(tn1)
@@ -911,8 +841,8 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 
   if !issetequal(edges_tn1, edges_tn2)
     new_edges = union(edges_tn1, edges_tn2)
-    tn1 = insert_missing_internal_inds(tn1, new_edges)
-    tn2 = insert_missing_internal_inds(tn2, new_edges)
+    tn1 = insert_linkinds(tn1, new_edges)
+    tn2 = insert_linkinds(tn2, new_edges)
   end
 
   edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
@@ -933,7 +863,7 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 
   #Create vertices of tn12 as direct sum of tn1[v] and tn2[v]. Work out the matching indices by matching edges. Make index tags those of tn1[v]
   for v in vertices(tn1)
-    @assert siteinds(tn1, v) == siteinds(tn2, v)
+    @assert issetequal(siteinds(tn1, v), siteinds(tn2, v))
 
     e1_v = filter(x -> src(x) == v || dst(x) == v, edges_tn1)
     e2_v = filter(x -> src(x) == v || dst(x) == v, edges_tn2)
@@ -957,3 +887,5 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 end
 
 Base.:+(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)
+
+ITensors.hasqns(tn::AbstractITensorNetwork) = any(v -> hasqns(tn[v]), vertices(tn))
