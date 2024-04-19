@@ -19,14 +19,13 @@ function two_site_expansion_updater(
     use_relative_cutoff=false,
     use_absolute_cutoff=true,
   )
-    #return init, (;)
     maxdim=maxdim_func(maxdim;internal_kwargs...)
     cutoff=cutoff_func(cutoff;internal_kwargs...)
     region = first(sweep_plan[which_region_update])
     typeof(region) <: NamedEdge && return init, (;)
     region = only(region)
-    #figure out next region, since we want to expand there
-    #ToDo account for non-integer indices into which_region_update
+    # figure out next region, since we want to expand there
+    # ToDo: account for non-integer indices into which_region_update
     next_region = if which_region_update == length(sweep_plan)
       nothing
     else
@@ -38,10 +37,11 @@ function two_site_expansion_updater(
     !(typeof(next_region) <: NamedEdge) && return init, (;)
     !(region == src(next_region) || region == dst(next_region)) && return init, (;)
     next_vertex = src(next_region) == region ? dst(next_region) : src(next_region)
-    vp = region => next_vertex
   
     phi, has_changed = _two_site_expand_core(
-      init, region, vp; projected_operator!, state!, expand_dir=1,
+      init, region, region => next_vertex; 
+      projected_operator!,
+      state!,
       svd_func_expand,
       maxdim,
       cutoff,
@@ -78,7 +78,6 @@ function _two_site_expand_core(
   vertexpair::Pair;
   projected_operator!,
   state!,
-  expand_dir=1,
   svd_func_expand,
   cutoff,
   maxdim,
@@ -87,25 +86,19 @@ function _two_site_expand_core(
 )
   # preliminaries
   theflux = flux(phi0)
-  svd_func = svd_func_expand
   v1 = first(vertexpair)
   v2 = last(vertexpair)
   verts = [v1, v2]
-  n1, n2 = 1, 2
   PH = copy(projected_operator![])
-  psi = copy(state![])
-  # orthogonalize on the edge
-  next_edge = edgetype(psi)(vertexpair)
-  #update of environment not strictly necessary here
-  psi, PH, phi = default_extracter(psi, PH, next_edge, v1;internal_kwargs=(;))#default_extracter(psi,next_edge)#extract_local_tensor(psi, next_edge)
-  
-  psis = map(n -> psi[n], verts)  # extract local site tensors
-  
-  #if we are already past the maximum allowed bond dimension, return the input
-  #ToDo: move up so we don't do any orthogonalization
-  old_linkdim = dim(commonind(first(psis), phi))
-  linkinds = map(psi -> commonind(psi, phi), psis)
+  state = copy(state![])
+  old_linkdim = dim(commonind(state[v1],state[v2]))
   (old_linkdim >= maxdim) && return phi0, false
+  # orthogonalize on the edge
+  #update of environment not strictly necessary here
+  state, PH, phi = default_extracter(state, PH, edgetype(state)(vertexpair), v1;
+                                  internal_kwargs=(;))
+  psis = map(n -> state[n], verts)  # extract local site tensors
+  linkinds = map(psi -> commonind(psi, phi), psis)
 
   # compute nullspace to the left and right 
   #@timeit_debug timer "nullvector" begin
@@ -118,7 +111,7 @@ function _two_site_expand_core(
   # update the projected operator
   #ToDo: may not be necessary if we use the extracter anyway
   PH = set_nsite(PH, 2)
-  PH = position(PH, psi, verts)
+  PH = position(PH, state, verts)
 
   # build environments
   g = underlying_graph(PH)
@@ -144,34 +137,14 @@ function _two_site_expand_core(
   # factorize
   #FIXME: remove specialization on svd_func, define interface for svd_funcs
   #@timeit_debug timer "svd_func" begin
-    if svd_func == ITensorNetworks._svd_solve_normal
-        U, S, V = svd_func(
-        envMap, uniqueinds(inds(cout), outinds); maxdim=maxdim - old_linkdim, cutoff=cutoff
-        )
-    elseif svd_func == ITensorNetworks.rsvd_iterative
-        
-        U, S, V = svd_func(
+  U, S, V = svd_func_expand(
         envMap,
         uniqueinds(inds(cout), outinds);
         maxdim=maxdim - old_linkdim,
         cutoff=cutoff,
-        use_relative_cutoff=false,
-        use_absolute_cutoff=true,
+        use_relative_cutoff,
+        use_absolute_cutoff,
         )
-        
-        #U,S,V = svd_func(contract(envMap),uniqueinds(inds(cout),outinds);maxdim=maxdim-old_linkdim, cutoff=cutoff, use_relative_cutoff=false,
-        #use_absolute_cutoff=true) #this one is for debugging in case we want to test the precontracted version
-    else
-        U, S, V = svd_func(
-        eltype(envMap),
-        envMap,
-        envMapDag,
-        uniqueinds(inds(cout), outinds);
-        flux=theflux,
-        maxdim=maxdim - old_linkdim,
-        cutoff=cutoff,
-        )
-end
   #end
 
   # catch cases when we decompose a map of norm==0.0
@@ -202,7 +175,8 @@ end
   )
   if hasqns(phi)
     new_phi = ITensor(eltype(phi), flux(phi), phi_indices...)
-    fill!(new_phi, 0.0)  #ToDo: Check whether this is really necessary.
+    #ToDo: Remove? This used to be necessary, but may have been fixed with bugfixes in ITensor
+    #fill!(new_phi, 0.0)
   else
     new_phi = ITensor(eltype(phi), phi_indices...)
   end
@@ -218,16 +192,16 @@ end
     new_ind -> combiner(new_ind; tags=tags(new_ind), dir=dir(new_ind)), new_inds
   )
   for (v, new_psi, C) in zip(verts, new_psis, combiners)
-    psi[v] = noprime(new_psi * C)
+    state[v] = noprime(new_psi * C)
   end
   new_phi = dag(first(combiners)) * new_phi * dag(last(combiners))
 
   # apply expanded bond tensor to site tensor and reset projected operator to region
-  psi[v1] *= new_phi
-  new_phi = psi[v1]
+  state[v1] *= new_phi
+  new_phi = state[v1]
   PH = set_nsite(PH, 1)
-  PH = position(PH, psi, [region])
+  PH = position(PH, state, [region])
   projected_operator![] = PH
-  state![] = psi
+  state![] = state
   return new_phi, true
 end
