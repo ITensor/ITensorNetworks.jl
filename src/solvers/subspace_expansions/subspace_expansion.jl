@@ -107,12 +107,12 @@ function _two_site_expand_core(
   (old_linkdim >= maxdim) && return phi0, false
 
   # compute nullspace to the left and right 
-  @timeit_debug timer "nullvector" begin
-    nullVecs = map(zip(psis, linkinds)) do (psi, linkind)
-      #return nullspace(psi, linkind; atol=atol)
-      return implicit_nullspace(psi, linkind)
-    end
+  #@timeit_debug timer "nullvector" begin
+  nullVecs = map(zip(psis, linkinds)) do (psi, linkind)
+    #return nullspace(psi, linkind; atol=atol)
+    return implicit_nullspace(psi, linkind)
   end
+  #end
 
   # update the projected operator 
   PH = set_nsite(PH, 2)
@@ -120,15 +120,15 @@ function _two_site_expand_core(
 
   # build environments
   g = underlying_graph(PH)
-  @timeit_debug timer "build environments" begin
-    envs = map(zip(verts, psis)) do (n, psi)
-      return noprime(
-        mapreduce(*, [v => n for v in neighbors(g, n) if !(v ∈ verts)]; init=psi) do e
-          return PH.environments[NamedEdge(e)]
-        end * PH.H[n],
-      )
-    end
+  #@timeit_debug timer "build environments" begin
+  envs = map(zip(verts, psis)) do (n, psi)
+    return noprime(
+      mapreduce(*, [v => n for v in neighbors(g, n) if !(v ∈ verts)]; init=psi) do e
+        return PH.environments[NamedEdge(e)]
+      end * PH.H[n],
+    )
   end
+  #end
 
   # apply the projection into nullspace
   envs = [last(nullVecs)(last(envs)), first(nullVecs)(first(envs))]
@@ -153,36 +153,36 @@ function _two_site_expand_core(
   #envMapDag = adjoint(envMap)
 
   # factorize
-  @timeit_debug timer "svd_func" begin
-    if svd_func == ITensorNetworks._svd_solve_normal
-      U, S, V = svd_func(
-        envMap, uniqueinds(inds(cout), outinds); maxdim=maxdim - old_linkdim, cutoff=cutoff
-      )
-    elseif svd_func == ITensorNetworks.rsvd_iterative
-      
-      U, S, V = svd_func(
-        envMap,
-        uniqueinds(inds(cout), outinds);
-        maxdim=maxdim - old_linkdim,
-        cutoff=cutoff,
-        use_relative_cutoff=false,
-        use_absolute_cutoff=true,
-      )
-      
-      #U,S,V = svd_func(contract(envMap),uniqueinds(inds(cout),outinds);maxdim=maxdim-old_linkdim, cutoff=cutoff, use_relative_cutoff=false,
-      #use_absolute_cutoff=true) #this one is for debugging in case we want to test the precontracted version
-    else
-      U, S, V = svd_func(
-        eltype(envMap),
-        envMap,
-        envMapDag,
-        uniqueinds(inds(cout), outinds);
-        flux=theflux,
-        maxdim=maxdim - old_linkdim,
-        cutoff=cutoff,
-      )
-    end
+  #@timeit_debug timer "svd_func" begin
+  if svd_func == ITensorNetworks._svd_solve_normal
+    U, S, V = svd_func(
+      envMap, uniqueinds(inds(cout), outinds); maxdim=maxdim - old_linkdim, cutoff=cutoff
+    )
+  elseif svd_func == ITensorNetworks.rsvd_iterative
+    
+    U, S, V = svd_func(
+      envMap,
+      uniqueinds(inds(cout), outinds);
+      maxdim=maxdim - old_linkdim,
+      cutoff=cutoff,
+      use_relative_cutoff=false,
+      use_absolute_cutoff=true,
+    )
+    
+    #U,S,V = svd_func(contract(envMap),uniqueinds(inds(cout),outinds);maxdim=maxdim-old_linkdim, cutoff=cutoff, use_relative_cutoff=false,
+    #use_absolute_cutoff=true) #this one is for debugging in case we want to test the precontracted version
+  else
+    U, S, V = svd_func(
+      eltype(envMap),
+      envMap,
+      envMapDag,
+      uniqueinds(inds(cout), outinds);
+      flux=theflux,
+      maxdim=maxdim - old_linkdim,
+      cutoff=cutoff,
+    )
   end
+  #end
 
   # catch cases when we decompose a map of norm==0.0
   (isnothing(U) || iszero(norm(U))) && return phi0, false
@@ -197,15 +197,15 @@ function _two_site_expand_core(
   #@show inds(S)
   
   # direct sum the site tensors
-  @timeit_debug timer "direct sum" begin
-    new_psis = map(zip(psis, [U, V])) do (psi, exp_basis)
-      return ITensors.directsum(
-        psi => commonind(psi, phi),
-        exp_basis => uniqueind(exp_basis, psi);
-        tags=tags(commonind(psi, phi)),
-      )
-    end
+  #@timeit_debug timer "direct sum" begin
+  new_psis = map(zip(psis, [U, V])) do (psi, exp_basis)
+    return ITensors.directsum(
+      psi => commonind(psi, phi),
+      exp_basis => uniqueind(exp_basis, psi);
+      tags=tags(commonind(psi, phi)),
+    )
   end
+  #end
   new_inds = [last(x) for x in new_psis]
   new_psis = [first(x) for x in new_psis]
 
