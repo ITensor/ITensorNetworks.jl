@@ -12,13 +12,13 @@ using ITensors:
   dag,
   denseblocks,
   factorize,
+  factorize_svd,
   hasqns,
   isdiag,
   noprime,
   prime,
   replaceind,
   replaceinds,
-  factorize_svd,
   unioninds,
   uniqueinds
 using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
