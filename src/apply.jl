@@ -85,24 +85,25 @@ function simple_update_bp_full(o, ψ, v⃗; envs, (singular_values!)=nothing, ap
   cutoff = 10 * eps(real(scalartype(ψ)))
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
+  @assert all(ndims(env) == 2 for env in vcat(envs_v1, envs_v2))
   sqrt_envs_v1 = [
     ITensorsExtensions.map_eigvals(
-      sqrt, env, first(inds(env)), last(inds(env)); cutoff, ishermitian=true
+      sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
     ) for env in envs_v1
   ]
   sqrt_envs_v2 = [
     ITensorsExtensions.map_eigvals(
-      sqrt, env, first(inds(env)), last(inds(env)); cutoff, ishermitian=true
+      sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
     ) for env in envs_v2
   ]
   inv_sqrt_envs_v1 = [
     ITensorsExtensions.map_eigvals(
-      inv ∘ sqrt, env, first(inds(env)), last(inds(env)); cutoff, ishermitian=true
+      inv ∘ sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
     ) for env in envs_v1
   ]
   inv_sqrt_envs_v2 = [
     ITensorsExtensions.map_eigvals(
-      inv ∘ sqrt, env, first(inds(env)), last(inds(env)); cutoff, ishermitian=true
+      inv ∘ sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
     ) for env in envs_v2
   ]
   ψᵥ₁ᵥ₂_tn = [ψ[v⃗[1]]; ψ[v⃗[2]]; sqrt_envs_v1; sqrt_envs_v2]
@@ -134,24 +135,25 @@ function simple_update_bp(o, ψ, v⃗; envs, (singular_values!)=nothing, apply_k
   cutoff = 10 * eps(real(scalartype(ψ)))
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
+  @assert all(ndims(env) == 2 for env in vcat(envs_v1, envs_v2))
   sqrt_envs_v1 = [
     ITensorsExtensions.map_eigvals(
-      sqrt, env, first(inds(env)), last(inds(env)); cutoff, ishermitian=true
+      sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
     ) for env in envs_v1
   ]
   sqrt_envs_v2 = [
     ITensorsExtensions.map_eigvals(
-      sqrt, env, first(inds(env)), last(inds(env)); cutoff, ishermitian=true
+      sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
     ) for env in envs_v2
   ]
   inv_sqrt_envs_v1 = [
     ITensorsExtensions.map_eigvals(
-      inv ∘ sqrt, env, first(inds(env)), last(inds(env)); cutoff, ishermitian=true
+      inv ∘ sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
     ) for env in envs_v1
   ]
   inv_sqrt_envs_v2 = [
     ITensorsExtensions.map_eigvals(
-      inv ∘ sqrt, env, first(inds(env)), last(inds(env)); cutoff, ishermitian=true
+      inv ∘ sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
     ) for env in envs_v2
   ]
   ψᵥ₁ = contract([ψ[v⃗[1]]; sqrt_envs_v1])
