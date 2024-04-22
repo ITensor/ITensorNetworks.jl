@@ -1,5 +1,5 @@
 module ITensorsExtensions
-using LinearAlgebra: LinearAlgebra, eigen, ishermitian, pinv
+using LinearAlgebra: LinearAlgebra, eigen, pinv
 using ITensors:
   ITensor,
   Index,
