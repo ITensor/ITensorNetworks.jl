@@ -34,6 +34,7 @@ using ITensors:
   scalartype,
   sim,
   uniqueinds
+using ITensors.NDTensors: NDTensors, dim
 using ITensorNetworks:
   ITensorNetworks,
   ⊗,

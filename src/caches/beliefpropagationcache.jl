@@ -13,7 +13,7 @@ using NamedGraphs.PartitionedGraphs:
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
 
-default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
+default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
 default_message_norm(m::ITensor) = norm(m)
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)

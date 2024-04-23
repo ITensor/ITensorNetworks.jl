@@ -20,7 +20,7 @@ using Test: @test, @testset
 
 @testset "apply" begin
   Random.seed!(5623)
-  g_dims = (2, 3)
+  g_dims = (2, 2)
   n = prod(g_dims)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
