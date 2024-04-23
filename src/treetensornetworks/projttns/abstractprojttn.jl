@@ -35,7 +35,7 @@ function sites(P::AbstractProjTTN{V}) where {V}
   return pos(P)
 end
 
-function NamedGraphs.incident_edges(P::AbstractProjTTN{V})::Vector{NamedEdge{V}} where {V}
+function NamedGraphs.incident_edges(P::AbstractProjTTN{V}) where {V}
   on_edge(P) && return [pos(P), reverse(pos(P))]
   edges = [
     [edgetype(P)(n => v) for n in setdiff(neighbors(underlying_graph(P), v), sites(P))] for
@@ -44,7 +44,7 @@ function NamedGraphs.incident_edges(P::AbstractProjTTN{V})::Vector{NamedEdge{V}}
   return collect(Base.Iterators.flatten(edges))
 end
 
-function internal_edges(P::AbstractProjTTN{V})::Vector{NamedEdge{V}} where {V}
+function internal_edges(P::AbstractProjTTN{V}) where {V}
   on_edge(P) && return edgetype(P)[]
   edges = [
     [edgetype(P)(v => n) for n in neighbors(underlying_graph(P), v) ∩ sites(P)] for

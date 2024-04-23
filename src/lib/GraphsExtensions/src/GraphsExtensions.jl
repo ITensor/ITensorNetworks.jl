@@ -1,4 +1,4 @@
-# TODO: Move to `Graphs.GraphsExtensions`.
+module GraphsExtensions
 using Graphs: AbstractGraph, IsDirected, a_star
 using NamedGraphs.GraphsExtensions: child_vertices, is_leaf, undirected_graph, parent_vertex
 using SimpleTraits: SimpleTraits, Not, @traitfn
@@ -19,17 +19,17 @@ using SimpleTraits: SimpleTraits, Not, @traitfn
 ## end
 
 ## """Get all edges which do not involve a leaf"""
-## function internal_edges(g::AbstractGraph)
+## function tree_internal_edges(g::AbstractGraph)
 ##   return filter(e -> !is_leaf_edge(g, e), edges(g))
 ## end
 
 ## """Get distance of a vertex from a leaf"""
-## function distance_to_leaf(g::AbstractGraph, v)
+## function tree_distance_to_leaf(g::AbstractGraph, v)
 ##   leaves = leaf_vertices(g)
-##   if isempty(leaves)
-##     error("Graph does not have any leaves.")
+##   if (isempty(leaves))
+##     return error("Graph does not contain leaves.")
 ##   end
-##   return minimum(leaf -> length(a_star(g, v, leaf)), leaves)
+##   return minimum([length(a_star(g, v, leaf)) for leaf in leaves])
 ## end
 
 ## """Return all vertices which are within a certain pathlength `dist` of the leaves of the  graph"""
@@ -40,7 +40,7 @@ using SimpleTraits: SimpleTraits, Not, @traitfn
 ## """
 ## Return the root vertex of a rooted directed graph
 ## """
-## @traitfn function _root(graph::AbstractGraph::IsDirected)
+## @traitfn function root_vertex(graph::AbstractGraph::IsDirected)
 ##   @assert _is_rooted(graph) "the input $(graph) has to be rooted"
 ##   v = first(vertices(graph))
 ##   while parent_vertex(graph, v) != nothing
@@ -49,7 +49,7 @@ using SimpleTraits: SimpleTraits, Not, @traitfn
 ##   return v
 ## end
 
-## @traitfn function _is_rooted(graph::AbstractGraph::IsDirected)
+## @traitfn function is_rooted(graph::AbstractGraph::IsDirected)
 ##   return isone(length(filter(v -> isnothing(parent_vertex(graph, v)), vertices(graph))))
 ## end
 
@@ -66,4 +66,5 @@ using SimpleTraits: SimpleTraits, Not, @traitfn
 ##     end
 ##   end
 ##   return true
+## end
 ## end
