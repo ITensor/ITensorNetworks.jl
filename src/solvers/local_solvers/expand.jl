@@ -135,7 +135,6 @@ function _two_site_expand_core(
   envMap=[cout * envs[1], phi* (cin * envs[2])]
 
   # factorize
-  #FIXME: remove specialization on svd_func, define interface for svd_funcs
   #@timeit_debug timer "svd_func" begin
   U, S, V = svd_func_expand(
         envMap,

@@ -26,10 +26,6 @@ function default_extracter(state, projected_operator, region, ortho; internal_kw
 end
 
 function extract_and_truncate(state,projected_operator, region, ortho; maxdim=nothing, cutoff=nothing,internal_kwargs)
-  #ToDo: move default into function signature?
-  #svd_kwargs = NamedTuple()
-  #svd_kwargs = isnothing(maxdim) ? svd_kwargs : merge(svd_kwargs,(;maxdim))
-  #svd_kwargs = isnothing(cutoff) ? svd_kwargs : merge(svd_kwargs,(;cutoff))
   svd_kwargs= (;
   (isnothing(maxdim) ? (;) : (;maxdim))...,
   (isnothing(cutoff) ? (;) : (;cutoff))...
