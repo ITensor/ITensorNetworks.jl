@@ -80,6 +80,7 @@ for f in [
   :(NamedGraphs.partitioned_graph),
   :(NamedGraphs.partitionedge),
   :(NamedGraphs.partitionvertices),
+  :(NamedGraphs.partitionedges),
   :(NamedGraphs.vertices),
   :(NamedGraphs.boundary_partitionedges),
   :(ITensorMPS.linkinds),
@@ -285,8 +286,7 @@ function vertex_scalars(
 end
 
 function edge_scalars(
-  bp_cache::BeliefPropagationCache,
-  pes::Vector=partitionedges(partitioned_tensornetwork(bp_cache)),
+  bp_cache::BeliefPropagationCache, pes::Vector=partitionedges(bp_cache)
 )
   return [region_scalar(bp_cache, pe) for pe in pes]
 end

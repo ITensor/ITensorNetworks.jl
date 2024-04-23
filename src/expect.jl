@@ -1,57 +1,80 @@
-using ITensors.ITensorMPS: ITensorMPS, expect, promote_itensor_eltype, OpSum
+using Dictionaries: Dictionary, set!
+using ITensors: Op, op, contract, siteinds, which_op
+using ITensors.ITensorMPS: ITensorMPS, expect
+
+default_expect_alg() = "bp"
+
+expect_network(ψ::AbstractITensorNetwork; kwargs...) = inner_network(ψ, ψ; kwargs...)
 
 function ITensorMPS.expect(
+  ψ::AbstractITensorNetwork, args...; alg=default_expect_alg(), kwargs...
+)
+  return expect(Algorithm(alg), ψ, args...; kwargs...)
+end
+
+function ITensorMPS.expect(alg::Algorithm, ψ::AbstractITensorNetwork, op::String; kwargs...)
+  return expect(alg, ψ, op, vertices(ψ); kwargs...)
+end
+
+function ITensorMPS.expect(
+  alg::Algorithm, ψ::AbstractITensorNetwork, op::String, vertex; kwargs...
+)
+  return expect(alg, ψ, op, [vertex]; kwargs...)
+end
+
+#TODO: What to call this function?!
+function expect_internal(
+  ψ::AbstractITensorNetwork,
+  ψIψ::AbstractFormNetwork,
+  ops::Vector{String},
+  vertices::Vector;
+  contract_kwargs=(;),
+  kwargs...,
+)
+  @assert length(vertices) == length(ops)
+  op_vertices = [operator_vertex(ψIψ, v) for v in vertices]
+  s = siteinds(ψ)
+  operators = ITensor[ITensors.op(op, s[vertices[i]]) for (i, op) in enumerate(ops)]
+
+  ψIψ_vs = ITensor[ψIψ[op_vertex] for op_vertex in op_vertices]
+  ∂ψIψ_∂v = environment(ψIψ, vertices; vertex_mapping_function=operator_vertices, kwargs...)
+  numerator = contract(vcat(∂ψIψ_∂v, operators); contract_kwargs...)[]
+  denominator = contract(vcat(∂ψIψ_∂v, ψIψ_vs); contract_kwargs...)[]
+
+  return numerator / denominator
+end
+
+function ITensorMPS.expect(
+  alg::Algorithm,
+  ψ::AbstractITensorNetwork,
   op::String,
-  ψ::AbstractITensorNetwork;
-  cutoff=nothing,
-  maxdim=nothing,
-  ortho=false,
-  sequence=nothing,
-  vertices=vertices(ψ),
+  vertices::Vector;
+  (cache!)=nothing,
+  update_cache=isnothing(cache!),
+  cache_update_kwargs=default_cache_update_kwargs(cache!),
+  cache_construction_function=tn ->
+    cache(alg, tn; default_cache_construction_kwargs(alg, tn)...),
+  kwargs...,
 )
-  s = siteinds(ψ)
-  ElT = promote_itensor_eltype(ψ)
-  # ElT = ishermitian(ITensors.op(op, s[vertices[1]])) ? real(ElT) : ElT
-  res = Dictionary(vertices, Vector{ElT}(undef, length(vertices)))
-  if isnothing(sequence)
-    sequence = contraction_sequence(inner_network(ψ, ψ))
+  ψIψ = expect_network(ψ)
+  if isnothing(cache!)
+    cache! = Ref(cache_construction_function(ψIψ))
   end
-  normψ² = norm_sqr(ψ; alg="exact", sequence)
-  for v in vertices
-    O = ITensor(Op(op, v), s)
-    Oψ = apply(O, ψ; cutoff, maxdim, ortho)
-    res[v] = inner(ψ, Oψ; alg="exact", sequence) / normψ²
+
+  if update_cache
+    cache![] = update(cache![]; cache_update_kwargs...)
   end
-  return res
+
+  return map(
+    vertex ->
+      expect_internal(ψ, ψIψ, [op], [vertex]; alg, cache!, update_cache=false, kwargs...),
+    vertices,
+  )
 end
 
 function ITensorMPS.expect(
-  ℋ::OpSum,
-  ψ::AbstractITensorNetwork;
-  cutoff=nothing,
-  maxdim=nothing,
-  ortho=false,
-  sequence=nothing,
+  alg::Algorithm"exact", ψ::AbstractITensorNetwork, op::String, vertices::Vector; kwargs...
 )
-  s = siteinds(ψ)
-  # h⃗ = Vector{ITensor}(ℋ, s)
-  if isnothing(sequence)
-    sequence = contraction_sequence(inner_network(ψ, ψ))
-  end
-  h⃗ψ = [apply(hᵢ, ψ; cutoff, maxdim, ortho) for hᵢ in ITensors.terms(ℋ)]
-  ψhᵢψ = [inner(ψ, hᵢψ; alg="exact", sequence) for hᵢψ in h⃗ψ]
-  ψh⃗ψ = sum(ψhᵢψ)
-  ψψ = norm_sqr(ψ; alg="exact", sequence)
-  return ψh⃗ψ / ψψ
-end
-
-function ITensorMPS.expect(
-  opsum_sum::Sum{<:OpSum},
-  ψ::AbstractITensorNetwork;
-  cutoff=nothing,
-  maxdim=nothing,
-  ortho=true,
-  sequence=nothing,
-)
-  return expect(sum(Ops.terms(opsum_sum)), ψ; cutoff, maxdim, ortho, sequence)
+  ψIψ = expect_network(ψ)
+  return map(vertex -> expect_internal(ψ, ψIψ, [op], [vertex]; alg, kwargs...), vertices)
 end

@@ -16,12 +16,17 @@ ket_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
 function operator_vertices(f::AbstractFormNetwork)
   return filter(v -> last(v) == operator_vertex_suffix(f), vertices(f))
 end
+
 function bra_vertices(f::AbstractFormNetwork)
   return filter(v -> last(v) == bra_vertex_suffix(f), vertices(f))
 end
 
 function ket_vertices(f::AbstractFormNetwork)
   return filter(v -> last(v) == ket_vertex_suffix(f), vertices(f))
+end
+
+function operator_vertices(f::AbstractFormNetwork, original_state_vertices::Vector)
+  return [operator_vertex_map(f)(osv) for osv in original_state_vertices]
 end
 
 function bra_vertices(f::AbstractFormNetwork, original_state_vertices::Vector)
@@ -62,11 +67,12 @@ end
 
 function environment(
   f::AbstractFormNetwork,
-  original_state_vertices::Vector;
+  original_vertices::Vector;
+  vertex_mapping_function=state_vertices,
   alg=default_environment_algorithm(),
   kwargs...,
 )
-  form_vertices = state_vertices(f, original_state_vertices)
+  form_vertices = vertex_mapping_function(f, original_vertices)
   if alg == "bp"
     partitioned_vertices = group(v -> original_state_vertex(f, v), vertices(f))
     return environment(
