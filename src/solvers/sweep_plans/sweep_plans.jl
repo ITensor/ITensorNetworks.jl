@@ -1,3 +1,6 @@
+using Graphs: AbstractEdge, dst, src
+using NamedGraphs.GraphsExtensions: GraphsExtensions
+
 direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
 
 function overlap(edge_a::AbstractEdge, edge_b::AbstractEdge)
@@ -58,7 +61,7 @@ end
 function forward_sweep(
   dir::Base.ForwardOrdering,
   graph::AbstractGraph;
-  root_vertex=default_root_vertex(graph),
+  root_vertex=GraphsExtensions.default_root_vertex(graph),
   region_kwargs,
   reverse_kwargs=region_kwargs,
   reverse_step=false,
@@ -141,7 +144,10 @@ function default_sweep_plans(
 end
 
 function default_sweep_plan(
-  graph::AbstractGraph; root_vertex=default_root_vertex(graph), region_kwargs, nsites::Int
+  graph::AbstractGraph;
+  root_vertex=GraphsExtensions.default_root_vertex(graph),
+  region_kwargs,
+  nsites::Int,
 )
   return vcat(
     [
@@ -158,7 +164,7 @@ end
 
 function tdvp_sweep_plan(
   graph::AbstractGraph;
-  root_vertex=default_root_vertex(graph),
+  root_vertex=GraphsExtensions.default_root_vertex(graph),
   region_kwargs,
   reverse_step=true,
   order::Int,

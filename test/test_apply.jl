@@ -12,14 +12,15 @@ using ITensorNetworks:
   siteinds,
   update
 using ITensors: ITensors, inner, op
-using NamedGraphs: PartitionVertex, named_grid
+using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs.PartitionedGraphs: PartitionVertex
 using Random: Random
 using SplitApplyCombine: group
 using Test: @test, @testset
 
 @testset "apply" begin
   Random.seed!(5623)
-  g_dims = (2, 3)
+  g_dims = (2, 2)
   n = prod(g_dims)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)

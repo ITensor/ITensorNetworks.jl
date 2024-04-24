@@ -1,14 +1,19 @@
 using Graphs: IsDirected
 using SplitApplyCombine: group
-using NamedGraphs: unpartitioned_graph
-using NamedGraphs: partitionvertices
-using NamedGraphs: PartitionVertex
 using LinearAlgebra: diag
 using ITensors: dir
 using ITensors.ITensorMPS: ITensorMPS
-using NamedGraphs: boundary_partitionedges, partitionvertices, partitionedges
+using NamedGraphs.PartitionedGraphs:
+  PartitionedGraphs,
+  PartitionedGraph,
+  PartitionVertex,
+  boundary_partitionedges,
+  partitionvertices,
+  partitionedges,
+  unpartitioned_graph
+using SimpleTraits: SimpleTraits, Not, @traitfn
 
-default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
+default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
 default_message_norm(m::ITensor) = norm(m)
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
@@ -77,11 +82,11 @@ end
 
 #Forward from partitioned graph
 for f in [
-  :(NamedGraphs.partitioned_graph),
-  :(NamedGraphs.partitionedge),
-  :(NamedGraphs.partitionvertices),
-  :(NamedGraphs.vertices),
-  :(NamedGraphs.boundary_partitionedges),
+  :(PartitionedGraphs.partitioned_graph),
+  :(PartitionedGraphs.partitionedge),
+  :(PartitionedGraphs.partitionvertices),
+  :(PartitionedGraphs.vertices),
+  :(PartitionedGraphs.boundary_partitionedges),
   :(ITensorMPS.linkinds),
 ]
   @eval begin
@@ -99,10 +104,8 @@ function message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
   mts = messages(bp_cache)
   return get(mts, edge, default_message(bp_cache, edge))
 end
-function messages(
-  bp_cache::BeliefPropagationCache, edges::Vector{<:PartitionEdge}; kwargs...
-)
-  return [message(bp_cache, edge; kwargs...) for edge in edges]
+function messages(bp_cache::BeliefPropagationCache, edges; kwargs...)
+  return map(edge -> message(bp_cache, edge; kwargs...), edges)
 end
 
 function Base.copy(bp_cache::BeliefPropagationCache)
@@ -129,7 +132,7 @@ end
 function environment(
   bp_cache::BeliefPropagationCache,
   partition_vertices::Vector{<:PartitionVertex};
-  ignore_edges=PartitionEdge[],
+  ignore_edges=(),
 )
   bpes = boundary_partitionedges(bp_cache, partition_vertices; dir=:in)
   ms = messages(bp_cache, setdiff(bpes, ignore_edges))
@@ -153,7 +156,7 @@ end
 
 function factor(bp_cache::BeliefPropagationCache, vertex::PartitionVertex)
   ptn = partitioned_tensornetwork(bp_cache)
-  return Vector{ITensor}(subgraph(ptn, vertex))
+  return collect(eachtensor(subgraph(ptn, vertex)))
 end
 
 """
@@ -250,21 +253,18 @@ end
 """
 Update the tensornetwork inside the cache
 """
-function update_factors(
-  bp_cache::BeliefPropagationCache, vertices::Vector, factors::Vector{ITensor}
-)
+function update_factors(bp_cache::BeliefPropagationCache, factors)
   bp_cache = copy(bp_cache)
   tn = tensornetwork(bp_cache)
-
-  for (vertex, factor) in zip(vertices, factors)
+  for vertex in eachindex(factors)
     # TODO: Add a check that this preserves the graph structure.
-    setindex_preserve_graph!(tn, factor, vertex)
+    setindex_preserve_graph!(tn, factors[vertex], vertex)
   end
   return bp_cache
 end
 
 function update_factor(bp_cache, vertex, factor)
-  return update_factors(bp_cache, [vertex], ITensor[factor])
+  return update_factors(bp_cache, Dictionary([vertex], [factor]))
 end
 
 function region_scalar(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
@@ -279,16 +279,15 @@ end
 
 function vertex_scalars(
   bp_cache::BeliefPropagationCache,
-  pvs::Vector=partitionvertices(partitioned_tensornetwork(bp_cache)),
+  pvs=partitionvertices(partitioned_tensornetwork(bp_cache)),
 )
-  return [region_scalar(bp_cache, pv) for pv in pvs]
+  return map(pv -> region_scalar(bp_cache, pv), pvs)
 end
 
 function edge_scalars(
-  bp_cache::BeliefPropagationCache,
-  pes::Vector=partitionedges(partitioned_tensornetwork(bp_cache)),
+  bp_cache::BeliefPropagationCache, pes=partitionedges(partitioned_tensornetwork(bp_cache))
 )
-  return [region_scalar(bp_cache, pe) for pe in pes]
+  return map(pe -> region_scalar(bp_cache, pe), pes)
 end
 
 function scalar_factors_quotient(bp_cache::BeliefPropagationCache)

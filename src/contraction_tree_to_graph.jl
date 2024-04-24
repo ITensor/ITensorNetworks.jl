@@ -1,4 +1,8 @@
-using Graphs.SimpleGraphs: rem_vertex!
+using AbstractTrees: Leaves, PostOrderDFS
+using Graphs: add_vertex!, dst, edges, rem_vertex!, src
+using NamedGraphs: NamedDiGraph, NamedGraph
+using NamedGraphs.GraphsExtensions: is_leaf_edge, root_vertex
+
 """
 Take a contraction sequence and return a directed graph.
 """
@@ -37,7 +41,7 @@ function contraction_sequence_to_graph(contract_sequence)
   for e in edges(direct_g)
     add_edge!(g, e)
   end
-  root = _root(direct_g)
+  root = root_vertex(direct_g)
   c1, c2 = child_vertices(direct_g, root)
   rem_vertex!(g, root)
   add_edge!(g, c1 => c2)

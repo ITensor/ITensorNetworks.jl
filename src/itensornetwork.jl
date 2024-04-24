@@ -1,6 +1,7 @@
 using DataGraphs: DataGraphs, DataGraph
 using Dictionaries: Indices, dictionary
 using ITensors: ITensors, ITensor, op, state
+using .ITensorsExtensions: trivial_space
 using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
 
 struct Private end
@@ -30,7 +31,9 @@ end
 function ITensorNetwork{V}() where {V}
   # TODO: Is there a better way to write this?
   # Try using `convert_vertextype`.
-  return _ITensorNetwork(data_graph_type(ITensorNetwork{V})())
+  new_data_graph_type = data_graph_type(ITensorNetwork{V})
+  new_underlying_graph_type = underlying_graph_type(new_data_graph_type)
+  return _ITensorNetwork(new_data_graph_type(new_underlying_graph_type()))
 end
 function ITensorNetwork{V}(tn::ITensorNetwork) where {V}
   # TODO: Is there a better way to write this?
@@ -237,6 +240,10 @@ end
 
 ITensorNetwork(itns::Vector{ITensorNetwork}) = reduce(⊗, itns)
 
-function Base.Vector{ITensor}(ψ::ITensorNetwork)
-  return ITensor[ψ[v] for v in vertices(ψ)]
+# TODO: Use `vertex_data` here?
+function eachtensor(ψ::ITensorNetwork)
+  # This type declaration is needed to narrow
+  # the element type of the resulting `Dictionary`,
+  # raise and issue with `Dictionaries.jl`.
+  return map(v -> ψ[v]::ITensor, vertices(ψ))
 end

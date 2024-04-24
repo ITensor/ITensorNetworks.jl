@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using DataGraphs: underlying_graph
 using Graphs: nv
-using NamedGraphs
+using NamedGraphs.NamedGraphGenerators: named_grid
 using ITensorNetworks:
   BeliefPropagationCache,
   BilinearFormNetwork,

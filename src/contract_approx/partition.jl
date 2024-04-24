@@ -1,28 +1,34 @@
-using DataGraphs: AbstractDataGraph, DataGraph, edge_data, vertex_data
+using DataGraphs: AbstractDataGraph, DataGraph, edge_data, edge_data_eltype, vertex_data
 using Dictionaries: Dictionary
 using Graphs: AbstractGraph, add_edge!, has_edge, dst, edges, edgetype, src, vertices
 using ITensors: ITensor, noncommoninds
 using NamedGraphs: NamedGraph, subgraph
+using SplitApplyCombine: flatten
 
 function _partition(g::AbstractGraph, subgraph_vertices)
   partitioned_graph = DataGraph(
-    NamedGraph(eachindex(subgraph_vertices)),
-    map(vs -> subgraph(g, vs), Dictionary(subgraph_vertices)),
+    NamedGraph(eachindex(subgraph_vertices));
+    vertex_data_eltype=typeof(g),
+    edge_data_eltype=@NamedTuple{
+      edges::Vector{edgetype(g)}, edge_data::Dictionary{edgetype(g),edge_data_eltype(g)}
+    }
   )
+  for v in vertices(partitioned_graph)
+    partitioned_graph[v] = subgraph(g, subgraph_vertices[v])
+  end
   for e in edges(g)
     s1 = findfirst_on_vertices(subgraph -> src(e) ∈ vertices(subgraph), partitioned_graph)
     s2 = findfirst_on_vertices(subgraph -> dst(e) ∈ vertices(subgraph), partitioned_graph)
     if (!has_edge(partitioned_graph, s1, s2) && s1 ≠ s2)
       add_edge!(partitioned_graph, s1, s2)
-      partitioned_graph[s1 => s2] = Dictionary(
-        [:edges, :edge_data],
-        [Vector{edgetype(g)}(), Dictionary{edgetype(g),edge_data_type(g)}()],
+      partitioned_graph[s1 => s2] = (;
+        edges=Vector{edgetype(g)}(), edge_data=Dictionary{edgetype(g),edge_data_eltype(g)}()
       )
     end
     if has_edge(partitioned_graph, s1, s2)
-      push!(partitioned_graph[s1 => s2][:edges], e)
+      push!(partitioned_graph[s1 => s2].edges, e)
       if isassigned(g, e)
-        set!(partitioned_graph[s1 => s2][:edge_data], e, g[e])
+        set!(partitioned_graph[s1 => s2].edge_data, e, g[e])
       end
     end
   end
@@ -86,20 +92,13 @@ end
 #   return subgraphs(g, subgraph_vertices(g; npartitions, nvertices_per_partition, kwargs...))
 # end
 
-"""
-  TODO: do we want to make it a public function?
-"""
 function _noncommoninds(partition::DataGraph)
-  networks = [Vector{ITensor}(partition[v]) for v in vertices(partition)]
-  network = vcat(networks...)
-  return noncommoninds(network...)
+  tn = mapreduce(v -> collect(eachtensor(partition[v])), vcat, vertices(partition))
+  return unique(flatten_siteinds(ITensorNetwork(tn)))
 end
 
 # Util functions for partition
 function _commoninds(partition::DataGraph)
-  networks = [Vector{ITensor}(partition[v]) for v in vertices(partition)]
-  network = vcat(networks...)
-  outinds = noncommoninds(network...)
-  allinds = mapreduce(t -> [i for i in inds(t)], vcat, network)
-  return Vector(setdiff(allinds, outinds))
+  tn = mapreduce(v -> collect(eachtensor(partition[v])), vcat, vertices(partition))
+  return unique(flatten_linkinds(ITensorNetwork(tn)))
 end

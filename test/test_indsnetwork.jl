@@ -5,7 +5,7 @@ using Graphs: edges, ne, nv, vertices
 using ITensorNetworks: IndsNetwork, union_all_inds
 using ITensors: Index
 using ITensors.NDTensors: dim
-using NamedGraphs: named_comb_tree
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Random: Random
 using Test: @test, @testset
 

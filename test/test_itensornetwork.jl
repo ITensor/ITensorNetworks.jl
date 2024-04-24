@@ -34,6 +34,7 @@ using ITensors:
   scalartype,
   sim,
   uniqueinds
+using ITensors.NDTensors: NDTensors, dim
 using ITensorNetworks:
   ITensorNetworks,
   ⊗,
@@ -52,7 +53,9 @@ using ITensorNetworks:
   siteinds,
   ttn
 using LinearAlgebra: factorize
-using NamedGraphs: NamedEdge, incident_edges, named_comb_tree, named_grid
+using NamedGraphs: NamedEdge
+using NamedGraphs.GraphsExtensions: incident_edges
+using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NDTensors: NDTensors, dim
 using Random: Random, randn!
 using Test: @test, @test_broken, @testset

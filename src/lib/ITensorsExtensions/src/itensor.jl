@@ -1,4 +1,3 @@
-module ITensorsExtensions
 using LinearAlgebra: LinearAlgebra, eigen, pinv
 using ITensors:
   ITensor,
@@ -12,7 +11,9 @@ using ITensors:
   map_diag,
   noncommonind,
   noprime,
+  replaceind,
   replaceinds,
+  sim,
   space,
   sqrt_decomp
 using ITensors.NDTensors:
@@ -52,16 +53,24 @@ invsqrt_diag(it::ITensor) = map_diag(inv ∘ sqrt, it)
 pinv_diag(it::ITensor) = map_diag(pinv, it)
 pinvsqrt_diag(it::ITensor) = map_diag(pinv ∘ sqrt, it)
 
-function map_itensor(
-  f::Function, A::ITensor, lind=first(inds(A)); regularization=nothing, kwargs...
-)
-  USV = svd(A, lind; kwargs...)
-  U, S, V, spec, u, v = USV
-  S = map_diag(s -> f(s + regularization), S)
-  sqrtDL, δᵤᵥ, sqrtDR = sqrt_decomp(S, u, v)
-  sqrtDR = denseblocks(sqrtDR) * denseblocks(δᵤᵥ)
-  L, R = U * sqrtDL, V * sqrtDR
-  return L * R
+#TODO: Make this work for non-hermitian A
+function eigendecomp(A::ITensor, linds, rinds; ishermitian=false, kwargs...)
+  @assert ishermitian
+  D, U = eigen(A, linds, rinds; ishermitian, kwargs...)
+  ul, ur = noncommonind(D, U), commonind(D, U)
+  Ul = replaceinds(U, vcat(rinds, ur), vcat(linds, ul))
+
+  return Ul, D, dag(U)
+end
+
+function map_eigvals(f::Function, A::ITensor, inds...; ishermitian=false, kwargs...)
+  if isdiag(A)
+    return map_diag(f, A)
+  end
+
+  Ul, D, Ur = eigendecomp(A, inds...; ishermitian, kwargs...)
+
+  return Ul * map_diag(f, D) * Ur
 end
 
 # Analagous to `denseblocks`.
@@ -78,5 +87,3 @@ function diagblocks(D::Tensor)
 end
 
 diagblocks(it::ITensor) = itensor(diagblocks(tensor(it)))
-
-end

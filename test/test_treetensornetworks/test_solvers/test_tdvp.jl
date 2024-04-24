@@ -16,7 +16,7 @@ using ITensorNetworks:
   tdvp
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using LinearAlgebra: norm
-using NamedGraphs: named_binary_tree, named_comb_tree
+using NamedGraphs.NamedGraphGenerators: named_binary_tree, named_comb_tree
 using Observers: observer
 using Test: @testset, @test
 

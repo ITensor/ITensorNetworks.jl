@@ -6,18 +6,20 @@ using ITensors.ITensorMPS: MPS
 using ITensorNetworks:
   _DensityMartrixAlgGraph,
   _contract_deltas_ignore_leaf_partitions,
-  _is_rooted_directed_binary_tree,
   _mps_partition_inds_order,
   _mincut_partitions,
   _partition,
   _rem_vertex!,
-  _root,
   IndsNetwork,
   ITensorNetwork,
   binary_tree_structure,
+  eachtensor,
   path_graph_structure,
   random_tensornetwork
-using NamedGraphs: NamedEdge, named_grid, post_order_dfs_vertices
+using NamedGraphs: NamedEdge, NamedGraph
+using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs.GraphsExtensions:
+  is_binary_arborescence, post_order_dfs_vertices, root_vertex
 using OMEinsumContractionOrders: OMEinsumContractionOrders
 using Test: @test, @testset
 
@@ -36,7 +38,7 @@ using Test: @test, @testset
   tn = ITensorNetwork(M[:])
   for out in [binary_tree_structure(tn), path_graph_structure(tn)]
     @test out isa DataGraph
-    @test _is_rooted_directed_binary_tree(out)
+    @test is_binary_arborescence(out)
     @test length(vertex_data(out).values) == 8
   end
   out = _mps_partition_inds_order(tn, [o, p, i, j, k, l, m, n])
@@ -64,7 +66,7 @@ end
   tn = ITensorNetwork(vec(tn[:, :, 1]))
   for out in [binary_tree_structure(tn), path_graph_structure(tn)]
     @test out isa DataGraph
-    @test _is_rooted_directed_binary_tree(out)
+    @test is_binary_arborescence(out)
     @test length(vertex_data(out).values) == 9
   end
 end
@@ -73,9 +75,8 @@ end
   inds = [Index(2, "$i") for i in 1:5]
   tn = ITensorNetwork([randomITensor(i) for i in inds])
   par = _partition(tn, binary_tree_structure(tn); alg="mincut_recursive_bisection")
-  networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
-  network = vcat(networks...)
-  @test isapprox(contract(Vector{ITensor}(tn)), contract(network...))
+  network = mapreduce(v -> collect(eachtensor(par[v])), vcat, vertices(par))
+  @test isapprox(contract(tn), contract(network))
 end
 
 @testset "test partition with mincut_recursive_bisection alg and approx_itensornetwork" begin
@@ -84,7 +85,7 @@ end
   k = Index(2, "k")
   l = Index(2, "l")
   m = Index(2, "m")
-  for dtype in [Float64, ComplexF64]
+  for dtype in (Float64, Complex{Float64})
     T = randomITensor(dtype, i, j, k, l, m)
     M = MPS(T, (i, j, k, l, m); cutoff=1e-5, maxdim=5)
     network = M[:]
@@ -92,18 +93,21 @@ end
     tn = ITensorNetwork(network)
     inds_btree = binary_tree_structure(tn)
     par = _partition(tn, inds_btree; alg="mincut_recursive_bisection")
-    par = _contract_deltas_ignore_leaf_partitions(par; root=_root(inds_btree))
-    networks = [Vector{ITensor}(par[v]) for v in vertices(par)]
-    network2 = vcat(networks...)
-    out2 = contract(network2...)
+    par = _contract_deltas_ignore_leaf_partitions(par; root=root_vertex(inds_btree))
+    networks = map(v -> par[v], vertices(par))
+    network2 = reduce(union, networks)
+    out2 = contract(network2)
     @test isapprox(out1, out2)
     # test approx_itensornetwork (here we call `contract` to test the interface)
     for structure in [path_graph_structure, binary_tree_structure]
       for alg in ["density_matrix", "ttn_svd"]
         approx_tn, lognorm = contract(
-          tn; alg=alg, output_structure=structure, contraction_sequence_alg="sa_bipartite"
+          tn;
+          alg=alg,
+          output_structure=structure,
+          contraction_sequence_kwargs=(; alg="sa_bipartite"),
         )
-        network3 = Vector{ITensor}(approx_tn)
+        network3 = collect(eachtensor(approx_tn))
         out3 = contract(network3...) * exp(lognorm)
         i1 = noncommoninds(network...)
         i3 = noncommoninds(network3...)
@@ -128,21 +132,20 @@ end
   underlying_tree = underlying_graph(input_partition)
   # Change type of each partition[v] since they will be updated
   # with potential data type chage.
-  p = DataGraph()
+  p = DataGraph(NamedGraph())
   for v in vertices(input_partition)
     add_vertex!(p, v)
     p[v] = ITensorNetwork{Any}(input_partition[v])
   end
-  alg_graph = _DensityMartrixAlgGraph(p, underlying_tree, _root(out_tree))
-  path = post_order_dfs_vertices(underlying_tree, _root(out_tree))
+  alg_graph = _DensityMartrixAlgGraph(p, underlying_tree, root_vertex(out_tree))
+  path = post_order_dfs_vertices(underlying_tree, root_vertex(out_tree))
   for v in path[1:2]
     _rem_vertex!(
       alg_graph,
       v;
       cutoff=1e-15,
       maxdim=10000,
-      contraction_sequence_alg="optimal",
-      contraction_sequence_kwargs=(;),
+      contraction_sequence_kwargs=(; alg="optimal"),
     )
   end
   # Check that a specific density matrix info has been cached
