@@ -4,6 +4,7 @@ using ITensors.ITensorMPS: ITensorMPS, expect
 
 default_expect_alg() = "bp"
 
+#Don't need this...
 expect_network(ψ::AbstractITensorNetwork; kwargs...) = inner_network(ψ, ψ; kwargs...)
 
 function ITensorMPS.expect(
@@ -12,43 +13,29 @@ function ITensorMPS.expect(
   return expect(Algorithm(alg), ψ, args...; kwargs...)
 end
 
-function ITensorMPS.expect(alg::Algorithm, ψ::AbstractITensorNetwork, op::String; kwargs...)
-  return expect(alg, ψ, op, vertices(ψ); kwargs...)
-end
+#TODO: What to name this? It calculates the expectation value <Prod{op in ops}> over ψ 
+# where you pass the norm network which is constructed elsewhere. All expect() calls should pass
+# down to this internal function. The alg is passed along to `environment`, which is where the work is 
+# actually done.
+# Get siteinds out of psi I psi instead?
+function expect_internal(ψIψ::AbstractFormNetwork, op::Op; contract_kwargs=(;), kwargs...)
+  v = only(op.sites)
 
-function ITensorMPS.expect(
-  alg::Algorithm, ψ::AbstractITensorNetwork, op::String, vertex; kwargs...
-)
-  return expect(alg, ψ, op, [vertex]; kwargs...)
-end
-
-#TODO: What to call this function?!
-function expect_internal(
-  ψ::AbstractITensorNetwork,
-  ψIψ::AbstractFormNetwork,
-  ops::Vector{String},
-  vertices::Vector;
-  contract_kwargs=(;),
-  kwargs...,
-)
-  @assert length(vertices) == length(ops)
-  op_vertices = [operator_vertex(ψIψ, v) for v in vertices]
-  s = siteinds(ψ)
-  operators = ITensor[ITensors.op(op, s[vertices[i]]) for (i, op) in enumerate(ops)]
-
-  ψIψ_vs = ITensor[ψIψ[op_vertex] for op_vertex in op_vertices]
-  ∂ψIψ_∂v = environment(ψIψ, vertices; vertex_mapping_function=operator_vertices, kwargs...)
-  numerator = contract(vcat(∂ψIψ_∂v, operators); contract_kwargs...)[]
-  denominator = contract(vcat(∂ψIψ_∂v, ψIψ_vs); contract_kwargs...)[]
+  ψIψ_v = ψIψ[operator_vertex(ψIψ, v)]
+  s = commonind(ψIψ[ket_vertex(ψIψ, v)], ψIψ_v)
+  operator = ITensors.op(op.which_op, s)
+  ∂ψIψ_∂v = environment(ψIψ, [v]; vertex_mapping_function=operator_vertices, kwargs...)
+  numerator = contract(vcat(∂ψIψ_∂v, operator); contract_kwargs...)[]
+  denominator = contract(vcat(∂ψIψ_∂v, ψIψ_v); contract_kwargs...)[]
 
   return numerator / denominator
 end
 
+#Remove type constraint on ops_collection
 function ITensorMPS.expect(
   alg::Algorithm,
   ψ::AbstractITensorNetwork,
-  op::String,
-  vertices::Vector;
+  ops::Vector{Op};
   (cache!)=nothing,
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(cache!),
@@ -66,15 +53,33 @@ function ITensorMPS.expect(
   end
 
   return map(
-    vertex ->
-      expect_internal(ψ, ψIψ, [op], [vertex]; alg, cache!, update_cache=false, kwargs...),
-    vertices,
+    op -> expect_internal(ψIψ, op; alg, cache!, update_cache=false, kwargs...), ops
   )
 end
 
 function ITensorMPS.expect(
-  alg::Algorithm"exact", ψ::AbstractITensorNetwork, op::String, vertices::Vector; kwargs...
+  alg::Algorithm"exact", ψ::AbstractITensorNetwork, ops::Vector{Op}; kwargs...
 )
   ψIψ = expect_network(ψ)
-  return map(vertex -> expect_internal(ψ, ψIψ, [op], [vertex]; alg, kwargs...), vertices)
+  return map(op -> expect_internal(ψIψ, op; alg, kwargs...), ops)
+end
+
+function ITensorMPS.expect(alg::Algorithm, ψ::AbstractITensorNetwork, op::Op; kwargs...)
+  return expect(alg, ψ, [op]; kwargs...)
+end
+
+function ITensorMPS.expect(
+  alg::Algorithm, ψ::AbstractITensorNetwork, op::String, vertex; kwargs...
+)
+  return expect(alg, ψ, Op(op, vertex); kwargs...)
+end
+
+function ITensorMPS.expect(
+  alg::Algorithm, ψ::AbstractITensorNetwork, op::String, vertices::Vector; kwargs...
+)
+  return expect(alg, ψ, [Op(op, vertex) for vertex in vertices]; kwargs...)
+end
+
+function ITensorMPS.expect(alg::Algorithm, ψ::AbstractITensorNetwork, op::String; kwargs...)
+  return expect(alg, ψ, op, vertices(ψ); kwargs...)
 end

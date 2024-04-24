@@ -143,9 +143,10 @@ function environment(
   return environment(bp_cache, [partition_vertex]; kwargs...)
 end
 
-function environment(bp_cache::BeliefPropagationCache, verts::Vector)
+#Keyword argument here to expand `partition_verts`
+function environment(bp_cache::BeliefPropagationCache, verts::Vector; kwargs...)
   partition_verts = partitionvertices(bp_cache, verts)
-  messages = environment(bp_cache, partition_verts)
+  messages = environment(bp_cache, partition_verts; kwargs...)
   central_tensors = ITensor[
     tensornetwork(bp_cache)[v] for v in setdiff(vertices(bp_cache, partition_verts), verts)
   ]
