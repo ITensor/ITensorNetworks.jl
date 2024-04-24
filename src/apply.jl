@@ -1,3 +1,4 @@
+using .BaseExtensions: maybe_real
 using Graphs: has_edge
 using LinearAlgebra: qr
 using ITensors: Ops

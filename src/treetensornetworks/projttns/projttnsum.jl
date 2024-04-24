@@ -1,6 +1,7 @@
 using ITensors: ITensors, contract, product
 using ITensors.LazyApply: LazyApply, terms
-using NamedGraphs: NamedGraphs, incident_edges
+using NamedGraphs: NamedGraphs
+using NamedGraphs.GraphsExtensions: incident_edges
 
 """
 ProjTTNSum

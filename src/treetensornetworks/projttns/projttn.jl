@@ -2,7 +2,8 @@ using DataGraphs: DataGraphs, underlying_graph
 using Dictionaries: Dictionary, Indices
 using Graphs: edgetype, vertices
 using ITensors: ITensor
-using NamedGraphs: NamedEdge, incident_edges
+using NamedGraphs: NamedEdge
+using NamedGraphs.GraphsExtensions: incident_edges, is_leaf_vertex
 
 """
 ProjTTN
@@ -51,7 +52,7 @@ function make_environment(P::ProjTTN, state::AbstractTTN, e::AbstractEdge)
   reverse(e) ∈ incident_edges(P) || (P = invalidate_environment(P, reverse(e)))
   # do nothing if valid environment already present
   if !haskey(environments(P), e)
-    if is_leaf(underlying_graph(P), src(e))
+    if is_leaf_vertex(underlying_graph(P), src(e))
       # leaves are easy
       env = state[src(e)] * operator(P)[src(e)] * dag(prime(state[src(e)]))
     else

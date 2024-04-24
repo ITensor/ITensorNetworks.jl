@@ -1,6 +1,7 @@
 using DataGraphs: DataGraphs, DataGraph
 using Dictionaries: Indices, dictionary
 using ITensors: ITensors, ITensor, op, state
+using .ITensorsExtensions: trivial_space
 using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
 
 struct Private end

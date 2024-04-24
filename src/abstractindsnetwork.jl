@@ -2,6 +2,7 @@ using ITensors: IndexSet
 using DataGraphs: DataGraphs, AbstractDataGraph, edge_data, vertex_data
 using Graphs: Graphs, AbstractEdge
 using ITensors: ITensors, unioninds, uniqueinds
+using .ITensorsExtensions: ITensorsExtensions, promote_indtype
 using NamedGraphs: NamedGraphs
 using NamedGraphs.GraphsExtensions: incident_edges, rename_vertices
 
@@ -96,7 +97,7 @@ end
 # Convenience functions
 # 
 
-function promote_indtypeof(is::AbstractIndsNetwork)
+function ITensorsExtensions.promote_indtypeof(is::AbstractIndsNetwork)
   sitetype = mapreduce(promote_indtype, vertices(is); init=Index{Int}) do v
     # TODO: Replace with `is[v]` once `getindex(::IndsNetwork, ...)` is smarter.
     return mapreduce(typeof, promote_indtype, get(is, v, Index[]); init=Index{Int})

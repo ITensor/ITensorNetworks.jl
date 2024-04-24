@@ -1,4 +1,3 @@
-module ITensorsExtensions
 using LinearAlgebra: LinearAlgebra, eigen, pinv
 using ITensors:
   ITensor,
@@ -88,5 +87,3 @@ function diagblocks(D::Tensor)
 end
 
 diagblocks(it::ITensor) = itensor(diagblocks(tensor(it)))
-
-end

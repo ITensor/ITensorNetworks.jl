@@ -1,3 +1,5 @@
+using NamedGraphs.GraphsExtensions: is_binary_arborescence, root_vertex
+
 # Density matrix algorithm and ttn_svd algorithm
 """
 Approximate a `binary_tree_partition` into an output ITensorNetwork
@@ -14,7 +16,7 @@ function approx_tensornetwork(
 )
   @assert is_tree(binary_tree_partition)
   @assert root in vertices(binary_tree_partition)
-  @assert _is_rooted_directed_binary_tree(dfs_tree(binary_tree_partition, root))
+  @assert is_binary_arborescence(dfs_tree(binary_tree_partition, root))
   # The `binary_tree_partition` may contain multiple delta tensors to make sure
   # the partition has a binary tree structure. These delta tensors could hurt the
   # performance when computing density matrices so we remove them first.
@@ -41,7 +43,7 @@ function approx_tensornetwork(
 )
   @assert is_tree(binary_tree_partition)
   @assert root in vertices(binary_tree_partition)
-  @assert _is_rooted_directed_binary_tree(dfs_tree(binary_tree_partition, root))
+  @assert is_binary_arborescence(dfs_tree(binary_tree_partition, root))
   return _approx_itensornetwork_ttn_svd!(
     binary_tree_partition; root, cutoff, maxdim, contraction_sequence_kwargs
   )
@@ -62,12 +64,12 @@ function approx_tensornetwork(
 )
   par = _partition(tn, inds_btree; alg="mincut_recursive_bisection")
   output_tn, log_root_norm = approx_tensornetwork(
-    alg, par; root=_root(inds_btree), cutoff, maxdim, contraction_sequence_kwargs
+    alg, par; root=root_vertex(inds_btree), cutoff, maxdim, contraction_sequence_kwargs
   )
   # Each leaf vertex in `output_tn` is adjacent to one output index.
   # We remove these leaf vertices so that each non-root vertex in `output_tn`
   # is an order 3 tensor.
-  _rem_leaf_vertices!(output_tn; root=_root(inds_btree), contraction_sequence_kwargs)
+  _rem_leaf_vertices!(output_tn; root=root_vertex(inds_btree), contraction_sequence_kwargs)
   return output_tn, log_root_norm
 end
 

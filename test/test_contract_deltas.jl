@@ -8,13 +8,12 @@ using ITensorNetworks:
   _contract_deltas_ignore_leaf_partitions,
   _noncommoninds,
   _partition,
-  _root,
   binary_tree_structure,
   eachtensor,
   flatten_siteinds,
   path_graph_structure,
   random_tensornetwork
-using NamedGraphs.GraphsExtensions: leaf_vertices
+using NamedGraphs.GraphsExtensions: leaf_vertices, root_vertex
 using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @testset
 
@@ -48,7 +47,7 @@ end
   tn = ITensorNetwork(vec(tn[:, :, 1]))
   for inds_tree in [binary_tree_structure(tn), path_graph_structure(tn)]
     par = _partition(tn, inds_tree; alg="mincut_recursive_bisection")
-    root = _root(inds_tree)
+    root = root_vertex(inds_tree)
     par_contract_deltas = _contract_deltas_ignore_leaf_partitions(par; root=root)
     @test Set(_noncommoninds(par)) == Set(_noncommoninds(par_contract_deltas))
     leaves = leaf_vertices(dfs_tree(par_contract_deltas, root))

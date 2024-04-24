@@ -16,7 +16,8 @@ using ITensors:
 using ITensors.ITensorMPS: ITensorMPS
 using ITensors.NDTensors: matrix
 using ITensorGaussianMPS: ITensorGaussianMPS
-using ITensorNetworks: ITensorNetworks, OpSum, ttn, relabel_sites, siteinds
+using ITensorNetworks: ITensorNetworks, OpSum, ttn, siteinds
+using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using KrylovKit: eigsolve
 using LinearAlgebra: eigvals, norm
@@ -64,7 +65,7 @@ end
       # get TTN Hamiltonian directly
       Hsvd = ttn(H, is; root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
       # compare resulting dense Hamiltonians
       @disable_warn_order begin
         Tttno = prod(Hline)
@@ -73,7 +74,7 @@ end
       @test Tttno ≈ Tmpo rtol = 1e-6
 
       Hsvd_lr = ttn(Hlr, is; root_vertex, cutoff=1e-10)
-      Hline_lr = ITensorMPS.MPO(relabel_sites(Hlr, vmap), sites)
+      Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
       @disable_warn_order begin
         Tttno_lr = prod(Hline_lr)
         Tmpo_lr = contract(Hsvd_lr)
@@ -142,7 +143,7 @@ end
       # get TTN Hamiltonian directly
       Hsvd = ttn(H, is; root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
       # compare resulting sparse Hamiltonians
 
       @disable_warn_order begin
@@ -152,7 +153,7 @@ end
       @test Tttno ≈ Tmpo rtol = 1e-6
 
       Hsvd_lr = ttn(Hlr, is; root_vertex, cutoff=1e-10)
-      Hline_lr = ITensorMPS.MPO(relabel_sites(Hlr, vmap), sites)
+      Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
       @disable_warn_order begin
         Tttno_lr = prod(Hline_lr)
         Tmpo_lr = contract(Hsvd_lr)
@@ -187,9 +188,9 @@ end
       # get corresponding MPO Hamiltonian
       sites = [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
       vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
-      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
       # compare resulting sparse Hamiltonians
-      Hmat_sp = ITensorGaussianMPS.hopping_hamiltonian(relabel_sites(H, vmap))
+      Hmat_sp = ITensorGaussianMPS.hopping_hamiltonian(replace_vertices(v -> vmap[v], H))
       @disable_warn_order begin
         Tmpo = prod(Hline)
         Tttno = contract(Hsvd)
@@ -256,7 +257,7 @@ end
       # get TTN Hamiltonian directly
       Hsvd = ttn(H, is_missing_site; root_vertex, cutoff=1e-10)
       # get corresponding MPO Hamiltonian
-      Hline = ITensorMPS.MPO(relabel_sites(H, vmap), sites)
+      Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
 
       # compare resulting sparse Hamiltonians
       @disable_warn_order begin
@@ -266,7 +267,7 @@ end
       @test Tttno ≈ Tmpo rtol = 1e-6
 
       Hsvd_lr = ttn(Hlr, is_missing_site; root_vertex, cutoff=1e-10)
-      Hline_lr = ITensorMPS.MPO(relabel_sites(Hlr, vmap), sites)
+      Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
       @disable_warn_order begin
         Tttno_lr = prod(Hline_lr)
         Tmpo_lr = contract(Hsvd_lr)

@@ -37,6 +37,7 @@ using ITensors:
   sim,
   swaptags
 using ITensors.ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
+using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using LinearAlgebra: LinearAlgebra, factorize
 using NamedGraphs:
   NamedGraphs, NamedGraph, not_implemented, parent_vertex_to_vertex, vertex_to_parent_vertex
@@ -172,7 +173,7 @@ end
 # Promotion and conversion
 #
 
-function promote_indtypeof(tn::AbstractITensorNetwork)
+function ITensorsExtensions.promote_indtypeof(tn::AbstractITensorNetwork)
   return mapreduce(promote_indtype, eachtensor(tn)) do t
     return indtype(t)
   end

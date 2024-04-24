@@ -5,7 +5,7 @@ using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks
 using ITensors.Ops: Op, OpSum
 using NamedGraphs.GraphsExtensions:
-  GraphsExtensions, boundary_edges, degrees, is_leaf, vertex_path
+  GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
 using StaticArrays: MVector
 
 # convert ITensors.OpSum to TreeTensorNetwork
@@ -140,7 +140,7 @@ function ttn_svd(
 
     # sanity check, leaves only have single incoming or outgoing edge
     @assert !isempty(dims_out) || !isnothing(dim_in)
-    (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf(sites, v)
+    (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf_vertex(sites, v)
 
     for term in os
       # loop over OpSum and pick out terms that act on current vertex
@@ -542,7 +542,7 @@ function ttn(
 )
   length(ITensors.terms(os)) == 0 && error("OpSum has no terms")
   is_tree(sites) || error("Site index graph must be a tree.")
-  is_leaf(sites, root_vertex) || error("Tree root must be a leaf vertex.")
+  is_leaf_vertex(sites, root_vertex) || error("Tree root must be a leaf vertex.")
 
   os = deepcopy(os)
   os = sorteachterm(os, sites, root_vertex)

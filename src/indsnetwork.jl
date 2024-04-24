@@ -1,8 +1,9 @@
 using DataGraphs: DataGraphs, DataGraph, IsUnderlyingGraph, map_data, vertex_data
-using Dictionaries: AbstractDictionary, Indices
+using Dictionaries: AbstractDictionary, Dictionary, Indices
 using Graphs: Graphs
 using Graphs.SimpleGraphs: AbstractSimpleGraph
-using ITensors: Index, dag
+using ITensors: Index, QN, dag
+using .ITensorsExtensions: ITensorsExtensions, indtype
 using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph
 using NamedGraphs.GraphsExtensions: vertextype
 using NamedGraphs.NamedGraphGenerators: named_path_graph
@@ -14,8 +15,8 @@ struct IndsNetwork{V,I} <: AbstractIndsNetwork{V,I}
     return new{V,I}(g)
   end
 end
-indtype(inds_network::IndsNetwork) = indtype(typeof(inds_network))
-indtype(::Type{<:IndsNetwork{V,I}}) where {V,I} = I
+ITensorsExtensions.indtype(inds_network::IndsNetwork) = indtype(typeof(inds_network))
+ITensorsExtensions.indtype(::Type{<:IndsNetwork{V,I}}) where {V,I} = I
 data_graph(is::IndsNetwork) = is.data_graph
 DataGraphs.underlying_graph(is::IndsNetwork) = underlying_graph(data_graph(is))
 NamedGraphs.vertextype(::Type{<:IndsNetwork{V}}) where {V} = V
@@ -109,29 +110,6 @@ end
 function path_indsnetwork(external_inds::Vector{<:Index})
   return path_indsnetwork(map(i -> [i], external_inds))
 end
-
-# TODO: Replace with a trait of the same name.
-const IsIndexSpace = Union{<:Integer,Vector{<:Pair{QN,<:Integer}}}
-
-# Infer the `Index` type of an `IndsNetwork` from the
-# spaces that get input.
-indtype(link_space::Nothing, site_space::Nothing) = Index
-indtype(link_space::Nothing, site_space) = indtype(site_space)
-indtype(link_space, site_space::Nothing) = indtype(link_space)
-indtype(link_space, site_space) = promote_type(indtype(link_space), indtype(site_space))
-
-# Default to type space
-indtype(space) = _indtype(typeof(space))
-
-# Base case
-# Use `_indtype` to avoid recursion overflow
-_indtype(T::Type{<:Index}) = T
-_indtype(T::Type{<:IsIndexSpace}) = Index{T}
-_indtype(::Type{Nothing}) = Index
-
-# Containers
-_indtype(T::Type{<:AbstractDictionary}) = _indtype(eltype(T))
-_indtype(T::Type{<:AbstractVector}) = _indtype(eltype(T))
 
 @traitfn function default_link_space(V::Type, g::::IsUnderlyingGraph)
   # TODO: Convert `g` to vertex type `V`

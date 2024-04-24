@@ -2,7 +2,13 @@ using DataGraphs: DataGraph
 using ITensors: Index, ITensor, delta, replaceinds, sim
 using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs.GraphsExtensions:
-  disjoint_union, pre_order_dfs_vertices, rename_vertices, subgraph
+  disjoint_union,
+  is_binary_arborescence,
+  is_leaf_vertex,
+  pre_order_dfs_vertices,
+  rename_vertices,
+  root_vertex,
+  subgraph
 
 function _binary_partition(tn::ITensorNetwork, source_inds::Vector{<:Index})
   external_inds = flatten_siteinds(tn)
@@ -69,20 +75,20 @@ Note: name of vertices in the output partition are the same as the name of verti
 function _partition(
   ::Algorithm"mincut_recursive_bisection", tn::ITensorNetwork, inds_btree::DataGraph
 )
-  @assert _is_rooted_directed_binary_tree(inds_btree)
+  @assert is_binary_arborescence(inds_btree)
   output_tns = Vector{ITensorNetwork{vertextype(tn)}}()
   output_deltas_vector = Vector{Vector{ITensor}}()
   scalars_vector = Vector{Vector{ITensor}}()
   # Mapping each vertex of the binary tree to a tn representing the partition
   # of the subtree containing this vertex and its descendant vertices.
   leaves = leaf_vertices(inds_btree)
-  root = _root(inds_btree)
+  root = root_vertex(inds_btree)
   v_to_subtree_tn = Dict{eltype(inds_btree),ITensorNetwork{Tuple{vertextype(tn),Int}}}()
   v_to_subtree_tn[root] = disjoint_union(tn, ITensorNetwork{vertextype(tn)}())
   for v in pre_order_dfs_vertices(inds_btree, root)
     @assert haskey(v_to_subtree_tn, v)
     input_tn = v_to_subtree_tn[v]
-    if !is_leaf(inds_btree, v)
+    if !is_leaf_vertex(inds_btree, v)
       c1, c2 = child_vertices(inds_btree, v)
       descendant_c1 = pre_order_dfs_vertices(inds_btree, c1)
       indices = [inds_btree[l] for l in intersect(descendant_c1, leaves)]
@@ -128,7 +134,7 @@ function _partition(
   for (i, v) in enumerate(pre_order_dfs_vertices(inds_btree, root))
     name_map[i] = v
   end
-  return rename_vertices(par, name_map)
+  return rename_vertices(v -> name_map[v], par)
 end
 
 function _partition(tn::ITensorNetwork, inds_btree::DataGraph; alg)

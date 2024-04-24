@@ -1,5 +1,6 @@
-using ITensors.NDTensors: ind
 using DataStructures: DataStructures, DisjointSets, find_root!
+using ITensors.NDTensors: ind
+using .ITensorsExtensions: is_delta
 
 """
 Rewrite of the function

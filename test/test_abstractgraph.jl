@@ -1,18 +1,19 @@
 @eval module $(gensym())
-using NamedGraphs: add_edge!, add_vertex!, NamedDiGraph
-using ITensorNetworks: _root, _is_rooted, _is_rooted_directed_binary_tree
+using Graphs: add_edge!, add_vertex!
+using NamedGraphs: NamedDiGraph
+using NamedGraphs.GraphsExtensions: root_vertex, is_rooted, is_binary_arborescence
 using Test: @test, @testset
 
 @testset "test rooted directed graphs" begin
   g = NamedDiGraph([1, 2, 3])
-  @test !_is_rooted(g)
+  @test !is_rooted(g)
   add_edge!(g, 1, 2)
   add_edge!(g, 1, 3)
-  @test _is_rooted(g)
-  @test _root(g) == 1
-  @test _is_rooted_directed_binary_tree(g)
+  @test is_rooted(g)
+  @test root_vertex(g) == 1
+  @test is_binary_arborescence(g)
   add_vertex!(g, 4)
   add_edge!(g, 1, 4)
-  @test !_is_rooted_directed_binary_tree(g)
+  @test !is_binary_arborescence(g)
 end
 end
