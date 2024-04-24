@@ -3,7 +3,7 @@ using Graphs: vertices
 using ITensors.ITensorMPS: MPS
 using ITensorNetworks: ttn, expect, random_mps, siteinds
 using LinearAlgebra: norm
-using NamedGraphs: named_comb_tree
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Test: @test, @testset
 
 @testset "MPS expect comparison with ITensors" begin

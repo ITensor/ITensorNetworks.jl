@@ -1,5 +1,6 @@
 using ITensors: state
 using ITensors.ITensorMPS: linkind
+using NamedGraphs.GraphsExtensions: GraphsExtensions
 using Observers: Observers
 
 function alternating_update(
@@ -13,7 +14,7 @@ function alternating_update(
   sweep_printer=nothing,
   (sweep_observer!)=nothing,
   (region_observer!)=nothing,
-  root_vertex=default_root_vertex(init_state),
+  root_vertex=GraphsExtensions.default_root_vertex(init_state),
   extracter_kwargs=(;),
   extracter=default_extracter(),
   updater_kwargs=(;),

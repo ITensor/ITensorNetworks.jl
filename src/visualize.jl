@@ -1,3 +1,4 @@
+# TODO: Move to `ITensorNetworksITensors.ITensorVisualizationCoreExt`.
 using DataGraphs: AbstractDataGraph, underlying_graph
 using Graphs: vertices
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize

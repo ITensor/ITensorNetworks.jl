@@ -1,21 +1,27 @@
+using Dictionaries: Indices
 using Graphs: path_graph
 using ITensors: ITensor
 using LinearAlgebra: factorize, normalize
-using NamedGraphs: vertextype
+using NamedGraphs.GraphsExtensions: GraphsExtensions, vertextype
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
 """
 struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
   tensornetwork::ITensorNetwork{V}
-  ortho_region::Vector{V}
-  global function _TreeTensorNetwork(tensornetwork::ITensorNetwork, ortho_region)
+  ortho_region::Indices{V}
+  global function _TreeTensorNetwork(tensornetwork::ITensorNetwork, ortho_region::Indices)
     @assert is_tree(tensornetwork)
     return new{vertextype(tensornetwork)}(tensornetwork, ortho_region)
   end
-  global function _TreeTensorNetwork(tensornetwork::ITensorNetwork)
-    return _TreeTensorNetwork(tensornetwork, vertices(tensornetwork))
-  end
+end
+
+function _TreeTensorNetwork(tensornetwork::ITensorNetwork, ortho_region::Vector)
+  return _TreeTensorNetwork(tensornetwork, Indices(ortho_region))
+end
+
+function _TreeTensorNetwork(tensornetwork::ITensorNetwork)
+  return _TreeTensorNetwork(tensornetwork, vertices(tensornetwork))
 end
 
 function TreeTensorNetwork(tn::ITensorNetwork; ortho_region=vertices(tn))
@@ -72,7 +78,12 @@ function mps(f, is::Vector{<:Index}; kwargs...)
 end
 
 # Construct from dense ITensor, using IndsNetwork of site indices.
-function ttn(a::ITensor, is::IndsNetwork; ortho_region=[default_root_vertex(is)], kwargs...)
+function ttn(
+  a::ITensor,
+  is::IndsNetwork;
+  ortho_region=Indices([GraphsExtensions.default_root_vertex(is)]),
+  kwargs...,
+)
   for v in vertices(is)
     @assert hasinds(a, is[v])
   end

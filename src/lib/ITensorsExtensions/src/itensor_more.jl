@@ -1,8 +1,7 @@
-using ITensors: filterinds
-using NamedGraphs: Key
-using ITensors: ITensors, Index, ITensor, QN, inds, op, replaceinds, uniqueinds
+using NamedGraphs.Keys: Key
+using ITensors: ITensors, Index, ITensor, QN, filterinds, inds, op, replaceinds, uniqueinds
 using ITensors.NDTensors: NDTensors
-using Dictionaries: Dictionary
+using Dictionaries: AbstractDictionary, Dictionary
 
 # Tensor sum: `A ⊞ B = A ⊗ Iᴮ + Iᴬ ⊗ B`
 # https://github.com/JuliaLang/julia/issues/13333#issuecomment-143825995
@@ -25,6 +24,29 @@ end
 # leaf values.
 # TODO: Move patch to `ITensors.jl`.
 ITensors._contract(As, index::Key) = As[index]
+
+# TODO: Replace with a trait of the same name.
+const IsIndexSpace = Union{<:Integer,Vector{<:Pair{QN,<:Integer}}}
+
+# Infer the `Index` type of an `IndsNetwork` from the
+# spaces that get input.
+indtype(link_space::Nothing, site_space::Nothing) = Index
+indtype(link_space::Nothing, site_space) = indtype(site_space)
+indtype(link_space, site_space::Nothing) = indtype(link_space)
+indtype(link_space, site_space) = promote_type(indtype(link_space), indtype(site_space))
+
+# Default to type space
+indtype(space) = _indtype(typeof(space))
+
+# Base case
+# Use `_indtype` to avoid recursion overflow
+_indtype(T::Type{<:Index}) = T
+_indtype(T::Type{<:IsIndexSpace}) = Index{T}
+_indtype(::Type{Nothing}) = Index
+
+# Containers
+_indtype(T::Type{<:AbstractDictionary}) = _indtype(eltype(T))
+_indtype(T::Type{<:AbstractVector}) = _indtype(eltype(T))
 
 indtype(a::ITensor) = promote_indtype(typeof.(inds(a))...)
 
@@ -64,6 +86,8 @@ end
 function promote_indtype_rule(type1::Type{<:Index}, type2::Type{<:Index})
   return Index{promote_spacetype_rule(spacetype(type1), spacetype(type2))}
 end
+
+function promote_indtypeof end
 
 trivial_space(x) = trivial_space(promote_indtypeof(x))
 trivial_space(x::Type) = trivial_space(promote_indtype(x))

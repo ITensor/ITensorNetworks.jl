@@ -12,7 +12,8 @@ using ITensorNetworks:
   siteinds,
   update
 using ITensors: ITensors, inner, op
-using NamedGraphs: PartitionVertex, named_grid
+using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs.PartitionedGraphs: PartitionVertex
 using Random: Random
 using SplitApplyCombine: group
 using Test: @test, @testset

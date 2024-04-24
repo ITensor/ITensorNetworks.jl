@@ -1,10 +1,11 @@
-using NamedGraphs: partitionedge
-using IterTools: cache
 using ITensors: tags
 using ITensors.NDTensors: dense, scalartype
+using NamedGraphs.PartitionedGraphs: partitionedge
 
 function default_bond_tensors(ψ::ITensorNetwork)
-  return DataGraph{vertextype(ψ),Nothing,ITensor}(underlying_graph(ψ))
+  return DataGraph(
+    underlying_graph(ψ); vertex_data_eltype=Nothing, edge_data_eltype=ITensor
+  )
 end
 
 struct VidalITensorNetwork{V,BTS} <: AbstractITensorNetwork{V}

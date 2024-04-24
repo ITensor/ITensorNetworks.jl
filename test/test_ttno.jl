@@ -3,7 +3,7 @@ using Graphs: vertices
 using ITensorNetworks: ttn, contract, ortho_region, siteinds, union_all_inds
 using ITensors: @disable_warn_order, prime, randomITensor
 using LinearAlgebra: norm
-using NamedGraphs: named_comb_tree
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Random: shuffle
 using Test: @test, @testset
 
@@ -18,7 +18,7 @@ using Test: @test, @testset
   # operator site inds
   is_isp = union_all_inds(is, prime(is; links=[]))
   # specify random linear vertex ordering of graph vertices
-  vertex_order = shuffle(vertices(c))
+  vertex_order = shuffle(collect(vertices(c)))
 
   @testset "Construct TTN operator from ITensor or Array" begin
     cutoff = 1e-10

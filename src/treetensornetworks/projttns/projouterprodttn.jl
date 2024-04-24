@@ -1,7 +1,7 @@
 using DataGraphs: DataGraphs
 using Dictionaries: set!
 using ITensors: ITensor
-using NamedGraphs: incident_edges
+using NamedGraphs.GraphsExtensions: incident_edges, is_leaf_vertex
 
 struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}
   pos::Union{Vector{<:V},NamedEdge{V}}
@@ -54,7 +54,7 @@ function make_environment(P::ProjOuterProdTTN, state::AbstractTTN, e::AbstractEd
   reverse(e) ∈ incident_edges(P) || (P = invalidate_environment(P, reverse(e)))
   # do nothing if valid environment already present
   if !haskey(environments(P), e)
-    if is_leaf(underlying_graph(P), src(e))
+    if is_leaf_vertex(underlying_graph(P), src(e))
       # leaves are easy
       env = internal_state(P)[src(e)] * operator(P)[src(e)] * dag(state[src(e)])
     else

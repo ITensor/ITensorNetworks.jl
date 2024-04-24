@@ -2,17 +2,19 @@
 using Graphs: dfs_tree, nv, vertices
 using ITensors: Index, ITensor, delta, noncommoninds, randomITensor
 using ITensorNetworks:
+  IndsNetwork,
+  ITensorNetwork,
   _contract_deltas,
   _contract_deltas_ignore_leaf_partitions,
   _noncommoninds,
   _partition,
-  _root,
   binary_tree_structure,
-  IndsNetwork,
-  ITensorNetwork,
+  eachtensor,
+  flatten_siteinds,
   path_graph_structure,
   random_tensornetwork
-using NamedGraphs: leaf_vertices, named_grid
+using NamedGraphs.GraphsExtensions: leaf_vertices, root_vertex
+using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @testset
 
 @testset "test _contract_deltas with no deltas" begin
@@ -31,8 +33,7 @@ end
   tn = ITensorNetwork([a, b, delta1, delta2])
   tn2 = _contract_deltas(tn)
   @test nv(tn2) == 3
-  @test Set(noncommoninds(Vector{ITensor}(tn)...)) ==
-    Set(noncommoninds(Vector{ITensor}(tn2)...))
+  @test issetequal(flatten_siteinds(tn), flatten_siteinds(tn2))
 end
 
 @testset "test _contract_deltas over partition" begin
@@ -46,7 +47,7 @@ end
   tn = ITensorNetwork(vec(tn[:, :, 1]))
   for inds_tree in [binary_tree_structure(tn), path_graph_structure(tn)]
     par = _partition(tn, inds_tree; alg="mincut_recursive_bisection")
-    root = _root(inds_tree)
+    root = root_vertex(inds_tree)
     par_contract_deltas = _contract_deltas_ignore_leaf_partitions(par; root=root)
     @test Set(_noncommoninds(par)) == Set(_noncommoninds(par_contract_deltas))
     leaves = leaf_vertices(dfs_tree(par_contract_deltas, root))
