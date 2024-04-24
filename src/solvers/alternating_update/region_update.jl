@@ -100,11 +100,7 @@ function region_update(
   state, spec = inserter(
     state, phi, region, ortho_vertex; inserter_kwargs..., internal_kwargs
   )
-
   all_kwargs = (;
-    cutoff,
-    maxdim,
-    mindim,
     which_region_update,
     sweep_plan,
     total_sweep_steps=length(sweep_plan),
@@ -120,6 +116,5 @@ function region_update(
   )
   update_observer!(region_observer!; all_kwargs...)
   !(isnothing(region_printer)) && region_printer(; all_kwargs...)
-
   return state, projected_operator
 end
