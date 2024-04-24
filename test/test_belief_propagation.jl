@@ -16,6 +16,7 @@ using ITensorNetworks:
   inner_network,
   linkinds_combiners,
   message,
+  partitioned_tensornetwork,
   random_tensornetwork,
   siteinds,
   split_index,
@@ -29,7 +30,7 @@ using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
 using NamedGraphs: NamedEdge
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using NamedGraphs.PartitionedGraphs: PartitionVertex
+using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedges
 using Random: Random
 using SplitApplyCombine: group
 using Test: @test, @testset
@@ -48,7 +49,7 @@ using Test: @test, @testset
   bpc = update(bpc; maxiter=50, tol=1e-10)
 
   #Test messages are converged
-  for pe in partitionedges(bpc)
+  for pe in partitionedges(partitioned_tensornetwork(bpc))
     @test update_message(bpc, pe) ≈ message(bpc, pe) atol = 1e-8
   end
 

@@ -4,23 +4,14 @@ using ITensors.ITensorMPS: ITensorMPS, expect
 
 default_expect_alg() = "bp"
 
-#Don't need this...
-expect_network(ψ::AbstractITensorNetwork; kwargs...) = inner_network(ψ, ψ; kwargs...)
-
 function ITensorMPS.expect(
   ψ::AbstractITensorNetwork, args...; alg=default_expect_alg(), kwargs...
 )
   return expect(Algorithm(alg), ψ, args...; kwargs...)
 end
 
-#TODO: What to name this? It calculates the expectation value <Prod{op in ops}> over ψ 
-# where you pass the norm network which is constructed elsewhere. All expect() calls should pass
-# down to this internal function. The alg is passed along to `environment`, which is where the work is 
-# actually done.
-# Get siteinds out of psi I psi instead?
 function expect_internal(ψIψ::AbstractFormNetwork, op::Op; contract_kwargs=(;), kwargs...)
   v = only(op.sites)
-
   ψIψ_v = ψIψ[operator_vertex(ψIψ, v)]
   s = commonind(ψIψ[ket_vertex(ψIψ, v)], ψIψ_v)
   operator = ITensors.op(op.which_op, s)
@@ -31,11 +22,10 @@ function expect_internal(ψIψ::AbstractFormNetwork, op::Op; contract_kwargs=(;)
   return numerator / denominator
 end
 
-#Remove type constraint on ops_collection
 function ITensorMPS.expect(
   alg::Algorithm,
   ψ::AbstractITensorNetwork,
-  ops::Vector{Op};
+  ops;
   (cache!)=nothing,
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(cache!),
@@ -43,7 +33,7 @@ function ITensorMPS.expect(
     cache(alg, tn; default_cache_construction_kwargs(alg, tn)...),
   kwargs...,
 )
-  ψIψ = expect_network(ψ)
+  ψIψ = inner_network(ψ, ψ)
   if isnothing(cache!)
     cache! = Ref(cache_construction_function(ψIψ))
   end
@@ -57,10 +47,8 @@ function ITensorMPS.expect(
   )
 end
 
-function ITensorMPS.expect(
-  alg::Algorithm"exact", ψ::AbstractITensorNetwork, ops::Vector{Op}; kwargs...
-)
-  ψIψ = expect_network(ψ)
+function ITensorMPS.expect(alg::Algorithm"exact", ψ::AbstractITensorNetwork, ops; kwargs...)
+  ψIψ = inner_network(ψ, ψ)
   return map(op -> expect_internal(ψIψ, op; alg, kwargs...), ops)
 end
 
@@ -69,13 +57,7 @@ function ITensorMPS.expect(alg::Algorithm, ψ::AbstractITensorNetwork, op::Op; k
 end
 
 function ITensorMPS.expect(
-  alg::Algorithm, ψ::AbstractITensorNetwork, op::String, vertex; kwargs...
-)
-  return expect(alg, ψ, Op(op, vertex); kwargs...)
-end
-
-function ITensorMPS.expect(
-  alg::Algorithm, ψ::AbstractITensorNetwork, op::String, vertices::Vector; kwargs...
+  alg::Algorithm, ψ::AbstractITensorNetwork, op::String, vertices; kwargs...
 )
   return expect(alg, ψ, [Op(op, vertex) for vertex in vertices]; kwargs...)
 end

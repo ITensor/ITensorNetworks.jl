@@ -2,7 +2,8 @@ using Test
 using ITensorNetworks
 
 using Graphs: SimpleGraph, uniform_tree
-using NamedGraphs: NamedGraph, named_grid, vertices
+using NamedGraphs: NamedGraph, vertices
+using NamedGraphs.NamedGraphGenerators: named_grid
 using ITensors: siteinds
 using ITensorNetworks:
   BeliefPropagationCache, expect, random_tensornetwork, original_state_vertex

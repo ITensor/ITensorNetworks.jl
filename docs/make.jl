@@ -7,7 +7,7 @@ DocMeta.setdocmeta!(
 
 makedocs(;
   modules=[ITensorNetworks],
-  authors="Matthew Fishman <mfishman@flatironinstitute.org> and contributors",
+  authors="Matthew Fishman <mfishman@flatironinstitute.org>, Joseph Tindall <jtindall@flatironinstitute.org> and contributors",
   repo="https://github.com/mtfishman/ITensorNetworks.jl/blob/{commit}{path}#{line}",
   sitename="ITensorNetworks.jl",
   format=Documenter.HTML(;
