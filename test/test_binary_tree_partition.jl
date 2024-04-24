@@ -1,6 +1,8 @@
 @eval module $(gensym())
 using DataGraphs: DataGraph, underlying_graph, vertex_data
 using Graphs: add_vertex!, vertices
+# Trigger package extension.
+using GraphsFlows: GraphsFlows
 using ITensors: Index, ITensor, contract, noncommoninds, randomITensor
 using ITensors.ITensorMPS: MPS
 using ITensorNetworks:
@@ -103,7 +105,7 @@ end
       for alg in ["density_matrix", "ttn_svd"]
         approx_tn, lognorm = contract(
           tn;
-          alg=alg,
+          alg,
           output_structure=structure,
           contraction_sequence_kwargs=(; alg="sa_bipartite"),
         )

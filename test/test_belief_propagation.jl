@@ -1,6 +1,8 @@
 @eval module $(gensym())
 using Compat: Compat
 using Graphs: vertices
+# Trigger package extension.
+using GraphsFlows: GraphsFlows
 using ITensorNetworks:
   ITensorNetworks,
   BeliefPropagationCache,
