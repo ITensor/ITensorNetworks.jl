@@ -28,7 +28,7 @@ function NDTensors.contract(
   output_structure::Function=path_graph_structure,
   kwargs...,
 )
-  return approx_tensornetwork(alg, tn, output_structure; kwargs...)
+  return contract_approx(alg, tn, output_structure; kwargs...)
 end
 
 function ITensors.scalar(alg::Algorithm, tn::AbstractITensorNetwork; kwargs...)
