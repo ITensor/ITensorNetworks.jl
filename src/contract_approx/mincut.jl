@@ -1,8 +1,8 @@
 using AbstractTrees: Leaves, PostOrderDFS
 using Combinatorics: powerset
 using Graphs: dijkstra_shortest_paths, weights
-using GraphsFlows: GraphsFlows
 using NamedGraphs: NamedDiGraph
+using NDTensors.AlgorithmSelection: Algorithm
 
 # a large number to prevent this edge being a cut
 MAX_WEIGHT = 1e32
@@ -37,6 +37,18 @@ function binary_tree_structure(tn::ITensorNetwork, outinds::Vector)
   return _binary_tree_structure(tn, outinds; maximally_unbalanced=false)
 end
 
+function mincut(graph::AbstractGraph, source_vertex, target_vertex; backend, kwargs...)
+  # TODO: Replace with `Backend(backend)`.
+  return mincut(Algorithm(backend), graph, source_vertex, target_vertex; kwargs...)
+end
+
+# TODO: Replace with `backend::Backend`.
+function mincut(
+  backend::Algorithm, graph::AbstractGraph, source_vertex, target_vertex; kwargs...
+)
+  return error("Backend `$backend` not implemented for `mincut`.")
+end
+
 """
 Calculate the mincut between two subsets of the uncontracted inds
 (source_inds and terminal_inds) of the input tn.
@@ -52,7 +64,7 @@ function _mincut(tn::ITensorNetwork, source_inds::Vector, terminal_inds::Vector)
   tn = disjoint_union(
     ITensorNetwork([ITensor(source_inds...), ITensor(terminal_inds...)]), tn
   )
-  return GraphsFlows.mincut(tn, (1, 1), (2, 1), weights(tn))
+  return mincut(tn, (1, 1), (2, 1); backend="GraphsFlows", capacity_matrix=weights(tn))
 end
 
 """

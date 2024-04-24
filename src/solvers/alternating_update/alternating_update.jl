@@ -1,7 +1,6 @@
 using ITensors: state
 using ITensors.ITensorMPS: linkind
 using NamedGraphs.GraphsExtensions: GraphsExtensions
-using Observers: Observers
 
 function alternating_update(
   operator,
@@ -66,7 +65,6 @@ function alternating_update(
   @assert !isnothing(sweep_plans)
   for which_sweep in eachindex(sweep_plans)
     sweep_plan = sweep_plans[which_sweep]
-
     sweep_time = @elapsed begin
       for which_region_update in eachindex(sweep_plan)
         state, projected_operator = region_update(
@@ -81,8 +79,7 @@ function alternating_update(
         )
       end
     end
-
-    Observers.update!(
+    update_observer!(
       sweep_observer!; state, which_sweep, sweep_time, outputlevel, sweep_plans
     )
     !isnothing(sweep_printer) &&

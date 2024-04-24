@@ -1,6 +1,3 @@
-using ITensors.NDTensors: mindim
-using Observers: Observers
-
 #ToDo: generalize beyond 2-site
 #ToDo: remove concept of orthogonality center for generality
 function current_ortho(sweep_plan, which_region_update)
@@ -93,10 +90,6 @@ function region_update(
   )
   state = state![]
   projected_operator = projected_operator![]
-  if !(phi isa ITensor && info isa NamedTuple)
-    println("Solver returned the following types: $(typeof(phi)), $(typeof(info))")
-    error("In alternating_update, solver must return an ITensor and a NamedTuple")
-  end
   # ToDo: implement noise term as updater
   #drho = nothing
   #ortho = "left"    #i guess with respect to ordered vertices that's valid but may be cleaner to use next_region logic
@@ -107,11 +100,7 @@ function region_update(
   state, spec = inserter(
     state, phi, region, ortho_vertex; inserter_kwargs..., internal_kwargs
   )
-
   all_kwargs = (;
-    cutoff,
-    maxdim,
-    mindim,
     which_region_update,
     sweep_plan,
     total_sweep_steps=length(sweep_plan),
@@ -125,8 +114,7 @@ function region_update(
     region_kwargs...,
     internal_kwargs...,
   )
-  Observers.update!(region_observer!; all_kwargs...)
+  update_observer!(region_observer!; all_kwargs...)
   !(isnothing(region_printer)) && region_printer(; all_kwargs...)
-
   return state, projected_operator
 end
