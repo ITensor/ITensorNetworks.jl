@@ -46,6 +46,7 @@ Random.seed!(1234)
       seq_kahypar_bipartite = contraction_sequence(
         tn; alg="kahypar_bipartite", sc_target=200
       )
+      Pkg.rm("KaHyPar")
       res_kahypar_bipartite = contract(tn; sequence=seq_kahypar_bipartite)[]
       @test res_optimal ≈ res_kahypar_bipartite
       seq_einexprs_kahypar = contraction_sequence(tn; alg="einexpr", optimizer=HyPar())
