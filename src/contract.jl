@@ -1,4 +1,4 @@
-using NamedGraphs: vertex_to_parent_vertex
+using NamedGraphs: vertex_to_ordinal_vertex
 using ITensors: ITensor, scalar
 using ITensors.ContractionSequenceOptimization: deepmap
 using ITensors.NDTensors: NDTensors, Algorithm, @Algorithm_str, contract
@@ -16,9 +16,9 @@ function NDTensors.contract(
   kwargs...,
 )
   # TODO: Use `vertex`.
-  sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn, v), sequence)
+  sequence_linear_index = deepmap(v -> vertex_to_ordinal_vertex(tn, v), sequence)
   # TODO: Use `tokenized_vertex`.
-  ts = map(pv -> tn[parent_vertex_to_vertex(tn, pv)], 1:nv(tn))
+  ts = map(pv -> tn[ordinal_vertex_to_vertex(tn, pv)], 1:nv(tn))
   return contract(ts; sequence=sequence_linear_index, kwargs...)
 end
 
