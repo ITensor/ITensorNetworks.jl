@@ -32,7 +32,6 @@ using ITensors.NDTensors:
   DiagBlockSparseTensor,
   DenseTensor,
   BlockOffsets
-using Observers: update!, insert_function!
 
 function NDTensors.blockoffsets(dense::DenseTensor)
   return BlockOffsets{ndims(dense)}([Block(ntuple(Returns(1), ndims(dense)))], [0])
