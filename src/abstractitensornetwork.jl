@@ -37,18 +37,12 @@ using ITensors:
   sim,
   swaptags
 using ITensors.ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
-using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
+using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using LinearAlgebra: LinearAlgebra, factorize
 using NamedGraphs:
-  NamedGraphs,
-  NamedGraph,
-  ⊔,
-  directed_graph,
-  incident_edges,
-  not_implemented,
-  rename_vertices,
-  vertex_to_parent_vertex,
-  vertextype
+  NamedGraphs, NamedGraph, not_implemented, parent_vertex_to_vertex, vertex_to_parent_vertex
+using NamedGraphs.GraphsExtensions:
+  ⊔, directed_graph, incident_edges, rename_vertices, vertextype
 using NDTensors: NDTensors, dim
 using SplitApplyCombine: flatten
 
@@ -59,7 +53,7 @@ data_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
 data_graph(graph::AbstractITensorNetwork) = not_implemented()
 
 # TODO: Define a generic fallback for `AbstractDataGraph`?
-DataGraphs.edge_data_type(::Type{<:AbstractITensorNetwork}) = ITensor
+DataGraphs.edge_data_eltype(::Type{<:AbstractITensorNetwork}) = ITensor
 
 # Graphs.jl overloads
 function Graphs.weights(graph::AbstractITensorNetwork)
@@ -102,6 +96,9 @@ end
 DataGraphs.underlying_graph(tn::AbstractITensorNetwork) = underlying_graph(data_graph(tn))
 function NamedGraphs.vertex_to_parent_vertex(tn::AbstractITensorNetwork, vertex)
   return vertex_to_parent_vertex(underlying_graph(tn), vertex)
+end
+function NamedGraphs.parent_vertex_to_vertex(tn::AbstractITensorNetwork, parent_vertex)
+  return parent_vertex_to_vertex(underlying_graph(tn), parent_vertex)
 end
 
 #
@@ -167,28 +164,23 @@ function Base.setindex!(tn::AbstractITensorNetwork, value, v)
   return tn
 end
 
-# Convert to a collection of ITensors (`Vector{ITensor}`).
-function Base.Vector{ITensor}(tn::AbstractITensorNetwork)
-  return [tn[v] for v in vertices(tn)]
-end
-
 # Convenience wrapper
-function tensors(tn::AbstractITensorNetwork, vertices=vertices(tn))
-  return map(v -> tn[v], Indices(vertices))
+function eachtensor(tn::AbstractITensorNetwork, vertices=vertices(tn))
+  return map(v -> tn[v], vertices)
 end
 
 #
 # Promotion and conversion
 #
 
-function promote_indtypeof(tn::AbstractITensorNetwork)
-  return mapreduce(promote_indtype, tensors(tn)) do t
+function ITensorsExtensions.promote_indtypeof(tn::AbstractITensorNetwork)
+  return mapreduce(promote_indtype, eachtensor(tn)) do t
     return indtype(t)
   end
 end
 
 function NDTensors.scalartype(tn::AbstractITensorNetwork)
-  return mapreduce(eltype, promote_type, tensors(tn); init=Bool)
+  return mapreduce(eltype, promote_type, eachtensor(tn); init=Bool)
 end
 
 # TODO: Define `eltype(::AbstractITensorNetwork)` as `ITensor`?
@@ -246,8 +238,8 @@ function ITensorMPS.siteinds(tn::AbstractITensorNetwork)
 end
 
 function flatten_siteinds(tn::AbstractITensorNetwork)
-  # reduce(noncommoninds, tensors(tn))
-  return unique(flatten([uniqueinds(tn, v) for v in vertices(tn)]))
+  # `identity.(...)` narrows the type, maybe there is a better way.
+  return identity.(flatten(map(v -> siteinds(tn, v), vertices(tn))))
 end
 
 function ITensorMPS.linkinds(tn::AbstractITensorNetwork)
@@ -259,7 +251,8 @@ function ITensorMPS.linkinds(tn::AbstractITensorNetwork)
 end
 
 function flatten_linkinds(tn::AbstractITensorNetwork)
-  return unique(flatten([commoninds(tn, e) for e in edges(tn)]))
+  # `identity.(...)` narrows the type, maybe there is a better way.
+  return identity.(flatten(map(e -> linkinds(tn, e), edges(tn))))
 end
 
 #
@@ -267,13 +260,12 @@ end
 #
 
 function neighbor_tensors(tn::AbstractITensorNetwork, vertex)
-  return tensors(tn, neighbors(tn, vertex))
+  return eachtensor(tn, neighbors(tn, vertex))
 end
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, vertex)
-  # TODO: Splatting here isn't good, make a version that works for
-  # collections of ITensors.
-  return reduce(uniqueinds, Iterators.flatten(([tn[vertex]], neighbor_tensors(tn, vertex))))
+  tn_vertex = [tn[vertex]; collect(neighbor_tensors(tn, vertex))]
+  return reduce(setdiff, inds.(tn_vertex))
 end
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
@@ -625,7 +617,11 @@ function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
 end
 
 function linkinds_combiners(tn::AbstractITensorNetwork; edges=edges(tn))
-  combiners = DataGraph(directed_graph(underlying_graph(tn)), ITensor, ITensor)
+  combiners = DataGraph(
+    directed_graph(underlying_graph(tn));
+    vertex_data_eltype=ITensor,
+    edge_data_eltype=ITensor,
+  )
   for e in edges
     C = combiner(linkinds(tn, e); tags=edge_tag(e))
     combiners[e] = C
@@ -741,6 +737,7 @@ Base.show(io::IO, graph::AbstractITensorNetwork) = show(io, MIME"text/plain"(), 
 # TODO: Move to an `ITensorNetworksVisualizationInterfaceExt`
 # package extension (and define a `VisualizationInterface` package
 # based on `ITensorVisualizationCore`.).
+using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
 function ITensorVisualizationCore.visualize(
   tn::AbstractITensorNetwork,
   args...;
@@ -751,7 +748,8 @@ function ITensorVisualizationCore.visualize(
   if !isnothing(vertex_labels_prefix)
     vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
   end
-  return visualize(Vector{ITensor}(tn), args...; vertex_labels, kwargs...)
+  # TODO: Use `tokenize_vertex`.
+  return visualize(collect(eachtensor(tn)), args...; vertex_labels, kwargs...)
 end
 
 # 
@@ -776,7 +774,9 @@ function ITensorMPS.linkdim(tn::AbstractITensorNetwork{V}, edge::AbstractEdge{V}
 end
 
 function ITensorMPS.linkdims(tn::AbstractITensorNetwork{V}) where {V}
-  ld = DataGraph{V,Any,Int}(copy(underlying_graph(tn)))
+  ld = DataGraph{V}(
+    copy(underlying_graph(tn)); vertex_data_eltype=Nothing, edge_data_eltype=Int
+  )
   for e in edges(ld)
     ld[e] = linkdim(tn, e)
   end

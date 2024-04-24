@@ -5,7 +5,8 @@ using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using OrdinaryDiffEq: Tsit5
 using KrylovKit: exponentiate
 using LinearAlgebra: norm
-using NamedGraphs: AbstractNamedEdge, named_comb_tree
+using NamedGraphs: AbstractNamedEdge
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Test: @test, @test_broken, @testset
 
 include(

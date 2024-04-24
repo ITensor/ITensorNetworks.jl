@@ -1,13 +1,14 @@
-using ITensors: siteind
+using Dictionaries: Dictionary
+using Graphs: AbstractGraph, nv, vertices
+using ITensors: ITensors, Index, siteind, siteinds
+
 function ITensors.siteind(sitetype::String, v::Tuple; kwargs...)
-  return addtags(siteind(sitetype; kwargs...), ITensorNetworks.vertex_tag(v))
+  return addtags(siteind(sitetype; kwargs...), vertex_tag(v))
 end
 
 # naming collision of ITensors.addtags and addtags keyword in siteind system
 function ITensors.siteind(d::Integer, v; addtags="", kwargs...)
-  return ITensors.addtags(
-    Index(d; tags="Site, $addtags", kwargs...), ITensorNetworks.vertex_tag(v)
-  )
+  return ITensors.addtags(Index(d; tags="Site, $addtags", kwargs...), vertex_tag(v))
 end
 
 function ITensors.siteinds(sitetypes::AbstractDictionary, g::AbstractGraph; kwargs...)

@@ -1,5 +1,6 @@
 using Graphs: has_vertex
-using NamedGraphs: edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
+using NamedGraphs.GraphsExtensions:
+  GraphsExtensions, edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
 using IsApprox: IsApprox, Approx
 using ITensors: @Algorithm_str, directsum, hasinds, permute, plev
 using ITensors.ITensorMPS: linkind, loginner, lognorm, orthogonalize
@@ -19,11 +20,6 @@ end
 
 ITensorNetwork(tn::AbstractTTN) = error("Not implemented")
 ortho_region(tn::AbstractTTN) = error("Not implemented")
-
-function default_root_vertex(gs::AbstractGraph...)
-  # @assert all(is_tree.(gs))
-  return first(leaf_vertices(gs[end]))
-end
 
 # 
 # Orthogonality center
@@ -50,7 +46,7 @@ function ITensorMPS.orthogonalize(tn::AbstractTTN, ortho_center; kwargs...)
   for e in edge_list
     tn = orthogonalize(tn, e)
   end
-  return set_ortho_region(tn, [ortho_center])
+  return set_ortho_region(tn, typeof(ortho_region(tn))([ortho_center]))
 end
 
 # For ambiguity error
@@ -63,12 +59,14 @@ end
 # Truncation
 # 
 
-function Base.truncate(tn::AbstractTTN; root_vertex=default_root_vertex(tn), kwargs...)
+function Base.truncate(
+  tn::AbstractTTN; root_vertex=GraphsExtensions.default_root_vertex(tn), kwargs...
+)
   for e in post_order_dfs_edges(tn, root_vertex)
     # always orthogonalize towards source first to make truncations controlled
     tn = orthogonalize(tn, src(e))
     tn = truncate(tn, e; kwargs...)
-    tn = set_ortho_region(tn, [dst(e)])
+    tn = set_ortho_region(tn, typeof(ortho_region(tn))([dst(e)]))
   end
   return tn
 end
@@ -83,7 +81,9 @@ end
 #
 
 # TODO: decide on contraction order: reverse dfs vertices or forward dfs edges?
-function NDTensors.contract(tn::AbstractTTN, root_vertex=default_root_vertex(tn); kwargs...)
+function NDTensors.contract(
+  tn::AbstractTTN, root_vertex=GraphsExtensions.default_root_vertex(tn); kwargs...
+)
   tn = copy(tn)
   # reverse post order vertices
   traversal_order = reverse(post_order_dfs_vertices(tn, root_vertex))
@@ -97,7 +97,7 @@ function NDTensors.contract(tn::AbstractTTN, root_vertex=default_root_vertex(tn)
 end
 
 function ITensors.inner(
-  x::AbstractTTN, y::AbstractTTN; root_vertex=default_root_vertex(x, y)
+  x::AbstractTTN, y::AbstractTTN; root_vertex=GraphsExtensions.default_root_vertex(x)
 )
   xᴴ = sim(dag(x); sites=[])
   y = sim(y; sites=[])
@@ -185,7 +185,7 @@ end
 
 # TODO: stick with this traversal or find optimal contraction sequence?
 function ITensorMPS.loginner(
-  tn1::AbstractTTN, tn2::AbstractTTN; root_vertex=default_root_vertex(tn1, tn2)
+  tn1::AbstractTTN, tn2::AbstractTTN; root_vertex=GraphsExtensions.default_root_vertex(tn1)
 )
   N = nv(tn1)
   if nv(tn2) != N
@@ -227,14 +227,16 @@ function Base.:+(
   ::Algorithm"densitymatrix",
   tns::AbstractTTN...;
   cutoff=1e-15,
-  root_vertex=default_root_vertex(tns...),
+  root_vertex=GraphsExtensions.default_root_vertex(first(tns)),
   kwargs...,
 )
   return error("Not implemented (yet) for trees.")
 end
 
 function Base.:+(
-  ::Algorithm"directsum", tns::AbstractTTN...; root_vertex=default_root_vertex(tns...)
+  ::Algorithm"directsum",
+  tns::AbstractTTN...;
+  root_vertex=GraphsExtensions.default_root_vertex(first(tns)),
 )
   @assert all(tn -> nv(first(tns)) == nv(tn), tns)
 
@@ -301,7 +303,10 @@ end
 
 # TODO: implement using multi-graph disjoint union
 function ITensors.inner(
-  y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex=default_root_vertex(x, A, y)
+  y::AbstractTTN,
+  A::AbstractTTN,
+  x::AbstractTTN;
+  root_vertex=GraphsExtensions.default_root_vertex(x),
 )
   traversal_order = reverse(post_order_dfs_vertices(x, root_vertex))
   ydag = sim(dag(y); sites=[])
@@ -319,7 +324,7 @@ function ITensors.inner(
   y::AbstractTTN,
   A::AbstractTTN,
   x::AbstractTTN;
-  root_vertex=default_root_vertex(B, y, A, x),
+  root_vertex=GraphsExtensions.default_root_vertex(B),
 )
   N = nv(B)
   if nv(y) != N || nv(x) != N || nv(A) != N
@@ -348,8 +353,8 @@ function ITensorMPS.expect(
   operator::String,
   state::AbstractTTN;
   vertices=vertices(state),
-  # ToDo: verify that this is a sane default
-  root_vertex=default_root_vertex(siteinds(state)),
+  # TODO: verify that this is a sane default
+  root_vertex=GraphsExtensions.default_root_vertex(state),
 )
   # TODO: Optimize this with proper caching.
   state /= norm(state)

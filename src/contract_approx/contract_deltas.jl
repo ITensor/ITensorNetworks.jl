@@ -1,5 +1,6 @@
-using ITensors.NDTensors: ind
 using DataStructures: DataStructures, DisjointSets, find_root!
+using ITensors.NDTensors: ind
+using .ITensorsExtensions: is_delta
 
 """
 Rewrite of the function
@@ -85,26 +86,26 @@ Example:
    4 │ ((dim=2|id=626|"6"), (dim=2|id=237|"5"))
 """
 function _contract_deltas(tn::ITensorNetwork)
-  network = Vector{ITensor}(tn)
-  deltas = filter(t -> is_delta(t), network)
-  if deltas == []
+  deltas = filter(is_delta, collect(eachtensor(tn)))
+  if isempty(deltas)
     return tn
   end
   tn = copy(tn)
-  outinds = noncommoninds(network...)
+  outinds = flatten_siteinds(tn)
   ds = _delta_inds_disjointsets(deltas, outinds)
   deltainds = [ds...]
   sim_deltainds = [find_root!(ds, i) for i in deltainds]
   # `rem_vertex!(tn, v)` changes `vertices(tn)` in place.
   # We copy it here so that the enumeration won't be affected.
-  for v in copy(vertices(tn))
+  vs = copy(vertices(tn))
+  for v in vs
     if !is_delta(tn[v])
       tn[v] = replaceinds(tn[v], deltainds, sim_deltainds)
       continue
     end
     i1, i2 = inds(tn[v])
     root = find_root!(ds, i1)
-    @assert root === find_root!(ds, i2)
+    @assert root == find_root!(ds, i2)
     if i1 != root && i1 in outinds
       tn[v] = delta(i1, root)
     elseif i2 != root && i2 in outinds
@@ -133,7 +134,7 @@ function _contract_deltas_ignore_leaf_partitions(
   nonleaves = setdiff(vertices(partition), leaves)
   rootinds = _noncommoninds(subgraph(partition, nonleaves))
   # check rootinds are not noncommoninds of the partition
-  @assert intersect(rootinds, _noncommoninds(partition)) == []
+  @assert isempty(intersect(rootinds, _noncommoninds(partition)))
   nonleaves_tn = _contract_deltas(reduce(union, [partition[v] for v in nonleaves]))
   nondelta_vs = filter(v -> !is_delta(nonleaves_tn[v]), vertices(nonleaves_tn))
   for v in nonleaves
@@ -142,18 +143,18 @@ function _contract_deltas_ignore_leaf_partitions(
   # Note: we also need to change inds in the leaves since they can be connected by deltas
   # in nonleaf vertices
   delta_vs = setdiff(vertices(nonleaves_tn), nondelta_vs)
-  if delta_vs == []
+  if isempty(delta_vs)
     return partition
   end
   ds = _delta_inds_disjointsets(
     Vector{ITensor}(subgraph(nonleaves_tn, delta_vs)), Vector{Index}()
   )
-  deltainds = [ds...]
-  sim_deltainds = [find_root!(ds, ind) for ind in deltainds]
+  deltainds = Index[ds...]
+  sim_deltainds = Index[find_root!(ds, ind) for ind in deltainds]
   for tn_v in leaves
-    partition[tn_v] = map_data(
-      t -> replaceinds(t, deltainds, sim_deltainds), partition[tn_v]; edges=[]
-    )
+    partition[tn_v] = map_data(partition[tn_v]; edges=[]) do t
+      return replaceinds(t, deltainds, sim_deltainds)
+    end
   end
   return partition
 end

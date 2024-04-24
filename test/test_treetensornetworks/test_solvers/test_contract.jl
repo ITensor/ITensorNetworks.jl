@@ -19,7 +19,7 @@ using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: prime, replaceinds, replaceprime
 using ITensors.ITensorMPS: ITensorMPS
 using LinearAlgebra: norm, normalize
-using NamedGraphs: named_comb_tree
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Test: @test, @test_broken, @testset
 
 @testset "Contract MPO" begin
@@ -118,7 +118,7 @@ end
   # Test basic usage for multiple ProjOuterProdTTN with default parameters
   # BLAS.axpy-like test
   os_id = OpSum()
-  os_id += -1, "Id", vertices(s)[1], "Id", vertices(s)[1]
+  os_id += -1, "Id", first(vertices(s)), "Id", first(vertices(s))
   minus_identity = ttn(os_id, s)
   Hpsi = ITensorNetworks.sum_apply(
     [(H, psi), (minus_identity, psi)]; alg="fit", init=psi, nsweeps=1

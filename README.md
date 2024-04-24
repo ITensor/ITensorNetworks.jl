@@ -32,15 +32,13 @@ julia> ] add ITensorNetworks
 Here are is an example of making a tensor network on a chain graph (a tensor train or matrix product state):
 
 ```julia
-julia> using Graphs: neighbors
+julia> using Graphs: neighbors, path_graph
 
-julia> using ITensorNetworks: ITensorNetwork, siteinds
+julia> using ITensorNetworks: ITensorNetwork
 
-julia> using NamedGraphs: named_grid, subgraph
-
-julia> tn = ITensorNetwork(named_grid(4); link_space=2)
+julia> tn = ITensorNetwork(path_graph(4); link_space=2)
 ITensorNetworks.ITensorNetwork{Int64} with 4 vertices:
-4-element Vector{Int64}:
+4-element Dictionaries.Indices{Int64}
  1
  2
  3
@@ -89,9 +87,13 @@ julia> neighbors(tn, 4)
 and here is a similar example for making a tensor network on a grid (a tensor product state or project entangled pair state (PEPS)):
 
 ```julia
+julia> using NamedGraphs.GraphsExtensions: subgraph
+
+julia> using NamedGraphs.NamedGraphGenerators: named_grid
+
 julia> tn = ITensorNetwork(named_grid((2, 2)); link_space=2)
 ITensorNetworks.ITensorNetwork{Tuple{Int64, Int64}} with 4 vertices:
-4-element Vector{Tuple{Int64, Int64}}:
+4-element Dictionaries.Indices{Tuple{Int64, Int64}}
  (1, 1)
  (2, 1)
  (1, 2)
@@ -126,7 +128,7 @@ julia> neighbors(tn, (1, 2))
 
 julia> tn_1 = subgraph(v -> v[1] == 1, tn)
 ITensorNetworks.ITensorNetwork{Tuple{Int64, Int64}} with 2 vertices:
-2-element Vector{Tuple{Int64, Int64}}:
+2-element Dictionaries.Indices{Tuple{Int64, Int64}}
  (1, 1)
  (1, 2)
 
@@ -140,7 +142,7 @@ with vertex data:
 
 julia> tn_2 = subgraph(v -> v[1] == 2, tn)
 ITensorNetworks.ITensorNetwork{Tuple{Int64, Int64}} with 2 vertices:
-2-element Vector{Tuple{Int64, Int64}}:
+2-element Dictionaries.Indices{Tuple{Int64, Int64}}
  (2, 1)
  (2, 2)
 
@@ -159,13 +161,13 @@ Networks can also be merged/unioned:
 ```julia
 julia> using ITensors: prime
 
-julia> using ITensorNetworks: ⊗, contract, contraction_sequence
+julia> using ITensorNetworks: ⊗, contract, contraction_sequence, siteinds
 
 julia> using ITensorUnicodePlots: @visualize
 
 julia> s = siteinds("S=1/2", named_grid(3))
 ITensorNetworks.IndsNetwork{Int64, ITensors.Index} with 3 vertices:
-3-element Vector{Int64}:
+3-element Dictionaries.Indices{Int64}
  1
  2
  3
@@ -185,7 +187,7 @@ and edge data:
 
 julia> tn1 = ITensorNetwork(s; link_space=2)
 ITensorNetworks.ITensorNetwork{Int64} with 3 vertices:
-3-element Vector{Int64}:
+3-element Dictionaries.Indices{Int64}
  1
  2
  3
@@ -202,7 +204,7 @@ with vertex data:
 
 julia> tn2 = ITensorNetwork(s; link_space=2)
 ITensorNetworks.ITensorNetwork{Int64} with 3 vertices:
-3-element Vector{Int64}:
+3-element Dictionaries.Indices{Int64}
  1
  2
  3
@@ -293,8 +295,8 @@ julia> @visualize Z;
 
 julia> contraction_sequence(Z)
 2-element Vector{Vector}:
- NamedGraphs.Key{Tuple{Int64, Int64}}[Key((1, 1)), Key((1, 2))]
- Any[Key((2, 1)), Any[Key((2, 2)), NamedGraphs.Key{Tuple{Int64, Int64}}[Key((3, 1)), Key((3, 2))]]]
+ NamedGraphs.Keys.Key{Tuple{Int64, Int64}}[Key((1, 1)), Key((1, 2))]
+ Any[Key((2, 1)), Any[Key((2, 2)), NamedGraphs.Keys.Key{Tuple{Int64, Int64}}[Key((3, 1)), Key((3, 2))]]]
 
 julia> Z̃ = contract(Z, (1, 1) => (2, 1));
 
@@ -303,20 +305,20 @@ julia> @visualize Z̃;
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀Z̃(2, 1)⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀(2)'⠤⠤⠔⠒⠒⠉⠉⠀⠀⢱⠀⠈⠉⠑⠒⠢⠤⢄⣀2⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⠀⣀⣀⠤⠤⠔⠒⠊⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠒⠒⠤⠤⢄⣀⡀⠀⠀⠀⠀⠀ 
-    ⠀Z̃(3, 1)⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢱⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀Z̃(1, 2)⠀⠀ 
-    ⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠔⠁⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀2⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⡠2⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⡠⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⠀2⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⢀⠤⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⠀⠀⢇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀Z̃(2, 2)⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⠀⠀⠸⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡠⠤⠒⠊⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⢇⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⠤2⠒⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⡀⠀⣀⡠⠤⠒⠊⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
-    ⠀⠀⠀⠀⠀⠀Z̃(3, 2)⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀Z̃(3, 1)⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠔⠁⠀⠀⠀⠉⠉⠑⠒⠒⠢⠤⠤⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈2⠉⠑⠒⠒⠤⠤⠤⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀⠀⠀⠀⠀(2)'⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀Z̃(3, 2)⠀⠀ 
+    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠤⠊⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀⠀⠀⢀⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠒⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀⢀⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀2⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀Z̃(2, 1)⠤⠤⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠑⠒2⠢⠤⠤⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⣀⠔⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉Z̃(2, 2)⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀2⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⠤⠤⠒⠊⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⣀⡠⠤2⠒⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀⠀⠀⠀⠀⢱⠀⢀⣀⠤⠔⠒⠊⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
+    ⠀⠀Z̃(1, 2)⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 
@@ -328,7 +330,7 @@ julia> @visualize Z̃;
 
 
 
-This file was generated with [weave.jl](https://github.com/JunoLab/Weave.jl) with the following commands:
+This file was generated with [Weave.jl](https://github.com/JunoLab/Weave.jl) with the following commands:
 
 ```julia
 using ITensorNetworks: ITensorNetworks

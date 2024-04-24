@@ -1,3 +1,5 @@
+using NamedGraphs.GraphsExtensions: GraphsExtensions
+
 #ToDo: Cleanup _compute_nsweeps, maybe restrict flexibility to simplify code
 function _compute_nsweeps(nsweeps::Int, t::Number, time_step::Number)
   return error("Cannot specify both nsweeps and time_step in tdvp")
@@ -101,7 +103,7 @@ function tdvp(
   sweep_printer=nothing,
   (sweep_observer!)=nothing,
   (region_observer!)=nothing,
-  root_vertex=default_root_vertex(init_state),
+  root_vertex=GraphsExtensions.default_root_vertex(init_state),
   reverse_step=true,
   extracter_kwargs=(;),
   extracter=default_extracter(), # ToDo: extracter could be inside extracter_kwargs, at the cost of having to extract it in region_update

@@ -1,3 +1,4 @@
+using .BaseExtensions: maybe_real
 using Graphs: has_edge
 using LinearAlgebra: qr
 using ITensors: Ops
@@ -26,7 +27,6 @@ using ITensors.ITensorMPS: siteinds
 using KrylovKit: linsolve
 using LinearAlgebra: eigen, norm, svd
 using NamedGraphs: NamedEdge, has_edge
-using Observers: Observers
 
 function full_update_bp(
   o,

@@ -2,10 +2,11 @@
 using Graphs: vertices
 using ITensors: ITensors
 using ITensors.ITensorMPS: ITensorMPS
-using ITensorNetworks:
-  ITensorNetwork, cartesian_to_linear, dmrg, expect, group_terms, siteinds, tebd
+using ITensorNetworks: ITensorNetwork, cartesian_to_linear, dmrg, expect, siteinds, tebd
+using ITensorNetworks.ITensorsExtensions: group_terms
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
-using NamedGraphs: named_grid, rename_vertices
+using NamedGraphs.GraphsExtensions: rename_vertices
+using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @testset, @test_broken
 
 ITensors.disable_warn_order()
@@ -22,7 +23,7 @@ ITensors.disable_warn_order()
   #
   # DMRG comparison
   #
-  g_dmrg = rename_vertices(g, cartesian_to_linear(dims))
+  g_dmrg = rename_vertices(v -> cartesian_to_linear(dims)[v], g)
   ℋ_dmrg = ModelHamiltonians.ising(g_dmrg; h)
   s_dmrg = [only(s[v]) for v in vertices(s)]
   H_dmrg = ITensorMPS.MPO(ℋ_dmrg, s_dmrg)

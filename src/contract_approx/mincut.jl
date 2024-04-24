@@ -1,8 +1,8 @@
 using AbstractTrees: Leaves, PostOrderDFS
 using Combinatorics: powerset
 using Graphs: dijkstra_shortest_paths, weights
-using GraphsFlows: GraphsFlows
 using NamedGraphs: NamedDiGraph
+using NDTensors.AlgorithmSelection: Algorithm
 
 # a large number to prevent this edge being a cut
 MAX_WEIGHT = 1e32
@@ -11,14 +11,14 @@ MAX_WEIGHT = 1e32
 Outputs a maximimally unbalanced directed binary tree DataGraph defining the desired graph structure
 """
 function path_graph_structure(tn::ITensorNetwork)
-  return path_graph_structure(tn, noncommoninds(Vector{ITensor}(tn)...))
+  return path_graph_structure(tn, flatten_siteinds(tn))
 end
 
 """
 Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a maximimally unbalanced
 directed binary tree DataGraph of `outinds` defining the desired graph structure
 """
-function path_graph_structure(tn::ITensorNetwork, outinds::Vector{<:Index})
+function path_graph_structure(tn::ITensorNetwork, outinds::Vector)
   return _binary_tree_structure(tn, outinds; maximally_unbalanced=true)
 end
 
@@ -26,15 +26,27 @@ end
 Outputs a directed binary tree DataGraph defining the desired graph structure
 """
 function binary_tree_structure(tn::ITensorNetwork)
-  return binary_tree_structure(tn, noncommoninds(Vector{ITensor}(tn)...))
+  return binary_tree_structure(tn, flatten_siteinds(tn))
 end
 
 """
 Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a
 directed binary tree DataGraph of `outinds` defining the desired graph structure
 """
-function binary_tree_structure(tn::ITensorNetwork, outinds::Vector{<:Index})
+function binary_tree_structure(tn::ITensorNetwork, outinds::Vector)
   return _binary_tree_structure(tn, outinds; maximally_unbalanced=false)
+end
+
+function mincut(graph::AbstractGraph, source_vertex, target_vertex; backend, kwargs...)
+  # TODO: Replace with `Backend(backend)`.
+  return mincut(Algorithm(backend), graph, source_vertex, target_vertex; kwargs...)
+end
+
+# TODO: Replace with `backend::Backend`.
+function mincut(
+  backend::Algorithm, graph::AbstractGraph, source_vertex, target_vertex; kwargs...
+)
+  return error("Backend `$backend` not implemented for `mincut`.")
 end
 
 """
@@ -43,27 +55,23 @@ Calculate the mincut between two subsets of the uncontracted inds
 Mincut of two inds list is defined as the mincut of two newly added vertices,
 each one neighboring to one inds subset.
 """
-function _mincut(
-  tn::ITensorNetwork, source_inds::Vector{<:Index}, terminal_inds::Vector{<:Index}
-)
+function _mincut(tn::ITensorNetwork, source_inds::Vector, terminal_inds::Vector)
   @assert length(source_inds) >= 1
   @assert length(terminal_inds) >= 1
-  noncommon_inds = noncommoninds(Vector{ITensor}(tn)...)
+  noncommon_inds = flatten_siteinds(tn)
   @assert issubset(source_inds, noncommon_inds)
   @assert issubset(terminal_inds, noncommon_inds)
   tn = disjoint_union(
     ITensorNetwork([ITensor(source_inds...), ITensor(terminal_inds...)]), tn
   )
-  return GraphsFlows.mincut(tn, (1, 1), (2, 1), weights(tn))
+  return mincut(tn, (1, 1), (2, 1); backend="GraphsFlows", capacity_matrix=weights(tn))
 end
 
 """
 Calculate the mincut_partitions between two subsets of the uncontracted inds
 (source_inds and terminal_inds) of the input tn.
 """
-function _mincut_partitions(
-  tn::ITensorNetwork, source_inds::Vector{<:Index}, terminal_inds::Vector{<:Index}
-)
+function _mincut_partitions(tn::ITensorNetwork, source_inds::Vector, terminal_inds::Vector)
   p1, p2, cut = _mincut(tn, source_inds, terminal_inds)
   p1 = [v[1] for v in p1 if v[2] == 2]
   p2 = [v[1] for v in p2 if v[2] == 2]
@@ -71,7 +79,7 @@ function _mincut_partitions(
 end
 
 function _mincut_partition_maxweightoutinds(
-  tn::ITensorNetwork, source_inds::Vector{<:Index}, terminal_inds::Vector{<:Index}
+  tn::ITensorNetwork, source_inds::Vector, terminal_inds::Vector
 )
   tn, out_to_maxweight_ind = _maxweightoutinds_tn(tn, [source_inds..., terminal_inds...])
   source_inds = [out_to_maxweight_ind[i] for i in source_inds]
@@ -82,9 +90,9 @@ end
 """
 Sum of shortest path distances among all outinds.
 """
-function _distance(tn::ITensorNetwork, outinds::Vector{<:Index})
+function _distance(tn::ITensorNetwork, outinds::Vector)
   @assert length(outinds) >= 1
-  @assert issubset(outinds, noncommoninds(Vector{ITensor}(tn)...))
+  @assert issubset(outinds, flatten_siteinds(tn))
   if length(outinds) == 1
     return 0.0
   end
@@ -105,8 +113,8 @@ create a tn with empty ITensors whose outinds weights are MAX_WEIGHT
 The maxweight_tn is constructed so that only commoninds of the tn
 will be considered in mincut.
 """
-function _maxweightoutinds_tn(tn::ITensorNetwork, outinds::Union{Nothing,Vector{<:Index}})
-  @assert issubset(outinds, noncommoninds(Vector{ITensor}(tn)...))
+function _maxweightoutinds_tn(tn::ITensorNetwork, outinds::Union{Nothing,Vector})
+  @assert issubset(outinds, flatten_siteinds(tn))
   out_to_maxweight_ind = Dict{Index,Index}()
   for ind in outinds
     out_to_maxweight_ind[ind] = Index(MAX_WEIGHT, ind.tags)
@@ -132,7 +140,7 @@ Example:
 # TODO
 """
 function _binary_tree_structure(
-  tn::ITensorNetwork, outinds::Vector{<:Index}; maximally_unbalanced::Bool=false
+  tn::ITensorNetwork, outinds::Vector; maximally_unbalanced::Bool=false
 )
   inds_tree_vector = _binary_tree_partition_inds(
     tn, outinds; maximally_unbalanced=maximally_unbalanced
@@ -141,7 +149,7 @@ function _binary_tree_structure(
 end
 
 function _binary_tree_partition_inds(
-  tn::ITensorNetwork, outinds::Vector{<:Index}; maximally_unbalanced::Bool=false
+  tn::ITensorNetwork, outinds::Vector; maximally_unbalanced::Bool=false
 )
   if length(outinds) == 1
     return outinds
@@ -164,7 +172,7 @@ function _nested_vector_to_directed_tree(inds_tree_vector::Vector)
     return inds_btree
   end
   treenode_to_v = Dict{Union{Vector,Index},Int}()
-  graph = DataGraph(NamedDiGraph(), Index)
+  graph = DataGraph(NamedDiGraph(); edge_data_eltype=Index)
   v = 1
   for treenode in PostOrderDFS(inds_tree_vector)
     add_vertex!(graph, v)
@@ -184,11 +192,9 @@ end
 """
 Given a tn and outinds, returns a vector of indices representing MPS inds ordering.
 """
-function _mps_partition_inds_order(
-  tn::ITensorNetwork, outinds::Union{Nothing,Vector{<:Index}}
-)
+function _mps_partition_inds_order(tn::ITensorNetwork, outinds::Union{Nothing,Vector})
   if outinds == nothing
-    outinds = noncommoninds(Vector{ITensor}(tn)...)
+    outinds = flatten_siteinds(tn)
   end
   if length(outinds) == 1
     return outinds
@@ -258,7 +264,7 @@ Note:
 """
 function _mincut_inds(
   tn_pair::Pair{<:ITensorNetwork,<:ITensorNetwork},
-  out_to_maxweight_ind::Dict{Index,Index},
+  out_to_maxweight_ind::Dict{<:Index,<:Index},
   sourceinds_list::Vector{<:Vector{<:Index}},
 )
   function _mincut_value(tn, sinds, outinds)

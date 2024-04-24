@@ -5,7 +5,7 @@ using Graphs: nv, vertices
 using ITensorNetworks: IndsNetwork, siteinds
 using ITensors: SiteType, hastags, space
 using ITensors.NDTensors: dim
-using NamedGraphs: named_grid
+using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @testset
 
 @testset "Site ind system" begin
