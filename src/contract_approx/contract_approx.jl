@@ -86,9 +86,7 @@ function contract_approx(
   contraction_sequence_kwargs=(;),
 )
   inds_btree = output_structure(tn)
-  return contract_approx(
-    alg, tn, inds_btree; cutoff, maxdim, contraction_sequence_kwargs
-  )
+  return contract_approx(alg, tn, inds_btree; cutoff, maxdim, contraction_sequence_kwargs)
 end
 
 # interface
