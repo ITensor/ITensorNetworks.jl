@@ -70,8 +70,8 @@ using Test: @test, @testset
   rdm = array((rdm * combiner(inds(rdm; plev=0)...)) * combiner(inds(rdm; plev=1)...))
   rdm /= tr(rdm)
 
-  eigs = eigvals(rdm)
+  eigs = Float64.(eigvals(rdm))
   @test size(rdm) == (2^length(vs), 2^length(vs))
-  @test all(>=(0), real(eigs)) && all(==(0), imag(eigs))
+  @test minimum(eigs) >= 0
 end
 end
