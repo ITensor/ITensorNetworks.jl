@@ -1,3 +1,4 @@
+@eval module $(gensym())
 using Test
 using ITensorNetworks
 
@@ -46,4 +47,4 @@ using SplitApplyCombine: group
   sz_exact = expect(ψ, "Sz"; alg="exact")
   @test sz_bp ≈ sz_exact
 end
-nothing
+end

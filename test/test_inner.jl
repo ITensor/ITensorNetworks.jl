@@ -1,3 +1,4 @@
+@eval module $(gensym())
 using Test
 using ITensorNetworks
 
@@ -55,4 +56,4 @@ using Random: Random
   @test xAy_scalar_bp ≈ xAy_scalar_logbp
   @test xAy_scalar ≈ xAy_scalar_logbp
 end
-nothing
+end

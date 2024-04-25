@@ -4,13 +4,7 @@ using ITensors.ITensorMPS: ITensorMPS, expect
 
 default_expect_alg() = "bp"
 
-function ITensorMPS.expect(
-  ψ::AbstractITensorNetwork, args...; alg=default_expect_alg(), kwargs...
-)
-  return expect(Algorithm(alg), ψ, args...; kwargs...)
-end
-
-function expect_internal(ψIψ::AbstractFormNetwork, op::Op; contract_kwargs=(;), kwargs...)
+function ITensorMPS.expect(ψIψ::AbstractFormNetwork, op::Op; contract_kwargs=(;), kwargs...)
   v = only(op.sites)
   ψIψ_v = ψIψ[operator_vertex(ψIψ, v)]
   s = commonind(ψIψ[ket_vertex(ψIψ, v)], ψIψ_v)
@@ -42,26 +36,28 @@ function ITensorMPS.expect(
     cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  return map(
-    op -> expect_internal(ψIψ, op; alg, cache!, update_cache=false, kwargs...), ops
-  )
+  return map(op -> expect(ψIψ, op; alg, cache!, update_cache=false, kwargs...), ops)
 end
 
 function ITensorMPS.expect(alg::Algorithm"exact", ψ::AbstractITensorNetwork, ops; kwargs...)
   ψIψ = inner_network(ψ, ψ)
-  return map(op -> expect_internal(ψIψ, op; alg, kwargs...), ops)
-end
-
-function ITensorMPS.expect(alg::Algorithm, ψ::AbstractITensorNetwork, op::Op; kwargs...)
-  return expect(alg, ψ, [op]; kwargs...)
+  return map(op -> expect(ψIψ, op; alg, kwargs...), ops)
 end
 
 function ITensorMPS.expect(
-  alg::Algorithm, ψ::AbstractITensorNetwork, op::String, vertices; kwargs...
+  ψ::AbstractITensorNetwork, op::Op; alg=default_expect_alg(), kwargs...
 )
-  return expect(alg, ψ, [Op(op, vertex) for vertex in vertices]; kwargs...)
+  return expect(Algorithm(alg), ψ, [op]; kwargs...)
 end
 
-function ITensorMPS.expect(alg::Algorithm, ψ::AbstractITensorNetwork, op::String; kwargs...)
-  return expect(alg, ψ, op, vertices(ψ); kwargs...)
+function ITensorMPS.expect(
+  ψ::AbstractITensorNetwork, op::String, vertices; alg=default_expect_alg(), kwargs...
+)
+  return expect(Algorithm(alg), ψ, [Op(op, vertex) for vertex in vertices]; kwargs...)
+end
+
+function ITensorMPS.expect(
+  ψ::AbstractITensorNetwork, op::String; alg=default_expect_alg(), kwargs...
+)
+  return expect(ψ, op, vertices(ψ); alg, kwargs...)
 end
