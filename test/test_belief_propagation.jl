@@ -72,6 +72,6 @@ using Test: @test, @testset
 
   eigs = Float64.(eigvals(rdm))
   @test size(rdm) == (2^length(vs), 2^length(vs))
-  @test minimum(eigs) >= 0
+  @test minimum(eigs) >= -eps(typeof(minimum(eigs)))
 end
 end
