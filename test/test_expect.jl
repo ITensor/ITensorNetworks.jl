@@ -12,7 +12,6 @@ using ITensorNetworks:
   original_state_vertex
 using Random: Random
 using SplitApplyCombine: group
-
 using Test: @test, @testset
 
 @testset "Test Expect" begin
