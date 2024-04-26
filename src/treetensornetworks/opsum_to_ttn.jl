@@ -1,32 +1,31 @@
+using Graphs: degree, is_tree
+using ITensors: flux, has_fermion_string, itensor, ops, removeqns, space, val
+using ITensors.ITensorMPS: ITensorMPS, cutoff, linkdims, truncate!
+using ITensors.LazyApply: Prod, Sum, coefficient
+using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks
+using ITensors.Ops: Op, OpSum
+using NamedGraphs.GraphsExtensions:
+  GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
+using StaticArrays: MVector
+
 # convert ITensors.OpSum to TreeTensorNetwork
 
 # 
 # Utility methods
 # 
 
-# linear ordering of vertices in tree graph relative to chosen root, chosen outward from root
-function find_index_in_tree(site, g::AbstractGraph, root_vertex)
-  ordering = reverse(post_order_dfs_vertices(g, root_vertex))
-  return findfirst(x -> x == site, ordering)
-end
-function find_index_in_tree(o::Op, g::AbstractGraph, root_vertex)
-  return find_index_in_tree(ITensors.site(o), g, root_vertex)
+function align_edges(edges, reference_edges)
+  return intersect(Iterators.flatten(zip(edges, reverse.(edges))), reference_edges)
 end
 
-# determine 'support' of product operator on tree graph
-function span(t::Scaled{C,Prod{Op}}, g::AbstractGraph) where {C}
-  spn = eltype(g)[]
-  nterms = length(t)
-  for i in 1:nterms, j in i:nterms
-    path = vertex_path(g, ITensors.site(t[i]), ITensors.site(t[j]))
-    spn = union(spn, path)
-  end
-  return spn
+function align_and_reorder_edges(edges, reference_edges)
+  return intersect(reference_edges, align_edges(edges, reference_edges))
 end
 
-# determine whether an operator string crosses a given graph vertex
-function crosses_vertex(t::Scaled{C,Prod{Op}}, g::AbstractGraph, v) where {C}
-  return v ∈ span(t, g)
+function split_at_vertex(g::AbstractGraph, v)
+  g = copy(g)
+  rem_vertex!(g, v)
+  return Set.(connected_components(g))
 end
 
 # 
@@ -36,12 +35,12 @@ end
 """
     ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex, kwargs...)
 
-Construct a dense TreeTensorNetwork from a symbolic OpSum representation of a
+Construct a TreeTensorNetwork from a symbolic OpSum representation of a
 Hamiltonian, compressing shared interaction channels.
 """
 function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kwargs...)
   # Function barrier to improve type stability
-  coefficient_type = ITensors.determineValType(terms(os))
+  coefficient_type = ITensorMPS.determineValType(terms(os))
   return ttn_svd(coefficient_type, os, sites, root_vertex; kwargs...)
 end
 
@@ -62,14 +61,19 @@ function ttn_svd(
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
   # traverse tree outwards from root vertex
-  vs = reverse(post_order_dfs_vertices(sites, root_vertex))                                 # store vertices in fixed ordering relative to root
-  # ToDo: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
-  es = reverse(reverse.(post_order_dfs_edges(sites, root_vertex)))                          # store edges in fixed ordering relative to root
+  vs = _default_vertex_ordering(sites, root_vertex)
+  # TODO: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
+  # store edges in fixed ordering relative to root
+  es = _default_edge_ordering(sites, root_vertex)
   # some things to keep track of
-  degrees = Dict(v => degree(sites, v) for v in vs)                                           # rank of every TTN tensor in network
-  Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in es)                                    # link isometries for SVD compression of TTN
-  inmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()                  # map from term in Hamiltonian to incoming channel index for every edge
-  outmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()                 # map from term in Hamiltonian to outgoing channel index for every edge
+  # rank of every TTN tensor in network
+  degrees = Dict(v => degree(sites, v) for v in vs)
+  # link isometries for SVD compression of TTN
+  Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in es)
+  # map from term in Hamiltonian to incoming channel index for every edge
+  inmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
+  # map from term in Hamiltonian to outgoing channel index for every edge
+  outmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
 
   op_cache = Dict{Pair{String,vertextype_sites},ITensor}()
 
@@ -96,48 +100,82 @@ function ttn_svd(
   for v in vs
     is_internal[v] = isempty(sites[v])
     if isempty(sites[v])
+      # FIXME: This logic only works for trivial flux, breaks for nonzero flux
+      # TODO: add assert or fix and add test!
       sites[v] = [Index(Hflux => 1)]
     end
   end
+  # bond coefficients for incoming edge channels
   inbond_coefs = Dict(
-    e => Dict{QN,Vector{ITensors.MatElem{coefficient_type}}}() for e in es
-  )                         # bond coefficients for incoming edge channels
-  site_coef_done = Prod{Op}[] # list of terms for which the coefficient has been added to a site factor
+    e => Dict{QN,Vector{ITensorMPS.MatElem{coefficient_type}}}() for e in es
+  )
+  # list of terms for which the coefficient has been added to a site factor
+  site_coef_done = Prod{Op}[]
   # temporary symbolic representation of TTN Hamiltonian
   tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
 
   # build compressed finite state machine representation
   for v in vs
     # for every vertex, find all edges that contain this vertex
-    edges = filter(e -> dst(e) == v || src(e) == v, es)
+    edges = align_and_reorder_edges(incident_edges(sites, v), es)
+
     # use the corresponding ordering as index order for tensor elements at this site
     dim_in = findfirst(e -> dst(e) == v, edges)
     edge_in = (isnothing(dim_in) ? [] : edges[dim_in])
     dims_out = findall(e -> src(e) == v, edges)
     edges_out = edges[dims_out]
 
+    # for every site w except v, determine the incident edge to v that lies 
+    # in the edge_path(w,v)
+    subgraphs = split_at_vertex(sites, v)
+    _boundary_edges = align_edges(
+      [only(boundary_edges(underlying_graph(sites), subgraph)) for subgraph in subgraphs],
+      edges,
+    )
+    which_incident_edge = Dict(
+      Iterators.flatten([
+        subgraphs[i] .=> ((_boundary_edges[i]),) for i in eachindex(subgraphs)
+      ]),
+    )
+
     # sanity check, leaves only have single incoming or outgoing edge
     @assert !isempty(dims_out) || !isnothing(dim_in)
-    (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf(sites, v)
+    (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf_vertex(sites, v)
 
     for term in os
       # loop over OpSum and pick out terms that act on current vertex
-      crosses_vertex(term, sites, v) || continue
+
+      factors = ITensors.terms(term)
+      if v in ITensors.site.(factors)
+        crosses_vertex = true
+      else
+        crosses_vertex =
+          !isone(
+            length(Set([which_incident_edge[site] for site in ITensors.site.(factors)]))
+          )
+      end
+      #if term doesn't cross vertex, skip it
+      crosses_vertex || continue
+
+      # filter out factor that acts on current vertex
+      onsite = filter(t -> (ITensors.site(t) == v), factors)
+      not_onsite_factors = setdiff(factors, onsite)
 
       # filter out factors that come in from the direction of the incoming edge
       incoming = filter(
-        t -> edge_in ∈ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
+        t -> which_incident_edge[ITensors.site(t)] == edge_in, not_onsite_factors
       )
+
       # also store all non-incoming factors in standard order, used for channel merging
       not_incoming = filter(
-        t -> edge_in ∉ edge_path(sites, ITensors.site(t), v), ITensors.terms(term)
+        t -> (ITensors.site(t) == v) || which_incident_edge[ITensors.site(t)] != edge_in,
+        factors,
       )
-      # filter out factor that acts on current vertex
-      onsite = filter(t -> (ITensors.site(t) == v), ITensors.terms(term))
+
       # for every outgoing edge, filter out factors that go out along that edge
       outgoing = Dict(
-        e => filter(t -> e ∈ edge_path(sites, v, ITensors.site(t)), ITensors.terms(term))
-        for e in edges_out
+        e => filter(t -> which_incident_edge[ITensors.site(t)] == e, not_onsite_factors) for
+        e in edges_out
       )
 
       # compute QNs
@@ -158,13 +196,13 @@ function ttn_svd(
         coutmap = get!(outmaps, edge_in => not_incoming_qn, Dict{Vector{Op},Int}())
         cinmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
 
-        bond_row = ITensors.posInLink!(cinmap, incoming)
-        bond_col = ITensors.posInLink!(coutmap, not_incoming) # get incoming channel
+        bond_row = ITensorMPS.posInLink!(cinmap, incoming)
+        bond_col = ITensorMPS.posInLink!(coutmap, not_incoming) # get incoming channel
         bond_coef = convert(coefficient_type, ITensors.coefficient(term))
         q_inbond_coefs = get!(
-          inbond_coefs[edge_in], incoming_qn, ITensors.MatElem{coefficient_type}[]
+          inbond_coefs[edge_in], incoming_qn, ITensorMPS.MatElem{coefficient_type}[]
         )
-        push!(q_inbond_coefs, ITensors.MatElem(bond_row, bond_col, bond_coef))
+        push!(q_inbond_coefs, ITensorMPS.MatElem(bond_row, bond_col, bond_coef))
         T_inds[dim_in] = bond_col
         T_qns[dim_in] = -incoming_qn
       end
@@ -172,7 +210,8 @@ function ttn_svd(
         coutmap = get!(
           outmaps, edges[dout] => outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
         )
-        T_inds[dout] = ITensors.posInLink!(coutmap, outgoing[edges[dout]]) # add outgoing channel
+        # add outgoing channel
+        T_inds[dout] = ITensorMPS.posInLink!(coutmap, outgoing[edges[dout]])
         T_qns[dout] = outgoing_qns[edges[dout]]
       end
       # if term starts at this site, add its coefficient as a site factor
@@ -180,7 +219,8 @@ function ttn_svd(
       if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
         ITensors.argument(term) ∉ site_coef_done
         site_coef = ITensors.coefficient(term)
-        site_coef = convert(coefficient_type, site_coef) # required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
+        # required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
+        site_coef = convert(coefficient_type, site_coef)
         push!(site_coef_done, ITensors.argument(term))
       end
       # add onsite identity for interactions passing through vertex
@@ -197,11 +237,11 @@ function ttn_svd(
       push!(tempTTN[v], el)
     end
 
-    ITensors.remove_dups!(tempTTN[v])
+    ITensorMPS.remove_dups!(tempTTN[v])
     # manual truncation: isometry on incoming edge
     if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
       for (q, mat) in inbond_coefs[edges[dim_in]]
-        M = ITensors.toMatrix(mat)
+        M = ITensorMPS.toMatrix(mat)
         U, S, V = svd(M)
         P = S .^ 2
         truncate!(P; maxdim, cutoff, mindim)
@@ -226,7 +266,7 @@ function ttn_svd(
     link_space[e] = Index(qi...; tags=edge_tag(e), dir=linkdir_ref)
   end
 
-  H = TTN(sites0)   # initialize TTN without the dummy indices added
+  H = ttn(sites0)   # initialize TTN without the dummy indices added
   function qnblock(i::Index, q::QN)
     for b in 2:(nblocks(i) - 1)
       flux(i, Block(b)) == q && return b
@@ -237,7 +277,8 @@ function ttn_svd(
 
   for v in vs
     # redo the whole thing like before
-    edges = filter(e -> dst(e) == v || src(e) == v, es)
+    # TODO: use neighborhood instead of going through all edges, see above
+    edges = align_and_reorder_edges(incident_edges(sites, v), es)
     dim_in = findfirst(e -> dst(e) == v, edges)
     dims_out = findall(e -> src(e) == v, edges)
     # slice isometries at this vertex
@@ -305,7 +346,8 @@ function ttn_svd(
 
     for ((b, q_op), m) in blocks
       Op = computeSiteProd(sites, Prod(q_op))
-      if hasqns(Op) # FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
+      if hasqns(Op)
+        # FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
         iszero(nnzblocks(Op)) && continue
       end
       sq = flux(Op)
@@ -331,9 +373,10 @@ function ttn_svd(
       if is_internal[v]
         H[v] += iT
       else
-        if hasqns(iT)
-          @assert flux(iT * Op) == Hflux
-        end
+        #TODO: Remove this assert since it seems to be costly
+        #if hasqns(iT)
+        #  @assert flux(iT * Op) == Hflux
+        #end
         H[v] += (iT * Op)
       end
     end
@@ -342,18 +385,22 @@ function ttn_svd(
     # add starting and ending identity operators
     idT = zeros(coefficient_type, linkdims...)
     if isnothing(dim_in)
-      idT[ones(Int, degrees[v])...] = 1.0 # only one real starting identity
+      # only one real starting identity
+      idT[ones(Int, degrees[v])...] = 1.0
     end
     # ending identities are a little more involved
     if !isnothing(dim_in)
-      idT[linkdims...] = 1.0 # place identity if all channels end
+      # place identity if all channels end
+      idT[linkdims...] = 1.0
       # place identity from start of incoming channel to start of each single outgoing channel, and end all other channels
       idT_end_inds = [linkdims...]
-      idT_end_inds[dim_in] = 1  #this should really be an int
+      #this should really be an int
+      idT_end_inds[dim_in] = 1
       for dout in dims_out
         idT_end_inds[dout] = 1
         idT[idT_end_inds...] = 1.0
-        idT_end_inds[dout] = linkdims[dout] # reset
+        # reset
+        idT_end_inds[dout] = linkdims[dout]
       end
     end
     T = itensor(idT, _linkinds)
@@ -400,12 +447,24 @@ function computeSiteProd(sites::IndsNetwork{V,<:Index}, ops::Prod{Op})::ITensor 
   return T
 end
 
+function _default_vertex_ordering(g::AbstractGraph, root_vertex)
+  return reverse(post_order_dfs_vertices(g, root_vertex))
+end
+
+function _default_edge_ordering(g::AbstractGraph, root_vertex)
+  return reverse(reverse.(post_order_dfs_edges(g, root_vertex)))
+end
+
 # This is almost an exact copy of ITensors/src/opsum_to_mpo_generic:sorteachterm except for the site ordering being
 # given via find_index_in_tree
 # changed `isless_site` to use tree vertex ordering relative to root
 function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) where {V}
   os = copy(os)
-  findpos(op::Op) = find_index_in_tree(op, sites, root_vertex)
+
+  # linear ordering of vertices in tree graph relative to chosen root, chosen outward from root
+  ordering = _default_vertex_ordering(sites, root_vertex)
+  site_positions = Dict(zip(ordering, 1:length(ordering)))
+  findpos(op::Op) = site_positions[ITensors.site(op)]
   isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
   N = nv(sites)
   for n in eachindex(os)
@@ -470,71 +529,59 @@ function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) 
 end
 
 """
-    TTN(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
-    TTN(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
+    ttn(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
+    ttn(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
        
 Convert an OpSum object `os` to a TreeTensorNetwork, with indices given by `sites`.
 """
-function TTN(
+function ttn(
   os::OpSum,
   sites::IndsNetwork;
-  root_vertex=default_root_vertex(sites),
-  splitblocks=false,
-  algorithm="svd",
+  root_vertex=GraphsExtensions.default_root_vertex(sites),
   kwargs...,
-)::TTN
+)
   length(ITensors.terms(os)) == 0 && error("OpSum has no terms")
   is_tree(sites) || error("Site index graph must be a tree.")
-  is_leaf(sites, root_vertex) || error("Tree root must be a leaf vertex.")
+  is_leaf_vertex(sites, root_vertex) || error("Tree root must be a leaf vertex.")
 
   os = deepcopy(os)
   os = sorteachterm(os, sites, root_vertex)
-  os = ITensors.sortmergeterms(os) # not exported
-  if algorithm == "svd"
-    T = ttn_svd(os, sites, root_vertex; kwargs...)
-  else
-    error("Currently only SVD is supported as TTN constructor backend.")
-  end
-
-  if splitblocks
-    error("splitblocks not yet implemented for AbstractTreeTensorNetwork.")
-    T = ITensors.splitblocks(linkinds, T) # TODO: make this work
-  end
-  return T
+  os = ITensorMPS.sortmergeterms(os)
+  return ttn_svd(os, sites, root_vertex; kwargs...)
 end
 
 function mpo(os::OpSum, external_inds::Vector; kwargs...)
-  return TTN(os, path_indsnetwork(external_inds); kwargs...)
+  return ttn(os, path_indsnetwork(external_inds); kwargs...)
 end
 
 # Conversion from other formats
-function TTN(o::Op, s::IndsNetwork; kwargs...)
-  return TTN(OpSum{Float64}() + o, s; kwargs...)
+function ttn(o::Op, s::IndsNetwork; kwargs...)
+  return ttn(OpSum{Float64}() + o, s; kwargs...)
 end
 
-function TTN(o::Scaled{C,Op}, s::IndsNetwork; kwargs...) where {C}
-  return TTN(OpSum{C}() + o, s; kwargs...)
+function ttn(o::Scaled{C,Op}, s::IndsNetwork; kwargs...) where {C}
+  return ttn(OpSum{C}() + o, s; kwargs...)
 end
 
-function TTN(o::Sum{Op}, s::IndsNetwork; kwargs...)
-  return TTN(OpSum{Float64}() + o, s; kwargs...)
+function ttn(o::Sum{Op}, s::IndsNetwork; kwargs...)
+  return ttn(OpSum{Float64}() + o, s; kwargs...)
 end
 
-function TTN(o::Prod{Op}, s::IndsNetwork; kwargs...)
-  return TTN(OpSum{Float64}() + o, s; kwargs...)
+function ttn(o::Prod{Op}, s::IndsNetwork; kwargs...)
+  return ttn(OpSum{Float64}() + o, s; kwargs...)
 end
 
-function TTN(o::Scaled{C,Prod{Op}}, s::IndsNetwork; kwargs...) where {C}
-  return TTN(OpSum{C}() + o, s; kwargs...)
+function ttn(o::Scaled{C,Prod{Op}}, s::IndsNetwork; kwargs...) where {C}
+  return ttn(OpSum{C}() + o, s; kwargs...)
 end
 
-function TTN(o::Sum{Scaled{C,Op}}, s::IndsNetwork; kwargs...) where {C}
-  return TTN(OpSum{C}() + o, s; kwargs...)
+function ttn(o::Sum{Scaled{C,Op}}, s::IndsNetwork; kwargs...) where {C}
+  return ttn(OpSum{C}() + o, s; kwargs...)
 end
 
 # Catch-all for leaf eltype specification
-function TTN(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
-  return NDTensors.convert_scalartype(eltype, TTN(os, sites; kwargs...))
+function ttn(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
+  return NDTensors.convert_scalartype(eltype, ttn(os, sites; kwargs...))
 end
 
 # 

@@ -1,10 +1,24 @@
-using ITensors
-using ITensorNetworks
-using ITensorNetworks: exponentiate_updater
-using KrylovKit: exponentiate
-using Observers
-using Random
-using Test
+@eval module $(gensym())
+using Graphs: dst, edges, src
+using ITensors: ITensor, contract, dag, inner, noprime, normalize, prime, scalar
+using ITensorNetworks:
+  ITensorNetworks,
+  OpSum,
+  ttn,
+  apply,
+  expect,
+  mpo,
+  mps,
+  op,
+  random_mps,
+  random_ttn,
+  siteinds,
+  tdvp
+using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
+using LinearAlgebra: norm
+using NamedGraphs.NamedGraphGenerators: named_binary_tree, named_comb_tree
+using Observers: observer
+using Test: @testset, @test
 
 @testset "MPS TDVP" begin
   @testset "Basic TDVP" begin
@@ -12,7 +26,6 @@ using Test
     cutoff = 1e-12
 
     s = siteinds("S=1/2", N)
-
     os = OpSum()
     for j in 1:(N - 1)
       os += 0.5, "S+", j, "S-", j + 1
@@ -22,11 +35,10 @@ using Test
 
     H = mpo(os, s)
 
-    ψ0 = random_mps(s; internal_inds_space=10)
+    ψ0 = random_mps(s; link_space=10)
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
-
+    ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
     @test norm(ψ1) ≈ 1.0
 
     ## Should lose fidelity:
@@ -36,12 +48,32 @@ using Test
     @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
     # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(
+      H,
+      +0.1im,
+      ψ1;
+      nsweeps=1,
+      cutoff,
+      updater_kwargs=(; krylovdim=20, maxiter=20, tol=1e-8),
+    )
 
     @test norm(ψ2) ≈ 1.0
 
     # Should rotate back to original state:
     @test abs(inner(ψ0, ψ2)) > 0.99
+
+    # test different ways to specify time-step specifications
+    ψa = tdvp(H, -0.1im, ψ0; nsweeps=4, cutoff, nsites=1)
+    ψb = tdvp(H, -0.1im, ψ0; time_step=-0.025im, cutoff, nsites=1)
+    ψc = tdvp(
+      H, -0.1im, ψ0; time_step=[-0.02im, -0.03im, -0.015im, -0.035im], cutoff, nsites=1
+    )
+    ψd = tdvp(
+      H, -0.1im, ψ0; nsweeps=4, time_step=[-0.02im, -0.03im, -0.025im], cutoff, nsites=1
+    )
+    @test inner(ψa, ψb) ≈ 1.0 rtol = 1e-7
+    @test inner(ψa, ψc) ≈ 1.0 rtol = 1e-7
+    @test inner(ψa, ψd) ≈ 1.0 rtol = 1e-7
   end
 
   @testset "TDVP: Sum of Hamiltonians" begin
@@ -64,9 +96,9 @@ using Test
     H2 = mpo(os2, s)
     Hs = [H1, H2]
 
-    ψ0 = random_mps(s; internal_inds_space=10)
+    ψ0 = random_mps(s; link_space=10)
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -77,7 +109,7 @@ using Test
     @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
     # Time evolve backwards:
-    ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -101,7 +133,7 @@ using Test
 
     H = mpo(os, s)
 
-    ψ0 = random_mps(s; internal_inds_space=10)
+    ψ0 = random_mps(s; link_space=10)
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; time_step=-0.05im, order, cutoff, nsites=1)
@@ -139,7 +171,7 @@ using Test
 
     Ut = exp(-im * tau * HM)
 
-    state = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    state = mps(n -> isodd(n) ? "Up" : "Dn", s)
     psi2 = deepcopy(state)
     psix = contract(state)
 
@@ -174,7 +206,7 @@ using Test
         cutoff,
         normalize=false,
         updater_kwargs=(; tol=1e-12, maxiter=500, krylovdim=25),
-        updater=exponentiate_updater,
+        updater=ITensorNetworks.exponentiate_updater,
       )
       # TODO: What should `expect` output? Right now
       # it outputs a dictionary.
@@ -218,7 +250,7 @@ using Test
     end
     append!(gates, reverse(gates))
 
-    state = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    state = mps(n -> isodd(n) ? "Up" : "Dn", s)
     phi = deepcopy(state)
     c = div(N, 2)
 
@@ -234,14 +266,13 @@ using Test
 
     for step in 1:Nsteps
       state = apply(gates, state; cutoff)
-      #normalize!(state)
 
       nsites = (step <= 3 ? 2 : 1)
       phi = tdvp(
         H,
         -tau * im,
         phi;
-        nsteps=1,
+        nsweeps=1,
         cutoff,
         nsites,
         normalize=true,
@@ -258,9 +289,9 @@ using Test
     # Evolve using TDVP
     # 
 
-    phi = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    phi = mps(n -> isodd(n) ? "Up" : "Dn", s)
 
-    obs = Observer(
+    obs = observer(
       "Sz" => (; state) -> expect("Sz", state; vertices=[c])[c],
       "En" => (; state) -> real(inner(state', H, state)),
     )
@@ -283,11 +314,10 @@ using Test
   end
 
   @testset "Imaginary Time Evolution" for reverse_step in [true, false]
-    N = 10
     cutoff = 1e-12
     tau = 1.0
-    ttotal = 50.0
-
+    ttotal = 10.0
+    N = 10
     s = siteinds("S=1/2", N)
 
     os = OpSum()
@@ -299,24 +329,24 @@ using Test
 
     H = mpo(os, s)
 
-    state = random_mps(s; internal_inds_space=2)
-    trange = 0.0:tau:ttotal
-    for (step, t) in enumerate(trange)
-      nsites = (step <= 10 ? 2 : 1)
-      state = tdvp(
-        H,
-        -tau,
-        state;
-        cutoff,
-        nsites,
-        reverse_step,
-        normalize=true,
-        updater_kwargs=(; krylovdim=15),
-      )
-    end
-
+    state = random_mps(s; link_space=2)
+    en0 = inner(state', H, state)
+    nsites = [repeat([2], 10); repeat([1], 10)]
+    maxdim = 32
+    state = tdvp(
+      H,
+      -ttotal,
+      state;
+      time_step=-tau,
+      maxdim,
+      cutoff,
+      nsites,
+      reverse_step,
+      normalize=true,
+      updater_kwargs=(; krylovdim=15),
+    )
     en1 = inner(state', H, state)
-    @test en1 < -4.25
+    @test en1 < en0
   end
 
   @testset "Observers" begin
@@ -343,16 +373,16 @@ using Test
 
     measure_sz(; state) = expect("Sz", state; vertices=[c])[c]
     measure_en(; state) = real(inner(state', H, state))
-    sweep_obs = Observer("Sz" => measure_sz, "En" => measure_en)
+    sweep_obs = observer("Sz" => measure_sz, "En" => measure_en)
 
     get_info(; info) = info
     step_measure_sz(; state) = expect("Sz", state; vertices=[c])[c]
     step_measure_en(; state) = real(inner(state', H, state))
-    region_obs = Observer(
+    region_obs = observer(
       "Sz" => step_measure_sz, "En" => step_measure_en, "info" => get_info
     )
 
-    state2 = mps(s; states=(n -> isodd(n) ? "Up" : "Dn"))
+    state2 = mps(n -> isodd(n) ? "Up" : "Dn", s)
     tdvp(
       H,
       -im * ttotal,
@@ -381,23 +411,22 @@ using Test
 end
 
 @testset "Tree TDVP" begin
-  @testset "Basic TDVP" begin
+  @testset "Basic TDVP" for c in [named_comb_tree(fill(2, 3)), named_binary_tree(3)]
     cutoff = 1e-12
 
-    tooth_lengths = fill(2, 3)
-    root_vertex = (3, 2)
+    tooth_lengths = fill(4, 4)
+    root_vertex = (1, 4)
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
+    os = ModelHamiltonians.heisenberg(c)
 
-    H = TTN(os, s)
+    H = ttn(os, s)
 
-    ψ0 = normalize!(random_ttn(s; link_space=10))
+    ψ0 = normalize(random_ttn(s))
 
     # Time evolve forward:
-    ψ1 = tdvp(H, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
-
+    ψ1 = tdvp(H, -0.1im, ψ0; root_vertex, nsweeps=1, cutoff, nsites=2)
     @test norm(ψ1) ≈ 1.0
 
     ## Should lose fidelity:
@@ -407,7 +436,7 @@ end
     @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
     # Time evolve backwards:
-    ψ2 = tdvp(H, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -432,13 +461,13 @@ end
       os2 += "Sz", src(e), "Sz", dst(e)
     end
 
-    H1 = TTN(os1, s)
-    H2 = TTN(os2, s)
+    H1 = ttn(os1, s)
+    H2 = ttn(os2, s)
     Hs = [H1, H2]
 
-    ψ0 = normalize!(random_ttn(s; link_space=10))
+    ψ0 = normalize(random_ttn(s; link_space=10))
 
-    ψ1 = tdvp(Hs, -0.1im, ψ0; nsteps=1, cutoff, nsites=1)
+    ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
     @test norm(ψ1) ≈ 1.0
 
@@ -449,7 +478,7 @@ end
     @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
     # Time evolve backwards:
-    ψ2 = tdvp(Hs, +0.1im, ψ1; nsteps=1, cutoff)
+    ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
     @test norm(ψ2) ≈ 1.0
 
@@ -467,13 +496,13 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
-    H = TTN(os, s)
+    os = ModelHamiltonians.heisenberg(c)
+    H = ttn(os, s)
     HM = contract(H)
 
     Ut = exp(-im * tau * HM)
 
-    state = TTN(ComplexF64, s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    state = ttn(ComplexF64, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn", s)
     statex = contract(state)
 
     Sz_tdvp = Float64[]
@@ -515,8 +544,8 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
-    H = TTN(os, s)
+    os = ModelHamiltonians.heisenberg(c)
+    H = ttn(os, s)
 
     gates = ITensor[]
     for e in edges(c)
@@ -531,7 +560,7 @@ end
     end
     append!(gates, reverse(gates))
 
-    state = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
+    state = ttn(v -> iseven(sum(isodd.(v))) ? "Up" : "Dn", s)
     phi = copy(state)
     c = (2, 1)
 
@@ -547,14 +576,13 @@ end
 
     for step in 1:Nsteps
       state = apply(gates, state; cutoff, maxdim)
-      #normalize!(state)
 
       nsites = (step <= 3 ? 2 : 1)
       phi = tdvp(
         H,
         -tau * im,
         phi;
-        nsteps=1,
+        nsweeps=1,
         cutoff,
         nsites,
         normalize=true,
@@ -571,8 +599,8 @@ end
     # Evolve using TDVP
     # 
 
-    phi = TTN(s, v -> iseven(sum(isodd.(v))) ? "Up" : "Dn")
-    obs = Observer(
+    phi = ttn(v -> iseven(sum(isodd.(v))) ? "Up" : "Dn", s)
+    obs = observer(
       "Sz" => (; state) -> expect("Sz", state; vertices=[c])[c],
       "En" => (; state) -> real(inner(state', H, state)),
     )
@@ -583,12 +611,14 @@ end
       time_step=-im * tau,
       cutoff,
       normalize=false,
-      (region_observer!)=obs,
+      (sweep_observer!)=obs,
       root_vertex=(3, 2),
     )
 
     @test norm(Sz1 - Sz2) < 5e-3
     @test norm(En1 - En2) < 5e-3
+    @test abs.(last(Sz1) - last(obs.Sz)) .< 5e-3
+    @test abs.(last(Sz2) - last(obs.Sz)) .< 5e-3
   end
 
   @testset "Imaginary Time Evolution" for reverse_step in [true, false]
@@ -600,10 +630,10 @@ end
     c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c)
 
-    os = ITensorNetworks.heisenberg(c)
-    H = TTN(os, s)
+    os = ModelHamiltonians.heisenberg(c)
+    H = ttn(os, s)
 
-    state = normalize!(random_ttn(s; link_space=2))
+    state = normalize(random_ttn(s; link_space=2))
 
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)
@@ -622,100 +652,5 @@ end
 
     @test inner(state', H, state) < -2.47
   end
-
-  # TODO: verify quantum number suport in ITensorNetworks
-
-  # @testset "Observers" begin
-  #   cutoff = 1e-12
-  #   tau = 0.1
-  #   ttotal = 1.0
-
-  #   tooth_lengths = fill(2, 3)
-  #   c = named_comb_tree(tooth_lengths)
-  #   s = siteinds("S=1/2", c; conserve_qns=true)
-
-  #   os = ITensorNetworks.heisenberg(c)
-  #   H = TTN(os, s)
-
-  #   c = (2, 2)
-
-  #   #
-  #   # Using the ITensors observer system
-  #   # 
-  #   struct TDVPObserver <: AbstractObserver end
-
-  #   Nsteps = convert(Int, ceil(abs(ttotal / tau)))
-  #   Sz1 = zeros(Nsteps)
-  #   En1 = zeros(Nsteps)
-  #   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
-  #     if bond == 1 && half_sweep == 2
-  #       Sz1[sweep] = expect("Sz", psi; vertices=[c])[c]
-  #       En1[sweep] = real(inner(psi', H, psi))
-  #     end
-  #   end
-
-  #   psi1 = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
-  #   tdvp(
-  #     H,
-  #     -im * ttotal,
-  #     psi1;
-  #     time_step=-im * tau,
-  #     cutoff,
-  #     normalize=false,
-  #     (observer!)=TDVPObserver(),
-  #     root_vertex=N,
-  #   )
-
-  #   #
-  #   # Using Observers.jl
-  #   # 
-
-  #   function measure_sz(; psi, bond, half_sweep)
-  #     if bond == 1  && half_sweep == 2
-  #       return expect("Sz", psi; vertices=[c])[c]
-  #     end
-  #     return nothing
-  #   end
-
-  #   function measure_en(; psi, bond, half_sweep)
-  #     if bond == 1 && half_sweep == 2
-  #       return real(inner(psi', H, psi))
-  #     end
-  #     return nothing
-  #   end
-
-  #   obs = Observer("Sz" => measure_sz, "En" => measure_en)
-
-  #   step_measure_sz(; psi) = expect("Sz", psi; vertices=[c])[c]
-
-  #   step_measure_en(; psi) = real(inner(psi', H, psi))
-
-  #   step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
-
-  #   psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
-  #   tdvp(
-  #     H,
-  #     -im * ttotal,
-  #     psi2;
-  #     time_step=-im * tau,
-  #     cutoff,
-  #     normalize=false,
-  #     (observer!)=obs,
-  #     (step_observer!)=step_obs,
-  #     root_vertex=N,
-  #   )
-
-  #   Sz2 = results(obs)["Sz"]
-  #   En2 = results(obs)["En"]
-
-  #   Sz2_step = results(step_obs)["Sz"]
-  #   En2_step = results(step_obs)["En"]
-
-  #   @test Sz1 ≈ Sz2
-  #   @test En1 ≈ En2
-  #   @test Sz1 ≈ Sz2_step
-  #   @test En1 ≈ En2_step
-  # end  
 end
-
-nothing
+end

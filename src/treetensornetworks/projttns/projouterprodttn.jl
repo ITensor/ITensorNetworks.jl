@@ -1,3 +1,8 @@
+using DataGraphs: DataGraphs
+using Dictionaries: set!
+using ITensors: ITensor
+using NamedGraphs.GraphsExtensions: incident_edges, is_leaf_vertex
+
 struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}
   pos::Union{Vector{<:V},NamedEdge{V}}
   internal_state::TTN{V}
@@ -7,7 +12,7 @@ end
 
 environments(p::ProjOuterProdTTN) = p.environments
 operator(p::ProjOuterProdTTN) = p.operator
-underlying_graph(p::ProjOuterProdTTN) = underlying_graph(operator(p))
+DataGraphs.underlying_graph(p::ProjOuterProdTTN) = underlying_graph(operator(p))
 pos(p::ProjOuterProdTTN) = p.pos
 internal_state(p::ProjOuterProdTTN) = p.internal_state
 
@@ -20,7 +25,7 @@ function ProjOuterProdTTN(internal_state::AbstractTTN, operator::AbstractTTN)
   )
 end
 
-function copy(P::ProjOuterProdTTN)
+function Base.copy(P::ProjOuterProdTTN)
   return ProjOuterProdTTN(
     pos(P), copy(internal_state(P)), copy(operator(P)), copy(environments(P))
   )
@@ -49,7 +54,7 @@ function make_environment(P::ProjOuterProdTTN, state::AbstractTTN, e::AbstractEd
   reverse(e) ∈ incident_edges(P) || (P = invalidate_environment(P, reverse(e)))
   # do nothing if valid environment already present
   if !haskey(environments(P), e)
-    if is_leaf(underlying_graph(P), src(e))
+    if is_leaf_vertex(underlying_graph(P), src(e))
       # leaves are easy
       env = internal_state(P)[src(e)] * operator(P)[src(e)] * dag(state[src(e)])
     else
@@ -81,7 +86,7 @@ function projected_operator_tensors(P::ProjOuterProdTTN)
   environments = ITensor[environment(P, edge) for edge in incident_edges(P)]
   # manual heuristic for contraction order fixing: for each site in ProjTTN, apply up to
   # two environments, then TTN tensor, then other environments
-  itensor_map = Union{ITensor,OneITensor}[] # TODO: will a Hamiltonian TTN tensor ever be a OneITensor?
+  itensor_map = ITensor[]
   for j in sites(P)
     push!(itensor_map, internal_state(P)[j])
   end
@@ -107,7 +112,7 @@ function contract_ket(P::ProjOuterProdTTN, v::ITensor)
 end
 
 # ToDo: verify conjugation etc. with complex AbstractTTN
-function contract(P::ProjOuterProdTTN, x::ITensor)
+function NDTensors.contract(P::ProjOuterProdTTN, x::ITensor)
   ket = contract_ket(P, ITensor(one(Bool)))
   return (dag(ket) * x) * ket
 end

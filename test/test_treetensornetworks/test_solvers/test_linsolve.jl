@@ -1,7 +1,8 @@
-using ITensors
-using ITensorNetworks
-using Test
-using Random
+@eval module $(gensym())
+using ITensorNetworks: ITensorNetworks, OpSum, apply, dmrg, inner, mpo, random_mps, siteinds
+using KrylovKit: linsolve
+using Random: Random
+using Test: @test, @test_broken, @testset
 
 @testset "Linsolve" begin
   @testset "Linsolve Basics" begin
@@ -21,29 +22,22 @@ using Random
     end
     H = mpo(os, s)
 
-    states = [isodd(n) ? "Up" : "Dn" for n in 1:N]
-
-    ## Correct x is x_c
-    #x_c = random_mps(s, state; linkdims=4)
-    ## Compute b
-    #b = apply(H, x_c; cutoff)
-
-    #x0 = random_mps(s, state; linkdims=10)
-    #x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-6)
-
-    #@show norm(x - x_c)
-    #@test norm(x - x_c) < 1E-4
-
     #
     # Test complex case
     #
     Random.seed!(1234)
-    x_c =
-      random_mps(s; states, internal_inds_space=4) +
-      0.1im * random_mps(s; states, internal_inds_space=2)
+
+    ## TODO: Need to add support for `random_mps`/`random_tensornetwork` with state input.
+    ## states = [isodd(n) ? "Up" : "Dn" for n in 1:N]
+    ## x_c = random_mps(states, s; link_space=4) + 0.1im * random_mps(states, s; link_space=2)
+    x_c = random_mps(s; link_space=4) + 0.1im * random_mps(s; link_space=2)
+
     b = apply(H, x_c; alg="fit", nsweeps=3, init=x_c) #cutoff is unsupported kwarg for apply/contract
 
-    x0 = random_mps(s; states, internal_inds_space=10)
+    ## TODO: Need to add support for `random_mps`/`random_tensornetwork` with state input.
+    ## x0 = random_mps(states, s; link_space=10)
+    x0 = random_mps(s; link_space=10)
+
     x = @test_broken linsolve(
       H, b, x0; cutoff, maxdim, nsweeps, updater_kwargs=(; tol=1E-6, ishermitian=true)
     )
@@ -51,5 +45,4 @@ using Random
     # @test norm(x - x_c) < 1E-3
   end
 end
-
-nothing
+end

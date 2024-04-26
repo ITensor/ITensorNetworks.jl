@@ -1,52 +1,32 @@
-function sqrt_and_inv_sqrt(
-  A::ITensor; ishermitian=false, cutoff=nothing, regularization=nothing
-)
-  if isdiag(A)
-    A = map_diag(x -> x + regularization, A)
-    sqrtA = sqrt_diag(A)
-    inv_sqrtA = inv_diag(sqrtA)
-    return sqrtA, inv_sqrtA
-  end
-  @assert ishermitian
-  D, U = eigen(A; ishermitian, cutoff)
-  D = map_diag(x -> x + regularization, D)
-  sqrtD = sqrt_diag(D)
-  # sqrtA = U * sqrtD * prime(dag(U))
-  sqrtA = noprime(sqrtD * U)
-  inv_sqrtD = inv_diag(sqrtD)
-  # inv_sqrtA = U * inv_sqrtD * prime(dag(U))
-  inv_sqrtA = noprime(inv_sqrtD * dag(U))
-  return sqrtA, inv_sqrtA
-end
-
-function symmetric_factorize(
-  A::ITensor, inds...; (observer!)=nothing, tags="", svd_kwargs...
-)
-  if !isnothing(observer!)
-    insert_function!(observer!, "singular_values" => (; singular_values) -> singular_values)
-  end
-  U, S, V = svd(A, inds...; lefttags=tags, righttags=tags, svd_kwargs...)
-  u = commonind(S, U)
-  v = commonind(S, V)
-  sqrtS = sqrt_diag(S)
-  Fu = U * sqrtS
-  Fv = V * sqrtS
-  if hasqns(A)
-    # Hack to make a generalized (non-diagonal) `δ` tensor.
-    # TODO: Make this easier, `ITensors.δ` doesn't work here.
-    δᵤᵥ = copy(S)
-    ITensors.data(δᵤᵥ) .= true
-    Fu *= dag(δᵤᵥ)
-    S = denseblocks(S)
-    S *= prime(dag(δᵤᵥ), u)
-    S = diagblocks(S)
-  else
-    Fu = replaceinds(Fu, v => u)
-    S = replaceinds(S, v => u')
-  end
-  update!(observer!; singular_values=S)
-  return Fu, Fv
-end
+using .BaseExtensions: maybe_real
+using Graphs: has_edge
+using LinearAlgebra: qr
+using ITensors: Ops
+using ITensors:
+  ITensors,
+  Index,
+  ITensor,
+  apply,
+  commonind,
+  commoninds,
+  contract,
+  dag,
+  denseblocks,
+  factorize,
+  factorize_svd,
+  hasqns,
+  isdiag,
+  noprime,
+  prime,
+  replaceind,
+  replaceinds,
+  unioninds,
+  uniqueinds
+using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
+using ITensors.ITensorMPS: siteinds
+using KrylovKit: linsolve
+using LinearAlgebra: eigen, norm, svd
+using NamedGraphs: NamedEdge, has_edge
 
 function full_update_bp(
   o,
@@ -56,7 +36,7 @@ function full_update_bp(
   nfullupdatesweeps=10,
   print_fidelity_loss=false,
   envisposdef=false,
-  (observer!)=nothing,
+  (singular_values!)=nothing,
   symmetrize=false,
   apply_kwargs...,
 )
@@ -87,8 +67,13 @@ function full_update_bp(
     apply_kwargs...,
   )
   if symmetrize
-    Rᵥ₁, Rᵥ₂ = symmetric_factorize(
-      Rᵥ₁ * Rᵥ₂, inds(Rᵥ₁); tags=edge_tag(v⃗[1] => v⃗[2]), observer!, apply_kwargs...
+    Rᵥ₁, Rᵥ₂ = factorize_svd(
+      Rᵥ₁ * Rᵥ₂,
+      inds(Rᵥ₁);
+      ortho="none",
+      tags=edge_tag(v⃗[1] => v⃗[2]),
+      singular_values!,
+      apply_kwargs...,
     )
   end
   ψᵥ₁ = Qᵥ₁ * Rᵥ₁
@@ -96,19 +81,31 @@ function full_update_bp(
   return ψᵥ₁, ψᵥ₂
 end
 
-function simple_update_bp_full(o, ψ, v⃗; envs, (observer!)=nothing, apply_kwargs...)
+function simple_update_bp_full(o, ψ, v⃗; envs, (singular_values!)=nothing, apply_kwargs...)
   cutoff = 10 * eps(real(scalartype(ψ)))
-  regularization = 10 * eps(real(scalartype(ψ)))
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
-  sqrt_and_inv_sqrt_envs_v1 =
-    sqrt_and_inv_sqrt.(envs_v1; ishermitian=true, cutoff, regularization)
-  sqrt_and_inv_sqrt_envs_v2 =
-    sqrt_and_inv_sqrt.(envs_v2; ishermitian=true, cutoff, regularization)
-  sqrt_envs_v1 = first.(sqrt_and_inv_sqrt_envs_v1)
-  inv_sqrt_envs_v1 = last.(sqrt_and_inv_sqrt_envs_v1)
-  sqrt_envs_v2 = first.(sqrt_and_inv_sqrt_envs_v2)
-  inv_sqrt_envs_v2 = last.(sqrt_and_inv_sqrt_envs_v2)
+  @assert all(ndims(env) == 2 for env in vcat(envs_v1, envs_v2))
+  sqrt_envs_v1 = [
+    ITensorsExtensions.map_eigvals(
+      sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
+    ) for env in envs_v1
+  ]
+  sqrt_envs_v2 = [
+    ITensorsExtensions.map_eigvals(
+      sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
+    ) for env in envs_v2
+  ]
+  inv_sqrt_envs_v1 = [
+    ITensorsExtensions.map_eigvals(
+      inv ∘ sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
+    ) for env in envs_v1
+  ]
+  inv_sqrt_envs_v2 = [
+    ITensorsExtensions.map_eigvals(
+      inv ∘ sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
+    ) for env in envs_v2
+  ]
   ψᵥ₁ᵥ₂_tn = [ψ[v⃗[1]]; ψ[v⃗[2]]; sqrt_envs_v1; sqrt_envs_v2]
   ψᵥ₁ᵥ₂ = contract(ψᵥ₁ᵥ₂_tn; sequence=contraction_sequence(ψᵥ₁ᵥ₂_tn; alg="optimal"))
   oψ = apply(o, ψᵥ₁ᵥ₂)
@@ -121,32 +118,44 @@ function simple_update_bp_full(o, ψ, v⃗; envs, (observer!)=nothing, apply_kwa
   v1_inds = [v1_inds; siteinds(ψ, v⃗[1])]
   v2_inds = [v2_inds; siteinds(ψ, v⃗[2])]
   e = v⃗[1] => v⃗[2]
-  ψᵥ₁, ψᵥ₂ = symmetric_factorize(oψ, v1_inds; tags=edge_tag(e), observer!, apply_kwargs...)
+  ψᵥ₁, ψᵥ₂ = factorize_svd(
+    oψ, v1_inds; ortho="none", tags=edge_tag(e), singular_values!, apply_kwargs...
+  )
   for inv_sqrt_env_v1 in inv_sqrt_envs_v1
-    # TODO: `dag` here?
-    ψᵥ₁ *= inv_sqrt_env_v1
+    ψᵥ₁ *= dag(inv_sqrt_env_v1)
   end
   for inv_sqrt_env_v2 in inv_sqrt_envs_v2
-    # TODO: `dag` here?
-    ψᵥ₂ *= inv_sqrt_env_v2
+    ψᵥ₂ *= dag(inv_sqrt_env_v2)
   end
   return ψᵥ₁, ψᵥ₂
 end
 
 # Reduced version
-function simple_update_bp(o, ψ, v⃗; envs, (observer!)=nothing, apply_kwargs...)
+function simple_update_bp(o, ψ, v⃗; envs, (singular_values!)=nothing, apply_kwargs...)
   cutoff = 10 * eps(real(scalartype(ψ)))
-  regularization = 10 * eps(real(scalartype(ψ)))
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
-  sqrt_and_inv_sqrt_envs_v1 =
-    sqrt_and_inv_sqrt.(envs_v1; ishermitian=true, cutoff, regularization)
-  sqrt_and_inv_sqrt_envs_v2 =
-    sqrt_and_inv_sqrt.(envs_v2; ishermitian=true, cutoff, regularization)
-  sqrt_envs_v1 = first.(sqrt_and_inv_sqrt_envs_v1)
-  inv_sqrt_envs_v1 = last.(sqrt_and_inv_sqrt_envs_v1)
-  sqrt_envs_v2 = first.(sqrt_and_inv_sqrt_envs_v2)
-  inv_sqrt_envs_v2 = last.(sqrt_and_inv_sqrt_envs_v2)
+  @assert all(ndims(env) == 2 for env in vcat(envs_v1, envs_v2))
+  sqrt_envs_v1 = [
+    ITensorsExtensions.map_eigvals(
+      sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
+    ) for env in envs_v1
+  ]
+  sqrt_envs_v2 = [
+    ITensorsExtensions.map_eigvals(
+      sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
+    ) for env in envs_v2
+  ]
+  inv_sqrt_envs_v1 = [
+    ITensorsExtensions.map_eigvals(
+      inv ∘ sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
+    ) for env in envs_v1
+  ]
+  inv_sqrt_envs_v2 = [
+    ITensorsExtensions.map_eigvals(
+      inv ∘ sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian=true
+    ) for env in envs_v2
+  ]
   ψᵥ₁ = contract([ψ[v⃗[1]]; sqrt_envs_v1])
   ψᵥ₂ = contract([ψ[v⃗[2]]; sqrt_envs_v2])
   sᵥ₁ = siteinds(ψ, v⃗[1])
@@ -157,19 +166,23 @@ function simple_update_bp(o, ψ, v⃗; envs, (observer!)=nothing, apply_kwargs..
   rᵥ₂ = commoninds(Qᵥ₂, Rᵥ₂)
   oR = apply(o, Rᵥ₁ * Rᵥ₂)
   e = v⃗[1] => v⃗[2]
-  Rᵥ₁, Rᵥ₂ = symmetric_factorize(
-    oR, unioninds(rᵥ₁, sᵥ₁); tags=edge_tag(e), observer!, apply_kwargs...
+  Rᵥ₁, Rᵥ₂ = factorize_svd(
+    oR,
+    unioninds(rᵥ₁, sᵥ₁);
+    ortho="none",
+    tags=edge_tag(e),
+    singular_values!,
+    apply_kwargs...,
   )
-  # TODO: `dag` here?
-  Qᵥ₁ = contract([Qᵥ₁; inv_sqrt_envs_v1])
-  Qᵥ₂ = contract([Qᵥ₂; inv_sqrt_envs_v2])
+  Qᵥ₁ = contract([Qᵥ₁; dag.(inv_sqrt_envs_v1)])
+  Qᵥ₂ = contract([Qᵥ₂; dag.(inv_sqrt_envs_v2)])
   ψᵥ₁ = Qᵥ₁ * Rᵥ₁
   ψᵥ₂ = Qᵥ₂ * Rᵥ₂
   return ψᵥ₁, ψᵥ₂
 end
 
 function ITensors.apply(
-  o::ITensor,
+  o,
   ψ::AbstractITensorNetwork;
   envs=ITensor[],
   normalize=false,
@@ -177,7 +190,7 @@ function ITensors.apply(
   nfullupdatesweeps=10,
   print_fidelity_loss=false,
   envisposdef=false,
-  (observer!)=nothing,
+  (singular_values!)=nothing,
   variational_optimization_only=false,
   symmetrize=false,
   reduced=true,
@@ -213,15 +226,15 @@ function ITensors.apply(
         nfullupdatesweeps,
         print_fidelity_loss,
         envisposdef,
-        observer!,
+        singular_values!,
         symmetrize,
         apply_kwargs...,
       )
     else
       if reduced
-        ψᵥ₁, ψᵥ₂ = simple_update_bp(o, ψ, v⃗; envs, observer!, apply_kwargs...)
+        ψᵥ₁, ψᵥ₂ = simple_update_bp(o, ψ, v⃗; envs, singular_values!, apply_kwargs...)
       else
-        ψᵥ₁, ψᵥ₂ = simple_update_bp_full(o, ψ, v⃗; envs, observer!, apply_kwargs...)
+        ψᵥ₁, ψᵥ₂ = simple_update_bp_full(o, ψ, v⃗; envs, singular_values!, apply_kwargs...)
       end
     end
     if normalize
@@ -297,15 +310,9 @@ end
 #In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
 """Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
 Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site"""
-function vidal_apply(
-  o::Union{ITensor,NamedEdge},
-  ψ::AbstractITensorNetwork,
-  bond_tensors::DataGraph;
-  normalize=false,
-  apply_kwargs...,
-)
-  ψ = copy(ψ)
-  bond_tensors = copy(bond_tensors)
+function ITensors.apply(o, ψ::VidalITensorNetwork; normalize=false, apply_kwargs...)
+  updated_ψ = copy(site_tensors(ψ))
+  updated_bond_tensors = copy(bond_tensors(ψ))
   v⃗ = _gate_vertices(o, ψ)
   if length(v⃗) == 2
     e = NamedEdge(v⃗[1] => v⃗[2])
@@ -314,17 +321,17 @@ function vidal_apply(
 
     for vn in neighbors(ψ, src(e))
       if (vn != dst(e))
-        ψv1 = noprime(ψv1 * bond_tensors[vn => src(e)])
+        ψv1 = noprime(ψv1 * bond_tensor(ψ, vn => src(e)))
       end
     end
 
     for vn in neighbors(ψ, dst(e))
       if (vn != src(e))
-        ψv2 = noprime(ψv2 * bond_tensors[vn => dst(e)])
+        ψv2 = noprime(ψv2 * bond_tensor(ψ, vn => dst(e)))
       end
     end
 
-    Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta = _contract_gate(o, ψv1, bond_tensors[e], ψv2)
+    Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta = _contract_gate(o, ψv1, bond_tensor(ψ, e), ψv2)
 
     U, S, V = ITensors.svd(
       theta,
@@ -339,34 +346,34 @@ function vidal_apply(
     S = replaceind(S, ind_to_replace => ind_to_replace_with')
     V = replaceind(V, ind_to_replace => ind_to_replace_with)
 
-    ψv1, bond_tensors[e], ψv2 = U * Qᵥ₁, S, V * Qᵥ₂
+    ψv1, updated_bond_tensors[e], ψv2 = U * Qᵥ₁, S, V * Qᵥ₂
 
     for vn in neighbors(ψ, src(e))
       if (vn != dst(e))
-        ψv1 = noprime(ψv1 * inv_diag(bond_tensors[vn => src(e)]))
+        ψv1 = noprime(ψv1 * ITensorsExtensions.inv_diag(bond_tensor(ψ, vn => src(e))))
       end
     end
 
     for vn in neighbors(ψ, dst(e))
       if (vn != src(e))
-        ψv2 = noprime(ψv2 * inv_diag(bond_tensors[vn => dst(e)]))
+        ψv2 = noprime(ψv2 * ITensorsExtensions.inv_diag(bond_tensor(ψ, vn => dst(e))))
       end
     end
 
     if normalize
       ψv1 /= norm(ψv1)
       ψv2 /= norm(ψv2)
-      normalize!(bond_tensors[e])
+      updated_bond_tensors[e] /= norm(updated_bond_tensors[e])
     end
 
-    setindex_preserve_graph!(ψ, ψv1, src(e))
-    setindex_preserve_graph!(ψ, ψv2, dst(e))
+    setindex_preserve_graph!(updated_ψ, ψv1, src(e))
+    setindex_preserve_graph!(updated_ψ, ψv2, dst(e))
 
-    return ψ, bond_tensors
+    return VidalITensorNetwork(updated_ψ, updated_bond_tensors)
 
   else
-    ψ = ITensors.apply(o, ψ; normalize)
-    return ψ, bond_tensors
+    updated_ψ = apply(o, updated_ψ; normalize)
+    return VidalITensorNetwork(ψ, updated_bond_tensors)
   end
 end
 
@@ -395,9 +402,7 @@ function fidelity(
     ],
     envs,
   )
-  term1 = ITensors.contract(
-    term1_tns; sequence=ITensors.optimal_contraction_sequence(term1_tns)
-  )
+  term1 = ITensors.contract(term1_tns; sequence=optimal_contraction_sequence(term1_tns))
 
   term2_tns = vcat(
     [
@@ -408,13 +413,9 @@ function fidelity(
     ],
     envs,
   )
-  term2 = ITensors.contract(
-    term2_tns; sequence=ITensors.optimal_contraction_sequence(term2_tns)
-  )
+  term2 = ITensors.contract(term2_tns; sequence=optimal_contraction_sequence(term2_tns))
   term3_tns = vcat([p_prev, q_prev, prime(dag(p_cur)), prime(dag(q_cur)), gate], envs)
-  term3 = ITensors.contract(
-    term3_tns; sequence=ITensors.optimal_contraction_sequence(term3_tns)
-  )
+  term3 = ITensors.contract(term3_tns; sequence=optimal_contraction_sequence(term3_tns))
 
   f = term3[] / sqrt(term1[] * term2[])
   return f * conj(f)
@@ -441,16 +442,14 @@ function optimise_p_q(
   qs_ind = setdiff(inds(q_cur), collect(Iterators.flatten(inds.(vcat(envs, p_cur)))))
   ps_ind = setdiff(inds(p_cur), collect(Iterators.flatten(inds.(vcat(envs, q_cur)))))
 
-  opt_b_seq = ITensors.optimal_contraction_sequence(
-    vcat(ITensor[p, q, o, dag(prime(q_cur))], envs)
-  )
-  opt_b_tilde_seq = ITensors.optimal_contraction_sequence(
+  opt_b_seq = optimal_contraction_sequence(vcat(ITensor[p, q, o, dag(prime(q_cur))], envs))
+  opt_b_tilde_seq = optimal_contraction_sequence(
     vcat(ITensor[p, q, o, dag(prime(p_cur))], envs)
   )
-  opt_M_seq = ITensors.optimal_contraction_sequence(
+  opt_M_seq = optimal_contraction_sequence(
     vcat(ITensor[q_cur, replaceinds(prime(dag(q_cur)), prime(qs_ind), qs_ind), p_cur], envs)
   )
-  opt_M_tilde_seq = ITensors.optimal_contraction_sequence(
+  opt_M_tilde_seq = optimal_contraction_sequence(
     vcat(ITensor[p_cur, replaceinds(prime(dag(p_cur)), prime(ps_ind), ps_ind), q_cur], envs)
   )
 

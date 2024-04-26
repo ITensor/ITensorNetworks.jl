@@ -1,22 +1,33 @@
+using DataGraphs: DataGraphs, underlying_graph
+using Dictionaries: Dictionary, Indices
+using Graphs: edgetype, vertices
+using ITensors: ITensor
+using NamedGraphs: NamedEdge
+using NamedGraphs.GraphsExtensions: incident_edges, is_leaf_vertex
+
 """
 ProjTTN
 """
-struct ProjTTN{V} <: AbstractProjTTN{V}
-  pos::Union{Vector{<:V},NamedEdge{V}} # TODO: cleanest way to specify effective Hamiltonian position?
+struct ProjTTN{V,Pos<:Union{Indices{V},NamedEdge{V}}} <: AbstractProjTTN{V}
+  pos::Pos
   operator::TTN{V}
   environments::Dictionary{NamedEdge{V},ITensor}
+end
+
+function ProjTTN(pos, operator::TTN, environments::Dictionary)
+  return ProjTTN(Indices(pos), operator, environments)
 end
 
 function ProjTTN(operator::TTN)
   return ProjTTN(vertices(operator), operator, Dictionary{edgetype(operator),ITensor}())
 end
 
-copy(P::ProjTTN) = ProjTTN(pos(P), copy(operator(P)), copy(environments(P)))
+Base.copy(P::ProjTTN) = ProjTTN(pos(P), copy(operator(P)), copy(environments(P)))
 
 #accessors for fields
 environments(p::ProjTTN) = p.environments
 operator(p::ProjTTN) = p.operator
-underlying_graph(P::ProjTTN) = underlying_graph(operator(P))
+DataGraphs.underlying_graph(P::ProjTTN) = underlying_graph(operator(P))
 pos(P::ProjTTN) = P.pos
 
 # trivial if we choose to specify position as above; only kept to allow using alongside
@@ -41,7 +52,7 @@ function make_environment(P::ProjTTN, state::AbstractTTN, e::AbstractEdge)
   reverse(e) ∈ incident_edges(P) || (P = invalidate_environment(P, reverse(e)))
   # do nothing if valid environment already present
   if !haskey(environments(P), e)
-    if is_leaf(underlying_graph(P), src(e))
+    if is_leaf_vertex(underlying_graph(P), src(e))
       # leaves are easy
       env = state[src(e)] * operator(P)[src(e)] * dag(prime(state[src(e)]))
     else
@@ -76,7 +87,7 @@ function projected_operator_tensors(P::ProjTTN)
   if on_edge(P)
     itensor_map = environments
   else
-    itensor_map = Union{ITensor,OneITensor}[] # TODO: will a Hamiltonian TTN tensor ever be a OneITensor?
+    itensor_map = ITensor[]
     for s in sites(P)
       site_envs = filter(hascommoninds(operator(P)[s]), environments)
       frst, scnd, rst = _separate_first_two(site_envs)

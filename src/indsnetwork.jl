@@ -1,16 +1,27 @@
+using DataGraphs: DataGraphs, DataGraph, IsUnderlyingGraph, map_data, vertex_data
+using Dictionaries: AbstractDictionary, Dictionary, Indices
+using Graphs: Graphs
+using Graphs.SimpleGraphs: AbstractSimpleGraph
+using ITensors: Index, QN, dag
+using .ITensorsExtensions: ITensorsExtensions, indtype
+using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph
+using NamedGraphs.GraphsExtensions: vertextype
+using NamedGraphs.NamedGraphGenerators: named_path_graph
+using SimpleTraits: SimpleTraits, Not, @traitfn
+
 struct IndsNetwork{V,I} <: AbstractIndsNetwork{V,I}
   data_graph::DataGraph{V,Vector{I},Vector{I},NamedGraph{V},NamedEdge{V}}
   global function _IndsNetwork(V::Type, I::Type, g::DataGraph)
     return new{V,I}(g)
   end
 end
-indtype(inds_network::IndsNetwork) = indtype(typeof(inds_network))
-indtype(::Type{<:IndsNetwork{V,I}}) where {V,I} = I
+ITensorsExtensions.indtype(inds_network::IndsNetwork) = indtype(typeof(inds_network))
+ITensorsExtensions.indtype(::Type{<:IndsNetwork{V,I}}) where {V,I} = I
 data_graph(is::IndsNetwork) = is.data_graph
-underlying_graph(is::IndsNetwork) = underlying_graph(data_graph(is))
-vertextype(::Type{<:IndsNetwork{V}}) where {V} = V
-underlying_graph_type(G::Type{<:IndsNetwork}) = NamedGraph{vertextype(G)}
-is_directed(::Type{<:IndsNetwork}) = false
+DataGraphs.underlying_graph(is::IndsNetwork) = underlying_graph(data_graph(is))
+NamedGraphs.vertextype(::Type{<:IndsNetwork{V}}) where {V} = V
+DataGraphs.underlying_graph_type(G::Type{<:IndsNetwork}) = NamedGraph{vertextype(G)}
+Graphs.is_directed(::Type{<:IndsNetwork}) = false
 
 #
 # Constructor
@@ -18,7 +29,7 @@ is_directed(::Type{<:IndsNetwork}) = false
 
 # When setting an edge with collections of `Index`, set the reverse direction
 # edge with the `dag`.
-function reverse_data_direction(
+function DataGraphs.reverse_data_direction(
   inds_network::IndsNetwork, is::Union{Index,Tuple{Vararg{Index}},Vector{<:Index}}
 )
   return dag(is)
@@ -67,7 +78,7 @@ function IndsNetwork{V,I}(
   link_space::Dictionary{<:Any,<:Vector{<:Index}},
   site_space::Dictionary{<:Any,<:Vector{<:Index}},
 ) where {V,I}
-  dg = DataGraph{V,Vector{I},Vector{I}}(g)
+  dg = DataGraph{V}(g; vertex_data_eltype=Vector{I}, edge_data_eltype=Vector{I})
   for e in keys(link_space)
     dg[e] = link_space[e]
   end
@@ -99,29 +110,6 @@ end
 function path_indsnetwork(external_inds::Vector{<:Index})
   return path_indsnetwork(map(i -> [i], external_inds))
 end
-
-# TODO: Replace with a trait of the same name.
-const IsIndexSpace = Union{<:Integer,Vector{<:Pair{QN,<:Integer}}}
-
-# Infer the `Index` type of an `IndsNetwork` from the
-# spaces that get input.
-indtype(link_space::Nothing, site_space::Nothing) = Index
-indtype(link_space::Nothing, site_space) = indtype(site_space)
-indtype(link_space, site_space::Nothing) = indtype(link_space)
-indtype(link_space, site_space) = promote_type(indtype(link_space), indtype(site_space))
-
-# Default to type space
-indtype(space) = _indtype(typeof(space))
-
-# Base case
-# Use `_indtype` to avoid recursion overflow
-_indtype(T::Type{<:Index}) = T
-_indtype(T::Type{<:IsIndexSpace}) = Index{T}
-_indtype(::Type{Nothing}) = Index
-
-# Containers
-_indtype(T::Type{<:AbstractDictionary}) = _indtype(eltype(T))
-_indtype(T::Type{<:AbstractVector}) = _indtype(eltype(T))
 
 @traitfn function default_link_space(V::Type, g::::IsUnderlyingGraph)
   # TODO: Convert `g` to vertex type `V`
@@ -300,7 +288,7 @@ end
 # Utility
 #
 
-copy(is::IndsNetwork) = IndsNetwork(copy(data_graph(is)))
+Base.copy(is::IndsNetwork) = IndsNetwork(copy(data_graph(is)))
 
 function map_inds(f, is::IndsNetwork, args...; sites=nothing, links=nothing, kwargs...)
   return map_data(i -> f(i, args...; kwargs...), is; vertices=sites, edges=links)
@@ -310,6 +298,10 @@ end
 # Visualization
 #
 
-function visualize(is::IndsNetwork, args...; kwargs...)
+# TODO: Move to an `ITensorNetworksVisualizationInterfaceExt`
+# package extension (and define a `VisualizationInterface` package
+# based on `ITensorVisualizationCore`.).
+using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
+function ITensorVisualizationCore.visualize(is::IndsNetwork, args...; kwargs...)
   return visualize(ITensorNetwork(is), args...; kwargs...)
 end

@@ -1,6 +1,23 @@
-using ITensors
+@eval module $(gensym())
+using Graphs: dfs_tree, nv, vertices
+# Trigger package extension.
+using GraphsFlows: GraphsFlows
+using ITensors: Index, ITensor, delta, noncommoninds, randomITensor
 using ITensorNetworks:
-  _contract_deltas, _contract_deltas_ignore_leaf_partitions, _noncommoninds, _root
+  IndsNetwork,
+  ITensorNetwork,
+  _contract_deltas,
+  _contract_deltas_ignore_leaf_partitions,
+  _noncommoninds,
+  _partition,
+  binary_tree_structure,
+  eachtensor,
+  flatten_siteinds,
+  path_graph_structure,
+  random_tensornetwork
+using NamedGraphs.GraphsExtensions: leaf_vertices, root_vertex
+using NamedGraphs.NamedGraphGenerators: named_grid
+using Test: @test, @testset
 
 @testset "test _contract_deltas with no deltas" begin
   i = Index(2, "i")
@@ -18,14 +35,13 @@ end
   tn = ITensorNetwork([a, b, delta1, delta2])
   tn2 = _contract_deltas(tn)
   @test nv(tn2) == 3
-  @test Set(noncommoninds(Vector{ITensor}(tn)...)) ==
-    Set(noncommoninds(Vector{ITensor}(tn2)...))
+  @test issetequal(flatten_siteinds(tn), flatten_siteinds(tn2))
 end
 
 @testset "test _contract_deltas over partition" begin
   N = (3, 3, 3)
   linkdim = 2
-  network = randomITensorNetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  network = random_tensornetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
   tn = Array{ITensor,length(N)}(undef, N...)
   for v in vertices(network)
     tn[v...] = network[v...]
@@ -33,7 +49,7 @@ end
   tn = ITensorNetwork(vec(tn[:, :, 1]))
   for inds_tree in [binary_tree_structure(tn), path_graph_structure(tn)]
     par = _partition(tn, inds_tree; alg="mincut_recursive_bisection")
-    root = _root(inds_tree)
+    root = root_vertex(inds_tree)
     par_contract_deltas = _contract_deltas_ignore_leaf_partitions(par; root=root)
     @test Set(_noncommoninds(par)) == Set(_noncommoninds(par_contract_deltas))
     leaves = leaf_vertices(dfs_tree(par_contract_deltas, root))
@@ -43,4 +59,5 @@ end
     # remaining tensors are all non-delta tensors
     @test nvs == 9
   end
+end
 end

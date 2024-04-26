@@ -1,6 +1,7 @@
-using Test
-using Glob
-using ITensorNetworks
+@eval module $(gensym())
+using Test: @test, @testset
+using Glob: Glob
+using ITensorNetworks: ITensorNetworks
 
 # https://discourse.julialang.org/t/rdir-search-recursive-for-files-with-a-given-name-pattern/75605/12
 @testset "ITensorNetworks.jl, test directory $root" for (root, dirs, files) in walkdir(
@@ -12,5 +13,4 @@ using ITensorNetworks
     @time include(joinpath(root, test_file))
   end
 end
-
-nothing
+end

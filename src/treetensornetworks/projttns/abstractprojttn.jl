@@ -1,12 +1,19 @@
+using DataGraphs: DataGraphs, underlying_graph
+using Graphs: neighbors
+using ITensors: ITensor, contract, order, product
+using ITensors.ITensorMPS: ITensorMPS, nsite
+using NamedGraphs: NamedGraphs, NamedEdge, vertextype
+using NamedGraphs.GraphsExtensions: incident_edges
+
 abstract type AbstractProjTTN{V} end
 
 environments(::AbstractProjTTN) = error("Not implemented")
 operator(::AbstractProjTTN) = error("Not implemented")
 pos(::AbstractProjTTN) = error("Not implemented")
 
-underlying_graph(P::AbstractProjTTN) = error("Not implemented")
+DataGraphs.underlying_graph(P::AbstractProjTTN) = error("Not implemented")
 
-copy(::AbstractProjTTN) = error("Not implemented")
+Base.copy(::AbstractProjTTN) = error("Not implemented")
 
 set_nsite(::AbstractProjTTN, nsite) = error("Not implemented")
 
@@ -22,14 +29,14 @@ Graphs.edgetype(P::AbstractProjTTN) = edgetype(underlying_graph(P))
 
 on_edge(P::AbstractProjTTN) = isa(pos(P), edgetype(P))
 
-nsite(P::AbstractProjTTN) = on_edge(P) ? 0 : length(pos(P))
+ITensorMPS.nsite(P::AbstractProjTTN) = on_edge(P) ? 0 : length(pos(P))
 
 function sites(P::AbstractProjTTN{V}) where {V}
   on_edge(P) && return V[]
   return pos(P)
 end
 
-function incident_edges(P::AbstractProjTTN{V})::Vector{NamedEdge{V}} where {V}
+function NamedGraphs.incident_edges(P::AbstractProjTTN{V}) where {V}
   on_edge(P) && return [pos(P), reverse(pos(P))]
   edges = [
     [edgetype(P)(n => v) for n in setdiff(neighbors(underlying_graph(P), v), sites(P))] for
@@ -38,7 +45,7 @@ function incident_edges(P::AbstractProjTTN{V})::Vector{NamedEdge{V}} where {V}
   return collect(Base.Iterators.flatten(edges))
 end
 
-function internal_edges(P::AbstractProjTTN{V})::Vector{NamedEdge{V}} where {V}
+function internal_edges(P::AbstractProjTTN{V}) where {V}
   on_edge(P) && return edgetype(P)[]
   edges = [
     [edgetype(P)(v => n) for n in neighbors(underlying_graph(P), v) ∩ sites(P)] for
@@ -67,11 +74,11 @@ end
 
 projected_operator_tensors(P::AbstractProjTTN) = error("Not implemented.")
 
-function contract(P::AbstractProjTTN, v::ITensor)
+function NDTensors.contract(P::AbstractProjTTN, v::ITensor)
   return foldl(*, projected_operator_tensors(P); init=v)
 end
 
-function product(P::AbstractProjTTN, v::ITensor)
+function ITensors.product(P::AbstractProjTTN, v::ITensor)
   Pv = contract(P, v)
   if order(Pv) != order(v)
     error(
@@ -101,8 +108,8 @@ function Base.eltype(P::AbstractProjTTN)::Type
   return ElType
 end
 
-vertextype(::Type{<:AbstractProjTTN{V}}) where {V} = V
-vertextype(p::AbstractProjTTN) = vertextype(typeof(p))
+NamedGraphs.vertextype(::Type{<:AbstractProjTTN{V}}) where {V} = V
+NamedGraphs.vertextype(p::AbstractProjTTN) = vertextype(typeof(p))
 
 function Base.size(P::AbstractProjTTN)::Tuple{Int,Int}
   d = 1
@@ -129,13 +136,14 @@ end
 function invalidate_environments(P::AbstractProjTTN)
   ie = internal_edges(P)
   newenvskeys = filter(!in(ie), keys(environments(P)))
-  P = set_environments(P, getindices(environments(P), newenvskeys))
+  P = set_environments(P, getindices_narrow_keytype(environments(P), newenvskeys))
   return P
 end
 
 function invalidate_environment(P::AbstractProjTTN, e::AbstractEdge)
+  T = typeof(environments(P))
   newenvskeys = filter(!isequal(e), keys(environments(P)))
-  P = set_environments(P, getindices(environments(P), newenvskeys))
+  P = set_environments(P, getindices_narrow_keytype(environments(P), newenvskeys))
   return P
 end
 

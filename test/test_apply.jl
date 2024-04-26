@@ -1,49 +1,51 @@
-using ITensorNetworks
+@eval module $(gensym())
+using Compat: Compat
+using Graphs: vertices
 using ITensorNetworks:
-  belief_propagation,
-  environment_tensors,
-  contract_inner,
-  vidal_gauge,
-  vidal_apply,
-  vidal_to_symmetric_gauge,
-  norm_network
-using Test
-using Compat
-using ITensors
-using Metis
-using NamedGraphs
-using Random
-using LinearAlgebra
-using SplitApplyCombine
+  BeliefPropagationCache,
+  ITensorNetwork,
+  VidalITensorNetwork,
+  apply,
+  environment,
+  norm_sqr_network,
+  random_tensornetwork,
+  siteinds,
+  update
+using ITensors: ITensors, inner, op
+using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs.PartitionedGraphs: PartitionVertex
+using Random: Random
+using SplitApplyCombine: group
+using Test: @test, @testset
 
 @testset "apply" begin
   Random.seed!(5623)
-  g_dims = (2, 3)
+  g_dims = (2, 2)
   n = prod(g_dims)
   g = named_grid(g_dims)
   s = siteinds("S=1/2", g)
   χ = 2
-  ψ = randomITensorNetwork(s; link_space=χ)
+  ψ = random_tensornetwork(s; link_space=χ)
   v1, v2 = (2, 2), (1, 2)
-
-  ψψ = norm_network(ψ)
-
+  ψψ = norm_sqr_network(ψ)
   #Simple Belief Propagation Grouping
-  pψψ_SBP = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
-  mtsSBP = belief_propagation(pψψ_SBP; niters=20)
-  envsSBP = environment_tensors(pψψ_SBP, mtsSBP, PartitionVertex.([v1, v2]))
+  bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+  bp_cache = update(bp_cache; maxiter=20)
+  envsSBP = environment(bp_cache, PartitionVertex.([v1, v2]))
 
-  ψ_vidal, bond_tensors = vidal_gauge(ψ, pψψ_SBP, mtsSBP)
+  ψv = VidalITensorNetwork(ψ)
 
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
-  pψψ_GBP = PartitionedGraph(ψψ, group(v -> v[1][1], vertices(ψψ)))
-  mtsGBP = belief_propagation(pψψ_GBP; niters=20)
-  envsGBP = environment_tensors(pψψ_GBP, mtsGBP, [(v1, 1), (v1, 2), (v2, 1), (v2, 2)])
+  bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
+  bp_cache = update(bp_cache; maxiter=20)
+  envsGBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
+
+  inner_alg = "exact"
 
   ngates = 5
 
   for i in 1:ngates
-    o = ITensors.op("RandomUnitary", s[v1]..., s[v2]...)
+    o = op("RandomUnitary", s[v1]..., s[v2]...)
 
     ψOexact = apply(o, ψ; cutoff=1e-16)
     ψOSBP = apply(
@@ -55,10 +57,8 @@ using SplitApplyCombine
       print_fidelity_loss=true,
       envisposdef=true,
     )
-    ψOVidal, bond_tensors_t = vidal_apply(
-      o, ψ_vidal, bond_tensors; maxdim=χ, normalize=true
-    )
-    ψOVidal_symm, _ = vidal_to_symmetric_gauge(ψOVidal, bond_tensors_t)
+    ψOv = apply(o, ψv; maxdim=χ, normalize=true)
+    ψOVidal_symm = ITensorNetwork(ψOv)
     ψOGBP = apply(
       o,
       ψ;
@@ -69,17 +69,20 @@ using SplitApplyCombine
       envisposdef=true,
     )
     fSBP =
-      contract_inner(ψOSBP, ψOexact) /
-      sqrt(contract_inner(ψOexact, ψOexact) * contract_inner(ψOSBP, ψOSBP))
+      inner(ψOSBP, ψOexact; alg=inner_alg) /
+      sqrt(inner(ψOexact, ψOexact; alg=inner_alg) * inner(ψOSBP, ψOSBP; alg=inner_alg))
     fVidal =
-      contract_inner(ψOVidal_symm, ψOexact) /
-      sqrt(contract_inner(ψOexact, ψOexact) * contract_inner(ψOVidal_symm, ψOVidal_symm))
+      inner(ψOVidal_symm, ψOexact; alg=inner_alg) / sqrt(
+        inner(ψOexact, ψOexact; alg=inner_alg) *
+        inner(ψOVidal_symm, ψOVidal_symm; alg=inner_alg),
+      )
     fGBP =
-      contract_inner(ψOGBP, ψOexact) /
-      sqrt(contract_inner(ψOexact, ψOexact) * contract_inner(ψOGBP, ψOGBP))
+      inner(ψOGBP, ψOexact; alg=inner_alg) /
+      sqrt(inner(ψOexact, ψOexact; alg=inner_alg) * inner(ψOGBP, ψOGBP; alg=inner_alg))
 
     @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
 
     @test isapprox(real(fSBP * conj(fSBP)), real(fVidal * conj(fVidal)); atol=1e-3)
   end
+end
 end
