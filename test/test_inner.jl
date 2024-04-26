@@ -1,8 +1,7 @@
 @eval module $(gensym())
-using Test
-using ITensorNetworks
 
 using ITensorNetworks:
+  ITensorNetwork,
   inner,
   inner_network,
   loginner,
@@ -17,6 +16,7 @@ using SplitApplyCombine: group
 using Graphs: SimpleGraph, uniform_tree
 using NamedGraphs: NamedGraph
 using Random: Random
+using Test: @test, @testset
 
 @testset "Inner products, BP vs exact comparison" begin
   Random.seed!(1234)

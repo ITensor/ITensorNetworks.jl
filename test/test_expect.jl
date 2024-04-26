@@ -1,15 +1,19 @@
 @eval module $(gensym())
-using Test
-using ITensorNetworks
 
 using Graphs: SimpleGraph, uniform_tree
 using NamedGraphs: NamedGraph, vertices
 using NamedGraphs.NamedGraphGenerators: named_grid
 using ITensors: siteinds
 using ITensorNetworks:
-  BeliefPropagationCache, expect, random_tensornetwork, original_state_vertex
+  BeliefPropagationCache,
+  ITensorNetwork,
+  expect,
+  random_tensornetwork,
+  original_state_vertex
 using Random: Random
 using SplitApplyCombine: group
+
+using Test: @test, @testset
 
 @testset "Test Expect" begin
   Random.seed!(1234)
@@ -37,7 +41,6 @@ using SplitApplyCombine: group
   @test sz_bp ≈ sz_exact
 
   #Test with QNS, product state so should be immediately exact
-  #TODO: Fix Construct TN with QNS that's got a bond dimension bigger than 1. Add() is broken...
   L, χ = 2, 2
   g = named_grid((L, L))
   s = siteinds("S=1/2", g; conserve_qns=true)
