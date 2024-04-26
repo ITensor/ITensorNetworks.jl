@@ -1,8 +1,9 @@
-using NamedGraphs: vertex_to_parent_vertex
 using ITensors: ITensor, scalar
 using ITensors.ContractionSequenceOptimization: deepmap
 using ITensors.NDTensors: NDTensors, Algorithm, @Algorithm_str, contract
 using LinearAlgebra: normalize!
+using NamedGraphs: NamedGraphs
+using NamedGraphs.OrdinalIndexing: th
 
 function NDTensors.contract(tn::AbstractITensorNetwork; alg="exact", kwargs...)
   return contract(Algorithm(alg), tn; kwargs...)
@@ -15,10 +16,8 @@ function NDTensors.contract(
   sequence=contraction_sequence(tn; contraction_sequence_kwargs...),
   kwargs...,
 )
-  # TODO: Use `vertex`.
-  sequence_linear_index = deepmap(v -> vertex_to_parent_vertex(tn, v), sequence)
-  # TODO: Use `tokenized_vertex`.
-  ts = map(pv -> tn[parent_vertex_to_vertex(tn, pv)], 1:nv(tn))
+  sequence_linear_index = deepmap(v -> NamedGraphs.vertex_positions(tn)[v], sequence)
+  ts = map(v -> tn[v], (1:nv(tn))th)
   return contract(ts; sequence=sequence_linear_index, kwargs...)
 end
 
