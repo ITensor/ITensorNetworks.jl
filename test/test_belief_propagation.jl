@@ -70,8 +70,10 @@ using Test: @test, @testset
   rdm = array((rdm * combiner(inds(rdm; plev=0)...)) * combiner(inds(rdm; plev=1)...))
   rdm /= tr(rdm)
 
-  eigs = Float64.(eigvals(rdm))
+  eigs = eigvals(rdm)
   @test size(rdm) == (2^length(vs), 2^length(vs))
-  @test minimum(eigs) >= -eps(typeof(minimum(eigs)))
+
+  @test all(eig -> imag(eig) ≈ 0, eigs)
+  @test all(eig -> real(eig) >= -eps(eltype(eig)), eigs)
 end
 end
