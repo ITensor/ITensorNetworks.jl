@@ -584,32 +584,6 @@ function ttn(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
   return NDTensors.convert_scalartype(eltype, ttn(os, sites; kwargs...))
 end
 
-# 
-# Tree adaptation of functionalities in ITensors.jl/src/physics/autompo/matelem.jl
-# 
-
-#################################
-# ArrElem (simple sparse array) #
-#################################
-
-struct ArrElem{T,N}
-  idxs::MVector{N,Int}
-  val::T
-end
-
-function Base.:(==)(a1::ArrElem{T,N}, a2::ArrElem{T,N})::Bool where {T,N}
-  return (a1.idxs == a2.idxs && a1.val == a2.val)
-end
-
-function Base.isless(a1::ArrElem{T,N}, a2::ArrElem{T,N})::Bool where {T,N}
-  for n in 1:N
-    if a1.idxs[n] != a2.idxs[n]
-      return a1.idxs[n] < a2.idxs[n]
-    end
-  end
-  return a1.val < a2.val
-end
-
 #####################################
 # QNArrElem (sparse array with QNs) #
 #####################################
