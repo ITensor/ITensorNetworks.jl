@@ -9,7 +9,7 @@ function ITensorMPS.expect(ψIψ::AbstractFormNetwork, op::Op; contract_kwargs=(
   ψIψ_v = ψIψ[operator_vertex(ψIψ, v)]
   s = commonind(ψIψ[ket_vertex(ψIψ, v)], ψIψ_v)
   operator = ITensors.op(op.which_op, s)
-  ∂ψIψ_∂v = environment(ψIψ, [v]; vertex_mapping_function=operator_vertices, kwargs...)
+  ∂ψIψ_∂v = environment(ψIψ, operator_vertices(ψIψ, [v]); kwargs...)
   numerator = contract(vcat(∂ψIψ_∂v, operator); contract_kwargs...)[]
   denominator = contract(vcat(∂ψIψ_∂v, ψIψ_v); contract_kwargs...)[]
 

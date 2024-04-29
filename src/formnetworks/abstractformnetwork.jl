@@ -72,24 +72,6 @@ function operator_network(f::AbstractFormNetwork)
   )
 end
 
-function environment(
-  f::AbstractFormNetwork,
-  original_vertices::Vector;
-  vertex_mapping_function=state_vertices,
-  alg=default_environment_algorithm(),
-  kwargs...,
-)
-  form_vertices = vertex_mapping_function(f, original_vertices)
-  if alg == "bp"
-    partitioned_vertices = group(v -> original_state_vertex(f, v), vertices(f))
-    return environment(
-      tensornetwork(f), form_vertices; alg, partitioned_vertices, kwargs...
-    )
-  else
-    return environment(tensornetwork(f), form_vertices; alg, kwargs...)
-  end
-end
-
 operator_vertex_map(f::AbstractFormNetwork) = v -> (v, operator_vertex_suffix(f))
 bra_vertex_map(f::AbstractFormNetwork) = v -> (v, bra_vertex_suffix(f))
 ket_vertex_map(f::AbstractFormNetwork) = v -> (v, ket_vertex_suffix(f))
