@@ -14,7 +14,7 @@ struct ProjTTN{V,Pos<:Union{Indices{V},NamedEdge{V}}} <: AbstractProjTTN{V}
   environments::Dictionary{NamedEdge{V},ITensor}
 end
 
-function ProjTTN(pos::Vector, operator::TTN, environments::Dictionary)
+function ProjTTN(pos, operator::TTN, environments::Dictionary)
   return ProjTTN(Indices(pos), operator, environments)
 end
 

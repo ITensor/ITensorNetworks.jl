@@ -1,9 +1,7 @@
-# TODO: Move to `ITensorNetworksITensors.ITensorVisualizationCoreExt`.
-using DataGraphs: AbstractDataGraph, underlying_graph
+# TODO: Move to `NamedGraphsITensorVisualizationCoreExt`.
 using Graphs: vertices
-using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-using NamedGraphs: AbstractNamedGraph, parent_graph
-
+using NamedGraphs: NamedGraphs, AbstractNamedGraph
+using ITensors.ITensorVisualizationCore: ITensorVisualizationCore
 function ITensorVisualizationCore.visualize(
   graph::AbstractNamedGraph,
   args...;
@@ -15,9 +13,16 @@ function ITensorVisualizationCore.visualize(
     vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(graph)]
   end
   #edge_labels = [string(e) for e in edges(graph)]
-  return visualize(parent_graph(graph), args...; vertex_labels, kwargs...)
+  return ITensorVisualizationCore.visualize(
+    NamedGraphs.position_graph(graph), args...; vertex_labels, kwargs...
+  )
 end
 
+# TODO: Move to `DataGraphsITensorVisualizationCoreExt`.
+using DataGraphs: DataGraphs, AbstractDataGraph
+using ITensors.ITensorVisualizationCore: ITensorVisualizationCore
 function ITensorVisualizationCore.visualize(graph::AbstractDataGraph, args...; kwargs...)
-  return visualize(underlying_graph(graph), args...; kwargs...)
+  return ITensorVisualizationCore.visualize(
+    DataGraphs.underlying_graph(graph), args...; kwargs...
+  )
 end

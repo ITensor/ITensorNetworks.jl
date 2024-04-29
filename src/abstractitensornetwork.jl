@@ -39,8 +39,7 @@ using ITensors:
 using ITensors.ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using LinearAlgebra: LinearAlgebra, factorize
-using NamedGraphs:
-  NamedGraphs, NamedGraph, not_implemented, parent_vertex_to_vertex, vertex_to_parent_vertex
+using NamedGraphs: NamedGraphs, NamedGraph, not_implemented
 using NamedGraphs.GraphsExtensions:
   ⊔, directed_graph, incident_edges, rename_vertices, vertextype
 using NDTensors: NDTensors, dim
@@ -94,11 +93,11 @@ function DataGraphs.edge_data(graph::AbstractITensorNetwork, args...)
 end
 
 DataGraphs.underlying_graph(tn::AbstractITensorNetwork) = underlying_graph(data_graph(tn))
-function NamedGraphs.vertex_to_parent_vertex(tn::AbstractITensorNetwork, vertex)
-  return vertex_to_parent_vertex(underlying_graph(tn), vertex)
+function NamedGraphs.vertex_positions(tn::AbstractITensorNetwork)
+  return NamedGraphs.vertex_positions(underlying_graph(tn))
 end
-function NamedGraphs.parent_vertex_to_vertex(tn::AbstractITensorNetwork, parent_vertex)
-  return parent_vertex_to_vertex(underlying_graph(tn), parent_vertex)
+function NamedGraphs.ordered_vertices(tn::AbstractITensorNetwork)
+  return NamedGraphs.ordered_vertices(underlying_graph(tn))
 end
 
 #
