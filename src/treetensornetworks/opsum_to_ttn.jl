@@ -8,8 +8,6 @@ using NamedGraphs.GraphsExtensions:
   GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
 using StaticArrays: MVector
 
-# convert ITensors.OpSum to TreeTensorNetwork
-
 # 
 # Utility methods
 # 
@@ -455,17 +453,10 @@ function _default_edge_ordering(g::AbstractGraph, root_vertex)
   return reverse(reverse.(post_order_dfs_edges(g, root_vertex)))
 end
 
-# This is almost an exact copy of ITensors/src/opsum_to_mpo_generic:sorteachterm except for the site ordering being
-# given via find_index_in_tree
-# changed `isless_site` to use tree vertex ordering relative to root
-function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) where {V}
+# This is almost an exact copy of ITensors/src/opsum_to_mpo_generic:sorteachterm 
+function sorteachterm(os::OpSum, sites; lt=isless)
   os = copy(os)
 
-  # linear ordering of vertices in tree graph relative to chosen root, chosen outward from root
-  ordering = _default_vertex_ordering(sites, root_vertex)
-  site_positions = Dict(zip(ordering, 1:length(ordering)))
-  findpos(op::Op) = site_positions[ITensors.site(op)]
-  isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
   N = nv(sites)
   for n in eachindex(os)
     t = os[n]
@@ -484,9 +475,11 @@ function sorteachterm(os::OpSum, sites::IndsNetwork{V,<:Index}, root_vertex::V) 
     # Sort operators in t by site order,
     # and keep the permutation used, perm, for analysis below
     perm = Vector{Int}(undef, Nt)
-    sortperm!(perm, ITensors.terms(t); alg=InsertionSort, lt=isless_site)
+    sortperm!(perm, ITensors.terms(t); alg=InsertionSort, lt)
 
     t = coefficient(t) * Prod(ITensors.terms(t)[perm])
+
+    # Everything below deals with fermionic operators:
 
     # Identify fermionic operators,
     # zeroing perm for bosonic operators,
@@ -545,7 +538,16 @@ function ttn(
   is_leaf_vertex(sites, root_vertex) || error("Tree root must be a leaf vertex.")
 
   os = deepcopy(os)
-  os = sorteachterm(os, sites, root_vertex)
+
+  # Build the isless_site function to pass to sorteachterm:
+  # * ordering = array of vertices ordered relative to chosen root, chosen outward from root
+  # * site_positions = map from vertex to where it is in ordering (inverse map of `ordering`)
+  ordering = _default_vertex_ordering(sites, root_vertex)
+  site_positions = Dict(zip(ordering, 1:length(ordering)))
+  findpos(op::Op) = site_positions[ITensors.site(op)]
+  isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
+
+  os = sorteachterm(os, sites; lt=isless_site)
   os = ITensorMPS.sortmergeterms(os)
   return ttn_svd(os, sites, root_vertex; kwargs...)
 end
