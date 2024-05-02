@@ -42,40 +42,32 @@ function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kwargs...)
   return ttn_svd(coefficient_type, os, sites, root_vertex; kwargs...)
 end
 
-function ttn_svd(
-  coefficient_type::Type{<:Number},
+#
+# TODO:
+# - remove is_internal from returns? maybe make it inside ttn_svd beforehand
+# - remove Hflux from returns along with is_internal
+# - split SVD'ing of "M"'s into Vs into a separate function
+#
+function make_sparse_ttn(
   os::OpSum,
-  sites0::IndsNetwork,
-  root_vertex;
+  sites::IndsNetwork,
+  root_vertex,
+  coefficient_type;
   mindim::Int=1,
   maxdim::Int=typemax(Int),
   cutoff=eps(real(coefficient_type)) * 10,
 )
-  linkdir_ref = ITensors.In   # safe to always use autofermion default here
-
-  sites = copy(sites0)  # copy because of modification to handle internal indices 
   edgetype_sites = edgetype(sites)
   vertextype_sites = vertextype(sites)
-  thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
-  # traverse tree outwards from root vertex
   vs = _default_vertex_ordering(sites, root_vertex)
-  vert_number = Dict(zip(vs, 1:length(vs)))
-  # TODO: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
-  # store edges in fixed ordering relative to root
   ordered_edges = _default_edge_ordering(sites, root_vertex)
-  # some things to keep track of
-  # rank of every TTN tensor in network
-  degrees = Dict(v => degree(sites, v) for v in vs)
-  # link isometries for SVD compression of TTN
-  Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in ordered_edges)
-  # map from term in Hamiltonian to incoming channel index for every edge
   inmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
-  # map from term in Hamiltonian to outgoing channel index for every edge
   outmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
 
-  op_cache = Dict{Pair{String,vertextype_sites},ITensor}()
+  Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in ordered_edges)
 
+  op_cache = Dict{Pair{String,vertextype_sites},ITensor}()
   function calc_qn(term::Vector{Op})
     q = QN()
     for st in term
@@ -111,13 +103,18 @@ function ttn_svd(
   inbond_coefs = Dict(
     e => Dict{QN,Vector{ITensorMPS.MatElem{coefficient_type}}}() for e in ordered_edges
   )
-  # list of terms for which the coefficient has been added to a site factor
+
+  # List of terms for which the coefficient has been added to a site factor
   site_coef_done = Prod{Op}[]
+
   # Temporary symbolic representation of TTN Hamiltonian
-  tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
+  tempTTN = Dict(
+    v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degree(sites, v)}[] for v in vs
+  )
 
   # Build compressed finite state machine representation (tempTTN)
   for v in vs
+    v_degree = degree(sites, v)
     # For every vertex, find all edges that contain this vertex
     edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
 
@@ -151,13 +148,10 @@ function ttn_svd(
         crosses_vertex = true
       else
         crosses_vertex =
-          !isone(
-            length(Set([which_incident_edge[site] for site in ITensors.site.(ops)]))
-          )
+          !isone(length(Set([which_incident_edge[site] for site in ITensors.site.(ops)])))
       end
       # If term doesn't cross vertex, skip it
       crosses_vertex || continue
-
 
       # filter out factor that acts on current vertex
       onsite = filter(t -> (ITensors.site(t) == v), ops)
@@ -187,8 +181,8 @@ function ttn_svd(
       site_qn = calc_qn(onsite)
 
       # initialize QNArrayElement indices and quantum numbers 
-      T_inds = MVector{degrees[v]}(fill(-1, degrees[v]))
-      T_qns = MVector{degrees[v]}(fill(QN(), degrees[v]))
+      T_inds = MVector{v_degree}(fill(-1, v_degree))
+      T_qns = MVector{v_degree}(fill(QN(), v_degree))
       # initialize ArrayElement indices for inbond_coefs
       bond_row = -1
       bond_col = -1
@@ -218,8 +212,7 @@ function ttn_svd(
       end
       # if term starts at this site, add its coefficient as a site factor
       site_coef = one(coefficient_type)
-      if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
-        argument(term) ∉ site_coef_done
+      if (isnothing(dim_in) || T_inds[dim_in] == -1) && argument(term) ∉ site_coef_done
         site_coef = coefficient(term)
         # required since coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
         site_coef = convert(coefficient_type, site_coef)
@@ -254,12 +247,37 @@ function ttn_svd(
     end
   end
 
+  return tempTTN, Vs, Hflux, is_internal
+end
+
+function ttn_svd(
+  coefficient_type::Type{<:Number}, os::OpSum, sites0::IndsNetwork, root_vertex; kws...
+)
+  linkdir_ref = ITensors.In   # safe to always use autofermion default here
+
+  sites = copy(sites0)  # copy because of modification to handle internal indices 
+  edgetype_sites = edgetype(sites)
+  thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
+
+  # traverse tree outwards from root vertex
+  vs = _default_vertex_ordering(sites, root_vertex)
+  #vert_number = Dict(zip(vs, 1:length(vs)))
+  # TODO: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
+  # store edges in fixed ordering relative to root
+  ordered_edges = _default_edge_ordering(sites, root_vertex)
+
+  tempTTN, Vs, Hflux, is_internal = make_sparse_ttn(
+    os, sites, root_vertex, coefficient_type; kws...
+  )
+
   # compress this tempTTN representation into dense form
 
   link_space = Dict{edgetype_sites,Index}()
   for e in ordered_edges
-    operator_blocks = [q=>size(Vq,2) for (q,Vq) in Vs[e]]
-    link_space[e] = Index(QN()=>1,operator_blocks...,Hflux=>1; tags=edge_tag(e), dir=linkdir_ref)
+    operator_blocks = [q => size(Vq, 2) for (q, Vq) in Vs[e]]
+    link_space[e] = Index(
+      QN() => 1, operator_blocks..., Hflux => 1; tags=edge_tag(e), dir=linkdir_ref
+    )
   end
 
   H = ttn(sites0)   # initialize TTN without the dummy indices added
@@ -272,6 +290,7 @@ function ttn_svd(
   qnblockdim(i::Index, q::QN) = blockdim(i, qnblock(i, q))
 
   for v in vs
+    v_degree = degree(sites, v)
     # redo the whole thing like before
     # TODO: use neighborhood instead of going through all edges, see above
     edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
@@ -282,20 +301,20 @@ function ttn_svd(
     linkinds = [link_space[e] for e in edges]
 
     # construct blocks
-    blocks = Dict{Tuple{Block{degrees[v]},Vector{Op}},Array{coefficient_type,degrees[v]}}()
+    blocks = Dict{Tuple{Block{v_degree},Vector{Op}},Array{coefficient_type,v_degree}}()
     for el in tempTTN[v]
       t = el.val
       (abs(coefficient(t)) > eps(real(coefficient_type))) || continue
-      block_helper_inds = fill(-1, degrees[v]) # we manipulate T_inds later, and loose track of ending/starting information, so keep track of it here
+      block_helper_inds = fill(-1, v_degree) # we manipulate T_inds later, and loose track of ending/starting information, so keep track of it here
       T_inds = el.idxs
       T_qns = el.qn_idxs
       ct = convert(coefficient_type, coefficient(t))
       sublinkdims = [
-        (T_inds[i] == -1 ? 1 : qnblockdim(linkinds[i], T_qns[i])) for i in 1:degrees[v]
+        (T_inds[i] == -1 ? 1 : qnblockdim(linkinds[i], T_qns[i])) for i in 1:v_degree
       ]
       zero_arr() = zeros(coefficient_type, sublinkdims...)
-      terminal_dims = findall(d -> T_inds[d] == -1, 1:degrees[v])   # directions in which term starts or ends
-      normal_dims = findall(d -> T_inds[d] ≠ -1, 1:degrees[v])      # normal dimensions, do truncation thingies
+      terminal_dims = findall(d -> T_inds[d] == -1, 1:v_degree)   # directions in which term starts or ends
+      normal_dims = findall(d -> T_inds[d] ≠ -1, 1:v_degree)      # normal dimensions, do truncation thingies
       T_inds[terminal_dims] .= 1                                  # start in channel 1  ###??
       block_helper_inds[terminal_dims] .= 1
       for dout in filter(d -> d ∈ terminal_dims, dims_out)
@@ -381,7 +400,7 @@ function ttn_svd(
     idT = zeros(coefficient_type, linkdims...)
     if isnothing(dim_in)
       # only one real starting identity
-      idT[ones(Int, degrees[v])...] = 1.0
+      idT[ones(Int, v_degree)...] = 1.0
     end
     # ending identities are a little more involved
     if !isnothing(dim_in)
@@ -493,9 +512,7 @@ function sorteachterm(os::OpSum, sites, root_vertex)
     t_parity = +1
     for n in reverse(1:Nt)
       currsite = site(t[n])
-      fermionic = has_fermion_string(
-        which_op(t[n]), only(sites[site(t[n])])
-      )
+      fermionic = has_fermion_string(which_op(t[n]), only(sites[site(t[n])]))
       if !ITensors.using_auto_fermion() && (t_parity == -1) && (currsite < prevsite)
         error("No verified fermion support for automatic TTN constructor!") # no verified support, just throw error
         # Put local piece of Jordan-Wigner string emanating
@@ -542,7 +559,7 @@ function ttn(
   length(terms(os)) == 0 && error("OpSum has no terms")
   is_tree(sites) || error("Site index graph must be a tree.")
   is_leaf_vertex(sites, root_vertex) || error("Tree root must be a leaf vertex.")
-  check_terms_support(os,sites)
+  check_terms_support(os, sites)
   os = deepcopy(os) #TODO: do we need this? sorteachterm copies `os` again
   os = sorteachterm(os, sites, root_vertex)
   os = ITensorMPS.sortmergeterms(os)
