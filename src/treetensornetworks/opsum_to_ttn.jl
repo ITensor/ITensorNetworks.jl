@@ -3,7 +3,7 @@ using ITensors: flux, has_fermion_string, itensor, ops, removeqns, space, val
 using ITensors.ITensorMPS: ITensorMPS, cutoff, linkdims, truncate!
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks
-using ITensors.Ops: Op, OpSum
+using ITensors.Ops: argument, coefficient, Op, OpSum, name, params, site, terms, which_op
 using NamedGraphs.GraphsExtensions:
   GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
 using StaticArrays: MVector
@@ -60,6 +60,7 @@ function ttn_svd(
 
   # traverse tree outwards from root vertex
   vs = _default_vertex_ordering(sites, root_vertex)
+  vert_number = Dict(zip(vs, 1:length(vs)))
   # TODO: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
   # store edges in fixed ordering relative to root
   ordered_edges = _default_edge_ordering(sites, root_vertex)
@@ -144,37 +145,38 @@ function ttn_svd(
     (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf_vertex(sites, v)
 
     for term in os
-      # loop over OpSum and pick out terms that act on current vertex
-      factors = ITensors.terms(term)
-      if v in ITensors.site.(factors)
+      # Loop over OpSum and pick out terms that act on current vertex
+      ops = ITensors.terms(term)
+      if v in ITensors.site.(ops)
         crosses_vertex = true
       else
         crosses_vertex =
           !isone(
-            length(Set([which_incident_edge[site] for site in ITensors.site.(factors)]))
+            length(Set([which_incident_edge[site] for site in ITensors.site.(ops)]))
           )
       end
-      #if term doesn't cross vertex, skip it
+      # If term doesn't cross vertex, skip it
       crosses_vertex || continue
 
-      # filter out factor that acts on current vertex
-      onsite = filter(t -> (ITensors.site(t) == v), factors)
-      not_onsite_factors = setdiff(factors, onsite)
 
-      # filter out factors that come in from the direction of the incoming edge
+      # filter out factor that acts on current vertex
+      onsite = filter(t -> (ITensors.site(t) == v), ops)
+      not_onsite_ops = setdiff(ops, onsite)
+
+      # filter out ops that come in from the direction of the incoming edge
       incoming = filter(
-        t -> which_incident_edge[ITensors.site(t)] == edge_in, not_onsite_factors
+        t -> which_incident_edge[ITensors.site(t)] == edge_in, not_onsite_ops
       )
 
-      # also store all non-incoming factors in standard order, used for channel merging
+      # also store all non-incoming ops in standard order, used for channel merging
       not_incoming = filter(
         t -> (ITensors.site(t) == v) || which_incident_edge[ITensors.site(t)] != edge_in,
-        factors,
+        ops,
       )
 
-      # for every outgoing edge, filter out factors that go out along that edge
+      # for every outgoing edge, filter out ops that go out along that edge
       outgoing = Dict(
-        e => filter(t -> which_incident_edge[ITensors.site(t)] == e, not_onsite_factors) for
+        e => filter(t -> which_incident_edge[ITensors.site(t)] == e, not_onsite_ops) for
         e in edges_out
       )
 
@@ -198,7 +200,7 @@ function ttn_svd(
 
         bond_row = ITensorMPS.posInLink!(cinmap, incoming)
         bond_col = ITensorMPS.posInLink!(coutmap, not_incoming) # get incoming channel
-        bond_coef = convert(coefficient_type, ITensors.coefficient(term))
+        bond_coef = convert(coefficient_type, coefficient(term))
         q_inbond_coefs = get!(
           inbond_coefs[edge_in], incoming_qn, ITensorMPS.MatElem{coefficient_type}[]
         )
@@ -217,11 +219,11 @@ function ttn_svd(
       # if term starts at this site, add its coefficient as a site factor
       site_coef = one(coefficient_type)
       if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
-        ITensors.argument(term) ∉ site_coef_done
-        site_coef = ITensors.coefficient(term)
-        # required since ITensors.coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
+        argument(term) ∉ site_coef_done
+        site_coef = coefficient(term)
+        # required since coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
         site_coef = convert(coefficient_type, site_coef)
-        push!(site_coef_done, ITensors.argument(term))
+        push!(site_coef_done, argument(term))
       end
       # add onsite identity for interactions passing through vertex
       if isempty(onsite)
@@ -422,7 +424,7 @@ end
 function isfermionic(t::Vector{Op}, sites::IndsNetwork{V,<:Index}) where {V}
   p = +1
   for op in t
-    if has_fermion_string(ITensors.name(op), only(sites[ITensors.site(op)]))
+    if has_fermion_string(name(op), only(sites[site(op)]))
       p *= -1
     end
   end
@@ -431,11 +433,11 @@ end
 
 # only(site(ops[1])) in ITensors breaks for Tuple site labels, had to drop the only
 function computeSiteProd(sites::IndsNetwork{V,<:Index}, ops::Prod{Op})::ITensor where {V}
-  v = ITensors.site(ops[1])
-  T = op(sites[v], ITensors.which_op(ops[1]); ITensors.params(ops[1])...)
+  v = site(ops[1])
+  T = op(sites[v], which_op(ops[1]); params(ops[1])...)
   for j in 2:length(ops)
-    (ITensors.site(ops[j]) != v) && error("Mismatch of vertex labels in computeSiteProd")
-    opj = op(sites[v], ITensors.which_op(ops[j]); ITensors.params(ops[j])...)
+    (site(ops[j]) != v) && error("Mismatch of vertex labels in computeSiteProd")
+    opj = op(sites[v], which_op(ops[j]); params(ops[j])...)
     T = product(T, opj)
   end
   return T
@@ -468,7 +470,7 @@ function sorteachterm(os::OpSum, sites, root_vertex)
   # + site_positions = map from vertex to where it is in ordering (inverse map of `ordering`)
   ordering = _default_vertex_ordering(sites, root_vertex)
   site_positions = Dict(zip(ordering, 1:length(ordering)))
-  findpos(op::Op) = site_positions[ITensors.site(op)]
+  findpos(op::Op) = site_positions[site(op)]
   isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
 
   N = nv(sites)
@@ -479,8 +481,8 @@ function sorteachterm(os::OpSum, sites, root_vertex)
     # and keep the permutation used, perm, for analysis below
     Nt = length(t)
     #perm = Vector{Int}(undef, Nt)
-    perm = sortperm(ITensors.terms(t); alg=InsertionSort, lt=isless_site)
-    t = coefficient(t) * Prod(ITensors.terms(t)[perm])
+    perm = sortperm(terms(t); alg=InsertionSort, lt=isless_site)
+    t = coefficient(t) * Prod(terms(t)[perm])
 
     # Everything below deals with fermionic operators:
 
@@ -490,16 +492,16 @@ function sorteachterm(os::OpSum, sites, root_vertex)
     prevsite = typemax(Int) #keep track of whether we are switching to a new site
     t_parity = +1
     for n in reverse(1:Nt)
-      currsite = ITensors.site(t[n])
+      currsite = site(t[n])
       fermionic = has_fermion_string(
-        ITensors.which_op(t[n]), only(sites[ITensors.site(t[n])])
+        which_op(t[n]), only(sites[site(t[n])])
       )
       if !ITensors.using_auto_fermion() && (t_parity == -1) && (currsite < prevsite)
         error("No verified fermion support for automatic TTN constructor!") # no verified support, just throw error
         # Put local piece of Jordan-Wigner string emanating
         # from fermionic operators to the right
         # (Remaining F operators will be put in by svdMPO)
-        terms(t)[n] = Op("$(ITensors.which_op(t[n])) * F", only(ITensors.site(t[n])))
+        terms(t)[n] = Op("$(which_op(t[n])) * F", only(site(t[n])))
       end
       prevsite = currsite
 
@@ -520,7 +522,7 @@ function sorteachterm(os::OpSum, sites, root_vertex)
     # and account for anti-commuting, fermionic operators 
     # during above sort; put resulting sign into coef
     t *= ITensors.parity_sign(perm)
-    ITensors.terms(os)[j] = t
+    terms(os)[j] = t
   end
   return os
 end
@@ -537,7 +539,7 @@ function ttn(
   root_vertex=GraphsExtensions.default_root_vertex(sites),
   kwargs...,
 )
-  length(ITensors.terms(os)) == 0 && error("OpSum has no terms")
+  length(terms(os)) == 0 && error("OpSum has no terms")
   is_tree(sites) || error("Site index graph must be a tree.")
   is_leaf_vertex(sites, root_vertex) || error("Tree root must be a leaf vertex.")
   check_terms_support(os,sites)
