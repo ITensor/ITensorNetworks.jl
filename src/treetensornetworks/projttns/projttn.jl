@@ -23,7 +23,7 @@ struct ProjTTN{V,Pos<:Union{Indices{V},NamedEdge{V}}} <: AbstractProjTTN{V}
     return new{vertextype(operator),NamedEdge{vertextype(operator)}}(
       convert(NamedEdge{vertextype(operator)}, pos),
       operator,
-      convert(Dictionary{NamedEdge{vertextype(operator),ITensor}}, environments),
+      convert(Dictionary{NamedEdge{vertextype(operator)},ITensor}, environments),
     )
   end
 end
