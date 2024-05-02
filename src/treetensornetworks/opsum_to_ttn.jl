@@ -62,12 +62,12 @@ function ttn_svd(
   vs = _default_vertex_ordering(sites, root_vertex)
   # TODO: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
   # store edges in fixed ordering relative to root
-  es = _default_edge_ordering(sites, root_vertex)
+  ordered_edges = _default_edge_ordering(sites, root_vertex)
   # some things to keep track of
   # rank of every TTN tensor in network
   degrees = Dict(v => degree(sites, v) for v in vs)
   # link isometries for SVD compression of TTN
-  Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in es)
+  Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in ordered_edges)
   # map from term in Hamiltonian to incoming channel index for every edge
   inmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
   # map from term in Hamiltonian to outgoing channel index for every edge
@@ -93,6 +93,7 @@ function ttn_svd(
   end
 
   Hflux = -calc_qn(terms(first(terms(os))))
+
   # insert dummy indices on internal vertices, these will not show up in the final tensor
   is_internal = Dict{vertextype_sites,Bool}()
   for v in vs
@@ -103,27 +104,29 @@ function ttn_svd(
       sites[v] = [Index(Hflux => 1)]
     end
   end
-  # bond coefficients for incoming edge channels
+
+  # Bond coefficients for incoming edge channels.
+  # These become the "M" coefficient matrices that get SVD'd.
   inbond_coefs = Dict(
-    e => Dict{QN,Vector{ITensorMPS.MatElem{coefficient_type}}}() for e in es
+    e => Dict{QN,Vector{ITensorMPS.MatElem{coefficient_type}}}() for e in ordered_edges
   )
   # list of terms for which the coefficient has been added to a site factor
   site_coef_done = Prod{Op}[]
-  # temporary symbolic representation of TTN Hamiltonian
+  # Temporary symbolic representation of TTN Hamiltonian
   tempTTN = Dict(v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degrees[v]}[] for v in vs)
 
-  # build compressed finite state machine representation
+  # Build compressed finite state machine representation (tempTTN)
   for v in vs
-    # for every vertex, find all edges that contain this vertex
-    edges = align_and_reorder_edges(incident_edges(sites, v), es)
+    # For every vertex, find all edges that contain this vertex
+    edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
 
-    # use the corresponding ordering as index order for tensor elements at this site
+    # Use the corresponding ordering as index order for tensor elements at this site
     dim_in = findfirst(e -> dst(e) == v, edges)
     edge_in = (isnothing(dim_in) ? [] : edges[dim_in])
     dims_out = findall(e -> src(e) == v, edges)
     edges_out = edges[dims_out]
 
-    # for every site w except v, determine the incident edge to v that lies 
+    # For every site w except v, determine the incident edge to v that lies 
     # in the edge_path(w,v)
     subgraphs = split_at_vertex(sites, v)
     _boundary_edges = align_edges(
@@ -142,7 +145,6 @@ function ttn_svd(
 
     for term in os
       # loop over OpSum and pick out terms that act on current vertex
-
       factors = ITensors.terms(term)
       if v in ITensors.site.(factors)
         crosses_vertex = true
@@ -253,15 +255,9 @@ function ttn_svd(
   # compress this tempTTN representation into dense form
 
   link_space = Dict{edgetype_sites,Index}()
-  for e in es
-    qi = Vector{Pair{QN,Int}}()
-    push!(qi, QN() => 1)
-    for (q, Vq) in Vs[e]
-      cols = size(Vq, 2)
-      push!(qi, q => cols)
-    end
-    push!(qi, Hflux => 1)
-    link_space[e] = Index(qi...; tags=edge_tag(e), dir=linkdir_ref)
+  for e in ordered_edges
+    operator_blocks = [q=>size(Vq,2) for (q,Vq) in Vs[e]]
+    link_space[e] = Index(QN()=>1,operator_blocks...,Hflux=>1; tags=edge_tag(e), dir=linkdir_ref)
   end
 
   H = ttn(sites0)   # initialize TTN without the dummy indices added
@@ -276,7 +272,7 @@ function ttn_svd(
   for v in vs
     # redo the whole thing like before
     # TODO: use neighborhood instead of going through all edges, see above
-    edges = align_and_reorder_edges(incident_edges(sites, v), es)
+    edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
     dim_in = findfirst(e -> dst(e) == v, edges)
     dims_out = findall(e -> src(e) == v, edges)
     # slice isometries at this vertex
@@ -336,10 +332,9 @@ function ttn_svd(
 
     H[v] = ITensor()
 
-    # make the final arrow directions
-    _linkinds = copy(linkinds)
+    # Set the final arrow directions
     if !isnothing(dim_in)
-      _linkinds[dim_in] = dag(_linkinds[dim_in])
+      linkinds[dim_in] = dag(linkinds[dim_in])
     end
 
     for ((b, q_op), m) in blocks
@@ -361,7 +356,7 @@ function ttn_svd(
           end
         end
       end
-      T = ITensors.BlockSparseTensor(coefficient_type, [b], _linkinds)
+      T = ITensors.BlockSparseTensor(coefficient_type, [b], linkinds)
       T[b] .= m
       iT = itensor(T)
       if !thishasqns
@@ -401,7 +396,8 @@ function ttn_svd(
         idT_end_inds[dout] = linkdims[dout]
       end
     end
-    T = itensor(idT, _linkinds)
+
+    T = itensor(idT, linkinds)
     if !thishasqns
       T = removeqns(T)
     end
@@ -453,30 +449,37 @@ function _default_edge_ordering(g::AbstractGraph, root_vertex)
   return reverse(reverse.(post_order_dfs_edges(g, root_vertex)))
 end
 
-# This is almost an exact copy of ITensors/src/opsum_to_mpo_generic:sorteachterm 
-function sorteachterm(os::OpSum, sites; lt=isless)
-  os = copy(os)
-
-  N = nv(sites)
-  for n in eachindex(os)
-    t = os[n]
-    Nt = length(t)
-
+function check_terms_support(os::OpSum, sites)
+  for t in os
     if !all(map(v -> has_vertex(sites, v), ITensors.sites(t)))
       error(
         "The OpSum contains a term $t that does not have support on the underlying graph."
       )
     end
+  end
+end
 
-    prevsite = N + 1 #keep track of whether we are switching
-    #to a new site to make sure F string
-    #is only placed at most once for each site
+# This code is very similar to ITensorMPS sorteachterm in opsum_generic.jl
+function sorteachterm(os::OpSum, sites, root_vertex)
+  os = copy(os)
+
+  # Build the isless_site function to pass to sortperm below:
+  # + ordering = array of vertices ordered relative to chosen root, chosen outward from root
+  # + site_positions = map from vertex to where it is in ordering (inverse map of `ordering`)
+  ordering = _default_vertex_ordering(sites, root_vertex)
+  site_positions = Dict(zip(ordering, 1:length(ordering)))
+  findpos(op::Op) = site_positions[ITensors.site(op)]
+  isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
+
+  N = nv(sites)
+  for j in eachindex(os)
+    t = os[j]
 
     # Sort operators in t by site order,
     # and keep the permutation used, perm, for analysis below
-    perm = Vector{Int}(undef, Nt)
-    sortperm!(perm, ITensors.terms(t); alg=InsertionSort, lt)
-
+    Nt = length(t)
+    #perm = Vector{Int}(undef, Nt)
+    perm = sortperm(ITensors.terms(t); alg=InsertionSort, lt=isless_site)
     t = coefficient(t) * Prod(ITensors.terms(t)[perm])
 
     # Everything below deals with fermionic operators:
@@ -484,13 +487,14 @@ function sorteachterm(os::OpSum, sites; lt=isless)
     # Identify fermionic operators,
     # zeroing perm for bosonic operators,
     # and inserting string "F" operators
-    parity = +1
-    for n in Nt:-1:1
+    prevsite = typemax(Int) #keep track of whether we are switching to a new site
+    t_parity = +1
+    for n in reverse(1:Nt)
       currsite = ITensors.site(t[n])
       fermionic = has_fermion_string(
         ITensors.which_op(t[n]), only(sites[ITensors.site(t[n])])
       )
-      if !ITensors.using_auto_fermion() && (parity == -1) && (currsite < prevsite)
+      if !ITensors.using_auto_fermion() && (t_parity == -1) && (currsite < prevsite)
         error("No verified fermion support for automatic TTN constructor!") # no verified support, just throw error
         # Put local piece of Jordan-Wigner string emanating
         # from fermionic operators to the right
@@ -500,14 +504,14 @@ function sorteachterm(os::OpSum, sites; lt=isless)
       prevsite = currsite
 
       if fermionic
-        parity = -parity
+        t_parity = -t_parity
       else
         # Ignore bosonic operators in perm
         # by zeroing corresponding entries
         perm[n] = 0
       end
     end
-    if parity == -1
+    if t_parity == -1
       error("Parity-odd fermionic terms not yet supported by AutoTTN")
     end
 
@@ -516,7 +520,7 @@ function sorteachterm(os::OpSum, sites; lt=isless)
     # and account for anti-commuting, fermionic operators 
     # during above sort; put resulting sign into coef
     t *= ITensors.parity_sign(perm)
-    ITensors.terms(os)[n] = t
+    ITensors.terms(os)[j] = t
   end
   return os
 end
@@ -536,18 +540,9 @@ function ttn(
   length(ITensors.terms(os)) == 0 && error("OpSum has no terms")
   is_tree(sites) || error("Site index graph must be a tree.")
   is_leaf_vertex(sites, root_vertex) || error("Tree root must be a leaf vertex.")
-
-  os = deepcopy(os)
-
-  # Build the isless_site function to pass to sorteachterm:
-  # * ordering = array of vertices ordered relative to chosen root, chosen outward from root
-  # * site_positions = map from vertex to where it is in ordering (inverse map of `ordering`)
-  ordering = _default_vertex_ordering(sites, root_vertex)
-  site_positions = Dict(zip(ordering, 1:length(ordering)))
-  findpos(op::Op) = site_positions[ITensors.site(op)]
-  isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
-
-  os = sorteachterm(os, sites; lt=isless_site)
+  check_terms_support(os,sites)
+  os = deepcopy(os) #TODO: do we need this? sorteachterm copies `os` again
+  os = sorteachterm(os, sites, root_vertex)
   os = ITensorMPS.sortmergeterms(os)
   return ttn_svd(os, sites, root_vertex; kwargs...)
 end
