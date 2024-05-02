@@ -1,9 +1,11 @@
 @eval module $(gensym())
+using Dictionaries: Dictionary, Indices
 using Graphs: vertices
-using ITensors: ITensors
-using ITensorNetworks: ProjTTN, ttn, environments, position, siteinds
+using ITensors: ITensors, ITensor
+using ITensorNetworks: ITensorNetwork, ProjTTN, ttn, environments, position, siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using NamedGraphs: NamedEdge
+using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_path_graph
 using Test: @test, @testset
 
 @testset "ProjTTN position" begin
@@ -46,5 +48,12 @@ using Test: @test, @testset
   if !auto_fermion_enabled
     ITensors.disable_auto_fermion()
   end
+end
+@testset "ProjTTN construction regression test" begin
+  pos = Indices{Tuple{String,Int}}()
+  g = named_path_graph(2)
+  operator = ttn(ITensorNetwork{Any}(g))
+  environments = Dictionary{NamedEdge{Any},ITensor}()
+  @test ProjTTN(pos, operator, environments) isa ProjTTN{Any,Indices{Any}}
 end
 end
