@@ -41,11 +41,12 @@ Random.seed!(1234)
       # KaHyPar doesn't work on Windows
       # https://github.com/kahypar/KaHyPar.jl/issues/9
       using Pkg
-      Pkg.add("KaHyPar")
+      Pkg.add("KaHyPar"; io=devnull)
       using KaHyPar
       seq_kahypar_bipartite = contraction_sequence(
         tn; alg="kahypar_bipartite", sc_target=200
       )
+      Pkg.rm("KaHyPar"; io=devnull)
       res_kahypar_bipartite = contract(tn; sequence=seq_kahypar_bipartite)[]
       @test res_optimal ≈ res_kahypar_bipartite
       seq_einexprs_kahypar = contraction_sequence(tn; alg="einexpr", optimizer=HyPar())

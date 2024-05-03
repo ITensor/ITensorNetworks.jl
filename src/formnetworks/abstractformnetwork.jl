@@ -23,12 +23,17 @@ end
 function operator_vertices(f::AbstractFormNetwork)
   return filter(v -> last(v) == operator_vertex_suffix(f), vertices(f))
 end
+
 function bra_vertices(f::AbstractFormNetwork)
   return filter(v -> last(v) == bra_vertex_suffix(f), vertices(f))
 end
 
 function ket_vertices(f::AbstractFormNetwork)
   return filter(v -> last(v) == ket_vertex_suffix(f), vertices(f))
+end
+
+function operator_vertices(f::AbstractFormNetwork, original_state_vertices::Vector)
+  return [operator_vertex_map(f)(osv) for osv in original_state_vertices]
 end
 
 function bra_vertices(f::AbstractFormNetwork, original_state_vertices::Vector)
@@ -65,23 +70,6 @@ function operator_network(f::AbstractFormNetwork)
   return rename_vertices(
     inv_vertex_map(f), first(induced_subgraph(f, operator_vertices(f)))
   )
-end
-
-function environment(
-  f::AbstractFormNetwork,
-  original_state_vertices::Vector;
-  alg=default_environment_algorithm(),
-  kwargs...,
-)
-  form_vertices = state_vertices(f, original_state_vertices)
-  if alg == "bp"
-    partitioned_vertices = group(v -> original_state_vertex(f, v), vertices(f))
-    return environment(
-      tensornetwork(f), form_vertices; alg, partitioned_vertices, kwargs...
-    )
-  else
-    return environment(tensornetwork(f), form_vertices; alg, kwargs...)
-  end
 end
 
 operator_vertex_map(f::AbstractFormNetwork) = v -> (v, operator_vertex_suffix(f))

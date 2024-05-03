@@ -16,7 +16,7 @@ struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
   end
 end
 
-function _TreeTensorNetwork(tensornetwork::ITensorNetwork, ortho_region::Vector)
+function _TreeTensorNetwork(tensornetwork::ITensorNetwork, ortho_region)
   return _TreeTensorNetwork(tensornetwork, Indices(ortho_region))
 end
 

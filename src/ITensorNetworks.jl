@@ -1,7 +1,6 @@
 module ITensorNetworks
 include("lib/BaseExtensions/src/BaseExtensions.jl")
 include("lib/ITensorsExtensions/src/ITensorsExtensions.jl")
-include("observers.jl")
 include("visualize.jl")
 include("graphs.jl")
 include("abstractindsnetwork.jl")
@@ -33,6 +32,7 @@ include("caches/beliefpropagationcache.jl")
 include("contraction_tree_to_graph.jl")
 include("gauging.jl")
 include("utils.jl")
+include("update_observer.jl")
 include("solvers/local_solvers/eigsolve.jl")
 include("solvers/local_solvers/exponentiate.jl")
 include("solvers/local_solvers/dmrg_x.jl")
@@ -70,11 +70,7 @@ include("lib/ModelHamiltonians/src/ModelHamiltonians.jl")
 include("lib/ModelNetworks/src/ModelNetworks.jl")
 
 using PackageExtensionCompat: @require_extensions
-using Requires: @require
 function __init__()
   @require_extensions
-  @require OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715" include(
-    "requires/omeinsumcontractionorders.jl"
-  )
 end
 end

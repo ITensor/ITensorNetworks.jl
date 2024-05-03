@@ -1,7 +1,7 @@
-using Test
-using ITensorNetworks
+@eval module $(gensym())
 
 using ITensorNetworks:
+  ITensorNetwork,
   inner,
   inner_network,
   loginner,
@@ -16,6 +16,7 @@ using SplitApplyCombine: group
 using Graphs: SimpleGraph, uniform_tree
 using NamedGraphs: NamedGraph
 using Random: Random
+using Test: @test, @testset
 
 @testset "Inner products, BP vs exact comparison" begin
   Random.seed!(1234)
@@ -55,4 +56,4 @@ using Random: Random
   @test xAy_scalar_bp ≈ xAy_scalar_logbp
   @test xAy_scalar ≈ xAy_scalar_logbp
 end
-nothing
+end

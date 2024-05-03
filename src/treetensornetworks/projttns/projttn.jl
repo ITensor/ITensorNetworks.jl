@@ -12,10 +12,24 @@ struct ProjTTN{V,Pos<:Union{Indices{V},NamedEdge{V}}} <: AbstractProjTTN{V}
   pos::Pos
   operator::TTN{V}
   environments::Dictionary{NamedEdge{V},ITensor}
+  global function _ProjTTN(pos, operator::TTN, environments::Dictionary)
+    return new{vertextype(operator),Indices{vertextype(operator)}}(
+      Indices{vertextype(operator)}(pos),
+      operator,
+      convert(Dictionary{NamedEdge{vertextype(operator)},ITensor}, environments),
+    )
+  end
+  global function _ProjTTN(pos::NamedEdge, operator::TTN, environments::Dictionary)
+    return new{vertextype(operator),NamedEdge{vertextype(operator)}}(
+      convert(NamedEdge{vertextype(operator)}, pos),
+      operator,
+      convert(Dictionary{NamedEdge{vertextype(operator)},ITensor}, environments),
+    )
+  end
 end
 
-function ProjTTN(pos::Vector, operator::TTN, environments::Dictionary)
-  return ProjTTN(Indices(pos), operator, environments)
+function ProjTTN(pos, operator::TTN, environments::Dictionary)
+  return _ProjTTN(pos, operator, environments)
 end
 
 function ProjTTN(operator::TTN)

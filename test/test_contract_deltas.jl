@@ -1,5 +1,7 @@
 @eval module $(gensym())
 using Graphs: dfs_tree, nv, vertices
+# Trigger package extension.
+using GraphsFlows: GraphsFlows
 using ITensors: Index, ITensor, delta, noncommoninds, randomITensor
 using ITensorNetworks:
   IndsNetwork,
