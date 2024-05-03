@@ -49,24 +49,17 @@ end
 # - split SVD'ing of "M"'s into Vs into a separate function
 #
 function make_sparse_ttn(
-  os::OpSum,
-  sites::IndsNetwork,
-  root_vertex,
-  coefficient_type;
-  mindim::Int=1,
-  maxdim::Int=typemax(Int),
-  cutoff=eps(real(coefficient_type)) * 10,
+  os::OpSum, sites::IndsNetwork, root_vertex, coefficient_type, calc_qn
 )
   edgetype_sites = edgetype(sites)
   vertextype_sites = vertextype(sites)
 
-  vs = _default_vertex_ordering(sites, root_vertex)
+  ordered_verts = _default_vertex_ordering(sites, root_vertex)
   ordered_edges = _default_edge_ordering(sites, root_vertex)
   inmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
   outmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
 
-  Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in ordered_edges)
-
+  #=
   op_cache = Dict{Pair{String,vertextype_sites},ITensor}()
   function calc_qn(term::Vector{Op})
     q = QN()
@@ -84,19 +77,7 @@ function make_sparse_ttn(
     end
     return q
   end
-
-  Hflux = -calc_qn(terms(first(terms(os))))
-
-  # insert dummy indices on internal vertices, these will not show up in the final tensor
-  is_internal = Dict{vertextype_sites,Bool}()
-  for v in vs
-    is_internal[v] = isempty(sites[v])
-    if isempty(sites[v])
-      # FIXME: This logic only works for trivial flux, breaks for nonzero flux
-      # TODO: add assert or fix and add test!
-      sites[v] = [Index(Hflux => 1)]
-    end
-  end
+  =#
 
   # Bond coefficients for incoming edge channels.
   # These become the "M" coefficient matrices that get SVD'd.
@@ -109,11 +90,12 @@ function make_sparse_ttn(
 
   # Temporary symbolic representation of TTN Hamiltonian
   tempTTN = Dict(
-    v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degree(sites, v)}[] for v in vs
+    v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degree(sites, v)}[] for
+    v in ordered_verts
   )
 
   # Build compressed finite state machine representation (tempTTN)
-  for v in vs
+  for v in ordered_verts
     v_degree = degree(sites, v)
     # For every vertex, find all edges that contain this vertex
     edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
@@ -231,46 +213,54 @@ function make_sparse_ttn(
 
       push!(tempTTN[v], el)
     end
-
     ITensorMPS.remove_dups!(tempTTN[v])
-    # manual truncation: isometry on incoming edge
+  end
+
+  return tempTTN, inbond_coefs
+end
+
+function svd_bond_coefs(
+  coefficient_type, sites, ordered_verts, ordered_edges, inbond_coefs; kws...
+)
+  Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in ordered_edges)
+  for v in ordered_verts
+    edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
+    dim_in = findfirst(e -> dst(e) == v, edges)
     if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
       for (q, mat) in inbond_coefs[edges[dim_in]]
         M = ITensorMPS.toMatrix(mat)
         U, S, V = svd(M)
         P = S .^ 2
-        truncate!(P; maxdim, cutoff, mindim)
+        truncate!(P; kws...)
         tdim = length(P)
         nc = size(M, 2)
         Vs[edges[dim_in]][q] = Matrix{coefficient_type}(V[1:nc, 1:tdim])
       end
     end
   end
-
-  return tempTTN, Vs, Hflux, is_internal
+  return Vs
 end
 
-function ttn_svd(
-  coefficient_type::Type{<:Number}, os::OpSum, sites0::IndsNetwork, root_vertex; kws...
+function compress_ttn(
+  coefficient_type, sites0, ordered_verts, ordered_edges, Hflux, tempTTN, Vs
 )
-  linkdir_ref = ITensors.In   # safe to always use autofermion default here
+  # Insert dummy indices on internal vertices, these will not show up in the final tensor
+  # TODO: come up with a better solution for this
+  sites = copy(sites0)
+  is_internal = Dict{vertextype(sites),Bool}()
+  for v in ordered_verts
+    is_internal[v] = isempty(sites[v])
+    if isempty(sites[v])
+      # FIXME: This logic only works for trivial flux, breaks for nonzero flux
+      # TODO: add assert or fix and add test!
+      sites[v] = [Index(Hflux => 1)]
+    end
+  end
 
-  sites = copy(sites0)  # copy because of modification to handle internal indices 
+  linkdir_ref = ITensors.In   # safe to always use autofermion default here
+  # Compress this tempTTN representation into dense form
   edgetype_sites = edgetype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
-
-  # traverse tree outwards from root vertex
-  vs = _default_vertex_ordering(sites, root_vertex)
-  #vert_number = Dict(zip(vs, 1:length(vs)))
-  # TODO: Add check in ttn_svd that the ordering matches that of find_index_in_tree, which is used in sorteachterm #fermion-sign!
-  # store edges in fixed ordering relative to root
-  ordered_edges = _default_edge_ordering(sites, root_vertex)
-
-  tempTTN, Vs, Hflux, is_internal = make_sparse_ttn(
-    os, sites, root_vertex, coefficient_type; kws...
-  )
-
-  # compress this tempTTN representation into dense form
 
   link_space = Dict{edgetype_sites,Index}()
   for e in ordered_edges
@@ -289,7 +279,7 @@ function ttn_svd(
   end
   qnblockdim(i::Index, q::QN) = blockdim(i, qnblock(i, q))
 
-  for v in vs
+  for v in ordered_verts
     v_degree = degree(sites, v)
     # redo the whole thing like before
     # TODO: use neighborhood instead of going through all edges, see above
@@ -428,8 +418,55 @@ function ttn_svd(
       H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
     end
   end
-
   return H
+end
+
+struct TermQN{V}
+  sites::IndsNetwork
+  op_cache::Dict{Pair{String,V},ITensor}
+  TermQN{V}(s) where {V} = new{V}(s, Dict{Pair{String,V},ITensor}())
+end
+
+function (t::TermQN)(term)
+  q = QN()
+  for st in term
+    op_tensor = get(t.op_cache, ITensors.which_op(st) => ITensors.site(st), nothing)
+    if op_tensor === nothing
+      op_tensor = op(
+        t.sites[ITensors.site(st)], ITensors.which_op(st); ITensors.params(st)...
+      )
+      t.op_cache[ITensors.which_op(st) => ITensors.site(st)] = op_tensor
+    end
+    if !isnothing(flux(op_tensor))
+      q += flux(op_tensor)
+    end
+  end
+  return q
+end
+
+function ttn_svd(
+  coefficient_type::Type{<:Number}, os::OpSum, sites::IndsNetwork, root_vertex; kws...
+)
+  calc_qn = TermQN{vertextype(sites)}(sites)
+
+  tempTTN, inbond_coefs = make_sparse_ttn(os, sites, root_vertex, coefficient_type, calc_qn)
+
+  Hflux = -calc_qn(terms(first(terms(os))))
+
+  # Traverse tree outwards from root vertex
+  ordered_verts = _default_vertex_ordering(sites, root_vertex)
+  # Store edges in fixed ordering relative to root
+  ordered_edges = _default_edge_ordering(sites, root_vertex)
+
+  Vs = svd_bond_coefs(
+    coefficient_type, sites, ordered_verts, ordered_edges, inbond_coefs; kws...
+  )
+
+  T = compress_ttn(
+    coefficient_type, sites, ordered_verts, ordered_edges, Hflux, tempTTN, Vs
+  )
+
+  return T
 end
 
 # 
@@ -489,8 +526,7 @@ function sorteachterm(os::OpSum, sites, root_vertex)
   # + site_positions = map from vertex to where it is in ordering (inverse map of `ordering`)
   ordering = _default_vertex_ordering(sites, root_vertex)
   site_positions = Dict(zip(ordering, 1:length(ordering)))
-  findpos(op::Op) = site_positions[site(op)]
-  isless_site(o1::Op, o2::Op) = findpos(o1) < findpos(o2)
+  isless_site(o1::Op, o2::Op) = site_positions[site(o1)] < site_positions[site(o2)]
 
   N = nv(sites)
   for j in eachindex(os)
