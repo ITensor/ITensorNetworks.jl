@@ -1,6 +1,5 @@
 using Graphs: degree, is_tree
-using ITensors: flux, has_fermion_string, itensor, ops, removeqns, space, val
-using ITensors.ITensorMPS: ITensorMPS, cutoff, linkdims, truncate!
+using ITensors: flux, has_fermion_string, itensor, ops, removeqns, space, truncate!, val
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks
 using ITensors.Ops: argument, coefficient, Op, OpSum, name, params, site, terms, which_op
@@ -30,6 +29,13 @@ end
 # Tree adaptations of functionalities in ITensors.jl/src/physics/autompo/opsum_to_mpo.jl
 # 
 
+function determine_val_type(terms)
+  for t in terms
+    (!isreal(coefficient(t))) && return ComplexF64
+  end
+  return Float64
+end
+
 """
     ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex, kwargs...)
 
@@ -38,16 +44,40 @@ Hamiltonian, compressing shared interaction channels.
 """
 function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kwargs...)
   # Function barrier to improve type stability
-  coefficient_type = ITensorMPS.determineValType(terms(os))
+  coefficient_type = determine_val_type(terms(os))
   return ttn_svd(coefficient_type, os, sites, root_vertex; kwargs...)
 end
 
-#
-# TODO:
-# - remove is_internal from returns? maybe make it inside ttn_svd beforehand
-# - remove Hflux from returns along with is_internal
-# - split SVD'ing of "M"'s into Vs into a separate function
-#
+function remove_dups!(v::Vector)
+  N = length(v)
+  (N == 0) && return nothing
+  sort!(v)
+  n = 1
+  u = 2
+  while u <= N
+    while u < N && v[u] == v[n]
+      u += 1
+    end
+    if v[u] != v[n]
+      v[n + 1] = v[u]
+      n += 1
+    end
+    u += 1
+  end
+  resize!(v, n)
+  return nothing
+end
+
+function pos_in_link!(linkmap::Dict, k)
+  isempty(k) && return -1
+  pos = get(linkmap, k, -1)
+  if pos == -1
+    pos = length(linkmap) + 1
+    linkmap[k] = pos
+  end
+  return pos
+end
+
 function make_sparse_ttn(
   os::OpSum, sites::IndsNetwork, root_vertex, coefficient_type, calc_qn
 )
@@ -59,30 +89,10 @@ function make_sparse_ttn(
   inmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
   outmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
 
-  #=
-  op_cache = Dict{Pair{String,vertextype_sites},ITensor}()
-  function calc_qn(term::Vector{Op})
-    q = QN()
-    for st in term
-      op_tensor = get(op_cache, ITensors.which_op(st) => ITensors.site(st), nothing)
-      if op_tensor === nothing
-        op_tensor = op(
-          sites[ITensors.site(st)], ITensors.which_op(st); ITensors.params(st)...
-        )
-        op_cache[ITensors.which_op(st) => ITensors.site(st)] = op_tensor
-      end
-      if !isnothing(flux(op_tensor))
-        q += flux(op_tensor)
-      end
-    end
-    return q
-  end
-  =#
-
   # Bond coefficients for incoming edge channels.
   # These become the "M" coefficient matrices that get SVD'd.
   inbond_coefs = Dict(
-    e => Dict{QN,Vector{ITensorMPS.MatElem{coefficient_type}}}() for e in ordered_edges
+    e => Dict{QN,Vector{MatElem{coefficient_type}}}() for e in ordered_edges
   )
 
   # List of terms for which the coefficient has been added to a site factor
@@ -174,13 +184,13 @@ function make_sparse_ttn(
         coutmap = get!(outmaps, edge_in => not_incoming_qn, Dict{Vector{Op},Int}())
         cinmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
 
-        bond_row = ITensorMPS.posInLink!(cinmap, incoming)
-        bond_col = ITensorMPS.posInLink!(coutmap, not_incoming) # get incoming channel
+        bond_row = pos_in_link!(cinmap, incoming)
+        bond_col = pos_in_link!(coutmap, not_incoming) # get incoming channel
         bond_coef = convert(coefficient_type, coefficient(term))
         q_inbond_coefs = get!(
-          inbond_coefs[edge_in], incoming_qn, ITensorMPS.MatElem{coefficient_type}[]
+          inbond_coefs[edge_in], incoming_qn, MatElem{coefficient_type}[]
         )
-        push!(q_inbond_coefs, ITensorMPS.MatElem(bond_row, bond_col, bond_coef))
+        push!(q_inbond_coefs, MatElem(bond_row, bond_col, bond_coef))
         T_inds[dim_in] = bond_col
         T_qns[dim_in] = -incoming_qn
       end
@@ -189,7 +199,7 @@ function make_sparse_ttn(
           outmaps, edges[dout] => outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
         )
         # add outgoing channel
-        T_inds[dout] = ITensorMPS.posInLink!(coutmap, outgoing[edges[dout]])
+        T_inds[dout] = pos_in_link!(coutmap, outgoing[edges[dout]])
         T_qns[dout] = outgoing_qns[edges[dout]]
       end
       # if term starts at this site, add its coefficient as a site factor
@@ -213,7 +223,7 @@ function make_sparse_ttn(
 
       push!(tempTTN[v], el)
     end
-    ITensorMPS.remove_dups!(tempTTN[v])
+    remove_dups!(tempTTN[v])
   end
 
   return tempTTN, inbond_coefs
@@ -228,7 +238,7 @@ function svd_bond_coefs(
     dim_in = findfirst(e -> dst(e) == v, edges)
     if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
       for (q, mat) in inbond_coefs[edges[dim_in]]
-        M = ITensorMPS.toMatrix(mat)
+        M = toMatrix(mat)
         U, S, V = svd(M)
         P = S .^ 2
         truncate!(P; kws...)
@@ -257,7 +267,7 @@ function compress_ttn(
     end
   end
 
-  linkdir_ref = ITensors.In   # safe to always use autofermion default here
+  linkdir_ref = ITensors.In  # safe to always use autofermion default here
   # Compress this tempTTN representation into dense form
   edgetype_sites = edgetype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
@@ -281,7 +291,7 @@ function compress_ttn(
 
   for v in ordered_verts
     v_degree = degree(sites, v)
-    # redo the whole thing like before
+    # Redo the whole thing like before
     # TODO: use neighborhood instead of going through all edges, see above
     edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
     dim_in = findfirst(e -> dst(e) == v, edges)
@@ -421,6 +431,12 @@ function compress_ttn(
   return H
 end
 
+#
+# TermQN implements a function with an internal cache.
+# Calling it on a term determines that term's flux
+# but tries not to rebuild the corresponding ITensor.
+# (Previously it was the function calc_qn.)
+#
 struct TermQN{V}
   sites::IndsNetwork
   op_cache::Dict{Pair{String,V},ITensor}
@@ -430,12 +446,10 @@ end
 function (t::TermQN)(term)
   q = QN()
   for st in term
-    op_tensor = get(t.op_cache, ITensors.which_op(st) => ITensors.site(st), nothing)
+    op_tensor = get(t.op_cache, which_op(st) => site(st), nothing)
     if op_tensor === nothing
-      op_tensor = op(
-        t.sites[ITensors.site(st)], ITensors.which_op(st); ITensors.params(st)...
-      )
-      t.op_cache[ITensors.which_op(st) => ITensors.site(st)] = op_tensor
+      op_tensor = op(t.sites[site(st)], which_op(st); params(st)...)
+      t.op_cache[which_op(st) => site(st)] = op_tensor
     end
     if !isnothing(flux(op_tensor))
       q += flux(op_tensor)
@@ -451,8 +465,6 @@ function ttn_svd(
 
   tempTTN, inbond_coefs = make_sparse_ttn(os, sites, root_vertex, coefficient_type, calc_qn)
 
-  Hflux = -calc_qn(terms(first(terms(os))))
-
   # Traverse tree outwards from root vertex
   ordered_verts = _default_vertex_ordering(sites, root_vertex)
   # Store edges in fixed ordering relative to root
@@ -461,6 +473,8 @@ function ttn_svd(
   Vs = svd_bond_coefs(
     coefficient_type, sites, ordered_verts, ordered_edges, inbond_coefs; kws...
   )
+
+  Hflux = -calc_qn(terms(first(terms(os))))
 
   T = compress_ttn(
     coefficient_type, sites, ordered_verts, ordered_edges, Hflux, tempTTN, Vs
@@ -580,6 +594,28 @@ function sorteachterm(os::OpSum, sites, root_vertex)
   return os
 end
 
+function sortmergeterms(os::OpSum{C}) where {C}
+  os_sorted_terms = sort(terms(os))
+  os = Sum(os_sorted_terms)
+  # Merge (add) terms with same operators
+  merge_os_data = Scaled{C,Prod{Op}}[]
+  last_term = copy(os[1])
+  last_term_coef = coefficient(last_term)
+  for n in 2:length(os)
+    if argument(os[n]) == argument(last_term)
+      last_term_coef += coefficient(os[n])
+      last_term = last_term_coef * argument(last_term)
+    else
+      push!(merge_os_data, last_term)
+      last_term = os[n]
+      last_term_coef = coefficient(last_term)
+    end
+  end
+  push!(merge_os_data, last_term)
+  os = Sum(merge_os_data)
+  return os
+end
+
 """
     ttn(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
     ttn(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
@@ -598,7 +634,7 @@ function ttn(
   check_terms_support(os, sites)
   os = deepcopy(os) #TODO: do we need this? sorteachterm copies `os` again
   os = sorteachterm(os, sites, root_vertex)
-  os = ITensorMPS.sortmergeterms(os)
+  os = sortmergeterms(os)
   return ttn_svd(os, sites, root_vertex; kwargs...)
 end
 
@@ -636,40 +672,11 @@ function ttn(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
   return NDTensors.convert_scalartype(eltype, ttn(os, sites; kwargs...))
 end
 
-#####################################
-# QNArrElem (sparse array with QNs) #
-#####################################
-
-struct QNArrElem{T,N}
-  qn_idxs::MVector{N,QN}
-  idxs::MVector{N,Int}
-  val::T
-end
-
-function Base.:(==)(a1::QNArrElem{T,N}, a2::QNArrElem{T,N})::Bool where {T,N}
-  return (a1.idxs == a2.idxs && a1.val == a2.val && a1.qn_idxs == a2.qn_idxs)
-end
-
-function Base.isless(a1::QNArrElem{T,N}, a2::QNArrElem{T,N})::Bool where {T,N}
-  ###two separate loops s.t. the MPS case reduces to the ITensors Implementation of QNMatElem
-  for n in 1:N
-    if a1.qn_idxs[n] != a2.qn_idxs[n]
-      return a1.qn_idxs[n] < a2.qn_idxs[n]
-    end
-  end
-  for n in 1:N
-    if a1.idxs[n] != a2.idxs[n]
-      return a1.idxs[n] < a2.idxs[n]
-    end
-  end
-  return a1.val < a2.val
-end
-
 # 
 # Sparse finite state machine construction
 # 
 
-# allow sparse arrays with ITensors.Sum entries
+# Allow sparse arrays with ITensors.Sum entries
 function Base.zero(::Type{S}) where {S<:Sum}
   return S()
 end
