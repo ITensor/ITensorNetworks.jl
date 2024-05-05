@@ -99,12 +99,12 @@ function make_sparse_ttn(
   site_coef_done = Prod{Op}[]
 
   # Temporary symbolic representation of TTN Hamiltonian
-  tempTTN = Dict(
+  temp_ttn = Dict(
     v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degree(sites, v)}[] for
     v in ordered_verts
   )
 
-  # Build compressed finite state machine representation (tempTTN)
+  # Build compressed finite state machine representation (temp_ttn)
   for v in ordered_verts
     v_degree = degree(sites, v)
     # For every vertex, find all edges that contain this vertex
@@ -206,6 +206,9 @@ function make_sparse_ttn(
       site_coef = one(coefficient_type)
       if (isnothing(dim_in) || T_inds[dim_in] == -1) && argument(term) ∉ site_coef_done
         site_coef = coefficient(term)
+        # TODO: update this code if the behavior (bug?) 
+        # is changed where typeof(coefficient(term)) of an 
+        # OpSum term is always ComplexFloat64
         # required since coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
         site_coef = convert(coefficient_type, site_coef)
         push!(site_coef_done, argument(term))
@@ -221,12 +224,12 @@ function make_sparse_ttn(
       # save indices and value of symbolic tensor entry
       el = QNArrElem(T_qns, T_inds, site_coef * Prod(onsite))
 
-      push!(tempTTN[v], el)
+      push!(temp_ttn[v], el)
     end
-    remove_dups!(tempTTN[v])
+    remove_dups!(temp_ttn[v])
   end
 
-  return tempTTN, inbond_coefs
+  return temp_ttn, inbond_coefs
 end
 
 function svd_bond_coefs(
@@ -252,7 +255,7 @@ function svd_bond_coefs(
 end
 
 function compress_ttn(
-  coefficient_type, sites0, ordered_verts, ordered_edges, Hflux, tempTTN, Vs
+  coefficient_type, sites0, ordered_verts, ordered_edges, Hflux, temp_ttn, Vs
 )
   # Insert dummy indices on internal vertices, these will not show up in the final tensor
   # TODO: come up with a better solution for this
@@ -268,7 +271,7 @@ function compress_ttn(
   end
 
   linkdir_ref = ITensors.In  # safe to always use autofermion default here
-  # Compress this tempTTN representation into dense form
+  # Compress this temp_ttn representation into dense form
   edgetype_sites = edgetype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
@@ -302,7 +305,7 @@ function compress_ttn(
 
     # construct blocks
     blocks = Dict{Tuple{Block{v_degree},Vector{Op}},Array{coefficient_type,v_degree}}()
-    for el in tempTTN[v]
+    for el in temp_ttn[v]
       t = el.val
       (abs(coefficient(t)) > eps(real(coefficient_type))) || continue
       block_helper_inds = fill(-1, v_degree) # we manipulate T_inds later, and loose track of ending/starting information, so keep track of it here
@@ -463,7 +466,7 @@ function ttn_svd(
 )
   calc_qn = TermQN{vertextype(sites)}(sites)
 
-  tempTTN, inbond_coefs = make_sparse_ttn(os, sites, root_vertex, coefficient_type, calc_qn)
+  temp_ttn, inbond_coefs = make_sparse_ttn(os, sites, root_vertex, coefficient_type, calc_qn)
 
   # Traverse tree outwards from root vertex
   ordered_verts = _default_vertex_ordering(sites, root_vertex)
@@ -477,7 +480,7 @@ function ttn_svd(
   Hflux = -calc_qn(terms(first(terms(os))))
 
   T = compress_ttn(
-    coefficient_type, sites, ordered_verts, ordered_edges, Hflux, tempTTN, Vs
+    coefficient_type, sites, ordered_verts, ordered_edges, Hflux, temp_ttn, Vs
   )
 
   return T
