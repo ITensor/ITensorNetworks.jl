@@ -29,11 +29,12 @@ end
 # Tree adaptations of functionalities in ITensors.jl/src/physics/autompo/opsum_to_mpo.jl
 # 
 
-function determine_val_type(terms)
-  for t in terms
-    (!isreal(coefficient(t))) && return ComplexF64
+function determine_coefficient_type(terms)
+  isempty(terms) && return Float64
+  if all(t->isreal(coefficient(t)),terms)
+    return real(typeof(coefficient(first(terms))))
   end
-  return Float64
+  return typeof(coefficient(first(terms)))
 end
 
 """
@@ -44,7 +45,7 @@ Hamiltonian, compressing shared interaction channels.
 """
 function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kwargs...)
   # Function barrier to improve type stability
-  coefficient_type = determine_val_type(terms(os))
+  coefficient_type = determine_coefficient_type(terms(os))
   return ttn_svd(coefficient_type, os, sites, root_vertex; kwargs...)
 end
 
