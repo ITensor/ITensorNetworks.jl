@@ -80,8 +80,8 @@ function pos_in_link!(linkmap::Dict, k)
   return pos
 end
 
-function make_sparse_ttn(
-  os::OpSum, sites::IndsNetwork, root_vertex, coefficient_type, calc_qn;
+function make_symbolic_ttn(
+  opsum::OpSum, sites::IndsNetwork, root_vertex, coefficient_type, calc_qn;
   ordered_verts, ordered_edges
 )
   inmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
@@ -97,15 +97,17 @@ function make_sparse_ttn(
   site_coef_done = Prod{Op}[]
 
   # Temporary symbolic representation of TTN Hamiltonian
-  temp_ttn = Dict(
+  symbolic_ttn = Dict(
     v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degree(sites, v)}[] for
     v in ordered_verts
   )
 
-  # Build compressed finite state machine representation (temp_ttn)
+  # Build compressed finite state machine representation (symbolic_ttn)
   for v in ordered_verts
     v_degree = degree(sites, v)
     # For every vertex, find all edges that contain this vertex
+    # (align_and_reorder_edges makes the output of indicident edges match the
+    #  direction and ordering match that of ordered_edges)
     edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
 
     # Use the corresponding ordering as index order for tensor elements at this site
@@ -116,22 +118,21 @@ function make_sparse_ttn(
 
     # For every site w except v, determine the incident edge to v
     # that lies in the edge_path(w,v)
+    # TODO: better way to make which_incident_edge below?
     subgraphs = split_at_vertex(sites, v)
-    _boundary_edges = align_edges(
-      [only(boundary_edges(underlying_graph(sites), subgraph)) for subgraph in subgraphs],
-      edges,
-    )
+    _boundary_edges = [only(boundary_edges(underlying_graph(sites), subgraph)) for subgraph in subgraphs]
+    _boundary_edges = align_edges(_boundary_edges, edges)
     which_incident_edge = Dict(
       Iterators.flatten([
         subgraphs[i] .=> ((_boundary_edges[i]),) for i in eachindex(subgraphs)
       ]),
     )
 
-    # sanity check, leaves only have single incoming or outgoing edge
+    # Sanity check, leaves only have single incoming or outgoing edge
     @assert !isempty(dims_out) || !isnothing(dim_in)
     (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf_vertex(sites, v)
 
-    for term in os
+    for term in opsum
       # Loop over OpSum and pick out terms that act on current vertex
       ops = ITensors.terms(term)
       if v in ITensors.site.(ops)
@@ -143,53 +144,51 @@ function make_sparse_ttn(
       # If term doesn't cross vertex, skip it
       crosses_vertex || continue
 
-      # filter out factor that acts on current vertex
-      onsite = filter(t -> (site(t) == v), ops)
-      non_onsite_ops = setdiff(ops, onsite)
+      # Filter out ops that acts on current vertex
+      onsite_ops = filter(t -> (site(t) == v), ops)
+      non_onsite_ops = setdiff(ops, onsite_ops)
 
-      # filter out ops that come in from the direction of the incoming edge
-      incoming = filter(
+      # Filter out ops that come in from the direction of the incoming edge
+      incoming_ops = filter(
         t -> which_incident_edge[site(t)] == edge_in, non_onsite_ops
       )
 
-      # also store all non-incoming ops in standard order, used for channel merging
-      not_incoming = filter(
+      # Also store all non-incoming ops in standard order, used for channel merging
+      non_incoming_ops = filter(
         t -> (site(t) == v) || which_incident_edge[site(t)] != edge_in,
         ops,
       )
 
-      # for every outgoing edge, filter out ops that go out along that edge
-      outgoing = Dict(
+      # For every outgoing edge, filter out ops that go out along that edge
+      outgoing_ops = Dict(
         e => filter(t -> which_incident_edge[site(t)] == e, non_onsite_ops) for
         e in edges_out
       )
 
-      # compute QNs
-      incoming_qn = calc_qn(incoming)
-      not_incoming_qn = calc_qn(not_incoming)
-      outgoing_qns = Dict(e => calc_qn(outgoing[e]) for e in edges_out)
-      site_qn = calc_qn(onsite)
+      # Compute QNs
+      incoming_qn = calc_qn(incoming_ops)
+      non_incoming_qn = calc_qn(non_incoming_ops)
+      outgoing_qns = Dict(e => calc_qn(outgoing_ops[e]) for e in edges_out)
+      site_qn = calc_qn(onsite_ops)
 
-      # initialize QNArrayElement indices and quantum numbers 
+      # Initialize QNArrayElement indices and quantum numbers 
       T_inds = MVector{v_degree}(fill(-1, v_degree))
       T_qns = MVector{v_degree}(fill(QN(), v_degree))
       # initialize ArrayElement indices for inbond_coefs
       bond_row = -1
       bond_col = -1
-      if !isempty(incoming)
-        # get the correct map from edge=>QN to term and channel
-        # this checks if term exists on edge=>QN ( otherwise insert it) and returns it's index
-        coutmap = get!(outmaps, edge_in => not_incoming_qn, Dict{Vector{Op},Int}())
+      if !isempty(incoming_ops)
+        # Get the correct map from edge=>QN to term and channel.
+        # This checks if term exists on edge=>QN (otherwise insert it) and returns its index.
+        coutmap = get!(outmaps, edge_in => non_incoming_qn, Dict{Vector{Op},Int}())
         cinmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
 
-        bond_row = pos_in_link!(cinmap, incoming)
-        bond_col = pos_in_link!(coutmap, not_incoming) # get incoming channel
+        bond_row = pos_in_link!(cinmap, incoming_ops)
+        bond_col = pos_in_link!(coutmap, non_incoming_ops) # get incoming channel
         bond_coef = convert(coefficient_type, coefficient(term))
         q_inbond_coefs = get!(
           inbond_coefs[edge_in], incoming_qn, MatElem{coefficient_type}[]
         )
-        #TODO: for OneElement, fill in size here
-        #push!(q_inbond_coefs, OneElement(bond_coef,(bond_row, bond_col), ()))
         push!(q_inbond_coefs, MatElem(bond_row, bond_col, bond_coef))
         T_inds[dim_in] = bond_col
         T_qns[dim_in] = -incoming_qn
@@ -198,8 +197,8 @@ function make_sparse_ttn(
         coutmap = get!(
           outmaps, edges[dout] => outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
         )
-        # add outgoing channel
-        T_inds[dout] = pos_in_link!(coutmap, outgoing[edges[dout]])
+        # Add outgoing channel
+        T_inds[dout] = pos_in_link!(coutmap, outgoing_ops[edges[dout]])
         T_qns[dout] = outgoing_qns[edges[dout]]
       end
       # If term starts at this site, add its coefficient as a site factor
@@ -209,21 +208,21 @@ function make_sparse_ttn(
         push!(site_coef_done, argument(term))
       end
       # Add onsite identity for interactions passing through vertex
-      if isempty(onsite)
-        if !ITensors.using_auto_fermion() && isfermionic(incoming, sites)
-          push!(onsite, Op("F", v))
+      if isempty(onsite_ops)
+        if !ITensors.using_auto_fermion() && isfermionic(incoming_ops, sites)
+          push!(onsite_ops, Op("F", v))
         else
-          push!(onsite, Op("Id", v))
+          push!(onsite_ops, Op("Id", v))
         end
       end
       # Save indices and value of symbolic tensor entry
-      el = QNArrElem(T_qns, T_inds, site_coef * Prod(onsite))
-      push!(temp_ttn[v], el)
+      el = QNArrElem(T_qns, T_inds, site_coef * Prod(onsite_ops))
+      push!(symbolic_ttn[v], el)
     end
-    remove_dups!(temp_ttn[v])
+    remove_dups!(symbolic_ttn[v])
   end
 
-  return temp_ttn, inbond_coefs
+  return symbolic_ttn, inbond_coefs
 end
 
 function svd_bond_coefs(
@@ -249,7 +248,7 @@ function svd_bond_coefs(
 end
 
 function compress_ttn(
-  coefficient_type, sites0, Hflux, temp_ttn, Vs; ordered_verts, ordered_edges
+  coefficient_type, sites0, Hflux, symbolic_ttn, Vs; ordered_verts, ordered_edges
 )
   # Insert dummy indices on internal vertices, these will not show up in the final tensor
   # TODO: come up with a better solution for this
@@ -265,7 +264,7 @@ function compress_ttn(
   end
 
   linkdir_ref = ITensors.In  # safe to always use autofermion default here
-  # Compress this temp_ttn representation into dense form
+  # Compress this symbolic_ttn representation into dense form
   edgetype_sites = edgetype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
@@ -299,7 +298,7 @@ function compress_ttn(
 
     # construct blocks
     blocks = Dict{Tuple{Block{v_degree},Vector{Op}},Array{coefficient_type,v_degree}}()
-    for el in temp_ttn[v]
+    for el in symbolic_ttn[v]
       t = el.val
       (abs(coefficient(t)) > eps(real(coefficient_type))) || continue
       block_helper_inds = fill(-1, v_degree) # we manipulate T_inds later, and loose track of ending/starting information, so keep track of it here
@@ -466,7 +465,7 @@ function ttn_svd(
   # Store edges in fixed ordering relative to root
   ordered_edges = _default_edge_ordering(sites, root_vertex)
 
-  temp_ttn, inbond_coefs = make_sparse_ttn(os, sites, root_vertex, coefficient_type, calc_qn; ordered_verts, ordered_edges)
+  symbolic_ttn, inbond_coefs = make_symbolic_ttn(os, sites, root_vertex, coefficient_type, calc_qn; ordered_verts, ordered_edges)
 
   Vs = svd_bond_coefs(
     coefficient_type, sites, inbond_coefs; ordered_verts, ordered_edges, kws...
@@ -475,7 +474,7 @@ function ttn_svd(
   Hflux = -calc_qn(terms(first(terms(os))))
 
   T = compress_ttn(
-    coefficient_type, sites, Hflux, temp_ttn, Vs; ordered_verts, ordered_edges
+    coefficient_type, sites, Hflux, symbolic_ttn, Vs; ordered_verts, ordered_edges
   )
 
   return T
