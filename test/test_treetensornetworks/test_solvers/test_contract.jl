@@ -44,11 +44,11 @@ using Test: @test, @test_broken, @testset
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = 1e-5
   # Test variational compression via DMRG
   Hfit = ProjOuterProdTTN(psi', H)
-  Hpsi_via_dmrg = dmrg(Hfit, psi; updater_kwargs=(; which_eigval=:LR,), nsweeps=1)
+  e, Hpsi_via_dmrg = dmrg(Hfit, psi; updater_kwargs=(; which_eigval=:LR,), nsweeps=1)
   @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 rtol = 1e-4
   # Test whether the interface works for ProjTTNSum with factors
   Hfit = ProjTTNSum([ProjOuterProdTTN(psi', H), ProjOuterProdTTN(psi', H)], [-0.2, -0.8])
-  Hpsi_via_dmrg = dmrg(Hfit, psi; nsweeps=1, updater_kwargs=(; which_eigval=:SR,))
+  e, Hpsi_via_dmrg = dmrg(Hfit, psi; nsweeps=1, updater_kwargs=(; which_eigval=:SR,))
   @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 rtol = 1e-4
 
   # Test basic usage for use with multiple ProjOuterProdTTN with default parameters
@@ -66,9 +66,7 @@ using Test: @test, @test_broken, @testset
   # Test the above via DMRG
   # ToDo: Investigate why this is broken
   Hfit = ProjTTNSum([ProjOuterProdTTN(psi', H), ProjOuterProdTTN(psi', identity)], [-1, 1])
-  Hpsi_normalized = ITensorNetworks.dmrg(
-    Hfit, psi; nsweeps=3, updater_kwargs=(; which_eigval=:SR)
-  )
+  e, Hpsi_normalized = dmrg(Hfit, psi; nsweeps=3, updater_kwargs=(; which_eigval=:SR))
   @test_broken abs(inner(Hpsi, (Hpsi_normalized) / norm(Hpsi))) ≈ 1 rtol = 1e-5
 
   #

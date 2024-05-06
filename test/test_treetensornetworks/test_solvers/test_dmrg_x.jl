@@ -10,6 +10,7 @@ using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Random: Random
 using Test: @test, @testset
 
+# TODO: Combine MPS and TTN tests.
 @testset "MPS DMRG-X" for conserve_qns in (false, true)
   n = 10
   s = siteinds("S=1/2", n; conserve_qns)
@@ -25,14 +26,16 @@ using Test: @test, @testset
 
   dmrg_x_kwargs = (nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
 
-  ϕ = dmrg_x(H, ψ; nsites=2, dmrg_x_kwargs...)
+  e, ϕ = dmrg_x(H, ψ; nsites=2, dmrg_x_kwargs...)
 
+  @test inner(ϕ', H, ϕ) / inner(ϕ, ϕ) ≈ e
   @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ', H, ϕ) / inner(ϕ, ϕ) rtol = 1e-1
   @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ)^2 rtol = 1e-7
   @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ', H, ϕ)^2 rtol = 1e-7
 
-  ϕ̃ = dmrg_x(H, ϕ; nsites=1, dmrg_x_kwargs...)
+  e, ϕ̃ = dmrg_x(H, ϕ; nsites=1, dmrg_x_kwargs...)
 
+  @test inner(ϕ̃', H, ϕ̃) / inner(ϕ̃, ϕ̃) ≈ e
   @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ̃', H, ϕ̃) / inner(ϕ̃, ϕ̃) rtol = 1e-1
   @test inner(H, ϕ̃, H, ϕ̃) ≈ inner(ϕ̃', H, ϕ̃)^2 rtol = 1e-3
   # Sometimes broken, sometimes not
@@ -56,14 +59,16 @@ end
 
   dmrg_x_kwargs = (nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
 
-  ϕ = dmrg_x(H, ψ; nsites=2, dmrg_x_kwargs...)
+  e, ϕ = dmrg_x(H, ψ; nsites=2, dmrg_x_kwargs...)
 
+  @test inner(ϕ', H, ϕ) / inner(ϕ, ϕ) ≈ e
   @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ', H, ϕ) / inner(ϕ, ϕ) rtol = 1e-1
   @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ)^2 rtol = 1e-2
   @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ', H, ϕ)^2 rtol = 1e-7
 
-  ϕ̃ = dmrg_x(H, ϕ; nsites=1, dmrg_x_kwargs...)
+  e, ϕ̃ = dmrg_x(H, ϕ; nsites=1, dmrg_x_kwargs...)
 
+  @test inner(ϕ̃', H, ϕ̃) / inner(ϕ̃, ϕ̃) ≈ e
   @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ̃', H, ϕ̃) / inner(ϕ̃, ϕ̃) rtol = 1e-1
   @test inner(H, ϕ̃, H, ϕ̃) ≈ inner(ϕ̃', H, ϕ̃)^2 rtol = 1e-6
   # Sometimes broken, sometimes not
