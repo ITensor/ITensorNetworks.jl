@@ -1,3 +1,4 @@
+#using FillArrays: OneElement
 using Graphs: degree, is_tree
 using ITensors: flux, has_fermion_string, itensor, ops, removeqns, space, truncate!, val
 using ITensors.LazyApply: Prod, Sum, coefficient
@@ -80,15 +81,11 @@ function pos_in_link!(linkmap::Dict, k)
 end
 
 function make_sparse_ttn(
-  os::OpSum, sites::IndsNetwork, root_vertex, coefficient_type, calc_qn
+  os::OpSum, sites::IndsNetwork, root_vertex, coefficient_type, calc_qn;
+  ordered_verts, ordered_edges
 )
-  edgetype_sites = edgetype(sites)
-  vertextype_sites = vertextype(sites)
-
-  ordered_verts = _default_vertex_ordering(sites, root_vertex)
-  ordered_edges = _default_edge_ordering(sites, root_vertex)
-  inmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
-  outmaps = Dict{Pair{edgetype_sites,QN},Dict{Vector{Op},Int}}()
+  inmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
+  outmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
 
   # Bond coefficients for incoming edge channels.
   # These become the "M" coefficient matrices that get SVD'd.
@@ -113,12 +110,12 @@ function make_sparse_ttn(
 
     # Use the corresponding ordering as index order for tensor elements at this site
     dim_in = findfirst(e -> dst(e) == v, edges)
-    edge_in = (isnothing(dim_in) ? [] : edges[dim_in])
+    edge_in = (isnothing(dim_in) ? nothing : edges[dim_in])
     dims_out = findall(e -> src(e) == v, edges)
     edges_out = edges[dims_out]
 
-    # For every site w except v, determine the incident edge to v that lies 
-    # in the edge_path(w,v)
+    # For every site w except v, determine the incident edge to v
+    # that lies in the edge_path(w,v)
     subgraphs = split_at_vertex(sites, v)
     _boundary_edges = align_edges(
       [only(boundary_edges(underlying_graph(sites), subgraph)) for subgraph in subgraphs],
@@ -141,29 +138,29 @@ function make_sparse_ttn(
         crosses_vertex = true
       else
         crosses_vertex =
-          !isone(length(Set([which_incident_edge[site] for site in ITensors.site.(ops)])))
+          !isone(length(Set([which_incident_edge[site] for site in site.(ops)])))
       end
       # If term doesn't cross vertex, skip it
       crosses_vertex || continue
 
       # filter out factor that acts on current vertex
-      onsite = filter(t -> (ITensors.site(t) == v), ops)
-      not_onsite_ops = setdiff(ops, onsite)
+      onsite = filter(t -> (site(t) == v), ops)
+      non_onsite_ops = setdiff(ops, onsite)
 
       # filter out ops that come in from the direction of the incoming edge
       incoming = filter(
-        t -> which_incident_edge[ITensors.site(t)] == edge_in, not_onsite_ops
+        t -> which_incident_edge[site(t)] == edge_in, non_onsite_ops
       )
 
       # also store all non-incoming ops in standard order, used for channel merging
       not_incoming = filter(
-        t -> (ITensors.site(t) == v) || which_incident_edge[ITensors.site(t)] != edge_in,
+        t -> (site(t) == v) || which_incident_edge[site(t)] != edge_in,
         ops,
       )
 
       # for every outgoing edge, filter out ops that go out along that edge
       outgoing = Dict(
-        e => filter(t -> which_incident_edge[ITensors.site(t)] == e, not_onsite_ops) for
+        e => filter(t -> which_incident_edge[site(t)] == e, non_onsite_ops) for
         e in edges_out
       )
 
@@ -191,6 +188,8 @@ function make_sparse_ttn(
         q_inbond_coefs = get!(
           inbond_coefs[edge_in], incoming_qn, MatElem{coefficient_type}[]
         )
+        #TODO: for OneElement, fill in size here
+        #push!(q_inbond_coefs, OneElement(bond_coef,(bond_row, bond_col), ()))
         push!(q_inbond_coefs, MatElem(bond_row, bond_col, bond_coef))
         T_inds[dim_in] = bond_col
         T_qns[dim_in] = -incoming_qn
@@ -203,28 +202,22 @@ function make_sparse_ttn(
         T_inds[dout] = pos_in_link!(coutmap, outgoing[edges[dout]])
         T_qns[dout] = outgoing_qns[edges[dout]]
       end
-      # if term starts at this site, add its coefficient as a site factor
+      # If term starts at this site, add its coefficient as a site factor
       site_coef = one(coefficient_type)
       if (isnothing(dim_in) || T_inds[dim_in] == -1) && argument(term) ∉ site_coef_done
-        site_coef = coefficient(term)
-        # TODO: update this code if the behavior (bug?) 
-        # is changed where typeof(coefficient(term)) of an 
-        # OpSum term is always ComplexFloat64
-        # required since coefficient seems to return ComplexF64 even if coefficient_type is determined to be real
-        site_coef = convert(coefficient_type, site_coef)
+        site_coef = convert(coefficient_type,coefficient(term))
         push!(site_coef_done, argument(term))
       end
-      # add onsite identity for interactions passing through vertex
+      # Add onsite identity for interactions passing through vertex
       if isempty(onsite)
         if !ITensors.using_auto_fermion() && isfermionic(incoming, sites)
-          error("No verified fermion support for automatic TTN constructor!")
+          push!(onsite, Op("F", v))
         else
           push!(onsite, Op("Id", v))
         end
       end
-      # save indices and value of symbolic tensor entry
+      # Save indices and value of symbolic tensor entry
       el = QNArrElem(T_qns, T_inds, site_coef * Prod(onsite))
-
       push!(temp_ttn[v], el)
     end
     remove_dups!(temp_ttn[v])
@@ -234,7 +227,7 @@ function make_sparse_ttn(
 end
 
 function svd_bond_coefs(
-  coefficient_type, sites, ordered_verts, ordered_edges, inbond_coefs; kws...
+  coefficient_type, sites, inbond_coefs; ordered_verts, ordered_edges, kws...
 )
   Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in ordered_edges)
   for v in ordered_verts
@@ -256,7 +249,7 @@ function svd_bond_coefs(
 end
 
 function compress_ttn(
-  coefficient_type, sites0, ordered_verts, ordered_edges, Hflux, temp_ttn, Vs
+  coefficient_type, sites0, Hflux, temp_ttn, Vs; ordered_verts, ordered_edges
 )
   # Insert dummy indices on internal vertices, these will not show up in the final tensor
   # TODO: come up with a better solution for this
@@ -463,25 +456,26 @@ function (t::TermQN)(term)
 end
 
 function ttn_svd(
-  coefficient_type::Type{<:Number}, os::OpSum, sites::IndsNetwork, root_vertex; kws...
+  coefficient_type::Type{<:Number}, os::OpSum, sites::IndsNetwork, root_vertex; 
+  kws...
 )
   calc_qn = TermQN{vertextype(sites)}(sites)
-
-  temp_ttn, inbond_coefs = make_sparse_ttn(os, sites, root_vertex, coefficient_type, calc_qn)
 
   # Traverse tree outwards from root vertex
   ordered_verts = _default_vertex_ordering(sites, root_vertex)
   # Store edges in fixed ordering relative to root
   ordered_edges = _default_edge_ordering(sites, root_vertex)
 
+  temp_ttn, inbond_coefs = make_sparse_ttn(os, sites, root_vertex, coefficient_type, calc_qn; ordered_verts, ordered_edges)
+
   Vs = svd_bond_coefs(
-    coefficient_type, sites, ordered_verts, ordered_edges, inbond_coefs; kws...
+    coefficient_type, sites, inbond_coefs; ordered_verts, ordered_edges, kws...
   )
 
   Hflux = -calc_qn(terms(first(terms(os))))
 
   T = compress_ttn(
-    coefficient_type, sites, ordered_verts, ordered_edges, Hflux, temp_ttn, Vs
+    coefficient_type, sites, Hflux, temp_ttn, Vs; ordered_verts, ordered_edges
   )
 
   return T
