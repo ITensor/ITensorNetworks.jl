@@ -267,27 +267,40 @@ function update_factor(bp_cache, vertex, factor)
   return update_factors(bp_cache, Dictionary([vertex], [factor]))
 end
 
-function region_scalar(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
+function region_scalar(
+  bp_cache::BeliefPropagationCache,
+  pv::PartitionVertex;
+  contract_kwargs=(; sequence="automatic"),
+)
   incoming_mts = environment(bp_cache, [pv])
   local_state = factor(bp_cache, pv)
-  return contract(vcat(incoming_mts, local_state))[]
+  return contract(vcat(incoming_mts, local_state); contract_kwargs...)[]
 end
 
-function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
-  return contract(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))))[]
+function region_scalar(
+  bp_cache::BeliefPropagationCache,
+  pe::PartitionEdge;
+  contract_kwargs=(; sequence="automatic"),
+)
+  return contract(
+    vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))); contract_kwargs...
+  )[]
 end
 
 function vertex_scalars(
   bp_cache::BeliefPropagationCache,
-  pvs=partitionvertices(partitioned_tensornetwork(bp_cache)),
+  pvs=partitionvertices(partitioned_tensornetwork(bp_cache));
+  kwargs...,
 )
-  return map(pv -> region_scalar(bp_cache, pv), pvs)
+  return map(pv -> region_scalar(bp_cache, pv; kwargs...), pvs)
 end
 
 function edge_scalars(
-  bp_cache::BeliefPropagationCache, pes=partitionedges(partitioned_tensornetwork(bp_cache))
+  bp_cache::BeliefPropagationCache,
+  pes=partitionedges(partitioned_tensornetwork(bp_cache));
+  kwargs...,
 )
-  return map(pe -> region_scalar(bp_cache, pe), pes)
+  return map(pe -> region_scalar(bp_cache, pe; kwargs...), pes)
 end
 
 function scalar_factors_quotient(bp_cache::BeliefPropagationCache)
