@@ -1,4 +1,5 @@
 #using FillArrays: OneElement
+#using DataGraphs: DataGraph
 using Graphs: degree, is_tree
 using ITensors: flux, has_fermion_string, itensor, ops, removeqns, space, truncate!, val
 using ITensors.LazyApply: Prod, Sum, coefficient
@@ -32,7 +33,7 @@ end
 
 function determine_coefficient_type(terms)
   isempty(terms) && return Float64
-  if all(t->isreal(coefficient(t)),terms)
+  if all(t -> isreal(coefficient(t)), terms)
     return real(typeof(coefficient(first(terms))))
   end
   return typeof(coefficient(first(terms)))
@@ -50,7 +51,12 @@ function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kwargs...)
   return ttn_svd(coefficient_type, os, sites, root_vertex; kwargs...)
 end
 
-function remove_dups!(v::Vector)
+# TODO: should be equivalent to `sort!(v); unique!(v)` however,
+# Base.unique! is giving incorrect results for data involving the 
+# Prod type from LazyApply. This could be a combination of Base.unique!
+# not strictly relying on isequal combined with an incorrect
+# implementation of isequal/isless for Prod.
+function _sort_unique!(v::Vector)
   N = length(v)
   (N == 0) && return nothing
   sort!(v)
@@ -81,11 +87,18 @@ function pos_in_link!(linkmap::Dict, k)
 end
 
 function make_symbolic_ttn(
-  opsum::OpSum, sites::IndsNetwork, root_vertex, coefficient_type, calc_qn;
-  ordered_verts, ordered_edges
+  coefficient_type,
+  opsum::OpSum,
+  sites::IndsNetwork;
+  ordered_verts,
+  ordered_edges,
+  root_vertex,
+  term_qn_map,
 )
   inmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
   outmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
+
+  #g = underlying_graph(sites)
 
   # Bond coefficients for incoming edge channels.
   # These become the "M" coefficient matrices that get SVD'd.
@@ -120,7 +133,9 @@ function make_symbolic_ttn(
     # that lies in the edge_path(w,v)
     # TODO: better way to make which_incident_edge below?
     subgraphs = split_at_vertex(sites, v)
-    _boundary_edges = [only(boundary_edges(underlying_graph(sites), subgraph)) for subgraph in subgraphs]
+    _boundary_edges = [
+      only(boundary_edges(underlying_graph(sites), subgraph)) for subgraph in subgraphs
+    ]
     _boundary_edges = align_edges(_boundary_edges, edges)
     which_incident_edge = Dict(
       Iterators.flatten([
@@ -149,14 +164,11 @@ function make_symbolic_ttn(
       non_onsite_ops = setdiff(ops, onsite_ops)
 
       # Filter out ops that come in from the direction of the incoming edge
-      incoming_ops = filter(
-        t -> which_incident_edge[site(t)] == edge_in, non_onsite_ops
-      )
+      incoming_ops = filter(t -> which_incident_edge[site(t)] == edge_in, non_onsite_ops)
 
       # Also store all non-incoming ops in standard order, used for channel merging
       non_incoming_ops = filter(
-        t -> (site(t) == v) || which_incident_edge[site(t)] != edge_in,
-        ops,
+        t -> (site(t) == v) || which_incident_edge[site(t)] != edge_in, ops
       )
 
       # For every outgoing edge, filter out ops that go out along that edge
@@ -166,10 +178,10 @@ function make_symbolic_ttn(
       )
 
       # Compute QNs
-      incoming_qn = calc_qn(incoming_ops)
-      non_incoming_qn = calc_qn(non_incoming_ops)
-      outgoing_qns = Dict(e => calc_qn(outgoing_ops[e]) for e in edges_out)
-      site_qn = calc_qn(onsite_ops)
+      incoming_qn = term_qn_map(incoming_ops)
+      non_incoming_qn = term_qn_map(non_incoming_ops)
+      outgoing_qns = Dict(e => term_qn_map(outgoing_ops[e]) for e in edges_out)
+      site_qn = term_qn_map(onsite_ops)
 
       # Initialize QNArrayElement indices and quantum numbers 
       T_inds = MVector{v_degree}(fill(-1, v_degree))
@@ -204,7 +216,7 @@ function make_symbolic_ttn(
       # If term starts at this site, add its coefficient as a site factor
       site_coef = one(coefficient_type)
       if (isnothing(dim_in) || T_inds[dim_in] == -1) && argument(term) ∉ site_coef_done
-        site_coef = convert(coefficient_type,coefficient(term))
+        site_coef = convert(coefficient_type, coefficient(term))
         push!(site_coef_done, argument(term))
       end
       # Add onsite identity for interactions passing through vertex
@@ -219,7 +231,7 @@ function make_symbolic_ttn(
       el = QNArrElem(T_qns, T_inds, site_coef * Prod(onsite_ops))
       push!(symbolic_ttn[v], el)
     end
-    remove_dups!(symbolic_ttn[v])
+    _sort_unique!(symbolic_ttn[v])
   end
 
   return symbolic_ttn, inbond_coefs
@@ -265,10 +277,9 @@ function compress_ttn(
 
   linkdir_ref = ITensors.In  # safe to always use autofermion default here
   # Compress this symbolic_ttn representation into dense form
-  edgetype_sites = edgetype(sites)
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
-  link_space = Dict{edgetype_sites,Index}()
+  link_space = Dict{edgetype(sites),Index}()
   for e in ordered_edges
     operator_blocks = [q => size(Vq, 2) for (q, Vq) in Vs[e]]
     link_space[e] = Index(
@@ -428,18 +439,18 @@ function compress_ttn(
 end
 
 #
-# TermQN implements a function with an internal cache.
+# TermQNMap implements a function with an internal cache.
 # Calling it on a term determines that term's flux
 # but tries not to rebuild the corresponding ITensor.
 # (Previously it was the function calc_qn.)
 #
-struct TermQN{V}
+struct TermQNMap{V}
   sites::IndsNetwork
   op_cache::Dict{Pair{String,V},ITensor}
-  TermQN{V}(s) where {V} = new{V}(s, Dict{Pair{String,V},ITensor}())
+  TermQNMap{V}(s) where {V} = new{V}(s, Dict{Pair{String,V},ITensor}())
 end
 
-function (t::TermQN)(term)
+function (t::TermQNMap)(term)
   q = QN()
   for st in term
     op_tensor = get(t.op_cache, which_op(st) => site(st), nothing)
@@ -455,23 +466,30 @@ function (t::TermQN)(term)
 end
 
 function ttn_svd(
-  coefficient_type::Type{<:Number}, os::OpSum, sites::IndsNetwork, root_vertex; 
-  kws...
+  coefficient_type::Type{<:Number}, os::OpSum, sites::IndsNetwork, root_vertex; kws...
 )
-  calc_qn = TermQN{vertextype(sites)}(sites)
+  term_qn_map = TermQNMap{vertextype(sites)}(sites)
 
   # Traverse tree outwards from root vertex
   ordered_verts = _default_vertex_ordering(sites, root_vertex)
   # Store edges in fixed ordering relative to root
   ordered_edges = _default_edge_ordering(sites, root_vertex)
 
-  symbolic_ttn, inbond_coefs = make_symbolic_ttn(os, sites, root_vertex, coefficient_type, calc_qn; ordered_verts, ordered_edges)
+  symbolic_ttn, inbond_coefs = make_symbolic_ttn(
+    coefficient_type,
+    os,
+    sites;
+    ordered_verts,
+    ordered_edges,
+    root_vertex,
+    term_qn_map,
+  )
 
   Vs = svd_bond_coefs(
     coefficient_type, sites, inbond_coefs; ordered_verts, ordered_edges, kws...
   )
 
-  Hflux = -calc_qn(terms(first(terms(os))))
+  Hflux = -term_qn_map(terms(first(terms(os))))
 
   T = compress_ttn(
     coefficient_type, sites, Hflux, symbolic_ttn, Vs; ordered_verts, ordered_edges
