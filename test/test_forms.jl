@@ -43,8 +43,12 @@ using Random: Random
   @test underlying_graph(operator_network(blf)) == underlying_graph(A)
   @test underlying_graph(bra_network(blf)) == underlying_graph(ψbra)
 
+  qf = QuadraticFormNetwork(ψket)
+  @test nv(qf) == 3 * nv(ψket)
+  @test isempty(flatten_siteinds(qf))
+
   qf = QuadraticFormNetwork(A, ψket)
-  @test nv(qf) == 2 * nv(ψbra) + nv(A)
+  @test nv(qf) == 2 * nv(ψket) + nv(A)
   @test isempty(flatten_siteinds(qf))
 
   v = (1, 1)
