@@ -663,38 +663,6 @@ function split_index(
   return tn
 end
 
-function flatten_networks(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork;
-  map_bra_linkinds=sim,
-  flatten=true,
-  combine_linkinds=true,
-  kwargs...,
-)
-  @assert issetequal(vertices(tn1), vertices(tn2))
-  tn1 = map_bra_linkinds(tn1; sites=[])
-  flattened_net = ⊗(tn1, tn2; kwargs...)
-  if flatten
-    for v in vertices(tn1)
-      flattened_net = contract(flattened_net, (v, 2) => (v, 1); merged_vertex=v)
-    end
-  end
-  if combine_linkinds
-    flattened_net = ITensorNetworks.combine_linkinds(flattened_net)
-  end
-  return flattened_net
-end
-
-function flatten_networks(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork,
-  tn3::AbstractITensorNetwork,
-  tn_tail::AbstractITensorNetwork...;
-  kwargs...,
-)
-  return flatten_networks(flatten_networks(tn1, tn2; kwargs...), tn3, tn_tail...; kwargs...)
-end
-
 function inner_network(x::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...)
   return BilinearFormNetwork(x, y; kwargs...)
 end
