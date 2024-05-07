@@ -59,7 +59,7 @@ function QuadraticFormNetwork(
   kwargs...,
 )
   blf = BilinearFormNetwork(
-    bra,
+    ket,
     ket;
     dual_site_index_map=dual_index_map,
     dual_link_index_map=dual_index_map,
