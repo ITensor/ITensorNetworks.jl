@@ -65,7 +65,7 @@ function BilinearFormNetwork(
   @assert issetequal(flatten_siteinds(bra), flatten_siteinds(ket))
   operator_inds = union_all_inds(siteinds(ket), dual_site_index_map(siteinds(ket)))
   # TODO: Define and use `identity_network` here.
-  O = ITensorNetwork(Op("I"), operator_inds)
+  O = ITensorNetwork(Op("I"), operator_inds; link_space=nothing)
   return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end
 
