@@ -4,7 +4,7 @@ using NamedGraphs.GraphsExtensions: GraphsExtensions
 
 function alternating_update(
   operator,
-  init_state::AbstractTTN;
+  init_state;
   nsweeps,  # define default for each solver implementation
   nsites, # define default for each level of solver implementation
   updater,  # this specifies the update performed locally
@@ -52,7 +52,7 @@ end
 
 function alternating_update(
   projected_operator,
-  init_state::AbstractTTN,
+  init_state,
   sweep_plans;
   outputlevel=default_outputlevel(),
   checkdone=default_checkdone(),  # 
@@ -100,6 +100,17 @@ end
 function alternating_update(operator::AbstractTTN, init_state::AbstractTTN; kwargs...)
   projected_operator = ProjTTN(operator)
   return alternating_update(projected_operator, init_state; kwargs...)
+end
+
+function alternating_update(operator::AbstractITensorNetwork, init_state::AbstractITensorNetwork, sweep_plans; kwargs...)
+  ψOψ = QuadraticFormNetwork(operator, init_state)
+  ψIψ = QuadraticFormNetwork(init_state)
+  ψOψ_bpc = BeliefPropagationCache(ψOψ)
+  ψIψ_bpc = BeliefPropagationCache(ψIψ)
+  ψOψ_bpc = update(ψOψ_bpc)
+  ψIψ_bpc = update(ψIψ_bpc)
+  projected_operator = (ψOψ_bpc, ψIψ_bpc)
+  return alternating_update(projected_operator, init_state, sweep_plans; kwargs...)
 end
 
 function alternating_update(

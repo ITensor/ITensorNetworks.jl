@@ -138,9 +138,13 @@ function insert_linkinds(
   for e in edges
     # TODO: Change to check if it is empty.
     if !isassigned(indsnetwork, e)
-      iₑ = Index(link_space, edge_tag(e))
-      # TODO: Allow setting with just `Index`.
-      indsnetwork[e] = [iₑ]
+      if !isnothing(link_space)
+        iₑ = Index(link_space, edge_tag(e))
+        # TODO: Allow setting with just `Index`.
+        indsnetwork[e] = [iₑ]
+      else
+        indsnetwork[e] = []
+      end
     end
   end
   return indsnetwork

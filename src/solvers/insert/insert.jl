@@ -48,3 +48,43 @@ function default_inserter(
   state = set_ortho_region(state, [v])
   return state, nothing
 end
+
+function bp_inserter(ψ::AbstractITensorNetwork, ψAψ_bpc::BeliefPropagationCache, 
+  ψIψ_bpc::BeliefPropagationCache, state::ITensor, region; cache_update_kwargs = (;), kwargs...)
+
+  spec = nothing
+
+  form_network = unpartitioned_graph(partitioned_tensornetwork(ψAψ_bpc))
+  if length(region) == 1
+    states = [state]
+  elseif length(region) == 2
+    v1, v2 = region[1], region[2]
+    e = edgetype(ψ)(v1, v2)
+    pe = partitionedge(ψAψ_bpc, ket_vertex(form_network, v1) => bra_vertex(form_network, v2))
+    stateᵥ₁, stateᵥ₂, spec = factorize_svd(state,uniqueinds(ψ[v1], ψ[v2]); ortho="none", tags=edge_tag(e),kwargs...)
+    states = noprime.([stateᵥ₁, stateᵥ₂])
+    delete!(messages(ψAψ_bpc), pe)
+    delete!(messages(ψIψ_bpc), pe)
+    delete!(messages(ψAψ_bpc), reverse(pe))
+    delete!(messages(ψIψ_bpc), reverse(pe))
+  end
+
+  for (i, v) in enumerate(region)
+    state = states[i]
+    form_bra_v, form_ket_v = bra_vertex(form_network, v), ket_vertex(form_network, v)
+    ψ[v] =state
+    state_dag = replaceinds(dag(state), inds(state), dual_index_map(form_network).(inds(state)))
+    ψAψ_bpc = update_factor(ψAψ_bpc, form_ket_v, state)
+    ψAψ_bpc = update_factor(ψAψ_bpc, form_bra_v, state_dag)
+    ψIψ_bpc = update_factor(ψIψ_bpc, form_ket_v, state)
+    ψIψ_bpc = update_factor(ψIψ_bpc, form_bra_v, state_dag)
+  end
+
+  ψAψ_bpc = update(ψAψ_bpc; cache_update_kwargs...)
+  ψIψ_bpc = update(ψIψ_bpc; cache_update_kwargs...)
+  updated_ψAψ = unpartitioned_graph(partitioned_tensornetwork(ψAψ_bpc))
+  updated_ψIψ = unpartitioned_graph(partitioned_tensornetwork(ψIψ_bpc))
+  eigval = scalar(updated_ψAψ; cache! = Ref(ψAψ_bpc), alg = "bp") / scalar(updated_ψIψ; cache! = Ref(ψIψ_bpc), alg = "bp")
+
+  return ψ, ψAψ_bpc, ψIψ_bpc, spec,   (; eigvals=[eigval])
+end

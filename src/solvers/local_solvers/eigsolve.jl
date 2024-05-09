@@ -32,3 +32,26 @@ function eigsolve_updater(
   )
   return vecs[1], (; info, eigvals=vals)
 end
+
+function bp_eigsolve_updater(init::ITensor, ∂ψAψ_bpc_∂r, sqrt_mts, inv_sqrt_mts; kwargs...)
+
+  #TODO: Put inv_sqrt_mts onto ∂ψAψ_bpc_∂r beforehand. Need to do this in an efficient way without
+  #precontracting ∂ψAψ_bpc_∂r
+  function get_new_state(∂ψAψ_bpc_∂r, inv_sqrt_mts, state::ITensor; sequence = "automatic")
+    state = noprime(contract([state; inv_sqrt_mts]))
+    state = dag(noprime(contract([state; ∂ψAψ_bpc_∂r]; sequence)))
+    return noprime(contract([state; (inv_sqrt_mts)]))
+  end
+
+  init = noprime(contract([init; sqrt_mts]))
+  sequence = optimal_contraction_sequence([init; ∂ψAψ_bpc_∂r])
+  get_new_state_partial = partial(get_new_state, ∂ψAψ_bpc_∂r, inv_sqrt_mts; sequence)
+  howmany = 1
+
+  vals, vecs, info = eigsolve(get_new_state_partial,init,howmany,:SR; ishermitian = true, kwargs...)
+
+  state = first(vecs)
+  state = noprime(contract([state; inv_sqrt_mts]))
+
+  return state, (; info, eigvals=vals)
+end

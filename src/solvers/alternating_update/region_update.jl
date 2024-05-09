@@ -41,7 +41,7 @@ end
 
 function region_update(
   projected_operator,
-  state;
+  state::AbstractTTN;
   outputlevel,
   which_sweep,
   sweep_plan,
@@ -117,4 +117,51 @@ function region_update(
   update_observer!(region_observer!; all_kwargs...)
   !(isnothing(region_printer)) && region_printer(; all_kwargs...)
   return state, projected_operator
+end
+
+function region_update(projected_operator, state; outputlevel,
+  which_sweep,
+  sweep_plan,
+  which_region_update,
+  region_printer,
+  (region_observer!))
+
+  (region, region_kwargs) = sweep_plan[which_region_update]
+  (;
+    extracter,
+    extracter_kwargs,
+    updater,
+    updater_kwargs,
+    inserter,
+    inserter_kwargs,
+    transform_operator,
+    transform_operator_kwargs,
+    internal_kwargs,
+  ) = region_kwargs
+  ψOψ_bpc, ψIψ_bpc = projected_operator
+
+  local_state, ∂ψOψ_bpc_∂r, sqrt_mts, inv_sqrt_mts = extracter(state, ψOψ_bpc, ψIψ_bpc, region; extracter_kwargs...)
+
+  local_state, _ = updater(local_state, ∂ψOψ_bpc_∂r, sqrt_mts, inv_sqrt_mts; updater_kwargs...)
+
+  state, ψOψ_bpc, ψIψ_bpc, spec, info  = inserter(state, ψOψ_bpc, ψIψ_bpc, local_state, region; inserter_kwargs...)
+
+  all_kwargs = (;
+    which_region_update,
+    sweep_plan,
+    total_sweep_steps=length(sweep_plan),
+    end_of_sweep=(which_region_update == length(sweep_plan)),
+    state,
+    region,
+    which_sweep,
+    spec,
+    outputlevel,
+    info...,
+    region_kwargs...,
+    internal_kwargs...,
+  )
+  update_observer!(region_observer!; all_kwargs...)
+  !(isnothing(region_printer)) && region_printer(; all_kwargs...)
+
+  return state, (ψOψ_bpc, ψIψ_bpc)
 end
