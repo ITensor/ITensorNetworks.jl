@@ -1,6 +1,6 @@
 using Dictionaries: Dictionary, set!
 using ITensors: Op, op, contract, siteinds, which_op
-using ITensors.ITensorMPS: ITensorMPS, expect
+using ITensorMPS: ITensorMPS, expect
 
 default_expect_alg() = "bp"
 

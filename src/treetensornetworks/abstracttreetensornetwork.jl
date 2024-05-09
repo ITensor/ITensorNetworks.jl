@@ -3,7 +3,7 @@ using NamedGraphs.GraphsExtensions:
   GraphsExtensions, edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
 using IsApprox: IsApprox, Approx
 using ITensors: @Algorithm_str, directsum, hasinds, permute, plev
-using ITensors.ITensorMPS: linkind, loginner, lognorm, orthogonalize
+using ITensorMPS: linkind, loginner, lognorm, orthogonalize
 using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end

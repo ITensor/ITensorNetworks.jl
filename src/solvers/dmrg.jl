@@ -1,4 +1,4 @@
-using ITensors.ITensorMPS: ITensorMPS, dmrg
+using ITensorMPS: ITensorMPS, dmrg
 using KrylovKit: KrylovKit
 
 """

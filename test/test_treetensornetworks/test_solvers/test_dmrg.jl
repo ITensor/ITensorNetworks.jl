@@ -3,7 +3,7 @@ using DataGraphs: edge_data, vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
 using ITensors: ITensors
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 using ITensorNetworks:
   ITensorNetworks,
   OpSum,

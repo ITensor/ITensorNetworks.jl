@@ -1,6 +1,6 @@
 using Graphs: degree, is_tree
 using ITensors: flux, has_fermion_string, itensor, ops, removeqns, space, val
-using ITensors.ITensorMPS: ITensorMPS, cutoff, linkdims, truncate!
+using ITensorMPS: ITensorMPS, cutoff, linkdims, truncate!
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks
 using ITensors.Ops: Op, OpSum

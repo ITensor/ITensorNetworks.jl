@@ -2,7 +2,7 @@ using Graphs: IsDirected
 using SplitApplyCombine: group
 using LinearAlgebra: diag
 using ITensors: dir
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 using NamedGraphs.PartitionedGraphs:
   PartitionedGraphs,
   PartitionedGraph,

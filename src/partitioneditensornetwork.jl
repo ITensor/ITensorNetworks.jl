@@ -1,6 +1,6 @@
 using Graphs: dst, src
 using ITensors: commoninds
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 using NamedGraphs.GraphsExtensions: subgraph
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, PartitionEdge
 
