@@ -4,7 +4,9 @@ using ITensors.ITensorMPS: ITensorMPS, expect
 
 default_expect_alg() = "bp"
 
-function ITensorMPS.expect(ψIψ::AbstractFormNetwork, op::Op; contract_kwargs=(;), kwargs...)
+function ITensorMPS.expect(
+  ψIψ::AbstractFormNetwork, op::Op; contract_kwargs=(; sequence="automatic"), kwargs...
+)
   v = only(op.sites)
   ψIψ_v = ψIψ[operator_vertex(ψIψ, v)]
   s = commonind(ψIψ[ket_vertex(ψIψ, v)], ψIψ_v)
