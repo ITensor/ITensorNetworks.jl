@@ -3,19 +3,9 @@ using DataGraphs: edge_data, vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
 using ITensors: ITensors
-using ITensors.ITensorMPS: ITensorMPS
+using ITensors.ITensorMPS: ITensorMPS, linkdims
 using ITensorNetworks:
-  ITensorNetworks,
-  OpSum,
-  ttn,
-  apply,
-  dmrg,
-  inner,
-  linkdims,
-  mpo,
-  random_mps,
-  random_ttn,
-  siteinds
+  ITensorNetworks, OpSum, ttn, apply, dmrg, inner, mpo, random_mps, random_ttn, siteinds
 using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using KrylovKit: eigsolve
