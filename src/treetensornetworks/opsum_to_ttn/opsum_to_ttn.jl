@@ -129,8 +129,8 @@ function make_symbolic_ttn(
     dims_out = findall(e -> src(e) == v, edges)
     edges_out = edges[dims_out]
 
-    # For every site w except v, determine the incident edge to v
-    # that lies in the edge_path(w,v)
+    # For every site v' except v, determine the incident edge to v
+    # that lies in the edge_path(v',v)
     # TODO: better way to make which_incident_edge below?
     subgraphs = split_at_vertex(sites, v)
     _boundary_edges = [
@@ -180,7 +180,6 @@ function make_symbolic_ttn(
       # Compute QNs
       incoming_qn = term_qn_map(incoming_ops)
       non_incoming_qn = term_qn_map(non_incoming_ops)
-      outgoing_qns = Dict(e => term_qn_map(outgoing_ops[e]) for e in edges_out)
       site_qn = term_qn_map(onsite_ops)
 
       # Initialize QNArrayElement indices and quantum numbers 
@@ -206,12 +205,12 @@ function make_symbolic_ttn(
         T_qns[dim_in] = -incoming_qn
       end
       for dout in dims_out
-        coutmap = get!(
-          outmaps, edges[dout] => outgoing_qns[edges[dout]], Dict{Vector{Op},Int}()
-        )
+        out_edge = edges[dout]
+        out_op = outgoing_ops[out_edge]
+        coutmap = get!(outmaps, out_edge => term_qn_map(out_op), Dict{Vector{Op},Int}())
         # Add outgoing channel
-        T_inds[dout] = pos_in_link!(coutmap, outgoing_ops[edges[dout]])
-        T_qns[dout] = outgoing_qns[edges[dout]]
+        T_inds[dout] = pos_in_link!(coutmap, out_op)
+        T_qns[dout] = term_qn_map(out_op)
       end
       # If term starts at this site, add its coefficient as a site factor
       site_coef = one(coefficient_type)
