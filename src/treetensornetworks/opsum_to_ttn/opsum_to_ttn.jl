@@ -476,13 +476,7 @@ function ttn_svd(
   ordered_edges = _default_edge_ordering(sites, root_vertex)
 
   symbolic_ttn, inbond_coefs = make_symbolic_ttn(
-    coefficient_type,
-    os,
-    sites;
-    ordered_verts,
-    ordered_edges,
-    root_vertex,
-    term_qn_map,
+    coefficient_type, os, sites; ordered_verts, ordered_edges, root_vertex, term_qn_map
   )
 
   Vs = svd_bond_coefs(
