@@ -4,7 +4,7 @@ using Graphs: add_vertex!, vertices
 # Trigger package extension.
 using GraphsFlows: GraphsFlows
 using ITensors: Index, ITensor, contract, noncommoninds, randomITensor
-using ITensors.ITensorMPS: MPS
+using ITensorMPS: MPS
 using ITensorNetworks:
   _DensityMartrixAlgGraph,
   _contract_deltas_ignore_leaf_partitions,

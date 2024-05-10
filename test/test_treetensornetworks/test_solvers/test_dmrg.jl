@@ -2,12 +2,22 @@
 using DataGraphs: edge_data, vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
-using ITensors: ITensors
-using ITensors.ITensorMPS: ITensorMPS, linkdims
+using ITensorMPS: ITensorMPS
 using ITensorNetworks:
-  ITensorNetworks, OpSum, ttn, apply, dmrg, inner, mpo, random_mps, random_ttn, siteinds
+  ITensorNetworks,
+  OpSum,
+  ttn,
+  apply,
+  dmrg,
+  inner,
+  mpo,
+  random_mps,
+  random_ttn,
+  linkdims,
+  siteinds
 using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
+using ITensors: ITensors
 using KrylovKit: eigsolve
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Observers: observer
