@@ -1,11 +1,13 @@
 #using FillArrays: OneElement
 #using DataGraphs: DataGraph
-using Graphs: degree, is_tree
+using Graphs: degree, is_tree, steiner_tree
 using ITensorMPS: ITensorMPS, cutoff, linkdims, ops, truncate!, val
 using ITensors: flux, has_fermion_string, itensor, removeqns, space
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks
-using ITensors.Ops: argument, coefficient, Op, OpSum, name, params, site, terms, which_op
+using ITensors.Ops:
+  argument, coefficient, Op, OpSum, name, params, site, sites, terms, which_op
+using IterTools: partition
 using NamedGraphs.GraphsExtensions:
   GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
 using StaticArrays: MVector
@@ -90,16 +92,15 @@ end
 function make_symbolic_ttn(
   coefficient_type,
   opsum::OpSum,
-  sites::IndsNetwork;
+  sites_::IndsNetwork;
   ordered_verts,
   ordered_edges,
   root_vertex,
   term_qn_map,
 )
-  inmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
-  outmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
-
-  #g = underlying_graph(sites)
+  graph = underlying_graph(sites_)
+  inmaps = Dict{Pair{edgetype(graph),QN},Dict{Vector{Op},Int}}()
+  outmaps = Dict{Pair{edgetype(graph),QN},Dict{Vector{Op},Int}}()
 
   # Bond coefficients for incoming edge channels.
   # These become the "M" coefficient matrices that get SVD'd.
@@ -112,17 +113,17 @@ function make_symbolic_ttn(
 
   # Temporary symbolic representation of TTN Hamiltonian
   symbolic_ttn = Dict(
-    v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degree(sites, v)}[] for
+    v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degree(graph, v)}[] for
     v in ordered_verts
   )
 
   # Build compressed finite state machine representation (symbolic_ttn)
   for v in ordered_verts
-    v_degree = degree(sites, v)
+    v_degree = degree(graph, v)
     # For every vertex, find all edges that contain this vertex
     # (align_and_reorder_edges makes the output of indicident edges match the
     #  direction and ordering match that of ordered_edges)
-    edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
+    edges = align_and_reorder_edges(incident_edges(graph, v), ordered_edges)
 
     # Use the corresponding ordering as index order for tensor elements at this site
     dim_in = findfirst(e -> dst(e) == v, edges)
@@ -133,10 +134,8 @@ function make_symbolic_ttn(
     # For every site v' except v, determine the incident edge to v
     # that lies in the edge_path(v',v)
     # TODO: better way to make which_incident_edge below?
-    subgraphs = split_at_vertex(sites, v)
-    _boundary_edges = [
-      only(boundary_edges(underlying_graph(sites), subgraph)) for subgraph in subgraphs
-    ]
+    subgraphs = split_at_vertex(graph, v)
+    _boundary_edges = [only(boundary_edges(graph, subgraph)) for subgraph in subgraphs]
     _boundary_edges = align_edges(_boundary_edges, edges)
     which_incident_edge = Dict(
       Iterators.flatten([
@@ -145,20 +144,23 @@ function make_symbolic_ttn(
     )
 
     # Sanity check, leaves only have single incoming or outgoing edge
-    @assert !isempty(dims_out) || !isnothing(dim_in)
-    (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf_vertex(sites, v)
+    #@assert !isempty(dims_out) || !isnothing(dim_in)
+    #(isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf_vertex(graph, v)
 
     for term in opsum
-      # Loop over OpSum and pick out terms that act on current vertex
-      ops = ITensors.terms(term)
-      if v in ITensors.site.(ops)
-        crosses_vertex = true
-      else
-        crosses_vertex =
-          !isone(length(Set([which_incident_edge[site] for site in site.(ops)])))
-      end
+      ops = terms(term)
+      op_sites = ITensors.sites(term)
+
+      # Only consider terms crossing current vertex
+      crosses_vertex = any(
+        ((s1, s2),) -> (v ∈ vertex_path(graph, s1, s2)), partition(op_sites, 2, 1)
+      )
+      # TODO: seems we could make this just
+      # crosses_vertex = (v ∈ vertices(steiner_tree(graph,op_sites))))
+      # but it is not working - steiner_tree seems to have spurious extra vertices?
+
       # If term doesn't cross vertex, skip it
-      crosses_vertex || continue
+      (crosses_vertex || (v ∈ op_sites)) || continue
 
       # Filter out ops that acts on current vertex
       onsite_ops = filter(t -> (site(t) == v), ops)
@@ -221,7 +223,7 @@ function make_symbolic_ttn(
       end
       # Add onsite identity for interactions passing through vertex
       if isempty(onsite_ops)
-        if !ITensors.using_auto_fermion() && isfermionic(incoming_ops, sites)
+        if !ITensors.using_auto_fermion() && isfermionic(incoming_ops, graph)
           push!(onsite_ops, Op("F", v))
         else
           push!(onsite_ops, Op("Id", v))
