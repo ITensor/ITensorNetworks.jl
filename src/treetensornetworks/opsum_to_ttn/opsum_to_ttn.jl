@@ -6,7 +6,7 @@ using ITensors: flux, has_fermion_string, itensor, removeqns, space
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks
 using ITensors.Ops:
-  argument, coefficient, Op, OpSum, name, params, site, sites, terms, which_op
+  argument, coefficient, Op, OpSum, name, params, site, terms, which_op
 using IterTools: partition
 using NamedGraphs.GraphsExtensions:
   GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
@@ -92,13 +92,13 @@ end
 function make_symbolic_ttn(
   coefficient_type,
   opsum::OpSum,
-  sites_::IndsNetwork;
+  sites::IndsNetwork;
   ordered_verts,
   ordered_edges,
   root_vertex,
   term_qn_map,
 )
-  graph = underlying_graph(sites_)
+  graph = underlying_graph(sites)
   inmaps = Dict{Pair{edgetype(graph),QN},Dict{Vector{Op},Int}}()
   outmaps = Dict{Pair{edgetype(graph),QN},Dict{Vector{Op},Int}}()
 
@@ -223,7 +223,7 @@ function make_symbolic_ttn(
       end
       # Add onsite identity for interactions passing through vertex
       if isempty(onsite_ops)
-        if !ITensors.using_auto_fermion() && isfermionic(incoming_ops, graph)
+        if !ITensors.using_auto_fermion() && isfermionic(incoming_ops, sites)
           push!(onsite_ops, Op("F", v))
         else
           push!(onsite_ops, Op("Id", v))
