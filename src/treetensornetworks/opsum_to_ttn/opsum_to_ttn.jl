@@ -97,19 +97,16 @@ function make_symbolic_ttn(
   root_vertex,
   term_qn_map,
 )
-  graph = underlying_graph(sites)
-  inmaps = Dict{Pair{edgetype(graph),QN},Dict{Vector{Op},Int}}()
-  outmaps = Dict{Pair{edgetype(graph),QN},Dict{Vector{Op},Int}}()
+  inmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
+  outmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
 
   # Bond coefficients for incoming edge channels.
   # These become the "M" coefficient matrices that get SVD'd.
-
   #edge_matrix_type = SparseArrayDOK{coefficient_type}
   edge_matrix_type = Vector{MatElem{coefficient_type}}
-
   edge_data_eltype = Dict{QN,edge_matrix_type}
-  inbond_coefs = DataGraph(graph; edge_data_eltype)
-  # Default initialize the DataGraph
+  inbond_coefs = DataGraph(sites; edge_data_eltype)
+  # Default initialize the coefs DataGraph
   for e in edges(inbond_coefs)
     inbond_coefs[e] = edge_data_eltype()
   end
@@ -119,19 +116,17 @@ function make_symbolic_ttn(
 
   # Temporary symbolic representation of TTN Hamiltonian
   vertex_data_eltype = Vector{QNArrElem{Scaled{coefficient_type,Prod{Op}}}}
-  symbolic_ttn = DataGraph(graph; vertex_data_eltype)
-  # Default initialize the DataGraph
-  for v in vertices(symbolic_ttn)
-    symbolic_ttn[v] = vertex_data_eltype()
-  end
+  symbolic_ttn = DataGraph(sites; vertex_data_eltype)
 
   # Build compressed finite state machine representation (symbolic_ttn)
   for v in ordered_verts
-    v_degree = degree(graph, v)
+    symbolic_ttn[v] = vertex_data_eltype()
+    v_degree = degree(sites, v)
+
     # For every vertex, find all edges that contain this vertex
     # (align_and_reorder_edges makes the output of indicident edges match the
     #  direction and ordering match that of ordered_edges)
-    edges = align_and_reorder_edges(incident_edges(graph, v), ordered_edges)
+    edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
 
     # Use the corresponding ordering as index order for tensor elements at this site
     dim_in = findfirst(e -> dst(e) == v, edges)
@@ -144,8 +139,8 @@ function make_symbolic_ttn(
     # TODO: better way to make which_incident_edge below?
     # TODO: instead of split at vertex, should
     #       be able to traverse subtrees formed by cutting incoming bond
-    subgraphs = split_at_vertex(graph, v)
-    _boundary_edges = [only(boundary_edges(graph, subgraph)) for subgraph in subgraphs]
+    subgraphs = split_at_vertex(sites, v)
+    _boundary_edges = [only(boundary_edges(sites, subgraph)) for subgraph in subgraphs]
     _boundary_edges = align_edges(_boundary_edges, edges)
     which_incident_edge = Dict(
       Iterators.flatten([
@@ -153,19 +148,15 @@ function make_symbolic_ttn(
       ]),
     )
 
-    # Sanity check, leaves only have single incoming or outgoing edge
-    #@assert !isempty(dims_out) || !isnothing(dim_in)
-    #(isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf_vertex(graph, v)
-
     for term in opsum
       ops = terms(term)
       op_sites = ITensors.sites(term)
 
       # Only consider terms crossing current vertex
-      crosses_v((s1, s2),) = (v ∈ vertex_path(graph, s1, s2))
+      crosses_v((s1, s2),) = (v ∈ vertex_path(sites, s1, s2))
       v_crossed = any(crosses_v, partition(op_sites, 2, 1))
       # TODO: seems we could make this just
-      # v_crossed = (v ∈ vertices(steiner_tree(graph,op_sites))))
+      # v_crossed = (v ∈ vertices(steiner_tree(sites,op_sites))))
       # but it is not working - steiner_tree seems to have spurious extra vertices?
 
       # If term doesn't cross vertex, skip it
@@ -186,7 +177,6 @@ function make_symbolic_ttn(
       # Compute QNs
       incoming_qn = term_qn_map(incoming_ops)
       non_incoming_qn = term_qn_map(non_incoming_ops)
-      site_qn = term_qn_map(onsite_ops)
 
       # Initialize QNArrayElement indices and quantum numbers 
       T_inds = fill(-1, v_degree)
@@ -273,7 +263,8 @@ function compress_ttn(
   # Insert dummy indices on internal vertices, these will not show up in the final tensor
   # TODO: come up with a better solution for this
   sites = copy(sites0)
-  is_internal = Dict{vertextype(sites),Bool}()
+
+  is_internal = DataGraph(sites; vertex_data_eltype=Bool)
   for v in ordered_verts
     is_internal[v] = isempty(sites[v])
     if isempty(sites[v])
@@ -287,7 +278,7 @@ function compress_ttn(
   # Compress this symbolic_ttn representation into dense form
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
-  link_space = Dict{edgetype(sites),Index}()
+  link_space = DataGraph(sites; edge_data_eltype=Index)
   for e in ordered_edges
     operator_blocks = [q => size(Vq, 2) for (q, Vq) in Vs[e]]
     link_space[e] = Index(
@@ -508,7 +499,7 @@ end
 
 # needed an extra `only` compared to ITensors version since IndsNetwork has Vector{<:Index}
 # as vertex data
-function isfermionic(t::Vector{Op}, sites::IndsNetwork{V,<:Index}) where {V}
+function isfermionic(t::Vector{Op}, sites::IndsNetwork)
   p = +1
   for op in t
     if has_fermion_string(name(op), only(sites[site(op)]))
