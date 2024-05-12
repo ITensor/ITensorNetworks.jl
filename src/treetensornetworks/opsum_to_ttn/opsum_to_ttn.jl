@@ -368,10 +368,6 @@ function compress_ttn(
       if is_internal[v]
         H[v] += iT
       else
-        #TODO: Remove this assert since it seems to be costly
-        #if hasqns(iT)
-        #  @assert flux(iT * Op) == total_qn
-        #end
         H[v] += (iT * Op)
       end
     end
