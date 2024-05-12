@@ -92,7 +92,6 @@ function make_symbolic_ttn(
   coefficient_type,
   opsum::OpSum,
   sites::IndsNetwork;
-  ordered_verts,
   ordered_edges,
   root_vertex,
   term_qn_map,
@@ -119,7 +118,7 @@ function make_symbolic_ttn(
   symbolic_ttn = DataGraph(sites; vertex_data_eltype)
 
   # Build compressed finite state machine representation (symbolic_ttn)
-  for v in ordered_verts
+  for v in vertices(sites)
     symbolic_ttn[v] = vertex_data_eltype()
     v_degree = degree(sites, v)
 
@@ -253,9 +252,7 @@ function svd_bond_coefs(coefficient_type, sites, bond_coefs; kws...)
   return Vs
 end
 
-function compress_ttn(
-  coefficient_type, sites0, Hflux, symbolic_ttn, Vs; ordered_verts, ordered_edges
-)
+function compress_ttn(coefficient_type, sites0, Hflux, symbolic_ttn, Vs; ordered_edges)
   # Insert dummy indices on internal vertices, these will not show up in the final tensor
   # TODO: come up with a better solution for this
   sites = copy(sites0)
@@ -291,7 +288,7 @@ function compress_ttn(
   end
   qnblockdim(i::Index, q::QN) = blockdim(i, qnblock(i, q))
 
-  for v in ordered_verts
+  for v in vertices(sites)
     v_degree = degree(sites, v)
     # Redo the whole thing like before
     # TODO: use neighborhood instead of going through all edges, see above
@@ -465,22 +462,18 @@ function ttn_svd(
 )
   term_qn_map = TermQNMap{vertextype(sites)}(sites)
 
-  # Traverse tree outwards from root vertex
-  ordered_verts = _default_vertex_ordering(sites, root_vertex)
   # Store edges in fixed ordering relative to root
   ordered_edges = _default_edge_ordering(sites, root_vertex)
 
   symbolic_ttn, bond_coefs = make_symbolic_ttn(
-    coefficient_type, os, sites; ordered_verts, ordered_edges, root_vertex, term_qn_map
+    coefficient_type, os, sites; ordered_edges, root_vertex, term_qn_map
   )
 
   Vs = svd_bond_coefs(coefficient_type, sites, bond_coefs; kws...)
 
   Hflux = -term_qn_map(terms(first(terms(os))))
 
-  T = compress_ttn(
-    coefficient_type, sites, Hflux, symbolic_ttn, Vs; ordered_verts, ordered_edges
-  )
+  T = compress_ttn(coefficient_type, sites, Hflux, symbolic_ttn, Vs; ordered_edges)
 
   return T
 end
