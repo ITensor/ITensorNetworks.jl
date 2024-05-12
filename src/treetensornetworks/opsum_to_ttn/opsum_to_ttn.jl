@@ -250,20 +250,18 @@ end
 function svd_bond_coefs(
   coefficient_type, sites, inbond_coefs; ordered_verts, ordered_edges, kws...
 )
-  Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in ordered_edges)
-  for v in ordered_verts
-    edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
-    dim_in = findfirst(e -> dst(e) == v, edges)
-    if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
-      for (q, mat) in inbond_coefs[edges[dim_in]]
-        M = toMatrix(mat)
-        U, S, V = svd(M)
-        P = S .^ 2
-        truncate!(P; kws...)
-        tdim = length(P)
-        nc = size(M, 2)
-        Vs[edges[dim_in]][q] = Matrix{coefficient_type}(V[1:nc, 1:tdim])
-      end
+  edge_data_eltype = Dict{QN,Matrix{coefficient_type}}
+  Vs = DataGraph(sites; edge_data_eltype)
+  for e in edges(sites)
+    Vs[e] = edge_data_eltype()
+    for (q, coefs) in inbond_coefs[e]
+      M = toMatrix(coefs)
+      U, S, V = svd(M)
+      P = S .^ 2
+      truncate!(P; kws...)
+      tdim = length(P)
+      nc = size(M, 2)
+      Vs[e][q] = Matrix{coefficient_type}(V[1:nc, 1:tdim])
     end
   end
   return Vs
