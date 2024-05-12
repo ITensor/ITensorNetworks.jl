@@ -183,12 +183,6 @@ function make_symbolic_ttn(
         t -> (site(t) == v) || which_incident_edge[site(t)] != edge_in, ops
       )
 
-      # For every outgoing edge, filter out ops that go out along that edge
-      outgoing_ops = Dict(
-        e => filter(t -> which_incident_edge[site(t)] == e, non_onsite_ops) for
-        e in edges_out
-      )
-
       # Compute QNs
       incoming_qn = term_qn_map(incoming_ops)
       non_incoming_qn = term_qn_map(non_incoming_ops)
@@ -209,7 +203,6 @@ function make_symbolic_ttn(
         bond_row = pos_in_link!(cinmap, incoming_ops)
         bond_col = pos_in_link!(coutmap, non_incoming_ops) # get incoming channel
         bond_coef = convert(coefficient_type, coefficient(term))
-        #edge_coefs = get!(inbond_coefs,edge_in,Dict{QN,edge_matrix_type}())
 
         # TODO: alternate version using SparseArraysDOK
         #q_edge_coefs = get!(edge_coefs, incoming_qn, edge_matrix_type())
@@ -224,7 +217,7 @@ function make_symbolic_ttn(
       end
       for dout in dims_out
         out_edge = edges[dout]
-        out_op = outgoing_ops[out_edge]
+        out_op = filter(t -> which_incident_edge[site(t)] == out_edge, non_onsite_ops)
         coutmap = get!(outmaps, out_edge => term_qn_map(out_op), Dict{Vector{Op},Int}())
         # Add outgoing channel
         T_inds[dout] = pos_in_link!(coutmap, out_op)
