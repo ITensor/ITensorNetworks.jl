@@ -137,13 +137,11 @@ function make_symbolic_ttn(
 
       # Only consider terms crossing current vertex
       crosses_v((s1, s2),) = (v ∈ vertex_path(sites, s1, s2))
-      v_crossed = any(crosses_v, partition(op_sites, 2, 1))
+      v_crossed = (v ∈ op_sites) || any(crosses_v, partition(op_sites, 2, 1))
       # TODO: seems we could make this just
       # v_crossed = (v ∈ vertices(steiner_tree(sites,op_sites))))
       # but it is not working - steiner_tree seems to have spurious extra vertices?
-
-      # If term doesn't cross vertex, skip it
-      (v_crossed || (v ∈ op_sites)) || continue
+      v_crossed || continue
 
       # Filter out ops that acts on current vertex
       onsite_ops = filter(t -> (site(t) == v), ops)
@@ -151,11 +149,8 @@ function make_symbolic_ttn(
 
       # Filter out ops that come in from the direction of the incoming edge
       incoming_ops = filter(t -> which_incident_edge[site(t)] == edge_in, non_onsite_ops)
-
       # Also store all non-incoming ops in standard order, used for channel merging
-      non_incoming_ops = filter(
-        t -> (site(t) == v) || which_incident_edge[site(t)] != edge_in, ops
-      )
+      non_incoming_ops = setdiff(ops, incoming_ops)
 
       # Compute QNs
       incoming_qn = term_qn_map(incoming_ops)
@@ -190,11 +185,11 @@ function make_symbolic_ttn(
       end
       for dout in dims_out
         out_edge = v_edges[dout]
-        out_op = filter(t -> which_incident_edge[site(t)] == out_edge, non_onsite_ops)
-        qn_outmap = get!(outmaps, out_edge => term_qn_map(out_op), Dict{Vector{Op},Int}())
+        out_ops = filter(t -> which_incident_edge[site(t)] == out_edge, non_onsite_ops)
+        qn_outmap = get!(outmaps, out_edge => term_qn_map(out_ops), Dict{Vector{Op},Int}())
         # Add outgoing channel
-        T_inds[dout] = pos_in_link!(qn_outmap, out_op)
-        T_qns[dout] = term_qn_map(out_op)
+        T_inds[dout] = pos_in_link!(qn_outmap, out_ops)
+        T_qns[dout] = term_qn_map(out_ops)
       end
       # If term starts at this site, add its coefficient as a site factor
       site_coef = one(coefficient_type)
