@@ -105,10 +105,10 @@ function make_symbolic_ttn(
   #edge_matrix_type = SparseArrayDOK{coefficient_type}
   edge_matrix_type = Vector{MatElem{coefficient_type}}
   edge_data_eltype = Dict{QN,edge_matrix_type}
-  inbond_coefs = DataGraph(sites; edge_data_eltype)
+  bond_coefs = DataGraph(sites; edge_data_eltype)
   # Default initialize the coefs DataGraph
-  for e in edges(inbond_coefs)
-    inbond_coefs[e] = edge_data_eltype()
+  for e in edges(bond_coefs)
+    bond_coefs[e] = edge_data_eltype()
   end
 
   # List of terms for which the coefficient has been added to a site factor
@@ -181,7 +181,7 @@ function make_symbolic_ttn(
       # Initialize QNArrayElement indices and quantum numbers 
       T_inds = fill(-1, v_degree)
       T_qns = fill(QN(), v_degree)
-      # initialize ArrayElement indices for inbond_coefs
+      # Initialize ArrayElement indices for bond_coefs
       bond_row = -1
       bond_col = -1
       if !isempty(incoming_ops)
@@ -199,7 +199,7 @@ function make_symbolic_ttn(
         #q_edge_coefs[bond_row,bond_col] = bond_coef
 
         # Version using MatElem
-        q_edge_coefs = get!(inbond_coefs[edge_in], incoming_qn, edge_matrix_type[])
+        q_edge_coefs = get!(bond_coefs[edge_in], incoming_qn, edge_matrix_type[])
         push!(q_edge_coefs, MatElem(bond_row, bond_col, bond_coef))
 
         T_inds[dim_in] = bond_col
@@ -234,24 +234,20 @@ function make_symbolic_ttn(
     _sort_unique!(symbolic_ttn[v])
   end
 
-  return symbolic_ttn, inbond_coefs
+  return symbolic_ttn, bond_coefs
 end
 
-function svd_bond_coefs(
-  coefficient_type, sites, inbond_coefs; ordered_verts, ordered_edges, kws...
-)
+function svd_bond_coefs(coefficient_type, sites, bond_coefs; kws...)
   edge_data_eltype = Dict{QN,Matrix{coefficient_type}}
   Vs = DataGraph(sites; edge_data_eltype)
   for e in edges(sites)
     Vs[e] = edge_data_eltype()
-    for (q, coefs) in inbond_coefs[e]
+    for (q, coefs) in bond_coefs[e]
       M = toMatrix(coefs)
       U, S, V = svd(M)
       P = S .^ 2
       truncate!(P; kws...)
-      tdim = length(P)
-      nc = size(M, 2)
-      Vs[e][q] = Matrix{coefficient_type}(V[1:nc, 1:tdim])
+      Vs[e][q] = Matrix(V[:, 1:length(P)])
     end
   end
   return Vs
@@ -265,7 +261,7 @@ function compress_ttn(
   sites = copy(sites0)
 
   is_internal = DataGraph(sites; vertex_data_eltype=Bool)
-  for v in ordered_verts
+  for v in vertices(sites)
     is_internal[v] = isempty(sites[v])
     if isempty(sites[v])
       # FIXME: This logic only works for trivial flux, breaks for nonzero flux
@@ -279,7 +275,7 @@ function compress_ttn(
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
   link_space = DataGraph(sites; edge_data_eltype=Index)
-  for e in ordered_edges
+  for e in edges(sites)
     operator_blocks = [q => size(Vq, 2) for (q, Vq) in Vs[e]]
     link_space[e] = Index(
       QN() => 1, operator_blocks..., Hflux => 1; tags=edge_tag(e), dir=linkdir_ref
@@ -474,13 +470,11 @@ function ttn_svd(
   # Store edges in fixed ordering relative to root
   ordered_edges = _default_edge_ordering(sites, root_vertex)
 
-  symbolic_ttn, inbond_coefs = make_symbolic_ttn(
+  symbolic_ttn, bond_coefs = make_symbolic_ttn(
     coefficient_type, os, sites; ordered_verts, ordered_edges, root_vertex, term_qn_map
   )
 
-  Vs = svd_bond_coefs(
-    coefficient_type, sites, inbond_coefs; ordered_verts, ordered_edges, kws...
-  )
+  Vs = svd_bond_coefs(coefficient_type, sites, bond_coefs; kws...)
 
   Hflux = -term_qn_map(terms(first(terms(os))))
 
