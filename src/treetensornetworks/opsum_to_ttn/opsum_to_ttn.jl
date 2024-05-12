@@ -226,7 +226,7 @@ function svd_bond_coefs(coefficient_type, sites, bond_coefs; kws...)
   for e in edges(sites)
     Vs[e] = edge_data_eltype()
     for (q, coefs) in bond_coefs[e]
-      M = toMatrix(coefs)
+      M = to_matrix(coefs)
       U, S, V = svd(M)
       P = S .^ 2
       truncate!(P; kws...)
