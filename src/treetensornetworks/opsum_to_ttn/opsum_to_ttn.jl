@@ -197,11 +197,11 @@ function make_symbolic_ttn(
       if !isempty(incoming_ops)
         # Get the correct map from edge=>QN to term and channel.
         # This checks if term exists on edge=>QN (otherwise insert it) and returns its index.
-        coutmap = get!(outmaps, edge_in => non_incoming_qn, Dict{Vector{Op},Int}())
-        cinmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
+        qn_outmap = get!(outmaps, edge_in => non_incoming_qn, Dict{Vector{Op},Int}())
+        qn_inmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
 
-        bond_row = pos_in_link!(cinmap, incoming_ops)
-        bond_col = pos_in_link!(coutmap, non_incoming_ops) # get incoming channel
+        bond_row = pos_in_link!(qn_inmap, incoming_ops)
+        bond_col = pos_in_link!(qn_outmap, non_incoming_ops) # get incoming channel
         bond_coef = convert(coefficient_type, coefficient(term))
 
         # TODO: alternate version using SparseArraysDOK
@@ -218,9 +218,9 @@ function make_symbolic_ttn(
       for dout in dims_out
         out_edge = edges[dout]
         out_op = filter(t -> which_incident_edge[site(t)] == out_edge, non_onsite_ops)
-        coutmap = get!(outmaps, out_edge => term_qn_map(out_op), Dict{Vector{Op},Int}())
+        qn_outmap = get!(outmaps, out_edge => term_qn_map(out_op), Dict{Vector{Op},Int}())
         # Add outgoing channel
-        T_inds[dout] = pos_in_link!(coutmap, out_op)
+        T_inds[dout] = pos_in_link!(qn_outmap, out_op)
         T_qns[dout] = term_qn_map(out_op)
       end
       # If term starts at this site, add its coefficient as a site factor
