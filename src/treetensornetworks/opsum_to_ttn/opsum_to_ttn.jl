@@ -1,15 +1,14 @@
-#using FillArrays: OneElement
-#using DataGraphs: DataGraph
+using DataGraphs: DataGraph
 using Graphs: degree, is_tree, steiner_tree
 using ITensorMPS: ITensorMPS, cutoff, linkdims, ops, truncate!, val
 using ITensors: flux, has_fermion_string, itensor, removeqns, space
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks
-using ITensors.Ops:
-  argument, coefficient, Op, OpSum, name, params, site, terms, which_op
+using ITensors.Ops: argument, coefficient, Op, OpSum, name, params, site, terms, which_op
 using IterTools: partition
 using NamedGraphs.GraphsExtensions:
   GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
+using NDTensors.SparseArrayDOKs: SparseArrayDOK
 using StaticArrays: MVector
 
 # 
@@ -104,18 +103,27 @@ function make_symbolic_ttn(
 
   # Bond coefficients for incoming edge channels.
   # These become the "M" coefficient matrices that get SVD'd.
-  inbond_coefs = Dict(
-    e => Dict{QN,Vector{MatElem{coefficient_type}}}() for e in ordered_edges
-  )
+
+  #edge_matrix_type = SparseArrayDOK{coefficient_type}
+  edge_matrix_type = Vector{MatElem{coefficient_type}}
+
+  edge_data_eltype = Dict{QN,edge_matrix_type}
+  inbond_coefs = DataGraph(graph; edge_data_eltype)
+  # Default initialize the DataGraph
+  for e in edges(inbond_coefs)
+    inbond_coefs[e] = edge_data_eltype()
+  end
 
   # List of terms for which the coefficient has been added to a site factor
   site_coef_done = Prod{Op}[]
 
   # Temporary symbolic representation of TTN Hamiltonian
-  symbolic_ttn = Dict(
-    v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degree(graph, v)}[] for
-    v in ordered_verts
-  )
+  vertex_data_eltype = Vector{QNArrElem{Scaled{coefficient_type,Prod{Op}}}}
+  symbolic_ttn = DataGraph(graph; vertex_data_eltype)
+  # Default initialize the DataGraph
+  for v in vertices(symbolic_ttn)
+    symbolic_ttn[v] = vertex_data_eltype()
+  end
 
   # Build compressed finite state machine representation (symbolic_ttn)
   for v in ordered_verts
@@ -134,6 +142,8 @@ function make_symbolic_ttn(
     # For every site v' except v, determine the incident edge to v
     # that lies in the edge_path(v',v)
     # TODO: better way to make which_incident_edge below?
+    # TODO: instead of split at vertex, should
+    #       be able to traverse subtrees formed by cutting incoming bond
     subgraphs = split_at_vertex(graph, v)
     _boundary_edges = [only(boundary_edges(graph, subgraph)) for subgraph in subgraphs]
     _boundary_edges = align_edges(_boundary_edges, edges)
@@ -152,15 +162,14 @@ function make_symbolic_ttn(
       op_sites = ITensors.sites(term)
 
       # Only consider terms crossing current vertex
-      crosses_vertex = any(
-        ((s1, s2),) -> (v ∈ vertex_path(graph, s1, s2)), partition(op_sites, 2, 1)
-      )
+      crosses_v((s1, s2),) = (v ∈ vertex_path(graph, s1, s2))
+      v_crossed = any(crosses_v, partition(op_sites, 2, 1))
       # TODO: seems we could make this just
-      # crosses_vertex = (v ∈ vertices(steiner_tree(graph,op_sites))))
+      # v_crossed = (v ∈ vertices(steiner_tree(graph,op_sites))))
       # but it is not working - steiner_tree seems to have spurious extra vertices?
 
       # If term doesn't cross vertex, skip it
-      (crosses_vertex || (v ∈ op_sites)) || continue
+      (v_crossed || (v ∈ op_sites)) || continue
 
       # Filter out ops that acts on current vertex
       onsite_ops = filter(t -> (site(t) == v), ops)
@@ -186,8 +195,8 @@ function make_symbolic_ttn(
       site_qn = term_qn_map(onsite_ops)
 
       # Initialize QNArrayElement indices and quantum numbers 
-      T_inds = MVector{v_degree}(fill(-1, v_degree))
-      T_qns = MVector{v_degree}(fill(QN(), v_degree))
+      T_inds = fill(-1, v_degree)
+      T_qns = fill(QN(), v_degree)
       # initialize ArrayElement indices for inbond_coefs
       bond_row = -1
       bond_col = -1
@@ -200,10 +209,16 @@ function make_symbolic_ttn(
         bond_row = pos_in_link!(cinmap, incoming_ops)
         bond_col = pos_in_link!(coutmap, non_incoming_ops) # get incoming channel
         bond_coef = convert(coefficient_type, coefficient(term))
-        q_inbond_coefs = get!(
-          inbond_coefs[edge_in], incoming_qn, MatElem{coefficient_type}[]
-        )
-        push!(q_inbond_coefs, MatElem(bond_row, bond_col, bond_coef))
+        #edge_coefs = get!(inbond_coefs,edge_in,Dict{QN,edge_matrix_type}())
+
+        # TODO: alternate version using SparseArraysDOK
+        #q_edge_coefs = get!(edge_coefs, incoming_qn, edge_matrix_type())
+        #q_edge_coefs[bond_row,bond_col] = bond_coef
+
+        # Version using MatElem
+        q_edge_coefs = get!(inbond_coefs[edge_in], incoming_qn, edge_matrix_type[])
+        push!(q_edge_coefs, MatElem(bond_row, bond_col, bond_coef))
+
         T_inds[dim_in] = bond_col
         T_qns[dim_in] = -incoming_qn
       end
