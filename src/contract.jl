@@ -73,11 +73,8 @@ function logscalar(
     denominator_terms
   end
 
-  if any(t -> iszero(t), denominator_terms)
-    return -Inf
-  else
-    return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
-  end
+  any(iszero, denominator_terms) && return -Inf
+  return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
 end
 
 function ITensors.scalar(alg::Algorithm"bp", tn::AbstractITensorNetwork; kwargs...)
