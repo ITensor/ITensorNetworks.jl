@@ -1,5 +1,5 @@
 using Printf: @printf
-using ITensors.ITensorMPS: maxlinkdim
+using ITensorMPS: maxlinkdim
 default_outputlevel() = 0
 default_nsites() = 2
 default_nsweeps() = 1 #? or nothing?

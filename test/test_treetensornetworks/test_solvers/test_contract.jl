@@ -17,7 +17,7 @@ using ITensorNetworks:
   siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: prime, replaceinds, replaceprime
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 using LinearAlgebra: norm, normalize
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Test: @test, @test_broken, @testset

@@ -1,4 +1,4 @@
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 
 function ITensorMPS.MPO(opsum::OpSum, s::IndsNetwork)
   s_linear = [only(s[v]) for v in 1:nv(s)]

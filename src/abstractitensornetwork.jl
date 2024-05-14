@@ -36,7 +36,7 @@ using ITensors:
   settags,
   sim,
   swaptags
-using ITensors.ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
+using ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using LinearAlgebra: LinearAlgebra, factorize
 using NamedGraphs: NamedGraphs, NamedGraph, not_implemented

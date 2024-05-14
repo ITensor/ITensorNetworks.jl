@@ -1,8 +1,9 @@
 @eval module $(gensym())
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
+using ITensorMPS: linkdims
 using ITensorNetworks:
-  OpSum, ttn, apply, contract, dmrg_x, inner, linkdims, mpo, mps, random_mps, siteinds
+  OpSum, ttn, apply, contract, dmrg_x, inner, mpo, mps, random_mps, siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: @disable_warn_order, array, dag, onehot, uniqueind
 using LinearAlgebra: eigen, normalize

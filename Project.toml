@@ -1,7 +1,7 @@
 name = "ITensorNetworks"
 uuid = "2919e153-833c-4bdc-8836-1ea460a35fc7"
 authors = ["Matthew Fishman <mfishman@flatironinstitute.org>, Joseph Tindall <jtindall@flatironinstitute.org> and contributors"]
-version = "0.11.3"
+version = "0.11.7"
 
 [deps]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
@@ -13,6 +13,7 @@ Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+ITensorMPS = "0d1a4710-d33b-49a5-8f18-73bdf49b47e2"
 ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
 IsApprox = "28f27b66-4bd8-47e7-9110-e2746eb8bed7"
 IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
@@ -36,14 +37,14 @@ TupleTools = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 [weakdeps]
 EinExprs = "b1794770-133b-4de1-afb4-526377e9f4c5"
 GraphsFlows = "06909019-6f44-4949-96fc-b9d9aaa02889"
-Observers = "338f10d5-c7f1-4033-a7d1-f9dec39bcaa0"
 OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715"
+Observers = "338f10d5-c7f1-4033-a7d1-f9dec39bcaa0"
 
 [extensions]
 ITensorNetworksEinExprsExt = "EinExprs"
 ITensorNetworksGraphsFlowsExt = "GraphsFlows"
-ITensorNetworksObserversExt = "Observers"
 ITensorNetworksOMEinsumContractionOrdersExt = "OMEinsumContractionOrders"
+ITensorNetworksObserversExt = "Observers"
 
 [compat]
 AbstractTrees = "0.4.4"
@@ -57,14 +58,15 @@ DocStringExtensions = "0.9"
 EinExprs = "0.6.4"
 Graphs = "1.8"
 GraphsFlows = "0.1.1"
-ITensors = "0.4, 0.5"
+ITensorMPS = "0.1"
+ITensors = "0.4, 0.5, 0.6"
 IsApprox = "0.1"
 IterTools = "1.4.0"
 KrylovKit = "0.6, 0.7"
-NamedGraphs = "0.6.0"
 NDTensors = "0.3"
-Observers = "0.2.4"
+NamedGraphs = "0.6.0"
 OMEinsumContractionOrders = "0.8.3"
+Observers = "0.2.4"
 PackageExtensionCompat = "1"
 SerializedElementArrays = "0.1"
 SimpleTraits = "0.9"
@@ -80,8 +82,8 @@ julia = "1.10"
 [extras]
 EinExprs = "b1794770-133b-4de1-afb4-526377e9f4c5"
 GraphsFlows = "06909019-6f44-4949-96fc-b9d9aaa02889"
-Observers = "338f10d5-c7f1-4033-a7d1-f9dec39bcaa0"
 OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715"
+Observers = "338f10d5-c7f1-4033-a7d1-f9dec39bcaa0"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]

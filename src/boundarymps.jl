@@ -1,5 +1,5 @@
 using ITensors: inner
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 
 #Given an ITensorNetwork on an Lx*Ly grid with sites indexed as (i,j) then perform contraction using a sequence of mps-mpo contractions
 function contract_boundary_mps(tn::ITensorNetwork; kwargs...)
