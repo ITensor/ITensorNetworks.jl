@@ -19,9 +19,9 @@ default_message_norm(m::ITensor) = norm(m)
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
-  n = norm(updated_messages)
-  if !iszero(n)
-    updated_messages /= norm(updated_messages)
+  message_norm = norm(updated_messages)
+  if !iszero(message_norm)
+    updated_messages /= message_norm
   end
   return ITensor[updated_messages]
 end
