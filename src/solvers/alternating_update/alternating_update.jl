@@ -103,12 +103,13 @@ function alternating_update(operator::AbstractTTN, init_state::AbstractTTN; kwar
 end
 
 function alternating_update(operator::AbstractITensorNetwork, init_state::AbstractITensorNetwork, sweep_plans; kwargs...)
+  cache_update_kwargs = is_tree(init_state) ? (;) : (; maxiter = 10, tol = 1e-5)
   ψOψ = QuadraticFormNetwork(operator, init_state)
   ψIψ = QuadraticFormNetwork(init_state)
   ψOψ_bpc = BeliefPropagationCache(ψOψ)
   ψIψ_bpc = BeliefPropagationCache(ψIψ)
-  ψOψ_bpc = update(ψOψ_bpc)
-  ψIψ_bpc = update(ψIψ_bpc)
+  ψOψ_bpc = update(ψOψ_bpc; cache_update_kwargs...)
+  ψIψ_bpc = update(ψIψ_bpc; cache_update_kwargs...)
   projected_operator = (ψOψ_bpc, ψIψ_bpc)
   return alternating_update(projected_operator, init_state, sweep_plans; kwargs...)
 end

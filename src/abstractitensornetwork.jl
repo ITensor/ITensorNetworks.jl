@@ -797,6 +797,23 @@ end
 is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
 is_multi_edge(tn::AbstractITensorNetwork) = Base.Fix1(is_multi_edge, tn)
 
+function edges_equal(e1s, e2s)
+  if length(e1s) != length(e2s)
+    return false
+  end
+  for e in e1s
+    if e ∉ e2s && reverse(e) ∉ e2s
+      return false
+    end
+  end
+  return true
+end
+
+
+function edges_equal(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
+  return edges_equal(edges(tn1), edges(tn2))
+end
+
 """Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex """
 function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   @assert issetequal(vertices(tn1), vertices(tn2))
@@ -806,14 +823,14 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 
   edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
 
-  if !issetequal(edges_tn1, edges_tn2)
+  if !edges_equal(tn1, tn2)
     new_edges = union(edges_tn1, edges_tn2)
     tn1 = insert_linkinds(tn1, new_edges)
     tn2 = insert_linkinds(tn2, new_edges)
   end
 
   edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
-  @assert issetequal(edges_tn1, edges_tn2)
+  @assert edges_equal(tn1, tn2)
 
   tn12 = copy(tn1)
   new_edge_indices = Dict(
@@ -835,7 +852,7 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
     e1_v = filter(x -> src(x) == v || dst(x) == v, edges_tn1)
     e2_v = filter(x -> src(x) == v || dst(x) == v, edges_tn2)
 
-    @assert issetequal(e1_v, e2_v)
+    @assert edges_equal(e1_v, e2_v)
     tn1v_linkinds = Index[only(linkinds(tn1, e)) for e in e1_v]
     tn2v_linkinds = Index[only(linkinds(tn2, e)) for e in e1_v]
     tn12v_linkinds = Index[new_edge_indices[e] for e in e1_v]
