@@ -2,7 +2,6 @@
 using Compat: Compat
 using Graphs: vertices
 # Trigger package extension.
-using GraphsFlows: GraphsFlows
 using ITensorNetworks:
   ITensorNetworks,
   BeliefPropagationCache,
@@ -18,6 +17,7 @@ using ITensorNetworks:
   message,
   partitioned_tensornetwork,
   random_tensornetwork,
+  scalar,
   siteinds,
   split_index,
   tensornetwork,
@@ -28,7 +28,7 @@ using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, random
 using ITensorNetworks.ModelNetworks: ModelNetworks
 using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
-using NamedGraphs: NamedEdge
+using NamedGraphs: NamedEdge, NamedGraph
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedges
 using Random: Random
@@ -75,5 +75,12 @@ using Test: @test, @testset
 
   @test all(eig -> imag(eig) ≈ 0, eigs)
   @test all(eig -> real(eig) >= -eps(eltype(eig)), eigs)
+
+  #Test edge case of network which evalutes to 0
+  χ = 2
+  g = named_grid((3, 1))
+  ψ = random_tensornetwork(ComplexF64, g; link_space=χ)
+  ψ[(1, 1)] = 0.0 * ψ[(1, 1)]
+  @test iszero(scalar(ψ; alg="bp"))
 end
 end
