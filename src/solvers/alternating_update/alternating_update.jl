@@ -102,7 +102,10 @@ function alternating_update(operator::AbstractTTN, init_state::AbstractTTN; kwar
   return alternating_update(projected_operator, init_state; kwargs...)
 end
 
-function alternating_update(operator::AbstractITensorNetwork, init_state::AbstractITensorNetwork, sweep_plans; kwargs...)
+#TODO: Brainwave. Generalise your BP alternating update to operator::Sum{AbstractITensorNetwork}. Shouldn't this
+# account for the environment correctly and put the BP error precisely on the state only, which is better
+# conditioned?!
+function alternating_update(operators::AbstractITensorNetwork, init_state::AbstractITensorNetwork, sweep_plans; kwargs...)
   cache_update_kwargs = is_tree(init_state) ? (;) : (; maxiter = 10, tol = 1e-5)
   ψOψ = QuadraticFormNetwork(operator, init_state)
   ψIψ = QuadraticFormNetwork(init_state)
