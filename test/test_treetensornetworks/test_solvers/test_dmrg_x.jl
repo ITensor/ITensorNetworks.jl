@@ -41,7 +41,7 @@ end
   s = siteinds("S=1/2", c; conserve_qns)
   W = 12
   # Random fields h ∈ [-W, W]
-  rng = StableRNG(1234)
+  rng = StableRNG(123)
   h = Dictionary(vertices(c), W * (2 * rand(rng, nv(c)) .- 1))
   H = ttn(ModelHamiltonians.heisenberg(c; h), s)
   ψ = normalize(ttn(v -> rand(rng, ["↑", "↓"]), s))
