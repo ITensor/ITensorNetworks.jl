@@ -150,11 +150,11 @@ end
   nbit = 3
   sites = siteinds("Qubit", nbit)
 
-  # randomMPO does not support linkdims keyword.
+  # random_mpo does not support linkdims keyword.
   M1 = replaceprime(
-    ITensorMPS.randomMPO(sites) + ITensorMPS.randomMPO(sites), 1 => 2, 0 => 1
+    ITensorMPS.random_mpo(sites) + ITensorMPS.random_mpo(sites), 1 => 2, 0 => 1
   )
-  M2 = ITensorMPS.randomMPO(sites) + ITensorMPS.randomMPO(sites)
+  M2 = ITensorMPS.random_mpo(sites) + ITensorMPS.random_mpo(sites)
   M12_ref = contract(M1, M2; alg="naive")
   t12_ref = ttn([M12_ref[v] for v in eachindex(M12_ref)])
 

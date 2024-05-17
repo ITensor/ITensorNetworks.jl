@@ -10,7 +10,7 @@ using ITensors:
   noprime,
   op,
   prime,
-  randomITensor,
+  random_itensor,
   replaceind,
   replaceinds,
   sim
@@ -53,7 +53,7 @@ Random.seed!(1234)
     n in (2, 3, 5, 10)
 
     i, j = Index.(([QN() => n], [QN() => n]))
-    A = randomITensor(elt, i, j)
+    A = random_itensor(elt, i, j)
     P = A * prime(dag(A), i)
     sqrtP = map_eigvals(sqrt, P, i, i'; ishermitian=true)
     inv_P = dag(map_eigvals(inv, P, i, i'; ishermitian=true))
