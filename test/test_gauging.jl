@@ -13,7 +13,7 @@ using ITensors: diagITensor, inds, inner
 using ITensors.NDTensors: vector
 using LinearAlgebra: diag
 using NamedGraphs.NamedGraphGenerators: named_grid
-using Random: Random
+using StableRNGs: StableRNG
 using Test: @test, @testset
 
 @testset "gauging" begin
@@ -23,8 +23,8 @@ using Test: @test, @testset
   s = siteinds("S=1/2", g)
   χ = 6
 
-  Random.seed!(5467)
-  ψ = random_tensornetwork(s; link_space=χ)
+  rng = StableRNG(1234)
+  ψ = random_tensornetwork(rng, s; link_space=χ)
 
   # Move directly to vidal gauge
   ψ_vidal = VidalITensorNetwork(

@@ -31,28 +31,23 @@ using LinearAlgebra: eigvals, tr
 using NamedGraphs: NamedEdge, NamedGraph
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedges
-using Random: Random
 using SplitApplyCombine: group
+using StableRNGs: StableRNG
 using Test: @test, @testset
-
 @testset "belief_propagation" begin
   ITensors.disable_warn_order()
-
   g = named_grid((3, 3))
   s = siteinds("S=1/2", g)
   χ = 2
-  Random.seed!(1234)
-  ψ = random_tensornetwork(s; link_space=χ)
+  rng = StableRNG(1234)
+  ψ = random_tensornetwork(rng, s; link_space=χ)
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
-
   bpc = BeliefPropagationCache(ψψ)
   bpc = update(bpc; maxiter=50, tol=1e-10)
-
   #Test messages are converged
   for pe in partitionedges(partitioned_tensornetwork(bpc))
     @test update_message(bpc, pe) ≈ message(bpc, pe) atol = 1e-8
   end
-
   #Test updating the underlying tensornetwork in the cache
   v = first(vertices(ψψ))
   new_tensor = randomITensor(inds(ψψ[v]))
@@ -79,7 +74,8 @@ using Test: @test, @testset
   #Test edge case of network which evalutes to 0
   χ = 2
   g = named_grid((3, 1))
-  ψ = random_tensornetwork(ComplexF64, g; link_space=χ)
+  rng = StableRNG(1234)
+  ψ = random_tensornetwork(rng, ComplexF64, g; link_space=χ)
   ψ[(1, 1)] = 0.0 * ψ[(1, 1)]
   @test iszero(scalar(ψ; alg="bp"))
 end

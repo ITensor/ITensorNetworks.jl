@@ -21,6 +21,7 @@ using ITensors: ITensors
 using KrylovKit: eigsolve
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Observers: observer
+using StableRNGs: StableRNG
 using Test: @test, @test_broken, @testset
 
 # This is needed since `eigen` is broken
@@ -43,7 +44,8 @@ ITensors.disable_auto_fermion()
 
   H = mpo(os, s)
 
-  psi = random_mps(s; link_space=20)
+  rng = StableRNG(1234)
+  psi = random_mps(rng, s; link_space=20)
 
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
@@ -87,7 +89,8 @@ end
     os += "Sz", j, "Sz", j + 1
   end
   H = mpo(os, s)
-  psi = random_mps(s; link_space=20)
+  rng = StableRNG(1234)
+  psi = random_mps(rng, s; link_space=20)
 
   nsweeps = 4
   maxdim = [20, 40, 80, 80]
@@ -124,7 +127,8 @@ end
     os += "Sz", j, "Sz", j + 1
   end
   H = mpo(os, s)
-  psi = random_mps(s; link_space=10)
+  rng = StableRNG(1234)
+  psi = random_mps(rng, s; link_space=10)
 
   nsweeps = 4
   maxdim = [10, 20, 40, 80]
@@ -156,7 +160,8 @@ end
 
   H = mpo(os, s)
 
-  psi = random_mps(s; link_space=20)
+  rng = StableRNG(1234)
+  psi = random_mps(rng, s; link_space=20)
 
   # Choose nsweeps to be less than length of arrays
   nsweeps = 5
@@ -193,7 +198,8 @@ end
     states = v -> d[v]
     psi = ttn(states, s)
 
-    #    psi = random_ttn(s; link_space=20) #FIXME: random_ttn broken for QN conserving case
+    # rng = StableRNG(1234)
+    # psi = random_ttn(rng, s; link_space=20) #FIXME: random_ttn broken for QN conserving case
 
     nsweeps = 10
     maxdim = [10, 20, 40, 100]
@@ -282,7 +288,8 @@ end
   s = siteinds("S=1/2", c)
   os = ModelHamiltonians.heisenberg(c)
   H = ttn(os, s)
-  psi = random_ttn(s; link_space=5)
+  rng = StableRNG(1234)
+  psi = random_ttn(rng, s; link_space=5)
   e, psi = dmrg(H, psi; nsweeps, maxdim, nsites)
 
   @test all(edge_data(linkdims(psi)) .<= maxdim)
