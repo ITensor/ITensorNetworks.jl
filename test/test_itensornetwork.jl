@@ -349,7 +349,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     dims = (2, 2)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
-    rng = StableRN(1234)
+    rng = StableRNG(1234)
     ψ = random_tensornetwork(rng, s; link_space=2)
     @test scalartype(ψ) == Float64
     ϕ = NDTensors.convert_scalartype(new_eltype, ψ)

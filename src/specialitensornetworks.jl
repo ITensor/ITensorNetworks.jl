@@ -70,14 +70,26 @@ Build an ITensor network on a graph specified by the inds network s.
 Bond_dim is given by link_space and entries are randomized.
 The random distribution is based on the input argument `distribution`.
 """
-function random_tensornetwork(distribution::Distribution, s::IndsNetwork; kwargs...)
+function random_tensornetwork(
+  rng::AbstractRNG, distribution::Distribution, s::IndsNetwork; kwargs...
+)
   return ITensorNetwork(s; kwargs...) do v
-    return inds -> itensor(rand(distribution, dim.(inds)...), inds)
+    return inds -> itensor(rand(rng, distribution, dim.(inds)...), inds)
   end
+end
+
+function random_tensornetwork(distribution::Distribution, s::IndsNetwork; kwargs...)
+  return random_tensornetwork(Random.default_rng(), distribution, s; kwargs...)
+end
+
+@traitfn function random_tensornetwork(
+  rng::AbstractRNG, distribution::Distribution, g::::IsUnderlyingGraph; kwargs...
+)
+  return random_tensornetwork(rng, distribution, IndsNetwork(g); kwargs...)
 end
 
 @traitfn function random_tensornetwork(
   distribution::Distribution, g::::IsUnderlyingGraph; kwargs...
 )
-  return random_tensornetwork(distribution, IndsNetwork(g); kwargs...)
+  return random_tensornetwork(Random.default_rng(), distribution, g; kwargs...)
 end
