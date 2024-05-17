@@ -58,6 +58,7 @@ using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NDTensors: NDTensors, dim
 using Random: randn!
+using StableRNGs: StableRNG
 using Test: @test, @test_broken, @testset
 const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 @testset "ITensorNetwork tests" begin
