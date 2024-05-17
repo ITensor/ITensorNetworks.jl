@@ -5,17 +5,16 @@ using ITensorNetworks:
 using ITensors: ITensors, contract
 using NamedGraphs.NamedGraphGenerators: named_grid
 using OMEinsumContractionOrders: OMEinsumContractionOrders
-using Random: Random
+using StableRNGs: StableRNG
 using Test: @test, @testset
-
-Random.seed!(1234)
 @testset "contraction_sequence" begin
   ITensors.@disable_warn_order begin
     dims = (2, 3)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
     χ = 10
-    ψ = random_tensornetwork(s; link_space=χ)
+    rng = StableRNG(1234)
+    ψ = random_tensornetwork(rng, s; link_space=χ)
     tn = norm_sqr_network(ψ)
     seq_optimal = contraction_sequence(tn; alg="optimal")
     res_optimal = contract(tn; sequence=seq_optimal)[]

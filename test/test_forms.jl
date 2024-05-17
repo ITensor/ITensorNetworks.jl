@@ -24,8 +24,6 @@ using ITensors: contract, dag, inds, prime, random_itensor
 using LinearAlgebra: norm
 using StableRNGs: StableRNG
 using Test: @test, @testset
-using Random: Random
-
 @testset "FormNetworks" begin
   g = named_grid((1, 4))
   s = siteinds("S=1/2", g)
@@ -53,7 +51,8 @@ using Random: Random
   @test isempty(flatten_siteinds(qf))
 
   v = (1, 1)
-  new_tensor = random_itensor(inds(ψket[v]))
+  rng = StableRNG(1234)
+  new_tensor = random_itensor(rng, inds(ψket[v]))
   qf_updated = update(qf, v, copy(new_tensor))
 
   @test tensornetwork(qf_updated)[bra_vertex(qf_updated, v)] ≈
