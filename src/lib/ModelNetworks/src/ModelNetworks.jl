@@ -1,7 +1,7 @@
 module ModelNetworks
 using Graphs: degree, dst, edges, src
 using ..ITensorNetworks: IndsNetwork, delta_network, insert_linkinds, itensor
-using ITensors: commoninds, diagITensor, inds, noprime
+using ITensors: commoninds, diag_itensor, inds, noprime
 using LinearAlgebra: Diagonal, eigen
 using NamedGraphs: NamedGraph
 
@@ -21,7 +21,7 @@ function ising_network(
   tn = delta_network(eltype, s)
   if (szverts != nothing)
     for v in szverts
-      tn[v] = diagITensor(eltype[1, -1], inds(tn[v]))
+      tn[v] = diag_itensor(eltype[1, -1], inds(tn[v]))
     end
   end
   for edge in edges(tn)

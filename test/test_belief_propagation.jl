@@ -24,7 +24,7 @@ using ITensorNetworks:
   update,
   update_factor,
   update_message
-using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, randomITensor
+using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
 using ITensorNetworks.ModelNetworks: ModelNetworks
 using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
@@ -50,7 +50,7 @@ using Test: @test, @testset
   end
   #Test updating the underlying tensornetwork in the cache
   v = first(vertices(ψψ))
-  new_tensor = randomITensor(inds(ψψ[v]))
+  new_tensor = random_itensor(inds(ψψ[v]))
   bpc_updated = update_factor(bpc, v, new_tensor)
   ψψ_updated = tensornetwork(bpc_updated)
   @test ψψ_updated[v] == new_tensor

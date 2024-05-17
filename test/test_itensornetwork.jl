@@ -30,7 +30,7 @@ using ITensors:
   itensor,
   onehot,
   order,
-  randomITensor,
+  random_itensor,
   scalartype,
   sim,
   uniqueinds
