@@ -2,7 +2,7 @@
 using DataGraphs: vertex_data
 using Graphs: vertices
 using ITensorNetworks: ttn, contract, ortho_region, siteinds
-using ITensors: @disable_warn_order, randomITensor
+using ITensors: @disable_warn_order, random_itensor
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Random: shuffle
@@ -22,7 +22,7 @@ using Test: @test, @testset
   @testset "Construct TTN from ITensor or Array" begin
     cutoff = 1e-10
     # create random ITensor with these indices
-    S = randomITensor(vertex_data(is)...)
+    S = random_itensor(vertex_data(is)...)
     # dense TTN constructor from IndsNetwork
     @disable_warn_order s1 = ttn(S, is; cutoff)
     root_vertex = only(ortho_region(s1))

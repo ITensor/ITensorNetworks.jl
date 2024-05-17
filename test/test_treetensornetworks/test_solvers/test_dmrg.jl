@@ -207,7 +207,7 @@ end
     vmap = Dictionary(collect(vertices(s))[linear_order], 1:length(linear_order))
     sline = only.(collect(vertex_data(s)))[linear_order]
     Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
-    psiline = ITensorMPS.randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+    psiline = ITensorMPS.random_mps(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
     e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
     @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
@@ -242,7 +242,7 @@ end
   # get MPS / MPO with JW string result
   ITensors.disable_auto_fermion()
   Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
-  psiline = ITensorMPS.randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+  psiline = ITensorMPS.random_mps(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
   e_jw, psi_jw = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
   ITensors.enable_auto_fermion()
 
@@ -261,7 +261,7 @@ end
 
   # Compare to `ITensors.MPO` version of `dmrg`
   Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
-  psiline = ITensorMPS.randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+  psiline = ITensorMPS.random_mps(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
   e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
   @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
