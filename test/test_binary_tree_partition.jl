@@ -23,6 +23,7 @@ using NamedGraphs.NamedGraphGenerators: named_grid
 using NamedGraphs.GraphsExtensions:
   is_binary_arborescence, post_order_dfs_vertices, root_vertex
 using OMEinsumContractionOrders: OMEinsumContractionOrders
+using StableRNGs: StableRNG
 using Test: @test, @testset
 
 @testset "test mincut functions on top of MPS" begin
@@ -60,7 +61,8 @@ end
 @testset "test _binary_tree_partition_inds of a 2D network" begin
   N = (3, 3, 3)
   linkdim = 2
-  network = random_tensornetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  rng = StableRNG(1234)
+  network = random_tensornetwork(rng, IndsNetwork(named_grid(N)); link_space=linkdim)
   tn = Array{ITensor,length(N)}(undef, N...)
   for v in vertices(network)
     tn[v...] = network[v...]
