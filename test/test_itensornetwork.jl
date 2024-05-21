@@ -175,6 +175,17 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
       return inds -> itensor(randn(rng, elt, dim.(inds)...), inds)
     end
     @test eltype(ψ[first(vertices(ψ))]) == elt
+
+    ψc = conj(ψ)
+    for v in vertices(ψ)
+      @test ψc[v] == conj(ψ[v])
+    end
+
+    ψd = dag(ψ)
+    for v in vertices(ψ)
+      @test ψd[v] == dag(ψ[v])
+    end
+
     rng = StableRNG(1234)
     ψ = ITensorNetwork(g; kwargs...) do v
       return inds -> itensor(randn(rng, dim.(inds)...), inds)
