@@ -149,6 +149,10 @@ is_getindex_expr(x) = false
 is_assignment_expr(expr::Expr) = (expr.head === :(=))
 is_assignment_expr(expr) = false
 
+# TODO: Define this in terms of a function mapping
+# preserve_graph_function(::typeof(setindex!)) = setindex!_preserve_graph
+# preserve_graph_function(::typeof(map_vertex_data)) = map_vertex_data_preserve_graph
+# Also allow annotating codeblocks like `@views`.
 macro preserve_graph(expr)
   if !is_setindex!_expr(expr)
     error(
@@ -390,6 +394,7 @@ function map_vertex_data(f, tn::AbstractITensorNetwork)
   return tn
 end
 
+# TODO: Define `@preserve_graph map_vertex_data(f, tn)`
 function map_vertex_data_preserve_graph(f, tn::AbstractITensorNetwork)
   tn = copy(tn)
   for v in vertices(tn)
@@ -399,10 +404,12 @@ function map_vertex_data_preserve_graph(f, tn::AbstractITensorNetwork)
 end
 
 function Base.conj(tn::AbstractITensorNetwork)
+  # TODO: Use `@preserve_graph map_vertex_data(f, tn)`
   return map_vertex_data_preserve_graph(conj, tn)
 end
 
 function ITensors.dag(tn::AbstractITensorNetwork)
+  # TODO: Use `@preserve_graph map_vertex_data(f, tn)`
   return map_vertex_data_preserve_graph(dag, tn)
 end
 
