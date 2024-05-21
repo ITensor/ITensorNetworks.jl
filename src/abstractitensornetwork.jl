@@ -156,7 +156,7 @@ is_assignment_expr(expr) = false
 macro preserve_graph(expr)
   if !is_setindex!_expr(expr)
     error(
-      "preserve_graph must be used with setindex! syntax (as @preserve_graph a[i,j,...] = value)"
+      "preserve_graph must be used with setindex! syntax (as @preserve_graph a[i,j,...] = value)",
     )
   end
   @capture(expr, array_[indices__] = value_)
