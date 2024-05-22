@@ -21,7 +21,6 @@ function ITensors.siteinds(x, g::AbstractGraph; kwargs...)
 end
 
 function to_siteind(x, vertex; kwargs...)
-  @show x
   return [siteind(x, vertex_tag(vertex); kwargs...)]
 end
 
