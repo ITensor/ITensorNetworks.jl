@@ -1,5 +1,6 @@
 [deps]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 DataGraphs = "b5a273c3-7e6c-41f6-98bd-8d7f1525a36a"
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
