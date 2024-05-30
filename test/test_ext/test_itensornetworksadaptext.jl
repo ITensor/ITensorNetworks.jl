@@ -18,7 +18,6 @@ Adapt.adapt_storage(::SinglePrecisionAdaptor, x) = single_precision(eltype(x)).(
   tn = random_tensornetwork(elt, s)
   @test ITensors.scalartype(tn) === elt
   tn′ = adapt(SinglePrecisionAdaptor(), tn)
-  @show ITensors.scalartype(tn), ITensors.scalartype(tn′)
   @test ITensors.scalartype(tn′) === single_precision(elt)
 end
 end
