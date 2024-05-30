@@ -3,7 +3,7 @@ using Adapt: Adapt, adapt
 using NamedGraphs.NamedGraphGenerators: named_grid
 using ITensorNetworks: random_tensornetwork, siteinds
 using ITensors: ITensors
-using Test: @test
+using Test: @test, @testset
 
 struct SinglePrecisionAdaptor end
 single_precision(::Type{<:AbstractFloat}) = Float32
