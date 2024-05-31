@@ -21,6 +21,7 @@ function alternating_update(
   inserter=default_inserter(),
   transform_operator_kwargs=(;),
   transform_operator=default_transform_operator(),
+  sweep_plan_func = default_sweep_plan,
   kwargs...,
 )
   inserter_kwargs = (; inserter_kwargs..., kwargs...)
@@ -28,6 +29,7 @@ function alternating_update(
     nsweeps,
     init_state;
     root_vertex,
+    sweep_plan_func,
     extracter,
     extracter_kwargs,
     updater,
@@ -102,19 +104,19 @@ function alternating_update(operator::AbstractTTN, init_state::AbstractTTN; kwar
   return alternating_update(projected_operator, init_state; kwargs...)
 end
 
-#TODO: Brainwave. Generalise your BP alternating update to operator::Sum{AbstractITensorNetwork}. Shouldn't this
+#TODO: Generalise your BP alternating update to operator::Sum{AbstractITensorNetwork}. Shouldn't this
 # account for the environment correctly and put the BP error precisely on the state only, which is better
 # conditioned?!
-function alternating_update(operators::AbstractITensorNetwork, init_state::AbstractITensorNetwork, sweep_plans; kwargs...)
+function alternating_update(operators::Vector{ITensorNetwork}, init_state::AbstractITensorNetwork, sweep_plans; kwargs...)
   cache_update_kwargs = is_tree(init_state) ? (;) : (; maxiter = 10, tol = 1e-5)
-  ψOψ = QuadraticFormNetwork(operator, init_state)
+  ψOψs = QuadraticFormNetwork[QuadraticFormNetwork(operator, init_state) for operator in operators]
   ψIψ = QuadraticFormNetwork(init_state)
-  ψOψ_bpc = BeliefPropagationCache(ψOψ)
+  ψOψ_bpcs = BeliefPropagationCache[BeliefPropagationCache(ψOψ) for ψOψ in ψOψs]
   ψIψ_bpc = BeliefPropagationCache(ψIψ)
-  ψOψ_bpc = update(ψOψ_bpc; cache_update_kwargs...)
+  ψOψ_bpcs = BeliefPropagationCache[update(ψOψ_bpc; cache_update_kwargs...) for ψOψ_bpc in ψOψ_bpcs]
   ψIψ_bpc = update(ψIψ_bpc; cache_update_kwargs...)
-  projected_operator = (ψOψ_bpc, ψIψ_bpc)
-  return alternating_update(projected_operator, init_state, sweep_plans; kwargs...)
+  projected_operators = (ψOψ_bpcs, ψIψ_bpc)
+  return alternating_update(projected_operators, init_state, sweep_plans; kwargs...)
 end
 
 function alternating_update(

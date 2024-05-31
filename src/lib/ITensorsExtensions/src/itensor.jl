@@ -20,6 +20,7 @@ using ITensors.NDTensors:
   NDTensors,
   Block,
   Tensor,
+  array,
   blockdim,
   blockoffsets,
   denseblocks,

@@ -13,7 +13,8 @@ using NamedGraphs.PartitionedGraphs:
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
 
-default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
+#default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
+default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]  
 default_messages(ptn::PartitionedGraph) = Dictionary()
 default_message_norm(m::ITensor) = norm(m)
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
@@ -82,6 +83,24 @@ default_message(bp_cache::BeliefPropagationCache) = bp_cache.default_message
 function tensornetwork(bp_cache::BeliefPropagationCache)
   return unpartitioned_graph(partitioned_tensornetwork(bp_cache))
 end
+
+function reset_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
+  new_messages = copy(messages(bp_cache))
+  for pe in pes
+    delete!(new_messages, pe)
+  end
+  return BeliefPropagationCache(partitioned_tensornetwork(bp_cache), new_messages, default_message(bp_cache))
+end
+
+function reset_messages(bp_cache::BeliefPropagationCache)
+  pedges = vcat(partitionedges(partitioned_tensornetwork(bp_cache)), reverse.(partitionedges(partitioned_tensornetwork(bp_cache))))
+  return reset_messages(bp_cache, pedges)
+end
+
+function reset_message(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
+  return reset_messages(bp_cache, PartitionEdge[pe])
+end
+
 
 #Forward from partitioned graph
 for f in [
@@ -173,6 +192,7 @@ function update_message(
 )
   vertex = src(edge)
   messages = environment(bp_cache, vertex; ignore_edges=PartitionEdge[reverse(edge)])
+
   state = factor(bp_cache, vertex)
 
   return message_update(ITensor[messages; state]; message_update_kwargs...)
@@ -258,6 +278,7 @@ Update the tensornetwork inside the cache
 """
 function update_factors(bp_cache::BeliefPropagationCache, factors)
   bp_cache = copy(bp_cache)
+  factors = copy(factors)
   tn = tensornetwork(bp_cache)
   for vertex in eachindex(factors)
     # TODO: Add a check that this preserves the graph structure.
