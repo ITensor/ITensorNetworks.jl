@@ -1,8 +1,8 @@
-using ITensors: siteinds, Op, prime
-using Graphs: edges, vertices, is_tree, connected_components
+using ITensors: siteinds, Op, prime, OpSum
+using Graphs: AbstractGraph, edges, vertices, is_tree, connected_components
 using NamedGraphs: NamedGraph, NamedEdge, NamedGraphs, rename_vertices
 using NamedGraphs.NamedGraphGenerators: named_grid
-using NamedGraphs.GraphsExtensions: forest_cover, add_edges, rem_edges, add_vertices, rem_vertices, disjoint_union, subgraph
+using NamedGraphs.GraphsExtensions: forest_cover, add_edges, rem_edges, add_vertices, rem_vertices, disjoint_union, subgraph, src, dst
 using ITensorNetworks: AbstractFormNetwork, IndsNetwork, ITensorNetwork, insert_linkinds, ttn, union_all_inds
 using DataGraphs: underlying_graph
 using ITensorNetworks.ModelHamiltonians: heisenberg
@@ -30,7 +30,7 @@ function NamedGraphs.GraphsExtensions.forest_cover(s::IndsNetwork; kwargs...)
     return ss
 end
 
-function model_tno(s::IndsNetwork, model::Function; params...)
+function model_ising_tno(s::IndsNetwork, model::Function; params...)
     forests = forest_cover(s)
     tnos = ITensorNetwork[]
     for s_tree in forests
@@ -52,6 +52,49 @@ function model_tno(s::IndsNetwork, model::Function; params...)
     end
 
     return reduce(+, tnos)
+end
+
+function model_tno_simplified(s::IndsNetwork, model::Function; params...)
+    forests = forest_cover(s)
+    tnos = ITensorNetwork[]
+    for s_tree in forests
+        g = underlying_graph(s_tree)
+        @show params
+        tno = ITensorNetwork(ttn(model(g; params...), s_tree))
+
+        missing_vertices = setdiff(vertices(s), vertices(g))
+        s_remaining_verts = subgraph(v -> v ∈ missing_vertices, s)
+
+        @assert issubset(edges(s_tree), edges(s))
+        @assert issubset(edges(s_remaining_verts), edges(s))
+        identity_tno = ITensorNetwork(Op("I"), union_all_inds(s_remaining_verts, prime(s_remaining_verts)))
+        tno = disjoint_union(tno, identity_tno)
+        tno = rename_vertices(v -> first(v), tno)
+        push!(tnos, tno)
+    end
+
+    return tnos
+end
+
+function ising_dictified(g::AbstractGraph, Js, hs)
+    ℋ = OpSum()
+    for e in edges(g)
+      ℋ += Js[e], "Sz", src(e), "Sz", dst(e)
+    end
+    for v in vertices(g)
+      ℋ += hs[v], "Sx", v
+    end
+    return ℋ
+end
+
+function xyz_dictified(g::AbstractGraph, Jxs, Jys, Jzs)
+    ℋ = OpSum()
+    for e in edges(g)
+      ℋ += Jxs[e], "X", src(e), "X", dst(e)
+      ℋ += Jys[e], "Y", src(e), "Y", dst(e)
+      ℋ += Jzs[e], "Z", src(e), "Z", dst(e)
+    end
+    return ℋ
 end
 
 function n_site_expect(ψIψ::AbstractFormNetwork, ops::Vector{String}, vs; kwargs...)
