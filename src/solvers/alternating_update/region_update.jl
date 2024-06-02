@@ -139,8 +139,7 @@ function region_update(projected_operators, state; outputlevel,
     internal_kwargs,
   ) = region_kwargs
   ψOψ_bpcs, ψIψ_bpc = first(projected_operators), last(projected_operators)
-  #ψOψ_bpc = only(ψOψ_bpcs)
-
+  
   #Fix extracter, update and inserter to work with sum of ψOψ_bpcs
   local_state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts = extracter(state, ψOψ_bpcs, ψIψ_bpc, region; extracter_kwargs...)
 

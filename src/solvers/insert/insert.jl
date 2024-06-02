@@ -22,7 +22,6 @@ function default_inserter(
     indsTe = inds(state[ortho_vert])
     L, phi, spec = factorize(phi, indsTe; tags=tags(state, e), maxdim, mindim, cutoff)
     state[ortho_vert] = L
-
   else
     v = ortho_vert
   end
@@ -57,6 +56,7 @@ function bp_inserter(ψ::AbstractITensorNetwork, ψAψ_bpcs::Vector{<:BeliefProp
   form_network = unpartitioned_graph(partitioned_tensornetwork(ψIψ_bpc))
   ψAψ_bpcs = BeliefPropagationCache[reset_messages(ψAψ_bpc) for ψAψ_bpc in ψAψ_bpcs]
   ψIψ_bpc = reset_messages(ψIψ_bpc)
+  @show messages(ψIψ_bpc)
   if length(region) == 1
     states = [state]
   elseif length(region) == 2
@@ -88,5 +88,7 @@ function bp_inserter(ψ::AbstractITensorNetwork, ψAψ_bpcs::Vector{<:BeliefProp
   updated_ψIψ = unpartitioned_graph(partitioned_tensornetwork(ψIψ_bpc))
   numerator_terms = [scalar(unpartitioned_graph(partitioned_tensornetwork(ψAψ_bpc)); cache! = Ref(ψAψ_bpc), alg = "bp") for ψAψ_bpc in ψAψ_bpcs]
   eigval = sum(numerator_terms) / scalar(updated_ψIψ; cache! = Ref(ψIψ_bpc), alg = "bp")
-  return ψ, ψAψ_bpcs, ψIψ_bpc, spec,   (; eigvals=[eigval])
+  @show eigval
+  @show scalar(only(ψAψ_bpcs); alg = "exact") / scalar(ψIψ_bpc; alg = "exact")
+  return ψ, ψAψ_bpcs, ψIψ_bpc, spec, (; eigvals=[eigval])
 end

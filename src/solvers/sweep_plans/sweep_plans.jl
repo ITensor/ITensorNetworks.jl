@@ -147,12 +147,9 @@ function bp_sweep_plan(g::AbstractGraph;
   root_vertex=GraphsExtensions.default_root_vertex(graph),
   region_kwargs,
   nsites::Int,
-  es = edges(g),
-  vs = vertices(g))
+  es = vcat(collect(edges(g)), collect(reverse(edges(g)))),
+  vs = vcat(reverse(collect(vertices(g))), collect(vertices(g))))
   region_kwargs = (; internal_kwargs = (;), region_kwargs...)
-
-  L = length(vertices(g))
-  es = vcat([NamedEdge((i, 1) => (i + 1, 1)) for i in 1:(L-1)], [NamedEdge((L,1) => (1,1))])
 
   if nsites == 2
    return collect(

@@ -14,67 +14,59 @@ using LinearAlgebra
 using Random: Random
 
 include("exampleutils.jl")
+include("imaginary_time_evo.jl")
 
 ITensors.disable_warn_order()
 
-function ising_operator_ring(s::IndsNetwork; h = 0, hl = 0)
-    L = length(vertices(s))
-    s_tree = rem_edge(s, (1,1) => (L,1))
-    g_tree = rem_edge(s, (1,1) => (L,1))
-    A = ITensorNetwork(ttn(ising(g_tree; h, hl), s_tree))
-    A = insert_linkinds(A, [NamedEdge((1,1) => (L,1))])
-    Ap2 = ITensorNetwork(v -> v == (L,1) || v == (1,1) ? Op("Sz") : Op("I"), union_all_inds(s,s'))
-    return A + Ap2
-end
-
-function ising_operator_sq_ring(s::IndsNetwork; h = 0, hl = 0)
-    L = length(vertices(s))
-    s_tree = rem_edge(s, (1,1) => (L,1))
-    g_tree = rem_edge(s, (1,1) => (L,1))
-    A = ITensorNetwork(ttn(ising(g_tree; h, hl), s_tree))
-    A = insert_linkinds(A, [NamedEdge((1,1) => (L,1))])
-    Ap2 = ITensorNetwork(v -> v == (L,1) || v == (1,1) ? Op("Sz") : Op("I"), union_all_inds(s,s'))
-    A = A + Ap2
-
-    Ap = map_inds(prime, A; links = [])
-    Ap = map_inds(sim, Ap; sites = [])
-    
-    Asq = copy(A)
-    for v in vertices(Asq)
-        Asq[v] = Ap[v] * A[v]
-        Asq[v] = mapprime(Asq[v], 2, 1)
-    end
-
-    return combine_linkinds(Asq)
+function smallest_eigvalue(A::AbstractITensorNetwork)
+    out = reduce(*, [A[v] for v in vertices(A)])
+    out = out * combiner(inds(out; plev = 0))  *combiner(inds(out; plev = 1))
+    out = array(out)
+    return minimum(LinearAlgebra.eigvals(out))
 end
 
 function main()
     L = 4
-    h, hl = 0.5, 0.1
-    g = named_grid((L,1); periodic = false)
+    h, hl, J = 0.5, 0.1, -1.0
+    g = named_grid((L,1); periodic = true)
+    #g = heavy_hex_lattice_graph(2,2)
+    hs = Dictionary(vertices(g), [h for v in vertices(g)])
+    hls = Dictionary(vertices(g), [hl for v in vertices(g)])
+    Js = Dictionary(edges(g), [J for e in edges(g)])
+    one_site_params = (; hs, hls)
+    two_site_params = (; Js)
     s = siteinds("S=1/2", g)
-    A = ITensorNetwork(ttn(ising(g; h, hl), s))
-    #A = ising_operator_ring(s; h, hl)
-    #Asq = ising_operator_sq_ring(s; h, hl)
+    A = model_tno(s, ising_dictified; two_site_params, one_site_params)
+    A2 = first(model_tno_simplified(s, ising_dictified; two_site_params, one_site_params))
 
-    χ, χmax = 2, 4
+    χ, χmax, χTEBDmax  = 1, 3, 3
+    nperiods = 10
+    dβs = [(25, 0.2/((2^(i-1)))) for i in 1:nperiods]
+    nbetas = 200
     Random.seed!(1234)
-    ψ_init = ITensorNetwork(v -> "↓", s)
-    A_vec = ITensorNetwork[A1, A2]
-    H_opsum = ising(s; h)
-
+    cache_update_kwargs = (;maxiter = 25, tol = 1e-10)
+    #ψ_init = ITensorNetwork(v -> "↑", s)
+    ψ_init = random_tensornetwork(s; link_space = χ)
+    H_opsum = ising(s; h, hl, J1 = J)
     e_init = sum(expect(ψ_init, H_opsum; alg = "bp"))
-    @show e_init
-    #A = ITensorNetwork(ttn(heisenberg(g), s))
-    cache_update_kwargs = (;maxiter = 30, tol = 1e-8)
+    println("Initial Energy is $e_init")
+    #ψ_imag_time = imaginary_time_evo(s, ψ_init, ising_dictified, dβs, nbetas; model_params = (; two_site_params..., one_site_params...), bp_update_kwargs = cache_update_kwargs,
+    #apply_kwargs = (; cutoff = 1e-10, maxdim = χTEBDmax))
+    #ψ_init = copy(ψ_imag_time)
+
     inserter_bp_kwargs = (; maxdim = χmax, cutoff = 1e-14, cache_update_kwargs)
     inserter_ttn_kwargs = (; maxdim = χmax)
-    updater_kwargs = (; tol = 1e-14, krylovdim = 5, maxiter = 2, verbosity = 0, eager = false)
-    nsites, nsweeps = 2, 3
+    updater_kwargs = (; tol = 1e-14, krylovdim = 3, maxiter = 2, verbosity = 0, eager = false)
+    nsites, nsweeps = 1, 2
 
     A = ITensorNetwork[A]
+    A2 = ITensorNetwork[A2]
+    H_opsum_A2 = ising(underlying_graph(only(A2)); h, hl, J1 = J)
+    @show smallest_eigvalue(only(A2))
+    @show sum(expect(ψ_init, H_opsum_A2; alg = "bp"))
     #@time e_bp_vectorized, ψ_bp_vectorized = dmrg(A_vec, ψ_init; nsweeps, nsites, updater_kwargs, inserter_kwargs = inserter_bp_kwargs)
-    @time e_bp_nonvectorized, ψ_bp_nonvectorized = dmrg(A, ψ_init; nsweeps, nsites, updater_kwargs, inserter_kwargs = inserter_bp_kwargs)
+    @time e_bp_nonvectorized, ψ_bp_nonvectorized = dmrg(A2, ψ_init; nsweeps, nsites, updater_kwargs, inserter_kwargs = inserter_bp_kwargs)
+    @show sum(expect(ψ_bp_nonvectorized, H_opsum_A2; alg = "bp"))
     #@time e_ttn, ψ_ttn = dmrg(ttn(A), ttn(ψ_init); nsweeps, nsites, updater_kwargs, inserter_kwargs = inserter_ttn_kwargs)
 
     #e_final_vectorized = sum(expect(ψ_bp_vectorized, H_opsum; alg = "bp"))

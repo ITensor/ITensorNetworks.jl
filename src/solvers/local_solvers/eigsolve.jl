@@ -50,7 +50,6 @@ function bp_eigsolve_updater(init::ITensor, ∂ψAψ_bpc_∂rs::Vector, sqrt_mts
   howmany = 1
 
   vals, vecs, info = eigsolve(get_new_state_partial,init,howmany,:SR; ishermitian = true, kwargs...)
-
   state = first(vecs)
   state = noprime(contract([state; inv_sqrt_mts]))
 
