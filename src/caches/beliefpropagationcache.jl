@@ -13,15 +13,15 @@ using NamedGraphs.PartitionedGraphs:
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
 
-#default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
-default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]  
+default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
+#default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]  
 default_messages(ptn::PartitionedGraph) = Dictionary()
 default_message_norm(m::ITensor) = norm(m)
-function default_message_update(contract_list::Vector{ITensor}; kwargs...)
+function default_message_update(contract_list::Vector{ITensor}; normalize = true, kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
   message_norm = norm(updated_messages)
-  if !iszero(message_norm)
+  if !iszero(message_norm) && normalize
     updated_messages /= message_norm
   end
   return ITensor[updated_messages]
@@ -330,3 +330,35 @@ end
 function scalar_factors_quotient(bp_cache::BeliefPropagationCache)
   return vertex_scalars(bp_cache), edge_scalars(bp_cache)
 end
+
+function ITensors.scalar(bp_cache::BeliefPropagationCache)
+  v_scalars, e_scalars = vertex_scalars(bp_cache), edge_scalars(bp_cache)
+  return prod(v_scalars) / prod(e_scalars)
+end
+
+function rescale_messages(bp_cache::BeliefPropagationCache, scalar::Float64, pv::PartitionVertex; scale_all = true)
+  bp_cache = copy(bp_cache)
+  pedges = boundary_partitionedges(bp_cache, PartitionVertex[pv]; dir=:in)
+  no_ms = length(pedges)
+  mts = messages(bp_cache)
+  if scale_all
+    scale_neg = scalar < 0 ? true : false
+    c = abs(scalar) ^ (1/no_ms)
+    
+    for pe in pedges
+      mt = only(mts[pe])
+      mt *= (c / sum(mt))
+      set!(mts, pe, ITensor[mt])
+    end
+
+    if scale_neg
+      mt = only(mts[first(pedges)])
+      mt *= -1
+      set!(mts, first(pedges), ITensor[mt])
+    end
+  end
+  return bp_cache
+end
+
+
+
