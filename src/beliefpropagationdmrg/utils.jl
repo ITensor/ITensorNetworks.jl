@@ -57,28 +57,6 @@ function smallest_eigvalue(A::AbstractITensorNetwork)
     return minimum(real.(eigvals(out)))
 end
 
-function bp_renormalize(ψ::ITensorNetwork, ψIψ::BeliefPropagationCache, ψOψs::Vector)
-
-    qf = unpartitioned_graph(partitioned_tensornetwork( ψIψ))
-    L = length(vertices(ψ))
-    Z = scalar(ψIψ)
-    Zval = Z^(-1/(2*L))
-    ψ = copy(ψ)
-    for v in vertices(ψ)
-        form_bra_v, form_ket_v = bra_vertex(qf, v), ket_vertex(qf, v)
-        state = ψ[v] * Zval
-        state_dag = copy(state)
-        state_dag = replaceinds(dag(state_dag), inds(state_dag), dual_index_map(qf).(inds(state_dag)))
-        ψ[v] = state
-        ψIψ = update_factor(ψIψ, form_ket_v, state)
-        ψIψ = update_factor(ψIψ, form_bra_v, state_dag)
-        ψOψs = update_factor.(ψOψs, (form_bra_v, ), (state, ))
-        ψOψs = update_factor.(ψOψs, (form_ket_v, ), (state_dag, ))
-    end
-
-    return ψ, ψIψ, ψOψs
-end
-
 function replace_v(bpc::BeliefPropagationCache, v)
     bpc = copy(bpc)
     qf = unpartitioned_graph(partitioned_tensornetwork(bpc))

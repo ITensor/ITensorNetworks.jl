@@ -84,24 +84,6 @@ function tensornetwork(bp_cache::BeliefPropagationCache)
   return unpartitioned_graph(partitioned_tensornetwork(bp_cache))
 end
 
-function reset_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
-  new_messages = copy(messages(bp_cache))
-  for pe in pes
-    delete!(new_messages, pe)
-  end
-  return BeliefPropagationCache(partitioned_tensornetwork(bp_cache), new_messages, default_message(bp_cache))
-end
-
-function reset_messages(bp_cache::BeliefPropagationCache)
-  pedges = vcat(partitionedges(partitioned_tensornetwork(bp_cache)), reverse.(partitionedges(partitioned_tensornetwork(bp_cache))))
-  return reset_messages(bp_cache, pedges)
-end
-
-function reset_message(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
-  return reset_messages(bp_cache, PartitionEdge[pe])
-end
-
-
 #Forward from partitioned graph
 for f in [
   :(PartitionedGraphs.partitioned_graph),

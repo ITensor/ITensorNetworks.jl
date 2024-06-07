@@ -10,8 +10,7 @@ include("bp_updater.jl")
 
 default_bp_update_kwargs(ψ::ITensorNetwork) = is_tree(ψ) ? (;) : (; maxiter = 25, tol = 1e-7)
 
-
-function build_update_caches(operators::Vector{ITensorNetwork}, ψ_init::ITensorNetwork; cache_update_kwargs = default_bp_update_kwargs(ψ_init))
+function initialize_caches(ψ_init::ITensorNetwork, operators::Vector{ITensorNetwork}; cache_update_kwargs = default_bp_update_kwargs(ψ_init))
     ψ = copy(ψ_init)
     ψIψ = QuadraticFormNetwork(ψ)
     ψIψ_bpc = BeliefPropagationCache(ψIψ)
@@ -31,9 +30,10 @@ end
 
 alt_vertex_order(ψ_init) = [[v] for v in collect(vertices(ψ_init))]
 
-function bp_dmrg(operators::Vector{ITensorNetwork}, ψ_init::ITensorNetwork; no_sweeps = 1, bp_update_kwargs = default_bp_update_kwargs( ψ_init),
+function bp_dmrg(ψ_init::ITensorNetwork, operators::Vector{ITensorNetwork}; no_sweeps = 1, bp_update_kwargs = default_bp_update_kwargs(ψ_init),
     vertex_order_func = default_vertex_order)
-    state, ψIψ_bpc, ψOψ_bpcs = build_update_caches(operators, ψ_init)
+
+    state, ψIψ_bpc, ψOψ_bpcs = initialize_caches(ψ_init, operators)
     regions = vertex_order_func(state)
 
     energy = sum(scalar.(ψOψ_bpcs)) / scalar(ψIψ_bpc)
@@ -44,8 +44,6 @@ function bp_dmrg(operators::Vector{ITensorNetwork}, ψ_init::ITensorNetwork; no_
         println("Beginning sweep $i")
         for region in regions
             println("Updating vertex $region")
-
-            state, ψIψ_bpc, ψOψ_bpcs = bp_renormalize(state, ψIψ_bpc, ψOψ_bpcs)
             
             v = only(region)
             form_op_v = (v, "operator")
@@ -57,14 +55,14 @@ function bp_dmrg(operators::Vector{ITensorNetwork}, ψ_init::ITensorNetwork; no_
             pv = PartitionVertex(v)
             ψOψ_bpcs = BeliefPropagationCache[rescale_messages(ψOψ_bpc, ψOψ_bpc_scalar, pv) for (ψOψ_bpc, ψOψ_bpc_scalar) in zip(ψOψ_bpcs, ψOψ_bpcs_scalars)]
             ψOψ_bpcs = BeliefPropagationCache[update_factor(ψOψ_bpc, form_op_v, local_op) for (ψOψ_bpc, local_op) in zip(ψOψ_bpcs, local_ops)]
+
             local_state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts = bp_extracter(state, ψOψ_bpcs, ψIψ_bpc, region)
 
             #Do an eigsolve
             local_state, _ = bp_eigsolve_updater(local_state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts)
 
-            state, ψOψ_bpcs, ψIψ_bpc, _, _ = bp_inserter_one_site(state, ψOψ_bpcs, ψIψ_bpc, local_state, region; cache_update_kwargs =bp_update_kwargs)
+            state, ψOψ_bpcs, ψIψ_bpc = bp_inserter(state, ψOψ_bpcs, ψIψ_bpc, local_state, region; cache_update_kwargs =bp_update_kwargs)
 
-            ψOψ_bpcs = update.(ψOψ_bpcs; bp_update_kwargs...)
             energy = sum(scalar.(ψOψ_bpcs)) / scalar(ψIψ_bpc)
             println("Current energy is $energy")
             append!(energies, energy)
