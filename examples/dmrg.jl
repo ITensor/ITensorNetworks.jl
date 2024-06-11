@@ -3,6 +3,8 @@ using Dictionaries: Dictionary
 using Graphs: nv, vertices
 using ITensorMPS: ITensorMPS
 using ITensorNetworks:
+  AbstractITensorNetwork,
+  BeliefPropagationCache,
   ITensorNetworks,
   OpSum,
   ttn,
@@ -14,10 +16,11 @@ using ITensorNetworks:
   random_ttn,
   linkdims,
   siteinds,
-  random_tensornetwork
+  random_tensornetwork,
+  maxlinkdim
 using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
-using ITensors: ITensors, expect
+using ITensors: ITensors, ITensor, expect
 using KrylovKit: eigsolve
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Observers: observer
@@ -25,18 +28,24 @@ using NamedGraphs.NamedGraphGenerators: named_grid
 
 using NPZ
 
+include("utils.jl")
+
+Random.seed!(5634)
+
 function main()
 
-  N = 24
-  g = heavy_hex_lattice_graph(3,3)
+  g_str = "HeavyHex"
+  pbc = true
+  g = g_str == "Chain" ? named_grid((24,1); periodic = pbc) : heavy_hex_lattice_graph(2,2; periodic = pbc)
+  g = renamer(g)
+  save = false
+  chi =1
+
   N = length(vertices(g))
-  g_mps = named_grid((N,1))
-  g_mps = rename_vertices(v -> (first(v), ), g_mps)
-  h, hl = 0.8, 0.2
-  J = -1
+  g_mps = renamer(named_grid((N,1)))
+  h, hl = 1.05, 0.4
+  J = 1
   s = siteinds("S=1/2",g_mps)
-  chi = 10
-  pbc = false
 
   os = OpSum()
   for e in edges(g)
@@ -56,16 +65,20 @@ function main()
   region_observer! = observer(sweep, region, energy)
 
   e, psifinal = dmrg(
-    H, psi0; nsweeps = 5, maxdim = chi, cutoff= 1e-14, nsites = 1, region_observer!
+    H, psi0; nsweeps = 20, maxdim = chi, cutoff= 1e-14, nsites = 1, region_observer!
   )
-  energies = region_observer!.energy
+  energies = (region_observer!.energy) / N
+  @show last(energies)
+  @show maxlinkdim(psifinal)
 
   final_mags = expect(psifinal, "Z")
-  file_name = "/Users/jtindall/Documents/Data/DMRG/HEAVYHEXISINGL$(N)h$(h)hl$(hl)chi$(chi)"
+  file_name = "/Users/jtindall/Files/Data/DMRG/"*g_str*"ISINGL$(N)h$(h)hl$(hl)chi$(chi)"
   if pbc
     file_name *= "PBC"
   end
-  npzwrite(file_name*".npz", energies = energies, final_mags = final_mags)
+  if save
+    npzwrite(file_name*".npz", energies = energies, final_mags = final_mags)
+  end
 
 end
 

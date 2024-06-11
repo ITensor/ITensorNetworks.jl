@@ -39,7 +39,6 @@ function bp_inserter(ψ::AbstractITensorNetwork, ψOψ_bpcs::Vector{<:BeliefProp
         ψIψ_bpc = update_factors(ψIψ_bpc, vertices_states)
     end
 
-    ψOψ_bpcs = update.(ψOψ_bpcs; cache_update_kwargs...)
     ψIψ_bpc = update(ψIψ_bpc; cache_update_kwargs...)
     if normalize_state
         ψ, ψIψ_bpc, ψOψ_bpcs = normalize_state_update_caches(ψ, ψIψ_bpc, ψOψ_bpcs)

@@ -1,3 +1,18 @@
+using ITensors: siteinds, Op, prime, OpSum, apply
+using Graphs: AbstractGraph, SimpleGraph, edges, vertices, is_tree, connected_components
+using NamedGraphs: NamedGraph, NamedEdge, NamedGraphs, rename_vertices
+using NamedGraphs.NamedGraphGenerators: named_grid, named_hexagonal_lattice_graph
+using NamedGraphs.GraphsExtensions: decorate_graph_edges, forest_cover, add_edges, rem_edges, add_vertices, rem_vertices, disjoint_union, subgraph, src, dst
+using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedge, unpartitioned_graph
+using ITensorNetworks: BeliefPropagationCache, AbstractITensorNetwork, AbstractFormNetwork, IndsNetwork, ITensorNetwork, insert_linkinds, ttn, union_all_inds,
+    neighbor_vertices, environment, messages, update_factor, message, partitioned_tensornetwork, bra_vertex, ket_vertex, operator_vertex, default_cache_update_kwargs,
+    dual_index_map
+using DataGraphs: underlying_graph
+using ITensorNetworks.ModelHamiltonians: heisenberg
+using ITensors: ITensor, noprime, dag, noncommonind, commonind, replaceind, dim, noncommoninds, delta, replaceinds
+using ITensors.NDTensors: denseblocks
+using Dictionaries: set!
+
 function BP_apply(o::ITensor, ψ::AbstractITensorNetwork, bpc::BeliefPropagationCache; apply_kwargs...)
     bpc = copy(bpc)
     ψ = copy(ψ)
@@ -29,16 +44,17 @@ function smallest_eigvalue(A::AbstractITensorNetwork)
     return minimum(real.(eigvals(out)))
 end
 
-function heavy_hex_lattice_graph(n::Int64, m::Int64)
+function heavy_hex_lattice_graph(n::Int64, m::Int64; periodic)
     """Create heavy-hex lattice geometry"""
-    g = named_hexagonal_lattice_graph(n, m)
+    g = named_hexagonal_lattice_graph(n, m; periodic)
     g = decorate_graph_edges(g)
+    return g
+end
 
+function renamer(g)
     vertex_rename = Dictionary()
     for (i,v) in enumerate(vertices(g))
         set!(vertex_rename, v, (i,))
     end
-    g = rename_vertices(v -> vertex_rename[v], g)
-    
-    return g
+    return rename_vertices(v -> vertex_rename[v], g)
 end
