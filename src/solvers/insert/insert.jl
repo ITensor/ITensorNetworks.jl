@@ -38,10 +38,10 @@ function default_inserter(
   phi::ITensor,
   region::NamedEdge,
   ortho;
-  normalize=false,
+  cutoff=nothing,
   maxdim=nothing,
   mindim=nothing,
-  cutoff=nothing,
+  normalize=false,
   internal_kwargs,
 )
   v = only(setdiff(support(region), [ortho]))
