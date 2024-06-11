@@ -14,6 +14,7 @@ function default_inserter(
   cutoff=nothing,
   internal_kwargs,
 )
+  state = copy(state)
   spec = nothing
   other_vertex = setdiff(support(region), [ortho_vert])
   if !isempty(other_vertex)
