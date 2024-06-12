@@ -34,16 +34,16 @@ Random.seed!(5634)
 
 function main()
 
-  g_str = "HeavyHex"
+  g_str = "Chain"
   pbc = true
   g = g_str == "Chain" ? named_grid((24,1); periodic = pbc) : heavy_hex_lattice_graph(2,2; periodic = pbc)
   g = renamer(g)
   save = false
-  chi =1
+  chi =2
 
   N = length(vertices(g))
   g_mps = renamer(named_grid((N,1)))
-  h, hl = 1.05, 0.4
+  h, hl = 0.6, 0.0
   J = 1
   s = siteinds("S=1/2",g_mps)
 
@@ -65,7 +65,7 @@ function main()
   region_observer! = observer(sweep, region, energy)
 
   e, psifinal = dmrg(
-    H, psi0; nsweeps = 20, maxdim = chi, cutoff= 1e-14, nsites = 1, region_observer!
+    H, psi0; nsweeps = 10, maxdim = chi, cutoff= 1e-14, nsites = 1, region_observer!
   )
   energies = (region_observer!.energy) / N
   @show last(energies)
