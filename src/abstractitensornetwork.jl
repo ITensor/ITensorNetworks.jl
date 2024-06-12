@@ -834,8 +834,8 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 
     e1_v = filter(x -> src(x) == v || dst(x) == v, edges_tn1)
     e2_v = filter(x -> src(x) == v || dst(x) == v, edges_tn2)
-    @assert issetequal(e1_v, e2_v)
 
+    @assert issetequal(e1_v, e2_v)
     tn1v_linkinds = Index[only(linkinds(tn1, e)) for e in e1_v]
     tn2v_linkinds = Index[only(linkinds(tn2, e)) for e in e1_v]
     tn12v_linkinds = Index[new_edge_indices[e] for e in e1_v]
