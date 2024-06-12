@@ -806,13 +806,14 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 
   edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
 
-  if !issetequal(tn1, tn2)
+  if !issetequal(edges_tn1, edges_tn2)
     new_edges = union(edges_tn1, edges_tn2)
     tn1 = insert_linkinds(tn1, new_edges)
     tn2 = insert_linkinds(tn2, new_edges)
   end
 
   edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
+  @assert issetequal(edges_tn1, edges_tn2)
 
   tn12 = copy(tn1)
   new_edge_indices = Dict(
@@ -833,6 +834,7 @@ function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork
 
     e1_v = filter(x -> src(x) == v || dst(x) == v, edges_tn1)
     e2_v = filter(x -> src(x) == v || dst(x) == v, edges_tn2)
+    @assert issetequal(e1_v, e2_v)
 
     tn1v_linkinds = Index[only(linkinds(tn1, e)) for e in e1_v]
     tn2v_linkinds = Index[only(linkinds(tn2, e)) for e in e1_v]

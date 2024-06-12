@@ -28,7 +28,6 @@ function alternating_update(
     nsweeps,
     init_state;
     root_vertex,
-    sweep_plan_func,
     extracter,
     extracter_kwargs,
     updater,
@@ -53,7 +52,7 @@ end
 
 function alternating_update(
   projected_operator,
-  init_state,
+  init_state::AbstractTTN,
   sweep_plans;
   outputlevel=default_outputlevel(),
   checkdone=default_checkdone(),  # 
