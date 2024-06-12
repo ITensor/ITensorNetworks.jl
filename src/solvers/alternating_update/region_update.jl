@@ -119,13 +119,16 @@ function region_update(
   return state, projected_operator
 end
 
-function region_update(projected_operators, state; outputlevel,
+function region_update(
+  projected_operators,
+  state;
+  outputlevel,
   which_sweep,
   sweep_plan,
   which_region_update,
   region_printer,
-  (region_observer!))
-
+  (region_observer!),
+)
   (region, region_kwargs) = sweep_plan[which_region_update]
   (;
     extracter,
@@ -139,13 +142,19 @@ function region_update(projected_operators, state; outputlevel,
     internal_kwargs,
   ) = region_kwargs
   ψOψ_bpcs, ψIψ_bpc = first(projected_operators), last(projected_operators)
-  
+
   #Fix extracter, update and inserter to work with sum of ψOψ_bpcs
-  local_state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts = extracter(state, ψOψ_bpcs, ψIψ_bpc, region; extracter_kwargs...)
+  local_state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts = extracter(
+    state, ψOψ_bpcs, ψIψ_bpc, region; extracter_kwargs...
+  )
 
-  local_state, _ = updater(local_state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts; updater_kwargs...)
+  local_state, _ = updater(
+    local_state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts; updater_kwargs...
+  )
 
-  state, ψOψ_bpcs, ψIψ_bpc, spec, info  = inserter(state, ψOψ_bpcs, ψIψ_bpc, local_state, region; inserter_kwargs...)
+  state, ψOψ_bpcs, ψIψ_bpc, spec, info = inserter(
+    state, ψOψ_bpcs, ψIψ_bpc, local_state, region; inserter_kwargs...
+  )
 
   all_kwargs = (;
     which_region_update,

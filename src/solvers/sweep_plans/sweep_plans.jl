@@ -143,22 +143,20 @@ function default_sweep_plans(
   return sweep_plans
 end
 
-function bp_sweep_plan(g::AbstractGraph;
+function bp_sweep_plan(
+  g::AbstractGraph;
   root_vertex=GraphsExtensions.default_root_vertex(graph),
   region_kwargs,
   nsites::Int,
-  es = vcat(collect(edges(g)), collect(reverse(edges(g)))),
-  vs = vcat(reverse(collect(vertices(g))), collect(vertices(g))))
-  region_kwargs = (; internal_kwargs = (;), region_kwargs...)
+  es=vcat(collect(edges(g)), collect(reverse(edges(g)))),
+  vs=vcat(reverse(collect(vertices(g))), collect(vertices(g))),
+)
+  region_kwargs = (; internal_kwargs=(;), region_kwargs...)
 
   if nsites == 2
-   return collect(
-    flatten(map(e -> [([src(e), dst(e)], region_kwargs)], es))
-   )
+    return collect(flatten(map(e -> [([src(e), dst(e)], region_kwargs)], es)))
   elseif nsites == 1
-    return collect(
-      flatten(map(v -> [([v], region_kwargs)], vs))
-    )
+    return collect(flatten(map(v -> [([v], region_kwargs)], vs)))
   end
 end
 

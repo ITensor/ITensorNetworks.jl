@@ -30,10 +30,10 @@ function ITensorMPS.dmrg(
   nsweeps,
   nsites=2,
   updater=bp_eigsolve_updater,
-  inserter = bp_inserter,
-  extracter = bp_extracter,
-  sweep_plan_func = bp_sweep_plan,
-  bp_sweep_kwargs = (;),
+  inserter=bp_inserter,
+  extracter=bp_extracter,
+  sweep_plan_func=bp_sweep_plan,
+  bp_sweep_kwargs=(;),
   (region_observer!)=nothing,
   kwargs...,
 )
@@ -42,7 +42,16 @@ function ITensorMPS.dmrg(
     region_observer!, ValuesObserver((; eigvals=eigvals_ref))
   )
   state = alternating_update(
-    operators, init_state; nsweeps, nsites, updater, region_observer!, inserter, extracter, sweep_plan_func, kwargs...
+    operators,
+    init_state;
+    nsweeps,
+    nsites,
+    updater,
+    region_observer!,
+    inserter,
+    extracter,
+    sweep_plan_func,
+    kwargs...,
   )
   eigval = only(eigvals_ref[])
   return eigval, state
