@@ -22,7 +22,7 @@ end
 
 #TODO: Add support for nsites = 2
 function bp_inserter(ψ::AbstractITensorNetwork, ψOψ_bpcs::Vector{<:BeliefPropagationCache}, 
-    ψIψ_bpc::BeliefPropagationCache, state::ITensor, region; normalize_state = true, cache_update_kwargs, nsites::Int64 = 1, kwargs...)
+    ψIψ_bpc::BeliefPropagationCache, state::ITensor, region; nsites::Int64 = 1, kwargs...)
 
     @assert nsites == 1
     ψ = copy(ψ)
@@ -37,11 +37,6 @@ function bp_inserter(ψ::AbstractITensorNetwork, ψOψ_bpcs::Vector{<:BeliefProp
         vertices_states = Dictionary([form_ket_v, form_bra_v], [state, state_dag])
         ψOψ_bpcs = update_factors.(ψOψ_bpcs, (vertices_states,))
         ψIψ_bpc = update_factors(ψIψ_bpc, vertices_states)
-    end
-
-    ψIψ_bpc = update(ψIψ_bpc; cache_update_kwargs...)
-    if normalize_state
-        ψ, ψIψ_bpc, ψOψ_bpcs = normalize_state_update_caches(ψ, ψIψ_bpc, ψOψ_bpcs)
     end
 
     return ψ, ψOψ_bpcs, ψIψ_bpc

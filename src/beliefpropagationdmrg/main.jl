@@ -11,20 +11,19 @@ include("bp_dmrg.jl")
 Random.seed!(5634)
 
 function main()
-    g_str = "HeavyHex"
+    g_str = "Chain"
     g = g_str == "Chain" ? named_grid((12,1); periodic = true) : heavy_hex_lattice_graph(2,2; periodic = true)
     g = renamer(g)
     save = true
     L = length(vertices(g))
     h, hl, J = 1.05, 0.4, 1.0
     s = siteinds("S=1/2", g)
-    χ = 2
+    χ = 1
     #ψ0 = ITensorNetwork(v -> "↑", s)
-    ψ0 = random_tensornetwork(s; link_space = 2)
+    ψ0 = random_tensornetwork(s; link_space = χ)
 
     H = ising(s; h, hl, J1 = J)
     tnos = opsum_to_tno(s, H)
-    tno = reduce(+, tnos)
 
     energy_calc_fun = (tn, bp_cache) -> sum(expect(tn, H; alg = "bp", (cache!) = Ref(bp_cache)))/L
 

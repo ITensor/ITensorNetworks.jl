@@ -158,6 +158,15 @@ function environment(bp_cache::BeliefPropagationCache, verts::Vector)
   return vcat(messages, central_tensors)
 end
 
+function factors(bp_cache::BeliefPropagationCache, vertices::Vector)
+  tn = tensornetwork(bp_cache)
+  return ITensor[tn[vertex] for vertex in vertices]
+end
+
+function factor(bp_cache::BeliefPropagationCache, vertex)
+  return only(factors(bp_cache, [vertex]))
+end
+
 function factor(bp_cache::BeliefPropagationCache, vertex::PartitionVertex)
   ptn = partitioned_tensornetwork(bp_cache)
   return collect(eachtensor(subgraph(ptn, vertex)))
@@ -318,26 +327,33 @@ function ITensors.scalar(bp_cache::BeliefPropagationCache)
   return prod(v_scalars) / prod(e_scalars)
 end
 
-function rescale_messages(bp_cache::BeliefPropagationCache, scalar::Float64, pv::PartitionVertex; scale_all = true)
+function renormalize_messages(bp_cache::BeliefPropagationCache)
   bp_cache = copy(bp_cache)
-  pedges = boundary_partitionedges(bp_cache, PartitionVertex[pv]; dir=:in)
-  no_ms = length(pedges)
   mts = messages(bp_cache)
-  if scale_all
-    scale_neg = scalar < 0 ? true : false
-    c = abs(scalar) ^ (1/no_ms)
-    
-    for pe in pedges
-      mt = only(mts[pe])
-      mt *= (c / sum(mt))
-      set!(mts, pe, ITensor[mt])
+  for pe in partitionedges(partitioned_tensornetwork(bp_cache))
+    n = region_scalar(bp_cache, pe) 
+    me, mer = only(mts[pe]), only(mts[reverse(pe)])
+    if n >= 0
+      set!(mts, pe, ITensor[(1/sqrt(n))*me])
+      set!(mts, reverse(pe), ITensor[(1/sqrt(n))*mer])
+    else
+      set!(mts, pe, ITensor[-(1/sqrt(abs(n)))*me])
+      set!(mts, reverse(pe), ITensor[(1/sqrt(abs(n)))*mer])
     end
+  end
+  return bp_cache
+end
 
-    if scale_neg
-      mt = only(mts[first(pedges)])
-      mt *= -1
-      set!(mts, first(pedges), ITensor[mt])
-    end
+function renormalize_factors(bp_cache::BeliefPropagationCache)
+  bp_cache = copy(bp_cache)
+  tn = tensornetwork(bp_cache)
+  for pv in partitionvertices(partitioned_tensornetwork(bp_cache))
+    n = 1.0 / region_scalar(bp_cache, pv)
+    verts = vertices(bp_cache, pv)
+    v = first(first(verts))
+    n = n ^(1/2)
+    fs = Dictionary([(v, "ket"), (v, "bra")], n.*factors(bp_cache, [(v, "ket"), (v, "bra")]))
+    bp_cache = update_factors(bp_cache, fs)
   end
   return bp_cache
 end
