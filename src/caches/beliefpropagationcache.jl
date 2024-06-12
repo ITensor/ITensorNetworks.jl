@@ -344,19 +344,5 @@ function renormalize_messages(bp_cache::BeliefPropagationCache)
   return bp_cache
 end
 
-function renormalize_factors(bp_cache::BeliefPropagationCache)
-  bp_cache = copy(bp_cache)
-  tn = tensornetwork(bp_cache)
-  for pv in partitionvertices(partitioned_tensornetwork(bp_cache))
-    n = 1.0 / region_scalar(bp_cache, pv)
-    verts = vertices(bp_cache, pv)
-    v = first(first(verts))
-    n = n ^(1/2)
-    fs = Dictionary([(v, "ket"), (v, "bra")], n.*factors(bp_cache, [(v, "ket"), (v, "bra")]))
-    bp_cache = update_factors(bp_cache, fs)
-  end
-  return bp_cache
-end
-
 
 

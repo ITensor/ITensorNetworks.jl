@@ -2,7 +2,7 @@ using ITensors: contract
 using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
 using KrylovKit: eigsolve
 
-default_krylov_kwargs() = (; tol = 1e-14, krylovdim = 20, maxiter = 3, verbosity = 0, eager = false, ishermitian = true)
+default_krylov_kwargs() = (; tol = 1e-14, maxiter = 1, verbosity = 0, eager = false, ishermitian = true)
 
 #TODO: Put inv_sqrt_mts onto ∂ψOψ_bpc_∂r beforehand. Need to do this in an efficient way without
 #precontracting ∂ψOψ_bpc_∂r and getting the index logic too messy
@@ -13,15 +13,15 @@ function get_new_state(∂ψOψ_bpc_∂rs::Vector, inv_sqrt_mts, sqrt_mts, state
   return noprime(contract([state; (inv_sqrt_mts)]))
 end
 
-function bp_eigsolve_updater(init::ITensor, ∂ψOψ_bpc_∂rs::Vector, sqrt_mts, inv_sqrt_mts; krylov_kwargs = default_krylov_kwargs())
+function bp_eigsolve_updater(init::ITensor, ∂ψOψ_bpc_∂rs::Vector, sqrt_mts, inv_sqrt_mts, previous_energy; L, krylov_kwargs = default_krylov_kwargs())
   
-    init = noprime(contract([init; sqrt_mts]))
-    sequences = [optimal_contraction_sequence([init; ∂ψOψ_bpc_∂r]) for ∂ψOψ_bpc_∂r in ∂ψOψ_bpc_∂rs]
+    gauged_init = noprime(contract([copy(init); sqrt_mts]))
+    sequences = [optimal_contraction_sequence([gauged_init; ∂ψOψ_bpc_∂r]) for ∂ψOψ_bpc_∂r in ∂ψOψ_bpc_∂rs]
     get_new_state_ = state -> get_new_state(∂ψOψ_bpc_∂rs, inv_sqrt_mts, sqrt_mts, state; sequences)
     howmany = 1
   
-    vals, vecs, info = eigsolve(get_new_state_,init,howmany,:SR; krylov_kwargs...)
+    vals, vecs, info = eigsolve(get_new_state_,gauged_init,howmany,:SR; krylov_kwargs...)
     state = noprime(contract([first(vecs); inv_sqrt_mts]))
   
-    return state, (; info, eigvals=vals)
+    return state, first(vals)
 end

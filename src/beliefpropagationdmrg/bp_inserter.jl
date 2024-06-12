@@ -1,30 +1,9 @@
 using ITensorNetworks: update_factors
 
-function normalize_state_update_caches(ψ::ITensorNetwork, ψIψ::BeliefPropagationCache, ψOψs::Vector{<:BeliefPropagationCache})
-    qf = tensornetwork(ψIψ)
-    L = length(vertices(ψ))
-    cur_norm = scalar(ψIψ)
-    rescale_coeff = cur_norm^(-1/(2*L))
-    ψ = copy(ψ)
-    for v in vertices(ψ)
-        form_bra_v, form_ket_v = bra_vertex(qf, v), ket_vertex(qf, v)
-        state = ψ[v] * rescale_coeff
-        ψ[v] = state
-        state_dag = copy(ψ[v])
-        state_dag = replaceinds(dag(state_dag), inds(state_dag), dual_index_map(qf).(inds(state_dag)))
-        vertices_states = Dictionary([form_ket_v, form_bra_v], [state, state_dag])
-        ψIψ = update_factors(ψIψ, vertices_states)
-        ψOψs = update_factors.(ψOψs, (vertices_states, ))
-    end
-
-    return ψ, ψIψ, ψOψs
-end
-
 #TODO: Add support for nsites = 2
 function bp_inserter(ψ::AbstractITensorNetwork, ψOψ_bpcs::Vector{<:BeliefPropagationCache}, 
     ψIψ_bpc::BeliefPropagationCache, state::ITensor, region; nsites::Int64 = 1, kwargs...)
 
-    @assert nsites == 1
     ψ = copy(ψ)
     form_network = tensornetwork(ψIψ_bpc)
     states = ITensor[state]
