@@ -19,6 +19,7 @@ using Dictionaries
 
 using LinearAlgebra: eigvals
 
+#Convert the forests in forest_cover to trees by adding "dummy" edges and keep track of them
 function connect_forests(s::IndsNetwork)
   g = underlying_graph(s)
   fs = forest_cover(g)
@@ -39,9 +40,8 @@ function connect_forests(s::IndsNetwork)
   return fs_connected
 end
 
-function opsum_to_tno(
-  s::IndsNetwork, H::OpSum; cutoff::Float64=1e-14, insert_dummy_inds=false
-)
+#Convert an Opsum to a vector of tensor network operators whose sum matches opsum
+function opsum_to_tnos(s::IndsNetwork, H::OpSum; cutoff::Float64=1e-14)
   s_fs_connected = connect_forests(s)
   no_forests = length(s_fs_connected)
   tnos = ITensorNetwork[]
@@ -60,9 +60,6 @@ function opsum_to_tno(
     end
     tno = truncate(ttn(new_opsum, s_f); cutoff)
     tno = ITensorNetwork(tno)
-    if insert_dummy_inds
-      tno = insert_linkinds(tno, setdiff(edges(s), edges(tno)))
-    end
     push!(tnos, tno)
   end
 

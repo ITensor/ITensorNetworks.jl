@@ -17,7 +17,7 @@ default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
 #default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]  
 default_messages(ptn::PartitionedGraph) = Dictionary()
 default_message_norm(m::ITensor) = norm(m)
-function default_message_update(contract_list::Vector{ITensor}; normalize = true, kwargs...)
+function default_message_update(contract_list::Vector{ITensor}; normalize=true, kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
   message_norm = norm(updated_messages)
@@ -131,6 +131,10 @@ function set_messages(cache::BeliefPropagationCache, messages)
   return BeliefPropagationCache(
     partitioned_tensornetwork(cache), messages, default_message(cache)
   )
+end
+
+function delete_messages(cache::BeliefPropagationCache)
+  return BeliefPropagationCache(partitioned_tensornetwork(cache))
 end
 
 function environment(
@@ -327,22 +331,15 @@ function ITensors.scalar(bp_cache::BeliefPropagationCache)
   return prod(v_scalars) / prod(e_scalars)
 end
 
+#Renormalize all messages such that <m_{e}m_{reverse(e)}> = 1 on all edges
 function renormalize_messages(bp_cache::BeliefPropagationCache)
   bp_cache = copy(bp_cache)
   mts = messages(bp_cache)
   for pe in partitionedges(partitioned_tensornetwork(bp_cache))
-    n = region_scalar(bp_cache, pe) 
+    n = region_scalar(bp_cache, pe)
     me, mer = only(mts[pe]), only(mts[reverse(pe)])
-    if n >= 0
-      set!(mts, pe, ITensor[(1/sqrt(n))*me])
-      set!(mts, reverse(pe), ITensor[(1/sqrt(n))*mer])
-    else
-      set!(mts, pe, ITensor[-(1/sqrt(abs(n)))*me])
-      set!(mts, reverse(pe), ITensor[(1/sqrt(abs(n)))*mer])
-    end
+    set!(mts, pe, ITensor[(1 / sqrt(n)) * me])
+    set!(mts, reverse(pe), ITensor[(1 / sqrt(n)) * mer])
   end
   return bp_cache
 end
-
-
-

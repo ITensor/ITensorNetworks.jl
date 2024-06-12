@@ -1,6 +1,5 @@
 using ITensorNetworks: random_tensornetwork
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
-using NPZ
 using ITensors: expect
 using Random
 
@@ -12,16 +11,14 @@ Random.seed!(5634)
 
 function main()
   g = named_grid((24, 1); periodic=true)
-  g = renamer(g)
-  save = true
   L = length(vertices(g))
-  h, hl, J = 0.6, 0.2, 1.0
+  h, hlongitudinal, J = 0.6, 0.2, 1.0
   s = siteinds("S=1/2", g)
   χ = 2
   ψ0 = random_tensornetwork(s; link_space=χ)
 
-  H = ising(s; h, hl, J1=J)
-  tnos = opsum_to_tno(s, H)
+  H = ising(s; h, hl=hlongitudinal, J1=J)
+  tnos = opsum_to_tnos(s, H)
 
   energy_calc_fun =
     (tn, bp_cache) -> sum(expect(tn, H; alg="bp", (cache!)=Ref(bp_cache))) / L

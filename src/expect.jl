@@ -25,7 +25,10 @@ function ITensorMPS.expect(
 end
 
 function ITensorMPS.expect(
-  ψIψ::AbstractFormNetwork, ops::Scaled{ComplexF64, Prod{Op}}; contract_kwargs=(; sequence="automatic"), kwargs...
+  ψIψ::AbstractFormNetwork,
+  ops::Scaled{ComplexF64,Prod{Op}};
+  contract_kwargs=(; sequence="automatic"),
+  kwargs...,
 )
   scalar = first(ops.args)
   iszero(scalar) && return 0.0
@@ -33,7 +36,7 @@ function ITensorMPS.expect(
   vs = site.(ops[1:n_ops])
   op_strings = which_op.(ops[1:n_ops])
   ψIψ_vs = [ψIψ[operator_vertex(ψIψ, v)] for v in vs]
-  sinds = [commonind(ψIψ[ket_vertex(ψIψ, v)], ψIψ_vs[i]) for (i,v) in enumerate(vs)]
+  sinds = [commonind(ψIψ[ket_vertex(ψIψ, v)], ψIψ_vs[i]) for (i, v) in enumerate(vs)]
   operators = [ITensors.op(op_strings[i], sinds[i]) for i in 1:n_ops]
   ∂ψIψ_∂v = environment(ψIψ, operator_vertices(ψIψ, vs); kwargs...)
   numerator = contract(vcat(∂ψIψ_∂v, operators); contract_kwargs...)[]
