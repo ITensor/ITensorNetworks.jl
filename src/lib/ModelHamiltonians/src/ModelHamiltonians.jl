@@ -108,7 +108,7 @@ heisenberg(N::Integer; kwargs...) = heisenberg(path_graph(N); kwargs...)
 """
 Next-to-nearest-neighbor Ising model (ZZX) on a general graph
 """
-function ising(g::AbstractGraph; J1=-1, J2=0, h=0, hl = 0)
+function ising(g::AbstractGraph; J1=-1, J2=0, h=0, hl=0)
   (; J1, J2, h, hl) = map(to_callable, (; J1, J2, h, hl))
   ℋ = OpSum()
   for e in edges(g)
