@@ -1,4 +1,4 @@
-using Graphs: AbstractEdge, dst, src, edges
+using Graphs: AbstractEdge, dst, src
 using NamedGraphs.GraphsExtensions: GraphsExtensions
 
 direction(step_number) = isodd(step_number) ? Base.Forward : Base.Reverse
@@ -141,23 +141,6 @@ function default_sweep_plans(
     push!(sweep_plans, sweep_plan)
   end
   return sweep_plans
-end
-
-function bp_sweep_plan(
-  g::AbstractGraph;
-  root_vertex=GraphsExtensions.default_root_vertex(graph),
-  region_kwargs,
-  nsites::Int,
-  es=vcat(collect(edges(g)), collect(reverse(edges(g)))),
-  vs=vcat(reverse(collect(vertices(g))), collect(vertices(g))),
-)
-  region_kwargs = (; internal_kwargs=(;), region_kwargs...)
-
-  if nsites == 2
-    return collect(flatten(map(e -> [([src(e), dst(e)], region_kwargs)], es)))
-  elseif nsites == 1
-    return collect(flatten(map(v -> [([v], region_kwargs)], vs)))
-  end
 end
 
 function default_sweep_plan(
