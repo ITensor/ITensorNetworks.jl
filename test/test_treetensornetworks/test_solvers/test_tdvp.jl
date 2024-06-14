@@ -18,8 +18,8 @@ using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_binary_tree, named_comb_tree
 using Observers: observer
+using StableRNGs: StableRNG
 using Test: @testset, @test
-
 @testset "MPS TDVP" begin
   @testset "Basic TDVP" begin
     N = 10
@@ -35,7 +35,8 @@ using Test: @testset, @test
 
     H = mpo(os, s)
 
-    ψ0 = random_mps(s; link_space=10)
+    rng = StableRNG(1234)
+    ψ0 = random_mps(rng, s; link_space=10)
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
@@ -96,7 +97,8 @@ using Test: @testset, @test
     H2 = mpo(os2, s)
     Hs = [H1, H2]
 
-    ψ0 = random_mps(s; link_space=10)
+    rng = StableRNG(1234)
+    ψ0 = random_mps(rng, s; link_space=10)
 
     ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
@@ -133,7 +135,8 @@ using Test: @testset, @test
 
     H = mpo(os, s)
 
-    ψ0 = random_mps(s; link_space=10)
+    rng = StableRNG(1234)
+    ψ0 = random_mps(rng, s; link_space=10)
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; time_step=-0.05im, order, cutoff, nsites=1)
@@ -329,7 +332,8 @@ using Test: @testset, @test
 
     H = mpo(os, s)
 
-    state = random_mps(s; link_space=2)
+    rng = StableRNG(1234)
+    state = random_mps(rng, s; link_space=2)
     en0 = inner(state', H, state)
     nsites = [repeat([2], 10); repeat([1], 10)]
     maxdim = 32
@@ -423,7 +427,8 @@ end
 
     H = ttn(os, s)
 
-    ψ0 = normalize(random_ttn(s))
+    rng = StableRNG(1234)
+    ψ0 = normalize(random_ttn(rng, s))
 
     # Time evolve forward:
     ψ1 = tdvp(H, -0.1im, ψ0; root_vertex, nsweeps=1, cutoff, nsites=2)
@@ -465,7 +470,8 @@ end
     H2 = ttn(os2, s)
     Hs = [H1, H2]
 
-    ψ0 = normalize(random_ttn(s; link_space=10))
+    rng = StableRNG(1234)
+    ψ0 = normalize(random_ttn(rng, s; link_space=10))
 
     ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsites=1)
 
@@ -633,7 +639,8 @@ end
     os = ModelHamiltonians.heisenberg(c)
     H = ttn(os, s)
 
-    state = normalize(random_ttn(s; link_space=2))
+    rng = StableRNG(1234)
+    state = normalize(random_ttn(rng, s; link_space=2))
 
     trange = 0.0:tau:ttotal
     for (step, t) in enumerate(trange)

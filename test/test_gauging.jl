@@ -9,11 +9,11 @@ using ITensorNetworks:
   random_tensornetwork,
   siteinds,
   update
-using ITensors: diagITensor, inds, inner
+using ITensors: diag_itensor, inds, inner
 using ITensors.NDTensors: vector
 using LinearAlgebra: diag
 using NamedGraphs.NamedGraphGenerators: named_grid
-using Random: Random
+using StableRNGs: StableRNG
 using Test: @test, @testset
 
 @testset "gauging" begin
@@ -23,8 +23,8 @@ using Test: @test, @testset
   s = siteinds("S=1/2", g)
   χ = 6
 
-  Random.seed!(5467)
-  ψ = random_tensornetwork(s; link_space=χ)
+  rng = StableRNG(1234)
+  ψ = random_tensornetwork(rng, s; link_space=χ)
 
   # Move directly to vidal gauge
   ψ_vidal = VidalITensorNetwork(
@@ -43,7 +43,7 @@ using Test: @test, @testset
   #Test all message tensors are approximately diagonal even when we keep running BP
   bp_cache = update(bp_cache; maxiter=10)
   for m_e in values(messages(bp_cache))
-    @test diagITensor(vector(diag(only(m_e))), inds(only(m_e))) ≈ only(m_e) atol = 1e-8
+    @test diag_itensor(vector(diag(only(m_e))), inds(only(m_e))) ≈ only(m_e) atol = 1e-8
   end
 end
 end

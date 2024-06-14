@@ -2,7 +2,7 @@
 using Graphs: dfs_tree, nv, vertices
 # Trigger package extension.
 using GraphsFlows: GraphsFlows
-using ITensors: Index, ITensor, delta, noncommoninds, randomITensor
+using ITensors: Index, ITensor, delta, noncommoninds, random_itensor
 using ITensorNetworks:
   IndsNetwork,
   ITensorNetwork,
@@ -17,11 +17,12 @@ using ITensorNetworks:
   random_tensornetwork
 using NamedGraphs.GraphsExtensions: leaf_vertices, root_vertex
 using NamedGraphs.NamedGraphGenerators: named_grid
+using StableRNGs: StableRNG
 using Test: @test, @testset
 
 @testset "test _contract_deltas with no deltas" begin
   i = Index(2, "i")
-  t = randomITensor(i)
+  t = random_itensor(i)
   tn = _contract_deltas(ITensorNetwork([t]))
   @test tn[1] == t
 end
@@ -41,7 +42,8 @@ end
 @testset "test _contract_deltas over partition" begin
   N = (3, 3, 3)
   linkdim = 2
-  network = random_tensornetwork(IndsNetwork(named_grid(N)); link_space=linkdim)
+  rng = StableRNG(1234)
+  network = random_tensornetwork(rng, IndsNetwork(named_grid(N)); link_space=linkdim)
   tn = Array{ITensor,length(N)}(undef, N...)
   for v in vertices(network)
     tn[v...] = network[v...]

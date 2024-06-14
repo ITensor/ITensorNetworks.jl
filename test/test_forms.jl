@@ -20,20 +20,19 @@ using ITensorNetworks:
   tensornetwork,
   union_all_inds,
   update
-using ITensors: contract, dag, inds, prime, randomITensor
+using ITensors: contract, dag, inds, prime, random_itensor
 using LinearAlgebra: norm
+using StableRNGs: StableRNG
 using Test: @test, @testset
-using Random: Random
-
 @testset "FormNetworks" begin
   g = named_grid((1, 4))
   s = siteinds("S=1/2", g)
   s_operator = union_all_inds(s, prime(s))
   χ, D = 2, 3
-  Random.seed!(1234)
-  ψket = random_tensornetwork(s; link_space=χ)
-  ψbra = random_tensornetwork(s; link_space=χ)
-  A = random_tensornetwork(s_operator; link_space=D)
+  rng = StableRNG(1234)
+  ψket = random_tensornetwork(rng, s; link_space=χ)
+  ψbra = random_tensornetwork(rng, s; link_space=χ)
+  A = random_tensornetwork(rng, s_operator; link_space=D)
 
   blf = BilinearFormNetwork(A, ψbra, ψket)
   @test nv(blf) == nv(ψket) + nv(ψbra) + nv(A)
@@ -52,7 +51,8 @@ using Random: Random
   @test isempty(flatten_siteinds(qf))
 
   v = (1, 1)
-  new_tensor = randomITensor(inds(ψket[v]))
+  rng = StableRNG(1234)
+  new_tensor = random_itensor(rng, inds(ψket[v]))
   qf_updated = update(qf, v, copy(new_tensor))
 
   @test tensornetwork(qf_updated)[bra_vertex(qf_updated, v)] ≈
