@@ -9,7 +9,6 @@ function renormalize_update_norm_cache(
     cache_update_kwargs,
   )
     ψ = copy(ψ)
-    ψIψ_bpc = delete_messages(ψIψ_bpc)
     ψIψ_bpc = update(ψIψ_bpc; cache_update_kwargs...)
     ψIψ_bpc = renormalize_messages(ψIψ_bpc)
     qf = tensornetwork(ψIψ_bpc)

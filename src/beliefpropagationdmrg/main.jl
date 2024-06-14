@@ -10,7 +10,7 @@ include("utils.jl")
 Random.seed!(5634)
 
 function main()
-  g = named_grid((24, 1); periodic=true)
+  g = heavy_hex_lattice_graph(2,2 ; periodic = true)
   L = length(vertices(g))
   h, hlongitudinal, J = 0.6, 0.2, 1.0
   s = siteinds("S=1/2", g)

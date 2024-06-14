@@ -20,7 +20,7 @@ function ITensorMPS.dmrg(
   state = alternating_update(
     operator, init_state; nsweeps, nsites, updater, region_observer!, kwargs...
   )
-  eigval = only(eigvals_ref[])
+  eigval = first(eigvals_ref[])
   return eigval, state
 end
 

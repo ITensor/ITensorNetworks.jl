@@ -3,7 +3,7 @@ using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
 using KrylovKit: eigsolve
 
 function default_krylov_kwargs()
-  return (; tol=1e-15, krylovdim=10, maxiter=1, verbosity=0, eager=false, ishermitian=true)
+  return (; tol=1e-15, krylovdim=20, maxiter=2, verbosity=0, eager=false, ishermitian=true)
 end
 
 #TODO: Put inv_sqrt_mts onto ∂ψOψ_bpc_∂r beforehand. Need to do this in an efficient way without

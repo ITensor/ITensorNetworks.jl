@@ -2,6 +2,7 @@ using ITensors: scalartype, which_op, name, names, sites
 using ITensorNetworks:
   ket_vertices, bra_vertices, tensornetwork, default_message_update, operator_network
 using ITensorNetworks.ITensorsExtensions: map_eigvals
+using NamedGraphs.GraphsExtensions: a_star, neighbors
 
 function effective_environments(state::ITensorNetwork, H::OpSum, ψIψ_bpc::BeliefPropagationCache, region)
   environments = Vector{ITensor}[]

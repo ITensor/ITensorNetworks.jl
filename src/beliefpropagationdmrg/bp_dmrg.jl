@@ -8,7 +8,7 @@ include("bp_extracter.jl")
 include("bp_inserter.jl")
 include("bp_updater.jl")
 
-default_bp_update_kwargs(ψ::ITensorNetwork) = is_tree(ψ) ? (;) : (; maxiter = 50, tol = 1e-8)
+default_bp_update_kwargs(ψ::ITensorNetwork) = is_tree(ψ) ? (;) : (; maxiter = 50, tol = 1e-12)
 
 function initialize_cache(ψ_init::ITensorNetwork; cache_update_kwargs = default_bp_update_kwargs(ψ_init))
     ψ = copy(ψ_init)
