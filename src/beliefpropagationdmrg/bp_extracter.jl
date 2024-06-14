@@ -1,4 +1,4 @@
-using ITensors: scalartype, which_op, name, names
+using ITensors: scalartype, which_op, name, names, sites
 using ITensorNetworks:
   ket_vertices, bra_vertices, tensornetwork, default_message_update, operator_network
 using ITensorNetworks.ITensorsExtensions: map_eigvals
@@ -8,10 +8,10 @@ function effective_environments(state::ITensorNetwork, H::OpSum, ψIψ_bpc::Beli
   s = siteinds(state)
   op_tensors = Vector{ITensor}(H, s)
   for (i, term) in enumerate(H)
+    term_envs = ITensor[]
     if length(sites(term)) == 1 && !iszero(first(term.args))
       path = a_star(state, only(sites(term)), only(region))
       ψOψ_qf = QuadraticFormNetwork(state)
-
       ψOψ_qf[(only(sites(term)), "operator")] = op_tensors[i]
     elseif length(sites(term)) == 2 && !iszero(first(term.args))
       v1, v2 = first(sites(term)), last(sites(term))
@@ -30,7 +30,7 @@ function effective_environments(state::ITensorNetwork, H::OpSum, ψIψ_bpc::Beli
       env = ITensor(1.0)
       path = vcat(src.(path))
       for v in path
-        env *= get_local_term(ψOψ_qf, v)
+        env *= ψOψ_qf[(v, "bra")]* ψOψ_qf[(v, "operator")] * ψOψ_qf[(v, "ket")]
         vns = neighbors(state, v)
         for vn in vns
           if vn ∉ path && vn != only(region)
@@ -38,14 +38,15 @@ function effective_environments(state::ITensorNetwork, H::OpSum, ψIψ_bpc::Beli
           end
         end
       end
+      push!(term_envs, env)
       for vn in neighbors(state, only(region))
         if vn ∉ path
-          env *= only(message(ψIψ_bpc, PartitionEdge(vn => only(region))))
+          push!(term_envs, only(message(ψIψ_bpc, PartitionEdge(vn => only(region)))))
         end
       end
-      env *= ψOψ_qf[(only(region), "operator")]
+      push!(term_envs, ψOψ_qf[(only(region), "operator")])
 
-      push!(environments, [env])
+      push!(environments, term_envs)
     end
   end
 
@@ -79,5 +80,5 @@ function bp_extracter(
       (f_inv_sqrt,), messages, first.(inds.(messages)), last.(inds.(messages)); ishermitian
     )
 
-  return state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts, ψ, ψIψ_bpc
+  return state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts
 end

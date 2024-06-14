@@ -1,37 +1,7 @@
 using ITensorNetworks: update_factors, edge_tag
-using ITensors: uniqueinds, factorize_svd, factorize
+using ITensors: uniqueinds, factorize_svd, factorize, inds
 using LinearAlgebra: norm
-
-function renormalize_update_norm_cache(
-  ψ::ITensorNetwork,
-  ψOψ_bpcs::Vector{<:BeliefPropagationCache},
-  ψIψ_bpc::BeliefPropagationCache;
-  cache_update_kwargs,
-)
-  ψ = copy(ψ)
-  ψIψ_bpc = delete_messages(ψIψ_bpc)
-  ψOψ_bpcs = delete_messages.(ψOψ_bpcs)
-  ψIψ_bpc = update(ψIψ_bpc; cache_update_kwargs...)
-  ψIψ_bpc = renormalize_messages(ψIψ_bpc)
-  qf = tensornetwork(ψIψ_bpc)
-
-  for v in vertices(ψ)
-    v_ket, v_bra = ket_vertex(qf, v), bra_vertex(qf, v)
-    pv = only(partitionvertices(ψIψ_bpc, [v_ket]))
-    vn = region_scalar(ψIψ_bpc, pv)
-    state = (1.0 / sqrt(vn)) * ψ[v]
-    state_dag = copy(dag(state))
-    state_dag = replaceinds(
-      state_dag, inds(state_dag), dual_index_map(qf).(inds(state_dag))
-    )
-    vertices_states = Dictionary([v_ket, v_bra], [state, state_dag])
-    ψOψ_bpcs = update_factors.(ψOψ_bpcs, (vertices_states,))
-    ψIψ_bpc = update_factors(ψIψ_bpc, vertices_states)
-    ψ[v] = state
-  end
-
-  return ψ, ψOψ_bpcs, ψIψ_bpc
-end
+using Dictionaries: Dictionary
 
 function renormalize_update_norm_cache(
     ψ::ITensorNetwork,

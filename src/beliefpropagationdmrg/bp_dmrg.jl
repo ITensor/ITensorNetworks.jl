@@ -7,7 +7,6 @@ include("utils.jl")
 include("bp_extracter.jl")
 include("bp_inserter.jl")
 include("bp_updater.jl")
-include("graphsextensions.jl")
 
 default_bp_update_kwargs(ψ::ITensorNetwork) = is_tree(ψ) ? (;) : (; maxiter = 50, tol = 1e-8)
 
@@ -30,24 +29,23 @@ function bp_dmrg(ψ_init::ITensorNetwork, H::OpSum; nsites = 1, no_sweeps = 1, b
     end
     state, ψIψ_bpc = renormalize_update_norm_cache(state, ψIψ_bpc; cache_update_kwargs = bp_update_kwargs)
 
-    energy = sum(expect(state, H; alg="bp", (cache!)=Ref(ψIψ_bpc))) / L
-    println("Initial energy density is $(energy)")
-    energies = [energy]
+    init_energy = sum(expect(state, H; alg="bp", (cache!)=Ref(ψIψ_bpc))) / L
+    println("Initial energy density is $(init_energy)")
+    energies = [init_energy]
 
     for i in 1:no_sweeps
         println("Beginning sweep $i")
         for region in regions
             println("Updating vertex $region")
 
-            local_state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts, ψ, ψIψ_bpc = bp_extracter_V3(state, H, ψIψ_bpc, region)
+            local_state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts = bp_extracter(state, H, ψIψ_bpc, region)
 
             local_state, energy = bp_eigsolve_updater(local_state, ∂ψOψ_bpc_∂rs, sqrt_mts, inv_sqrt_mts)
 
             state, ψIψ_bpc = bp_inserter(state, ψIψ_bpc, local_state, region; bp_update_kwargs)
 
-            energy = sum(expect(state, H; alg="bp", (cache!)=Ref(ψIψ_bpc))) / L
-            append!(energies, energy)
-            println("Current energy density is $(energy)")
+            append!(energies, energy / L)
+            println("Current energy density is $(energy / L)")
         end
     end
 
