@@ -14,20 +14,26 @@ function initialize_cache(ψ_init::ITensorNetwork; cache_update_kwargs = default
     ψ = copy(ψ_init)
     ψIψ = QuadraticFormNetwork(ψ)
     ψIψ_bpc = BeliefPropagationCache(ψIψ)
+    state, ψIψ_bpc = renormalize_update_norm_cache(ψ, ψIψ_bpc; cache_update_kwargs)
+
     return (ψ, ψIψ_bpc)
 end
+
+function opsum_to_dict(g::Dictionary, H::OpSum)
+
+
+
 
 function bp_dmrg(ψ_init::ITensorNetwork, H::OpSum; nsites = 1, no_sweeps = 1, bp_update_kwargs = default_bp_update_kwargs(ψ_init))
 
     L = length(vertices(ψ_init))
-    state, ψIψ_bpc = initialize_cache(ψ_init)
+    state, ψIψ_bpc = initialize_cache(ψ_init; cache_update_kwargs = bp_update_kwargs)
     state_vertices, state_edges = collect(vertices(state)), edges(state)
     if nsites == 1
         regions = [[v] for v in vcat(state_vertices, reverse(state_vertices))]
     else 
         regions = [[src(e), dst(e)] for e in vcat(state_edges, reverse(state_edges))]
     end
-    state, ψIψ_bpc = renormalize_update_norm_cache(state, ψIψ_bpc; cache_update_kwargs = bp_update_kwargs)
 
     init_energy = sum(expect(state, H; alg="bp", (cache!)=Ref(ψIψ_bpc))) / L
     println("Initial energy density is $(init_energy)")

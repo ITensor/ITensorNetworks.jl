@@ -133,10 +133,6 @@ function set_messages(cache::BeliefPropagationCache, messages)
   )
 end
 
-function delete_messages(cache::BeliefPropagationCache)
-  return BeliefPropagationCache(partitioned_tensornetwork(cache))
-end
-
 function environment(
   bp_cache::BeliefPropagationCache,
   partition_vertices::Vector{<:PartitionVertex};
