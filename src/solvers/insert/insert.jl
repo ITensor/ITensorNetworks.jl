@@ -23,7 +23,7 @@ function default_inserter(
     indsTe = inds(state[ortho_vert])
     L, phi, spec = factorize(phi, indsTe; tags=tags(state, e), maxdim, mindim, cutoff)
     state[ortho_vert] = L
-    
+
   else
     v = ortho_vert
   end
