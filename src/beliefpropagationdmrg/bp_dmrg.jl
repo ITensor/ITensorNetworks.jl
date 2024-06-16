@@ -1,6 +1,6 @@
 using NamedGraphs.GraphsExtensions: is_tree
 using NamedGraphs.PartitionedGraphs: partitionvertices, partitionedges, PartitionEdge
-using ITensorNetworks: ITensorNetwork, QuadraticFormNetwork, BeliefPropagationCache, update, default_message_update, delete_messages
+using ITensorNetworks: ITensorNetwork, QuadraticFormNetwork, BeliefPropagationCache, update, default_message_update
 using ITensors: scalar
 
 include("utils.jl")
@@ -18,11 +18,6 @@ function initialize_cache(ψ_init::ITensorNetwork; cache_update_kwargs = default
 
     return (ψ, ψIψ_bpc)
 end
-
-function opsum_to_dict(g::Dictionary, H::OpSum)
-
-
-
 
 function bp_dmrg(ψ_init::ITensorNetwork, H::OpSum; nsites = 1, no_sweeps = 1, bp_update_kwargs = default_bp_update_kwargs(ψ_init))
 
