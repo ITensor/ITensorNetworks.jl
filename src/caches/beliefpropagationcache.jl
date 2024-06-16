@@ -13,8 +13,8 @@ using NamedGraphs.PartitionedGraphs:
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
 
-default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
-#default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]  
+#default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
+default_message(inds_e) = ITensor[denseblocks(delta(inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()
 default_message_norm(m::ITensor) = norm(m)
 function default_message_update(contract_list::Vector{ITensor}; normalize=true, kwargs...)
@@ -322,20 +322,22 @@ function scalar_factors_quotient(bp_cache::BeliefPropagationCache)
   return vertex_scalars(bp_cache), edge_scalars(bp_cache)
 end
 
-function ITensors.scalar(bp_cache::BeliefPropagationCache)
-  v_scalars, e_scalars = vertex_scalars(bp_cache), edge_scalars(bp_cache)
-  return prod(v_scalars) / prod(e_scalars)
-end
-
-#Renormalize all messages such that <m_{e}m_{reverse(e)}> = 1 on all edges
-function renormalize_messages(bp_cache::BeliefPropagationCache)
+function normalize_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
   bp_cache = copy(bp_cache)
   mts = messages(bp_cache)
-  for pe in partitionedges(partitioned_tensornetwork(bp_cache))
+  for pe in pes
     n = region_scalar(bp_cache, pe)
     me, mer = only(mts[pe]), only(mts[reverse(pe)])
     set!(mts, pe, ITensor[(1 / sqrt(n)) * me])
     set!(mts, reverse(pe), ITensor[(1 / sqrt(n)) * mer])
   end
   return bp_cache
+end
+
+function normalize_message(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
+  return normalize_messages(bp_cache, PartitionEdge[pe])
+end
+
+function normalize_messages(bp_cache::BeliefPropagationCache)
+  return normalize_messages(bp_cache, partitionedges(partitioned_tensornetwork(bp_cache)))
 end
