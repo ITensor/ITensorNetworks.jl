@@ -157,9 +157,9 @@ function environment(bp_cache::BeliefPropagationCache, verts::Vector)
   return vcat(messages, central_tensors)
 end
 
-function factors(bp_cache::BeliefPropagationCache, vertices::Vector)
+function factors(bp_cache::BeliefPropagationCache, vertices)
   tn = tensornetwork(bp_cache)
-  return ITensor[tn[vertex] for vertex in vertices]
+  return map(vertex -> tn[vertex], vertices)
 end
 
 function factor(bp_cache::BeliefPropagationCache, vertex)
