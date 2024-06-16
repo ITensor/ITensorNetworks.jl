@@ -40,7 +40,7 @@ function LinearAlgebra.normalize(
     v_ket, v_bra = ket_vertex(norm_tn, v), bra_vertex(norm_tn, v)
     pv = only(partitionvertices(cache![], [v_ket]))
     vn = region_scalar(cache![], pv)
-    state = (1.0 / sqrt(vn)) * tn[v]
+    state = tn[v] / sqrt(vn)
     state_dag = copy(dag(state))
     state_dag = replaceinds(
       state_dag, inds(state_dag), dual_index_map(norm_tn).(inds(state_dag))
