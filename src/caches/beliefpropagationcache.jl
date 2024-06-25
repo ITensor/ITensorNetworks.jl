@@ -32,20 +32,14 @@ default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertice
 function default_partitioned_vertices(f::AbstractFormNetwork)
   return group(v -> original_state_vertex(f, v), vertices(f))
 end
-default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
+default_cache_update_kwargs(cache) = (; maxiter=25, tol=1e-8)
 function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
   return (; partitioned_vertices=default_partitioned_vertices(ψ))
 end
 
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
-  @assert issetequal(inds(lhs), inds(rhs))
-  c = combiner(inds(lhs))
-  lhs *= c
-  rhs *= c
-  lhs /= norm(lhs)
-  rhs /= norm(rhs)
-  f = abs(dot(lhs, rhs))^2
+  f = abs(dot(lhs / norm(lhs), rhs / norm(rhs)))^2
   return 1 - f
 end
 
