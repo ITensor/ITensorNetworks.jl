@@ -13,7 +13,7 @@ using NamedGraphs.PartitionedGraphs:
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
 
-default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
+default_message(elt, inds_e) = ITensor[denseblocks(delta(elt, i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
@@ -37,6 +37,7 @@ function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITens
   return (; partitioned_vertices=default_partitioned_vertices(ψ))
 end
 
+#TODO: Take `dot` without precontracting the messages to allow scaling to more complex messages
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
   f = abs2(dot(lhs / norm(lhs), rhs / norm(rhs)))
@@ -96,8 +97,10 @@ for f in [
   end
 end
 
+ITensorNetworks.scalartype(bp_cache) = scalartype(tensornetwork(bp_cache))
+
 function default_message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
-  return default_message(bp_cache)(linkinds(bp_cache, edge))
+  return default_message(bp_cache)(scalartype(bp_cache), linkinds(bp_cache, edge))
 end
 
 function message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
