@@ -39,7 +39,7 @@ end
 
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
-  f = abs(dot(lhs / norm(lhs), rhs / norm(rhs)))^2
+  f = abs2(dot(lhs / norm(lhs), rhs / norm(rhs)))
   return 1 - f
 end
 
