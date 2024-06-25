@@ -41,13 +41,13 @@ using Test: @test, @testset
   s = siteinds("S=1/2", g)
   χ = 2
   rng = StableRNG(1234)
-  ψ = random_tensornetwork(rng, s; link_space=χ)
+  ψ = random_tensornetwork(rng, ComplexF64, s; link_space=χ)
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
   bpc = BeliefPropagationCache(ψψ, group(v -> first(v), vertices(ψψ)))
-  bpc = update(bpc; maxiter=20, tol=1e-8)
+  bpc = update(bpc; maxiter=25, tol=1e-10)
   #Test messages are converged
   for pe in partitionedges(partitioned_tensornetwork(bpc))
-    @test update_message(bpc, pe) ≈ message(bpc, pe) atol = 1e-8
+    @test message_diff(update_message(bpc, pe), message(bpc, pe)) < 1e-8
   end
   #Test updating the underlying tensornetwork in the cache
   v = first(vertices(ψψ))
@@ -70,8 +70,8 @@ using Test: @test, @testset
   eigs = eigvals(rdm)
   @test size(rdm) == (2^length(vs), 2^length(vs))
 
-  @test all(eig -> imag(eig) ≈ 0, eigs)
-  @test all(eig -> real(eig) >= -eps(eltype(eig)), eigs)
+  @test all(eig -> abs(imag(eig)) <= 1e-16, eigs)
+  @test all(eig -> real(eig) >= -eps(eltype(real(eig))), eigs)
 
   #Test edge case of network which evalutes to 0
   χ = 2
