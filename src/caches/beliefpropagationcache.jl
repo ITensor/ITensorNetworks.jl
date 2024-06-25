@@ -1,6 +1,6 @@
 using Graphs: IsDirected
 using SplitApplyCombine: group
-using LinearAlgebra: diag
+using LinearAlgebra: diag, dot
 using ITensors: dir
 using ITensorMPS: ITensorMPS
 using NamedGraphs.PartitionedGraphs:
@@ -12,10 +12,10 @@ using NamedGraphs.PartitionedGraphs:
   partitionedges,
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
+using NDTensors: NDTensors
 
-default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
+default_message(elt, inds_e) = ITensor[denseblocks(delta(elt, i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
-default_message_norm(m::ITensor) = norm(m)
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
@@ -33,17 +33,16 @@ default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertice
 function default_partitioned_vertices(f::AbstractFormNetwork)
   return group(v -> original_state_vertex(f, v), vertices(f))
 end
-default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
+default_cache_update_kwargs(cache) = (; maxiter=25, tol=1e-8)
 function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
   return (; partitioned_vertices=default_partitioned_vertices(ψ))
 end
 
-function message_diff(
-  message_a::Vector{ITensor}, message_b::Vector{ITensor}; message_norm=default_message_norm
-)
+#TODO: Take `dot` without precontracting the messages to allow scaling to more complex messages
+function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
-  norm_lhs, norm_rhs = message_norm(lhs), message_norm(rhs)
-  return 0.5 * norm((denseblocks(lhs) / norm_lhs) - (denseblocks(rhs) / norm_rhs))
+  f = abs2(dot(lhs / norm(lhs), rhs / norm(rhs)))
+  return 1 - f
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}
@@ -99,8 +98,10 @@ for f in [
   end
 end
 
+NDTensors.scalartype(bp_cache) = scalartype(tensornetwork(bp_cache))
+
 function default_message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
-  return default_message(bp_cache)(linkinds(bp_cache, edge))
+  return default_message(bp_cache)(scalartype(bp_cache), linkinds(bp_cache, edge))
 end
 
 function message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
