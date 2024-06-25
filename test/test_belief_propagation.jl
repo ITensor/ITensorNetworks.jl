@@ -83,7 +83,7 @@ using Test: @test, @testset
     g = named_grid((3, 1))
     rng = StableRNG(1234)
     ψ = random_tensornetwork(rng, elt, g; link_space=χ)
-    ψ[(1, 1)] = 0.0 * ψ[(1, 1)]
+    ψ[(1, 1)] = 0 * ψ[(1, 1)]
     @test iszero(scalar(ψ; alg="bp"))
   end
 end
