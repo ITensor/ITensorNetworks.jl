@@ -15,7 +15,6 @@ using SimpleTraits: SimpleTraits, Not, @traitfn
 
 default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
-euclidean_dist(x, y) = sqrt(abs(norm(x)^2 + norm(y)^2 - 2 * real(dot(x, y))))
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
@@ -44,7 +43,9 @@ function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   c = combiner(inds(lhs))
   lhs *= c
   rhs *= c
-  return euclidean_dist(lhs / norm(lhs), rhs / norm(rhs))
+  lhs /= norm(lhs)
+  rhs /= norm(rhs)
+  return 1 - sqrt(abs(dot(lhs, rhs)))
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}
