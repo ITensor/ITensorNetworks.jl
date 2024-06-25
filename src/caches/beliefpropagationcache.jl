@@ -1,6 +1,6 @@
 using Graphs: IsDirected
 using SplitApplyCombine: group
-using LinearAlgebra: diag
+using LinearAlgebra: diag, dot
 using ITensors: dir
 using ITensorMPS: ITensorMPS
 using NamedGraphs.PartitionedGraphs:
@@ -15,7 +15,7 @@ using SimpleTraits: SimpleTraits, Not, @traitfn
 
 default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
-default_message_norm(m::ITensor) = norm(m)
+euclidean_dist(x, y) = sqrt(abs(norm(x)^2 + norm(y)^2 - 2 * real(dot(x, y))))
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
@@ -38,12 +38,13 @@ function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITens
   return (; partitioned_vertices=default_partitioned_vertices(ψ))
 end
 
-function message_diff(
-  message_a::Vector{ITensor}, message_b::Vector{ITensor}; message_norm=default_message_norm
-)
+function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
-  norm_lhs, norm_rhs = message_norm(lhs), message_norm(rhs)
-  return 0.5 * norm((denseblocks(lhs) / norm_lhs) - (denseblocks(rhs) / norm_rhs))
+  @assert issetequal(inds(lhs), inds(rhs))
+  c = combiner(inds(lhs))
+  lhs *= c
+  rhs *= c
+  return euclidean_dist(lhs / norm(lhs), rhs / norm(rhs))
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}

@@ -23,7 +23,8 @@ using ITensorNetworks:
   tensornetwork,
   update,
   update_factor,
-  update_message
+  update_message,
+  message_diff
 using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
 using ITensorNetworks.ModelNetworks: ModelNetworks
 using ITensors.NDTensors: array
@@ -42,8 +43,8 @@ using Test: @test, @testset
   rng = StableRNG(1234)
   ψ = random_tensornetwork(rng, s; link_space=χ)
   ψψ = ψ ⊗ prime(dag(ψ); sites=[])
-  bpc = BeliefPropagationCache(ψψ)
-  bpc = update(bpc; maxiter=50, tol=1e-10)
+  bpc = BeliefPropagationCache(ψψ, group(v -> first(v), vertices(ψψ)))
+  bpc = update(bpc; maxiter=20, tol=1e-8)
   #Test messages are converged
   for pe in partitionedges(partitioned_tensornetwork(bpc))
     @test update_message(bpc, pe) ≈ message(bpc, pe) atol = 1e-8
