@@ -12,6 +12,7 @@ using NamedGraphs.PartitionedGraphs:
   partitionedges,
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
+using NDTensors: NDTensors
 
 default_message(elt, inds_e) = ITensor[denseblocks(delta(elt, i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
@@ -97,7 +98,7 @@ for f in [
   end
 end
 
-ITensorNetworks.scalartype(bp_cache) = scalartype(tensornetwork(bp_cache))
+NDTensors.scalartype(bp_cache) = scalartype(tensornetwork(bp_cache))
 
 function default_message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
   return default_message(bp_cache)(scalartype(bp_cache), linkinds(bp_cache, edge))
