@@ -45,7 +45,8 @@ function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   rhs *= c
   lhs /= norm(lhs)
   rhs /= norm(rhs)
-  return 1 - sqrt(abs(dot(lhs, rhs)))
+  f = abs(dot(lhs, rhs))^2
+  return 1 - f
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}
