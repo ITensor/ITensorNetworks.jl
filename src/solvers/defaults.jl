@@ -7,6 +7,8 @@ default_extracter() = default_extracter
 default_inserter() = default_inserter
 default_checkdone() = (; kws...) -> false
 default_transform_operator() = nothing
+default_scale_cutoff_by_timestep(cutoff;time_step, kwargs...) = isinf(time_step) ? cutoff : cutoff / abs(time_step)
+default_scale_maxdim(maxdim;kwargs...) = Int(ceil(2^(1.0/3.0) * maxdim))
 function default_region_printer(;
   cutoff,
   maxdim,
