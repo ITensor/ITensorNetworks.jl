@@ -178,7 +178,30 @@ end
 """
 Do a sequential update of the message tensors on `edges`
 """
-function update(
+function update!(
+  bp_cache::BeliefPropagationCache,
+  edges::Vector{<:PartitionEdge};
+  (update_diff!)=nothing,
+  kwargs...,
+)
+  prev_mts = copy(messages(bp_cache))
+  mts = messages(bp_cache)
+  for e in edges
+    if !haskey(prev_mts, e)
+      set!(prev_mts, e, default_message(bp_cache, e))
+    end
+    set!(mts, e, update_message(bp_cache, e; kwargs...))
+    if !isnothing(update_diff!)
+      update_diff![] += message_diff(prev_mts[e], mts[e])
+    end
+  end
+  return bp_cache
+end
+
+"""
+Do a sequential update of the message tensors on `edges`
+"""
+function update_V1(
   bp_cache::BeliefPropagationCache,
   edges::Vector{<:PartitionEdge};
   (update_diff!)=nothing,
@@ -187,7 +210,7 @@ function update(
   bp_cache_updated = copy(bp_cache)
   mts = messages(bp_cache_updated)
   for e in edges
-    set!(mts, e, update_message(bp_cache_updated, e; kwargs...))
+    set!(mts, e, update_message(bp_cache, e; kwargs...))
     if !isnothing(update_diff!)
       update_diff![] += message_diff(message(bp_cache, e), mts[e])
     end
@@ -196,8 +219,27 @@ function update(
 end
 
 """
+Out of place version
+"""
+function update_V2(
+  bp_cache::BeliefPropagationCache,
+  edges::Vector{<:PartitionEdge};
+  (update_diff!)=nothing,
+  kwargs...,
+)
+  bp_cache_updated = copy(bp_cache)
+  bp_cache_updated = update!(bp_cache_updated, edges; (update_diff!), kwargs...)
+  return bp_cache_updated
+end
+
+
+"""
 Update the message tensor on a single edge
 """
+function update!(bp_cache::BeliefPropagationCache, edge::PartitionEdge; kwargs...)
+  return update!(bp_cache, [edge]; kwargs...)
+end
+
 function update(bp_cache::BeliefPropagationCache, edge::PartitionEdge; kwargs...)
   return update(bp_cache, [edge]; kwargs...)
 end
@@ -205,7 +247,7 @@ end
 """
 Do parallel updates between groups of edges of all message tensors
 Currently we send the full message tensor data struct to update for each edge_group. But really we only need the
-mts relevant to that group.
+mts relevant to that group. Out-of-place only for now.
 """
 function update(
   bp_cache::BeliefPropagationCache,
@@ -239,7 +281,7 @@ function update(
   end
   for i in 1:maxiter
     diff = compute_error ? Ref(0.0) : nothing
-    bp_cache = update(bp_cache, edges; (update_diff!)=diff, kwargs...)
+    bp_cache = update_V1(bp_cache, edges; (update_diff!)=diff, kwargs...)
     if compute_error && (diff.x / length(edges)) <= tol
       if verbose
         println("BP converged to desired precision after $i iterations.")
@@ -253,14 +295,23 @@ end
 """
 Update the tensornetwork inside the cache
 """
-function update_factors(bp_cache::BeliefPropagationCache, factors)
-  bp_cache = copy(bp_cache)
+function update_factors!(bp_cache::BeliefPropagationCache, factors)
   tn = tensornetwork(bp_cache)
   for vertex in eachindex(factors)
     # TODO: Add a check that this preserves the graph structure.
     setindex_preserve_graph!(tn, factors[vertex], vertex)
   end
   return bp_cache
+end
+
+function update_factors(bp_cache::BeliefPropagationCache, factors)
+  bp_cache_updated = copy(bp_cache)
+  bp_cache_updated = update_factors!(bp_cache_updated, factors)
+  return bp_cache_updated
+end
+
+function update_factor!(bp_cache, vertex, factor)
+  return update_factors!(bp_cache, Dictionary([vertex], [factor]))
 end
 
 function update_factor(bp_cache, vertex, factor)
