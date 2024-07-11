@@ -14,9 +14,8 @@ using NamedGraphs.PartitionedGraphs:
 using SimpleTraits: SimpleTraits, Not, @traitfn
 using NDTensors: NDTensors
 
-default_message(elt, inds_e) = ITensor[denseblocks(delta(elt, i)) for i in inds_e]
+default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
-
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
@@ -108,7 +107,6 @@ end
 
 function message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
   mts = messages(bp_cache)
-  #return get(mts, edge, default_message(bp_cache, edge))
   haskey(mts, edge) && return mts[edge]
   return default_message(bp_cache, edge)
 end

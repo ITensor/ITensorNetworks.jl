@@ -6,20 +6,18 @@ using ITensorNetworks:
   contraction_sequence_to_graph,
   contraction_tree_leaf_bipartition,
   random_tensornetwork
-using Test: @test, @testset
 using NamedGraphs.GraphsExtensions:
   is_leaf_vertex, leaf_vertices, non_leaf_edges, root_vertex
 using NamedGraphs.NamedGraphGenerators: named_grid
-
+using StableRNGs: StableRNG
+using Test: @test, @testset
 @testset "contraction_sequence_to_graph" begin
   n = 3
   dims = (n, n)
   g = named_grid(dims)
-
-  tn = random_tensornetwork(g; link_space=2)
-
+  rng = StableRNG(1234)
+  tn = random_tensornetwork(rng, g; link_space=2)
   seq = contraction_sequence(tn)
-
   g_directed_seq = contraction_sequence_to_digraph(seq)
   g_seq_leaves = leaf_vertices(g_directed_seq)
   @test length(g_seq_leaves) == n * n

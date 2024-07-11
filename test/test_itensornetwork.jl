@@ -30,7 +30,7 @@ using ITensors:
   itensor,
   onehot,
   order,
-  randomITensor,
+  random_itensor,
   scalartype,
   sim,
   uniqueinds
@@ -57,24 +57,19 @@ using NamedGraphs: NamedEdge
 using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NDTensors: NDTensors, dim
-using Random: Random, randn!
+using Random: randn!
+using StableRNGs: StableRNG
 using Test: @test, @test_broken, @testset
-
 const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
-
 @testset "ITensorNetwork tests" begin
   @testset "ITensorNetwork Basics" begin
-    Random.seed!(1234)
     g = named_grid((4,))
     s = siteinds("S=1/2", g)
-
     @test s isa IndsNetwork
     @test nv(s) == 4
     @test ne(s) == 3
     @test neighbors(s, (2,)) == [(1,), (3,)]
-
     tn = ITensorNetwork(s; link_space=2)
-
     @test nv(tn) == 4
     @test ne(tn) == 3
     @test tn isa ITensorNetwork
@@ -100,9 +95,9 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     @test_broken tn[1:2] isa ITensorNetwork
     # TODO: Support this syntax, maybe rename `subgraph`.
     @test_broken induced_subgraph(tn, [(1,), (2,)]) isa ITensorNetwork
-
+    rng = StableRNG(1234)
     for v in vertices(tn)
-      tn[v] = randn!(tn[v])
+      tn[v] = randn!(rng, tn[v])
     end
     tn′ = sim(dag(tn); sites=[])
 
@@ -175,17 +170,32 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
       siteinds("S=1/2", named_grid((3, 3))),
     )
 
+    rng = StableRNG(1234)
     ψ = ITensorNetwork(g; kwargs...) do v
-      return inds -> itensor(randn(elt, dim.(inds)...), inds)
+      return inds -> itensor(randn(rng, elt, dim.(inds)...), inds)
     end
     @test eltype(ψ[first(vertices(ψ))]) == elt
+
+    ψc = conj(ψ)
+    for v in vertices(ψ)
+      @test ψc[v] == conj(ψ[v])
+    end
+
+    ψd = dag(ψ)
+    for v in vertices(ψ)
+      @test ψd[v] == dag(ψ[v])
+    end
+
+    rng = StableRNG(1234)
     ψ = ITensorNetwork(g; kwargs...) do v
-      return inds -> itensor(randn(dim.(inds)...), inds)
+      return inds -> itensor(randn(rng, dim.(inds)...), inds)
     end
     @test eltype(ψ[first(vertices(ψ))]) == Float64
-    ψ = random_tensornetwork(elt, g; kwargs...)
+    rng = StableRNG(1234)
+    ψ = random_tensornetwork(rng, elt, g; kwargs...)
     @test eltype(ψ[first(vertices(ψ))]) == elt
-    ψ = random_tensornetwork(g; kwargs...)
+    rng = StableRNG(1234)
+    ψ = random_tensornetwork(rng, g; kwargs...)
     @test eltype(ψ[first(vertices(ψ))]) == Float64
     ψ = ITensorNetwork(elt, undef, g; kwargs...)
     @test eltype(ψ[first(vertices(ψ))]) == elt
@@ -259,27 +269,24 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
       end
     end
   end
-
   @testset "random_tensornetwork with custom distributions" begin
     distribution = Uniform(-1.0, 1.0)
-    tn = random_tensornetwork(distribution, named_grid(4); link_space=2)
+    rng = StableRNG(1234)
+    tn = random_tensornetwork(rng, distribution, named_grid(4); link_space=2)
     # Note: distributions in package `Distributions` currently doesn't support customized
     # eltype, and all elements have type `Float64`
     @test eltype(tn[first(vertices(tn))]) == Float64
   end
-
   @testset "orthogonalize" begin
-    tn = random_tensornetwork(named_grid(4); link_space=2)
+    rng = StableRNG(1234)
+    tn = random_tensornetwork(rng, named_grid(4); link_space=2)
     Z = norm_sqr(tn)
-
     tn_ortho = factorize(tn, 4 => 3)
-
     # TODO: Error here in arranging the edges. Arrange by hash?
     Z̃ = norm_sqr(tn_ortho)
     @test nv(tn_ortho) == 5
     @test nv(tn) == 4
     @test Z ≈ Z̃
-
     tn_ortho = orthogonalize(tn, 4 => 3)
     Z̃ = norm_sqr(tn_ortho)
     @test nv(tn_ortho) == 4
@@ -353,9 +360,9 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     dims = (2, 2)
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
-    ψ = random_tensornetwork(s; link_space=2)
+    rng = StableRNG(1234)
+    ψ = random_tensornetwork(rng, s; link_space=2)
     @test scalartype(ψ) == Float64
-
     ϕ = NDTensors.convert_scalartype(new_eltype, ψ)
     @test scalartype(ϕ) == new_eltype
   end
@@ -365,7 +372,6 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
     state_map(v::Tuple) = iseven(sum(isodd.(v))) ? "↑" : "↓"
-
     ψ = ITensorNetwork(state_map, s)
     t = ψ[2, 2]
     si = only(siteinds(ψ, (2, 2)))
@@ -373,7 +379,6 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     @test eltype(t) == Float64
     @test abs(t[si => "↑", [b => end for b in bi]...]) == 1.0 # insert_links introduces extra signs through factorization...
     @test t[si => "↓", [b => end for b in bi]...] == 0.0
-
     ϕ = ITensorNetwork(elt, state_map, s)
     t = ϕ[2, 2]
     si = only(siteinds(ϕ, (2, 2)))
@@ -385,11 +390,11 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 
   @testset "Priming and tagging" begin
     # TODO: add actual tests
-
     tooth_lengths = fill(2, 3)
     c = named_comb_tree(tooth_lengths)
     is = siteinds("S=1/2", c)
-    tn = random_tensornetwork(is; link_space=3)
+    rng = StableRNG(1234)
+    tn = random_tensornetwork(rng, is; link_space=3)
     @test_broken swapprime(tn, 0, 2)
   end
 end

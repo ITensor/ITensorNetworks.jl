@@ -73,6 +73,7 @@ function logscalar(
     denominator_terms
   end
 
+  any(iszero, denominator_terms) && return -Inf
   return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
 end
 
