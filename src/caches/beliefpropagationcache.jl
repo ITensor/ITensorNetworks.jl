@@ -25,7 +25,6 @@ function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   end
   return ITensor[updated_messages]
 end
-
 @traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
 @traitfn function default_bp_maxiter(g::::IsDirected)
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
