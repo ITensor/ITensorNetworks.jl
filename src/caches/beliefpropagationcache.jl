@@ -1,6 +1,6 @@
 using Graphs: IsDirected
 using SplitApplyCombine: group
-using LinearAlgebra: diag
+using LinearAlgebra: diag, dot
 using ITensors: dir
 using ITensorMPS: ITensorMPS
 using NamedGraphs.PartitionedGraphs:
@@ -12,16 +12,21 @@ using NamedGraphs.PartitionedGraphs:
   partitionedges,
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
+using NDTensors: NDTensors
 
-default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
+default_message(elt, inds_e) = ITensor[denseblocks(delta(elt, i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
-default_message_norm(m::ITensor) = norm(m)
+
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
-  updated_messages /= norm(updated_messages)
+  message_norm = norm(updated_messages)
+  if !iszero(message_norm)
+    updated_messages /= message_norm
+  end
   return ITensor[updated_messages]
 end
+
 @traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
 @traitfn function default_bp_maxiter(g::::IsDirected)
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
@@ -30,17 +35,16 @@ default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertice
 function default_partitioned_vertices(f::AbstractFormNetwork)
   return group(v -> original_state_vertex(f, v), vertices(f))
 end
-default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
+default_cache_update_kwargs(cache) = (; maxiter=25, tol=1e-8)
 function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
   return (; partitioned_vertices=default_partitioned_vertices(ψ))
 end
 
-function message_diff(
-  message_a::Vector{ITensor}, message_b::Vector{ITensor}; message_norm=default_message_norm
-)
+#TODO: Take `dot` without precontracting the messages to allow scaling to more complex messages
+function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
-  norm_lhs, norm_rhs = message_norm(lhs), message_norm(rhs)
-  return 0.5 * norm((denseblocks(lhs) / norm_lhs) - (denseblocks(rhs) / norm_rhs))
+  f = abs2(dot(lhs / norm(lhs), rhs / norm(rhs)))
+  return 1 - f
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}
@@ -96,13 +100,17 @@ for f in [
   end
 end
 
+NDTensors.scalartype(bp_cache) = scalartype(tensornetwork(bp_cache))
+
 function default_message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
-  return default_message(bp_cache)(linkinds(bp_cache, edge))
+  return default_message(bp_cache)(scalartype(bp_cache), linkinds(bp_cache, edge))
 end
 
 function message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
   mts = messages(bp_cache)
-  return get(mts, edge, default_message(bp_cache, edge))
+  #return get(mts, edge, default_message(bp_cache, edge))
+  haskey(mts, edge) && return mts[edge]
+  return default_message(bp_cache, edge)
 end
 function messages(bp_cache::BeliefPropagationCache, edges; kwargs...)
   return map(edge -> message(bp_cache, edge; kwargs...), edges)
@@ -148,15 +156,16 @@ end
 function environment(bp_cache::BeliefPropagationCache, verts::Vector)
   partition_verts = partitionvertices(bp_cache, verts)
   messages = environment(bp_cache, partition_verts)
-  central_tensors = ITensor[
-    tensornetwork(bp_cache)[v] for v in setdiff(vertices(bp_cache, partition_verts), verts)
-  ]
+  central_tensors = factors(bp_cache, setdiff(vertices(bp_cache, partition_verts), verts))
   return vcat(messages, central_tensors)
 end
 
+function factors(bp_cache::BeliefPropagationCache, verts::Vector)
+  return ITensor[tensornetwork(bp_cache)[v] for v in verts]
+end
+
 function factor(bp_cache::BeliefPropagationCache, vertex::PartitionVertex)
-  ptn = partitioned_tensornetwork(bp_cache)
-  return collect(eachtensor(subgraph(ptn, vertex)))
+  return factors(bp_cache, vertices(bp_cache, vertex))
 end
 
 """
@@ -178,30 +187,7 @@ end
 """
 Do a sequential update of the message tensors on `edges`
 """
-function update!(
-  bp_cache::BeliefPropagationCache,
-  edges::Vector{<:PartitionEdge};
-  (update_diff!)=nothing,
-  kwargs...,
-)
-  prev_mts = copy(messages(bp_cache))
-  mts = messages(bp_cache)
-  for e in edges
-    if !haskey(prev_mts, e)
-      set!(prev_mts, e, default_message(bp_cache, e))
-    end
-    set!(mts, e, update_message(bp_cache, e; kwargs...))
-    if !isnothing(update_diff!)
-      update_diff![] += message_diff(prev_mts[e], mts[e])
-    end
-  end
-  return bp_cache
-end
-
-"""
-Do a sequential update of the message tensors on `edges`
-"""
-function update_V1(
+function update(
   bp_cache::BeliefPropagationCache,
   edges::Vector{<:PartitionEdge};
   (update_diff!)=nothing,
@@ -210,7 +196,7 @@ function update_V1(
   bp_cache_updated = copy(bp_cache)
   mts = messages(bp_cache_updated)
   for e in edges
-    set!(mts, e, update_message(bp_cache, e; kwargs...))
+    set!(mts, e, update_message(bp_cache_updated, e; kwargs...))
     if !isnothing(update_diff!)
       update_diff![] += message_diff(message(bp_cache, e), mts[e])
     end
@@ -219,27 +205,8 @@ function update_V1(
 end
 
 """
-Out of place version
-"""
-function update_V2(
-  bp_cache::BeliefPropagationCache,
-  edges::Vector{<:PartitionEdge};
-  (update_diff!)=nothing,
-  kwargs...,
-)
-  bp_cache_updated = copy(bp_cache)
-  bp_cache_updated = update!(bp_cache_updated, edges; (update_diff!), kwargs...)
-  return bp_cache_updated
-end
-
-
-"""
 Update the message tensor on a single edge
 """
-function update!(bp_cache::BeliefPropagationCache, edge::PartitionEdge; kwargs...)
-  return update!(bp_cache, [edge]; kwargs...)
-end
-
 function update(bp_cache::BeliefPropagationCache, edge::PartitionEdge; kwargs...)
   return update(bp_cache, [edge]; kwargs...)
 end
@@ -247,7 +214,7 @@ end
 """
 Do parallel updates between groups of edges of all message tensors
 Currently we send the full message tensor data struct to update for each edge_group. But really we only need the
-mts relevant to that group. Out-of-place only for now.
+mts relevant to that group.
 """
 function update(
   bp_cache::BeliefPropagationCache,
@@ -281,7 +248,7 @@ function update(
   end
   for i in 1:maxiter
     diff = compute_error ? Ref(0.0) : nothing
-    bp_cache = update_V1(bp_cache, edges; (update_diff!)=diff, kwargs...)
+    bp_cache = update(bp_cache, edges; (update_diff!)=diff, kwargs...)
     if compute_error && (diff.x / length(edges)) <= tol
       if verbose
         println("BP converged to desired precision after $i iterations.")
@@ -295,23 +262,14 @@ end
 """
 Update the tensornetwork inside the cache
 """
-function update_factors!(bp_cache::BeliefPropagationCache, factors)
+function update_factors(bp_cache::BeliefPropagationCache, factors)
+  bp_cache = copy(bp_cache)
   tn = tensornetwork(bp_cache)
   for vertex in eachindex(factors)
     # TODO: Add a check that this preserves the graph structure.
     setindex_preserve_graph!(tn, factors[vertex], vertex)
   end
   return bp_cache
-end
-
-function update_factors(bp_cache::BeliefPropagationCache, factors)
-  bp_cache_updated = copy(bp_cache)
-  bp_cache_updated = update_factors!(bp_cache_updated, factors)
-  return bp_cache_updated
-end
-
-function update_factor!(bp_cache, vertex, factor)
-  return update_factors!(bp_cache, Dictionary([vertex], [factor]))
 end
 
 function update_factor(bp_cache, vertex, factor)
