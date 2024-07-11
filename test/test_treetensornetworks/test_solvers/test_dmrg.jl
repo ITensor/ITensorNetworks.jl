@@ -184,13 +184,11 @@ end
     else        # when using no QNs, autofermion breaks # ToDo reference Issue in ITensors
       ITensors.disable_auto_fermion()
     end
-
-    tooth_lengths = fill(2, 3)
-    c = named_comb_tree(tooth_lengths)
     s = siteinds("S=1/2", c; conserve_qns=use_qns)
+
     os = ModelHamiltonians.heisenberg(c)
+
     H = ttn(os, s)
-    e, psi = dmrg(H, psi; dmrg_kwargs)
 
     # make init_state
     d = Dict()
