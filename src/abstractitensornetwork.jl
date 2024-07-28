@@ -36,9 +36,10 @@ using ITensors:
   settags,
   sim,
   swaptags
-using ITensors.ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
+using ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using LinearAlgebra: LinearAlgebra, factorize
+using MacroTools: @capture
 using NamedGraphs: NamedGraphs, NamedGraph, not_implemented
 using NamedGraphs.GraphsExtensions:
   ⊔, directed_graph, incident_edges, rename_vertices, vertextype
@@ -138,6 +139,30 @@ function setindex_preserve_graph!(tn::AbstractITensorNetwork, value, vertex)
   return tn
 end
 
+# TODO: Move to `BaseExtensions` module.
+function is_setindex!_expr(expr::Expr)
+  return is_assignment_expr(expr) && is_getindex_expr(first(expr.args))
+end
+is_setindex!_expr(x) = false
+is_getindex_expr(expr::Expr) = (expr.head === :ref)
+is_getindex_expr(x) = false
+is_assignment_expr(expr::Expr) = (expr.head === :(=))
+is_assignment_expr(expr) = false
+
+# TODO: Define this in terms of a function mapping
+# preserve_graph_function(::typeof(setindex!)) = setindex!_preserve_graph
+# preserve_graph_function(::typeof(map_vertex_data)) = map_vertex_data_preserve_graph
+# Also allow annotating codeblocks like `@views`.
+macro preserve_graph(expr)
+  if !is_setindex!_expr(expr)
+    error(
+      "preserve_graph must be used with setindex! syntax (as @preserve_graph a[i,j,...] = value)",
+    )
+  end
+  @capture(expr, array_[indices__] = value_)
+  return :(setindex_preserve_graph!($(esc(array)), $(esc(value)), $(esc.(indices)...)))
+end
+
 function ITensors.hascommoninds(tn::AbstractITensorNetwork, edge::Pair)
   return hascommoninds(tn, edgetype(tn)(edge))
 end
@@ -148,7 +173,7 @@ end
 
 function Base.setindex!(tn::AbstractITensorNetwork, value, v)
   # v = to_vertex(tn, index...)
-  setindex_preserve_graph!(tn, value, v)
+  @preserve_graph tn[v] = value
   for edge in incident_edges(tn, v)
     rem_edge!(tn, edge)
   end
@@ -297,12 +322,12 @@ function ITensors.replaceinds(
   @assert underlying_graph(is) == underlying_graph(is′)
   for v in vertices(is)
     isassigned(is, v) || continue
-    setindex_preserve_graph!(tn, replaceinds(tn[v], is[v] => is′[v]), v)
+    @preserve_graph tn[v] = replaceinds(tn[v], is[v] => is′[v])
   end
   for e in edges(is)
     isassigned(is, e) || continue
     for v in (src(e), dst(e))
-      setindex_preserve_graph!(tn, replaceinds(tn[v], is[e] => is′[e]), v)
+      @preserve_graph tn[v] = replaceinds(tn[v], is[e] => is′[e])
     end
   end
   return tn
@@ -361,13 +386,31 @@ end
 
 LinearAlgebra.adjoint(tn::Union{IndsNetwork,AbstractITensorNetwork}) = prime(tn)
 
-#dag(tn::AbstractITensorNetwork) = map_vertex_data(dag, tn)
-function ITensors.dag(tn::AbstractITensorNetwork)
-  tndag = copy(tn)
-  for v in vertices(tndag)
-    setindex_preserve_graph!(tndag, dag(tndag[v]), v)
+function map_vertex_data(f, tn::AbstractITensorNetwork)
+  tn = copy(tn)
+  for v in vertices(tn)
+    tn[v] = f(tn[v])
   end
-  return tndag
+  return tn
+end
+
+# TODO: Define `@preserve_graph map_vertex_data(f, tn)`
+function map_vertex_data_preserve_graph(f, tn::AbstractITensorNetwork)
+  tn = copy(tn)
+  for v in vertices(tn)
+    @preserve_graph tn[v] = f(tn[v])
+  end
+  return tn
+end
+
+function Base.conj(tn::AbstractITensorNetwork)
+  # TODO: Use `@preserve_graph map_vertex_data(f, tn)`
+  return map_vertex_data_preserve_graph(conj, tn)
+end
+
+function ITensors.dag(tn::AbstractITensorNetwork)
+  # TODO: Use `@preserve_graph map_vertex_data(f, tn)`
+  return map_vertex_data_preserve_graph(dag, tn)
 end
 
 # TODO: should this make sure that internal indices
@@ -442,9 +485,7 @@ function NDTensors.contract(
   for n_dst in neighbors_dst
     add_edge!(tn, merged_vertex => n_dst)
   end
-
-  setindex_preserve_graph!(tn, new_itensor, merged_vertex)
-
+  @preserve_graph tn[merged_vertex] = new_itensor
   return tn
 end
 
@@ -533,13 +574,8 @@ function LinearAlgebra.factorize(
     add_edge!(tn, X_vertex => nX)
   end
   add_edge!(tn, Y_vertex => dst(edge))
-
-  # tn[X_vertex] = X
-  setindex_preserve_graph!(tn, X, X_vertex)
-
-  # tn[Y_vertex] = Y
-  setindex_preserve_graph!(tn, Y, Y_vertex)
-
+  @preserve_graph tn[X_vertex] = X
+  @preserve_graph tn[Y_vertex] = Y
   return tn
 end
 
@@ -661,38 +697,6 @@ function split_index(
   end
 
   return tn
-end
-
-function flatten_networks(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork;
-  map_bra_linkinds=sim,
-  flatten=true,
-  combine_linkinds=true,
-  kwargs...,
-)
-  @assert issetequal(vertices(tn1), vertices(tn2))
-  tn1 = map_bra_linkinds(tn1; sites=[])
-  flattened_net = ⊗(tn1, tn2; kwargs...)
-  if flatten
-    for v in vertices(tn1)
-      flattened_net = contract(flattened_net, (v, 2) => (v, 1); merged_vertex=v)
-    end
-  end
-  if combine_linkinds
-    flattened_net = ITensorNetworks.combine_linkinds(flattened_net)
-  end
-  return flattened_net
-end
-
-function flatten_networks(
-  tn1::AbstractITensorNetwork,
-  tn2::AbstractITensorNetwork,
-  tn3::AbstractITensorNetwork,
-  tn_tail::AbstractITensorNetwork...;
-  kwargs...,
-)
-  return flatten_networks(flatten_networks(tn1, tn2; kwargs...), tn3, tn_tail...; kwargs...)
 end
 
 function inner_network(x::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...)

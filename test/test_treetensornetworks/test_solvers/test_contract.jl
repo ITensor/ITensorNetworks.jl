@@ -17,15 +17,17 @@ using ITensorNetworks:
   siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: prime, replaceinds, replaceprime
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 using LinearAlgebra: norm, normalize
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using StableRNGs: StableRNG
 using Test: @test, @test_broken, @testset
 
 @testset "Contract MPO" begin
   N = 20
   s = siteinds("S=1/2", N)
-  psi = random_mps(s; link_space=8)
+  rng = StableRNG(1234)
+  psi = random_mps(rng, s; link_space=8)
   os = OpSum()
   for j in 1:(N - 1)
     os += 0.5, "S+", j, "S-", j + 1
@@ -44,11 +46,11 @@ using Test: @test, @test_broken, @testset
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = 1e-5
   # Test variational compression via DMRG
   Hfit = ProjOuterProdTTN(psi', H)
-  Hpsi_via_dmrg = dmrg(Hfit, psi; updater_kwargs=(; which_eigval=:LR,), nsweeps=1)
+  e, Hpsi_via_dmrg = dmrg(Hfit, psi; updater_kwargs=(; which_eigval=:LR,), nsweeps=1)
   @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 rtol = 1e-4
   # Test whether the interface works for ProjTTNSum with factors
   Hfit = ProjTTNSum([ProjOuterProdTTN(psi', H), ProjOuterProdTTN(psi', H)], [-0.2, -0.8])
-  Hpsi_via_dmrg = dmrg(Hfit, psi; nsweeps=1, updater_kwargs=(; which_eigval=:SR,))
+  e, Hpsi_via_dmrg = dmrg(Hfit, psi; nsweeps=1, updater_kwargs=(; which_eigval=:SR,))
   @test abs(inner(Hpsi_via_dmrg, Hpsi / norm(Hpsi))) ≈ 1 rtol = 1e-4
 
   # Test basic usage for use with multiple ProjOuterProdTTN with default parameters
@@ -66,9 +68,7 @@ using Test: @test, @test_broken, @testset
   # Test the above via DMRG
   # ToDo: Investigate why this is broken
   Hfit = ProjTTNSum([ProjOuterProdTTN(psi', H), ProjOuterProdTTN(psi', identity)], [-1, 1])
-  Hpsi_normalized = ITensorNetworks.dmrg(
-    Hfit, psi; nsweeps=3, updater_kwargs=(; which_eigval=:SR)
-  )
+  e, Hpsi_normalized = dmrg(Hfit, psi; nsweeps=3, updater_kwargs=(; which_eigval=:SR))
   @test_broken abs(inner(Hpsi, (Hpsi_normalized) / norm(Hpsi))) ≈ 1 rtol = 1e-5
 
   #
@@ -90,7 +90,8 @@ using Test: @test, @test_broken, @testset
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-5
 
   # Test with nsite=1
-  Hpsi_guess = random_mps(t; link_space=32)
+  rng = StableRNG(1234)
+  Hpsi_guess = random_mps(rng, t; link_space=32)
   Hpsi = contract(H, psi; alg="fit", init=Hpsi_guess, nsites=1, nsweeps=4)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-4
 end
@@ -101,7 +102,8 @@ end
   c = named_comb_tree(tooth_lengths)
 
   s = siteinds("S=1/2", c)
-  psi = normalize(random_ttn(s; link_space=8))
+  rng = StableRNG(1234)
+  psi = normalize(random_ttn(rng, s; link_space=8))
 
   os = ModelHamiltonians.heisenberg(c; J1=1, J2=1)
   H = ttn(os, s)
@@ -143,7 +145,8 @@ end
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-5
 
   # Test with nsite=1
-  Hpsi_guess = random_ttn(t; link_space=32)
+  rng = StableRNG(1234)
+  Hpsi_guess = random_ttn(rng, t; link_space=32)
   Hpsi = contract(H, psi; alg="fit", nsites=1, nsweeps=10, init=Hpsi_guess)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-2
 end
@@ -152,11 +155,11 @@ end
   nbit = 3
   sites = siteinds("Qubit", nbit)
 
-  # randomMPO does not support linkdims keyword.
+  # random_mpo does not support linkdims keyword.
   M1 = replaceprime(
-    ITensorMPS.randomMPO(sites) + ITensorMPS.randomMPO(sites), 1 => 2, 0 => 1
+    ITensorMPS.random_mpo(sites) + ITensorMPS.random_mpo(sites), 1 => 2, 0 => 1
   )
-  M2 = ITensorMPS.randomMPO(sites) + ITensorMPS.randomMPO(sites)
+  M2 = ITensorMPS.random_mpo(sites) + ITensorMPS.random_mpo(sites)
   M12_ref = contract(M1, M2; alg="naive")
   t12_ref = ttn([M12_ref[v] for v in eachindex(M12_ref)])
 

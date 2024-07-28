@@ -2,8 +2,7 @@
 using DataGraphs: edge_data, vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
-using ITensors: ITensors
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 using ITensorNetworks:
   ITensorNetworks,
   OpSum,
@@ -11,16 +10,18 @@ using ITensorNetworks:
   apply,
   dmrg,
   inner,
-  linkdims,
   mpo,
   random_mps,
   random_ttn,
+  linkdims,
   siteinds
 using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
+using ITensors: ITensors
 using KrylovKit: eigsolve
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Observers: observer
+using StableRNGs: StableRNG
 using Test: @test, @test_broken, @testset
 
 # This is needed since `eigen` is broken
@@ -43,7 +44,8 @@ ITensors.disable_auto_fermion()
 
   H = mpo(os, s)
 
-  psi = random_mps(s; link_space=20)
+  rng = StableRNG(1234)
+  psi = random_mps(rng, s; link_space=20)
 
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
@@ -53,22 +55,24 @@ ITensors.disable_auto_fermion()
   psi_mps = ITensorMPS.MPS([psi[v] for v in 1:nv(psi)])
   e2, psi2 = dmrg(H_mpo, psi_mps; nsweeps, maxdim, outputlevel=0)
 
-  psi = dmrg(
+  e, psi = dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
+  @test inner(psi', H, psi) ≈ e
   @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
 
   # Alias for `ITensorNetworks.dmrg`
-  psi = eigsolve(
+  e, psi = eigsolve(
     H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
+  @test inner(psi', H, psi) ≈ e
   @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
 
   # Test custom sweep regions #BROKEN, ToDo: Make proper custom sweep regions for test
   #=
   orig_E = inner(psi', H, psi)
   sweep_regions = [[1], [2], [3], [3], [2], [1]]
-  psi = dmrg(H, psi; nsweeps, maxdim, cutoff, sweep_regions)
+  e, psi = dmrg(H, psi; nsweeps, maxdim, cutoff, sweep_regions)
   new_E = inner(psi', H, psi)
   @test new_E ≈ orig_E
   =#
@@ -85,7 +89,8 @@ end
     os += "Sz", j, "Sz", j + 1
   end
   H = mpo(os, s)
-  psi = random_mps(s; link_space=20)
+  rng = StableRNG(1234)
+  psi = random_mps(rng, s; link_space=20)
 
   nsweeps = 4
   maxdim = [20, 40, 80, 80]
@@ -101,13 +106,14 @@ end
   energy(; eigvals, kw...) = eigvals[1]
   region_observer! = observer(region, sweep, energy)
 
-  psi = dmrg(H, psi; nsweeps, maxdim, cutoff, sweep_observer!, region_observer!)
+  e, psi = dmrg(H, psi; nsweeps, maxdim, cutoff, sweep_observer!, region_observer!)
 
   #
   # Test out certain values
   #
   @test region_observer![9, :region] == [2, 1]
   @test region_observer![30, :energy] < -4.25
+  @test region_observer![30, :energy] ≈ e rtol = 1e-6
 end
 
 @testset "Cache to Disk" begin
@@ -121,12 +127,13 @@ end
     os += "Sz", j, "Sz", j + 1
   end
   H = mpo(os, s)
-  psi = random_mps(s; link_space=10)
+  rng = StableRNG(1234)
+  psi = random_mps(rng, s; link_space=10)
 
   nsweeps = 4
   maxdim = [10, 20, 40, 80]
 
-  @test_broken psi = dmrg(
+  @test_broken e, psi = dmrg(
     H,
     psi;
     nsweeps,
@@ -153,14 +160,15 @@ end
 
   H = mpo(os, s)
 
-  psi = random_mps(s; link_space=20)
+  rng = StableRNG(1234)
+  psi = random_mps(rng, s; link_space=20)
 
   # Choose nsweeps to be less than length of arrays
   nsweeps = 5
   maxdim = [200, 250, 400, 600, 800, 1200, 2000, 2400, 2600, 3000]
   cutoff = [1e-10, 1e-10, 1e-12, 1e-12, 1e-12, 1e-12, 1e-14, 1e-14, 1e-14, 1e-14]
 
-  psi = dmrg(H, psi; nsweeps, maxdim, cutoff)
+  e, psi = dmrg(H, psi; nsweeps, maxdim, cutoff)
 end
 
 @testset "Tree DMRG" for nsites in [2]
@@ -190,12 +198,13 @@ end
     states = v -> d[v]
     psi = ttn(states, s)
 
-    #    psi = random_ttn(s; link_space=20) #FIXME: random_ttn broken for QN conserving case
+    # rng = StableRNG(1234)
+    # psi = random_ttn(rng, s; link_space=20) #FIXME: random_ttn broken for QN conserving case
 
     nsweeps = 10
     maxdim = [10, 20, 40, 100]
     @show use_qns
-    psi = dmrg(
+    e, psi = dmrg(
       H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
     )
 
@@ -204,7 +213,8 @@ end
     vmap = Dictionary(collect(vertices(s))[linear_order], 1:length(linear_order))
     sline = only.(collect(vertex_data(s)))[linear_order]
     Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
-    psiline = ITensorMPS.randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+    rng = StableRNG(1234)
+    psiline = ITensorMPS.random_mps(rng, sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
     e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
     @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
@@ -239,7 +249,8 @@ end
   # get MPS / MPO with JW string result
   ITensors.disable_auto_fermion()
   Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
-  psiline = ITensorMPS.randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+  rng = StableRNG(1234)
+  psiline = ITensorMPS.random_mps(rng, sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
   e_jw, psi_jw = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
   ITensors.enable_auto_fermion()
 
@@ -252,13 +263,14 @@ end
   end
   states = v -> d[v]
   psi = ttn(states, s)
-  psi = dmrg(
+  e, psi = dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
 
   # Compare to `ITensors.MPO` version of `dmrg`
   Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
-  psiline = ITensorMPS.randomMPS(sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
+  rng = StableRNG(1234)
+  psiline = ITensorMPS.random_mps(rng, sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
   e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
   @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
@@ -279,8 +291,9 @@ end
   s = siteinds("S=1/2", c)
   os = ModelHamiltonians.heisenberg(c)
   H = ttn(os, s)
-  psi = random_ttn(s; link_space=5)
-  psi = dmrg(H, psi; nsweeps, maxdim, nsites)
+  rng = StableRNG(1234)
+  psi = random_ttn(rng, s; link_space=5)
+  e, psi = dmrg(H, psi; nsweeps, maxdim, nsites)
 
   @test all(edge_data(linkdims(psi)) .<= maxdim)
 end

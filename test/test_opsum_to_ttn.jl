@@ -13,7 +13,7 @@ using ITensors:
   dag,
   inds,
   removeqns
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 using ITensors.NDTensors: matrix
 using ITensorGaussianMPS: ITensorGaussianMPS
 using ITensorNetworks: ITensorNetworks, OpSum, ttn, siteinds

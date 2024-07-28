@@ -47,7 +47,7 @@ Returns a [`NestedEinsum`](@ref) instance.
 ```jldoctest
 julia> using ITensors, ITensorContractionOrders
 julia> i, j, k, l = Index(4), Index(5), Index(6), Index(7);
-julia> x, y, z = randomITensor(i, j), randomITensor(j, k), randomITensor(k, l);
+julia> x, y, z = random_itensor(i, j), random_itensor(j, k), random_itensor(k, l);
 julia> net = optimize_contraction([x, y, z]; optimizer=TreeSA());
 ```
 """

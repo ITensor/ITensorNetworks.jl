@@ -1,5 +1,4 @@
 @eval module $(gensym())
-
 using ITensorNetworks:
   ITensorNetwork,
   inner,
@@ -15,17 +14,16 @@ using ITensors: dag, siteinds
 using SplitApplyCombine: group
 using Graphs: SimpleGraph, uniform_tree
 using NamedGraphs: NamedGraph
-using Random: Random
+using StableRNGs: StableRNG
 using Test: @test, @testset
-
 @testset "Inner products, BP vs exact comparison" begin
-  Random.seed!(1234)
   L = 4
   χ = 2
   g = NamedGraph(SimpleGraph(uniform_tree(L)))
   s = siteinds("S=1/2", g)
-  y = random_tensornetwork(s; link_space=χ)
-  x = random_tensornetwork(s; link_space=χ)
+  rng = StableRNG(1234)
+  y = random_tensornetwork(rng, s; link_space=χ)
+  x = random_tensornetwork(rng, s; link_space=χ)
 
   #First lets do it with the flattened version of the network
   xy = inner_network(x, y)

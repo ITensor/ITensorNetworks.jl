@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using Graphs: vertices
 using ITensors: ITensors
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 using ITensorNetworks: ITensorNetwork, cartesian_to_linear, dmrg, expect, siteinds, tebd
 using ITensorNetworks.ITensorsExtensions: group_terms
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians

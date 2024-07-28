@@ -23,7 +23,7 @@ using ITensors:
   unioninds,
   uniqueinds
 using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
-using ITensors.ITensorMPS: siteinds
+using ITensorMPS: siteinds
 using KrylovKit: linsolve
 using LinearAlgebra: eigen, norm, svd
 using NamedGraphs: NamedEdge, has_edge
@@ -266,7 +266,12 @@ function ITensors.apply(
 end
 
 function ITensors.apply(
-  o⃗::Scaled, ψ::AbstractITensorNetwork; normalize=false, ortho=false, apply_kwargs...
+  o⃗::Scaled,
+  ψ::AbstractITensorNetwork;
+  cutoff=nothing,
+  normalize=false,
+  ortho=false,
+  apply_kwargs...,
 )
   return maybe_real(Ops.coefficient(o⃗)) *
          apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho, apply_kwargs...)

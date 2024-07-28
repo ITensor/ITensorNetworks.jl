@@ -1,8 +1,8 @@
 using Graphs: IsDirected
 using SplitApplyCombine: group
-using LinearAlgebra: diag
+using LinearAlgebra: diag, dot
 using ITensors: dir
-using ITensors.ITensorMPS: ITensorMPS
+using ITensorMPS: ITensorMPS
 using NamedGraphs.PartitionedGraphs:
   PartitionedGraphs,
   PartitionedGraph,
@@ -12,14 +12,17 @@ using NamedGraphs.PartitionedGraphs:
   partitionedges,
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
+using NDTensors: NDTensors
 
-default_message(inds_e) = ITensor[denseblocks(delta(i)) for i in inds_e]
+default_message(elt, inds_e) = ITensor[denseblocks(delta(elt, i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
-default_message_norm(m::ITensor) = norm(m)
 function default_message_update(contract_list::Vector{ITensor}; kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
-  updated_messages /= norm(updated_messages)
+  message_norm = norm(updated_messages)
+  if !iszero(message_norm)
+    updated_messages /= message_norm
+  end
   return ITensor[updated_messages]
 end
 @traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
@@ -30,17 +33,16 @@ default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertice
 function default_partitioned_vertices(f::AbstractFormNetwork)
   return group(v -> original_state_vertex(f, v), vertices(f))
 end
-default_cache_update_kwargs(cache) = (; maxiter=20, tol=1e-5)
+default_cache_update_kwargs(cache) = (; maxiter=25, tol=1e-8)
 function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
   return (; partitioned_vertices=default_partitioned_vertices(ψ))
 end
 
-function message_diff(
-  message_a::Vector{ITensor}, message_b::Vector{ITensor}; message_norm=default_message_norm
-)
+#TODO: Take `dot` without precontracting the messages to allow scaling to more complex messages
+function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
-  norm_lhs, norm_rhs = message_norm(lhs), message_norm(rhs)
-  return 0.5 * norm((denseblocks(lhs) / norm_lhs) - (denseblocks(rhs) / norm_rhs))
+  f = abs2(dot(lhs / norm(lhs), rhs / norm(rhs)))
+  return 1 - f
 end
 
 struct BeliefPropagationCache{PTN,MTS,DM}
@@ -96,8 +98,10 @@ for f in [
   end
 end
 
+NDTensors.scalartype(bp_cache) = scalartype(tensornetwork(bp_cache))
+
 function default_message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
-  return default_message(bp_cache)(linkinds(bp_cache, edge))
+  return default_message(bp_cache)(scalartype(bp_cache), linkinds(bp_cache, edge))
 end
 
 function message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
@@ -267,27 +271,40 @@ function update_factor(bp_cache, vertex, factor)
   return update_factors(bp_cache, Dictionary([vertex], [factor]))
 end
 
-function region_scalar(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
+function region_scalar(
+  bp_cache::BeliefPropagationCache,
+  pv::PartitionVertex;
+  contract_kwargs=(; sequence="automatic"),
+)
   incoming_mts = environment(bp_cache, [pv])
   local_state = factor(bp_cache, pv)
-  return contract(vcat(incoming_mts, local_state))[]
+  return contract(vcat(incoming_mts, local_state); contract_kwargs...)[]
 end
 
-function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
-  return contract(vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))))[]
+function region_scalar(
+  bp_cache::BeliefPropagationCache,
+  pe::PartitionEdge;
+  contract_kwargs=(; sequence="automatic"),
+)
+  return contract(
+    vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))); contract_kwargs...
+  )[]
 end
 
 function vertex_scalars(
   bp_cache::BeliefPropagationCache,
-  pvs=partitionvertices(partitioned_tensornetwork(bp_cache)),
+  pvs=partitionvertices(partitioned_tensornetwork(bp_cache));
+  kwargs...,
 )
-  return map(pv -> region_scalar(bp_cache, pv), pvs)
+  return map(pv -> region_scalar(bp_cache, pv; kwargs...), pvs)
 end
 
 function edge_scalars(
-  bp_cache::BeliefPropagationCache, pes=partitionedges(partitioned_tensornetwork(bp_cache))
+  bp_cache::BeliefPropagationCache,
+  pes=partitionedges(partitioned_tensornetwork(bp_cache));
+  kwargs...,
 )
-  return map(pe -> region_scalar(bp_cache, pe), pes)
+  return map(pe -> region_scalar(bp_cache, pe; kwargs...), pes)
 end
 
 function scalar_factors_quotient(bp_cache::BeliefPropagationCache)

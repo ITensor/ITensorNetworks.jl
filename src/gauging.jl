@@ -25,10 +25,7 @@ function Base.copy(ψ::VidalITensorNetwork)
   return VidalITensorNetwork(copy(site_tensors(ψ)), copy(bond_tensors(ψ)))
 end
 
-function default_norm_cache(ψ::ITensorNetwork)
-  ψψ = norm_sqr_network(ψ)
-  return BeliefPropagationCache(ψψ, group(v -> first(v), vertices(ψψ)))
-end
+default_norm_cache(ψ::ITensorNetwork) = BeliefPropagationCache(QuadraticFormNetwork(ψ))
 
 function ITensorNetwork(
   ψ_vidal::VidalITensorNetwork; (cache!)=nothing, update_gauge=false, update_kwargs...

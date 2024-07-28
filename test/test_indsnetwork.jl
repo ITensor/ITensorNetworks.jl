@@ -6,45 +6,35 @@ using ITensorNetworks: IndsNetwork, union_all_inds
 using ITensors: Index
 using ITensors.NDTensors: dim
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
-using Random: Random
+using StableRNGs: StableRNG
 using Test: @test, @testset
-
 @testset "IndsNetwork constructors" begin
-  Random.seed!(1234)
-
   # test on comb tree
   dims = (3, 2)
   c = named_comb_tree(dims)
-
   ## specify some site and link indices in different ways
-
   # one index per site
-  site_dims = [rand(2:6) for _ in 1:nv(c)]
+  rng = StableRNG(1234)
+  site_dims = [rand(rng, 2:6) for _ in 1:nv(c)]
   site_inds = Index.(site_dims)
-
   # multiple indices per site
-  site_dims_multi = [[rand(2:6) for ni in 1:rand(1:3)] for _ in 1:nv(c)]
+  site_dims_multi = [[rand(rng, 2:6) for ni in 1:rand(rng, 1:3)] for _ in 1:nv(c)]
   site_inds_multi = map(x -> Index.(x), site_dims_multi)
-
   # one index per link
-  link_dims = [rand(2:6) for _ in 1:ne(c)]
+  link_dims = [rand(rng, 2:6) for _ in 1:ne(c)]
   link_inds = Index.(link_dims)
-
   # multiple indices per link
-  link_dims_multi = [[rand(2:6) for ni in 1:rand(1:3)] for _ in 1:ne(c)]
+  link_dims_multi = [[rand(rng, 2:6) for ni in 1:rand(rng, 1:3)] for _ in 1:ne(c)]
   link_inds_multi = map(x -> Index.(x), link_dims_multi)
-
   # TODO: fix ambiguity due to vectors of QNBlocks...
   # test constructors
-
   ## empty constructor
   is_emtpy = IndsNetwork(c)
   @test is_emtpy isa IndsNetwork
   @test isempty(vertex_data(is_emtpy)) && isempty(edge_data(is_emtpy))
-
   ## specify site and/or link spaces uniformly
-  uniform_dim = rand(2:6)
-  uniform_dim_multi = [rand(2:6) for _ in 1:rand(2:4)]
+  uniform_dim = rand(rng, 2:6)
+  uniform_dim_multi = [rand(rng, 2:6) for _ in 1:rand(rng, 2:4)]
   # only initialize sites
   is_usite = IndsNetwork(c; site_space=uniform_dim)
   @test is_usite isa IndsNetwork
@@ -140,22 +130,28 @@ using Test: @test, @testset
 end
 
 @testset "IndsNetwork merging" begin
-  Random.seed!(1234)
-
   # test on comb tree
   dims = (3, 2)
   c = named_comb_tree(dims)
-  site_dims1 = Dictionary(vertices(c), [[rand(2:6) for ni in 1:rand(1:3)] for _ in 1:nv(c)])
-  site_dims2 = Dictionary(vertices(c), [[rand(2:6) for ni in 1:rand(1:3)] for _ in 1:nv(c)])
-  link_dims1 = Dictionary(edges(c), [[rand(2:6) for ni in 1:rand(1:3)] for _ in 1:ne(c)])
-  link_dims2 = Dictionary(edges(c), [[rand(2:6) for ni in 1:rand(1:3)] for _ in 1:ne(c)])
+  rng = StableRNG(1234)
+  site_dims1 = Dictionary(
+    vertices(c), [[rand(rng, 2:6) for ni in 1:rand(rng, 1:3)] for _ in 1:nv(c)]
+  )
+  site_dims2 = Dictionary(
+    vertices(c), [[rand(rng, 2:6) for ni in 1:rand(rng, 1:3)] for _ in 1:nv(c)]
+  )
+  link_dims1 = Dictionary(
+    edges(c), [[rand(rng, 2:6) for ni in 1:rand(rng, 1:3)] for _ in 1:ne(c)]
+  )
+  link_dims2 = Dictionary(
+    edges(c), [[rand(rng, 2:6) for ni in 1:rand(rng, 1:3)] for _ in 1:ne(c)]
+  )
   is1_s = IndsNetwork(c; site_space=site_dims1)
   is2_s = IndsNetwork(c; site_space=site_dims2)
   is1_e = IndsNetwork(c; link_space=link_dims1)
   is2_e = IndsNetwork(c; link_space=link_dims2)
   is1 = IndsNetwork(c; site_space=site_dims1, link_space=link_dims1)
   is2 = IndsNetwork(c; site_space=site_dims2, link_space=link_dims2)
-
   # merge some networks
   is1_m = union_all_inds(is1_s, is1_e)
   @test dim.(vertex_data(is1_m)) == dim.(vertex_data(is1))
