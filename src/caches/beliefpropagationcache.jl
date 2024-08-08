@@ -16,11 +16,11 @@ using NDTensors: NDTensors
 
 default_message(elt, inds_e) = ITensor[denseblocks(delta(elt, i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
-default_message_norm(m::ITensor) = norm(m)
 function default_message_update(contract_list::Vector{ITensor}; normalize=true, kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
-  if normalize && !iszero(norm(updated_messages))
+  message_norm = norm(updated_messages)
+  if normalize && !iszero(message_norm)
     updated_messages /= message_norm
   end
   return ITensor[updated_messages]
