@@ -5,11 +5,9 @@ using NamedGraphs.NamedGraphGenerators: named_grid
 using ITensorNetworks: ITensorNetwork, inner_network, random_tensornetwork, siteinds
 using ITensors: ITensors, apply, op, scalar, inner
 using LinearAlgebra: norm_sqr
-using Random: Random
+using StableRNGs: StableRNG
 using Test: @test, @testset
-
 @testset "add_itensornetworks" begin
-  Random.seed!(5623)
   g = named_grid((2, 2))
   s = siteinds("S=1/2", g)
   ψ1 = ITensorNetwork(v -> "↑", s)
@@ -32,8 +30,9 @@ using Test: @test, @testset
   rem_edge!(s2, NamedEdge((1, 1) => (1, 2)))
 
   v = rand(vertices(g))
-  ψ1 = random_tensornetwork(s1; link_space=χ)
-  ψ2 = random_tensornetwork(s2; link_space=χ)
+  rng = StableRNG(1234)
+  ψ1 = random_tensornetwork(rng, s1; link_space=χ)
+  ψ2 = random_tensornetwork(rng, s2; link_space=χ)
 
   ψ12 = ψ1 + ψ2
 

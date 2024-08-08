@@ -3,7 +3,7 @@ using DataGraphs: vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
 using ITensorNetworks: IndsNetwork, siteinds
-using ITensors: SiteType, hastags, space
+using ITensors: Index, SiteType, hastags, space
 using ITensors.NDTensors: dim
 using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @testset
@@ -17,6 +17,16 @@ using Test: @test, @testset
   ftype(v::Tuple) = iseven(sum(isodd.(v))) ? "S=1/2" : "S=1"
   fdim(v::Tuple) = space(SiteType(ftype(v)))
   testtag = "TestTag"
+
+  d1 = map(v -> Index(2), vertices(g))
+  d2 = map(v -> "S=1/2", vertices(g))
+  for x in (v -> d1[v], d1, v -> d2[v], d2)
+    s = siteinds(x, g)
+    @test s[1, 1] isa Vector{<:Index}
+    @test s[1, 2] isa Vector{<:Index}
+    @test s[2, 1] isa Vector{<:Index}
+    @test s[2, 2] isa Vector{<:Index}
+  end
 
   # uniform string sitetype
   s_us = siteinds(sitetypes[1], g; addtags=testtag)

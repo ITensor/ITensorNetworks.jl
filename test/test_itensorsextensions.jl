@@ -10,15 +10,13 @@ using ITensors:
   noprime,
   op,
   prime,
-  randomITensor,
+  random_itensor,
   replaceind,
   replaceinds,
   sim
 using ITensorNetworks.ITensorsExtensions: map_eigvals
-using Random: Random
+using StableRNGs: StableRNG
 using Test: @test, @testset
-
-Random.seed!(1234)
 @testset "ITensorsExtensions" begin
   @testset "Test map eigvals without QNS (eltype=$elt, dim=$n)" for elt in (
       Float32, Float64, Complex{Float32}, Complex{Float64}
@@ -27,7 +25,8 @@ Random.seed!(1234)
 
     i, j = Index(n, "i"), Index(n, "j")
     linds, rinds = Index[i], Index[j]
-    A = randn(elt, (n, n))
+    rng = StableRNG(1234)
+    A = randn(rng, elt, (n, n))
     A = A * A'
     P = ITensor(A, i, j)
     sqrtP = map_eigvals(sqrt, P, linds, rinds; ishermitian=true)
@@ -53,7 +52,8 @@ Random.seed!(1234)
     n in (2, 3, 5, 10)
 
     i, j = Index.(([QN() => n], [QN() => n]))
-    A = randomITensor(elt, i, j)
+    rng = StableRNG(1234)
+    A = random_itensor(rng, elt, i, j)
     P = A * prime(dag(A), i)
     sqrtP = map_eigvals(sqrt, P, i, i'; ishermitian=true)
     inv_P = dag(map_eigvals(inv, P, i, i'; ishermitian=true))

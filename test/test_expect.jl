@@ -1,5 +1,4 @@
 @eval module $(gensym())
-
 using Graphs: SimpleGraph, uniform_tree
 using NamedGraphs: NamedGraph, vertices
 using NamedGraphs.NamedGraphGenerators: named_grid
@@ -10,18 +9,16 @@ using ITensorNetworks:
   expect,
   random_tensornetwork,
   original_state_vertex
-using Random: Random
 using SplitApplyCombine: group
+using StableRNGs: StableRNG
 using Test: @test, @testset
-
 @testset "Test Expect" begin
-  Random.seed!(1234)
-
   #Test on a tree
   L, χ = 4, 2
   g = NamedGraph(SimpleGraph(uniform_tree(L)))
   s = siteinds("S=1/2", g)
-  ψ = random_tensornetwork(s; link_space=χ)
+  rng = StableRNG(1234)
+  ψ = random_tensornetwork(rng, s; link_space=χ)
   sz_bp = expect(ψ, "Sz"; alg="bp")
   sz_exact = expect(ψ, "Sz"; alg="exact")
   @test sz_bp ≈ sz_exact
@@ -30,7 +27,8 @@ using Test: @test, @testset
   L, χ = 2, 2
   g = named_grid((L, L))
   s = siteinds("S=1/2", g)
-  ψ = random_tensornetwork(s; link_space=χ)
+  rng = StableRNG(1234)
+  ψ = random_tensornetwork(rng, s; link_space=χ)
   cache_construction_function =
     f -> BeliefPropagationCache(
       f; partitioned_vertices=group(v -> (original_state_vertex(f, v)[1]), vertices(f))
