@@ -8,9 +8,9 @@ default_inserter() = default_inserter
 default_checkdone() = (; kws...) -> false
 default_transform_operator() = nothing
 function default_region_printer(;
-  cutoff,
-  maxdim,
-  mindim,
+  cutoff=nothing,
+  mindim=nothing,
+  maxdim=nothing,
   outputlevel,
   state,
   sweep_plan,
@@ -23,9 +23,9 @@ function default_region_printer(;
     region = first(sweep_plan[which_region_update])
     @printf("Sweep %d, region=%s \n", which_sweep, region)
     print("  Truncated using")
-    @printf(" cutoff=%.1E", cutoff)
-    @printf(" maxdim=%d", maxdim)
-    @printf(" mindim=%d", mindim)
+    !isnothing(cutoff) && @printf(" cutoff=%.1E", cutoff)
+    !isnothing(maxdim) && @printf(" maxdim=%d", maxdim)
+    !isnothing(mindim) && @printf(" mindim=%d", mindim)
     println()
     if spec != nothing
       @printf(

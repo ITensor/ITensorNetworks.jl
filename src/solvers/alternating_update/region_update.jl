@@ -112,6 +112,7 @@ function region_update(
     outputlevel,
     info...,
     region_kwargs...,
+    inserter_kwargs...,
     internal_kwargs...,
   )
   update_observer!(region_observer!; all_kwargs...)
