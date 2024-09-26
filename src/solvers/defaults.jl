@@ -1,4 +1,4 @@
-using Printf: @printf
+using Printf: @printf, @sprintf
 using ITensorMPS: maxlinkdim
 default_outputlevel() = 0
 default_nsites() = 2
@@ -7,6 +7,10 @@ default_extracter() = default_extracter
 default_inserter() = default_inserter
 default_checkdone() = (; kws...) -> false
 default_transform_operator() = nothing
+
+format(x) = @sprintf("%s", x)
+format(x::AbstractFloat) = @sprintf("%.1E", x)
+
 function default_region_printer(;
   inserter_kwargs,
   outputlevel,
@@ -21,9 +25,11 @@ function default_region_printer(;
     region = first(sweep_plan[which_region_update])
     @printf("Sweep %d, region=%s \n", which_sweep, region)
     print("  Truncated using")
-    haskey(inserter_kwargs, :cutoff) && @printf(" cutoff=%.1E", inserter_kwargs.cutoff)
-    haskey(inserter_kwargs, :maxdim) && @printf(" maxdim=%d", inserter_kwargs.maxdim)
-    haskey(inserter_kwargs, :mindim) && @printf(" mindim=%d", inserter_kwargs.mindim)
+    for key in [:cutoff, :maxdim, :mindim]
+      if haskey(inserter_kwargs, key)
+        print(" ", key, "=", format(inserter_kwargs[key]))
+      end
+    end
     println()
     if spec != nothing
       @printf(
