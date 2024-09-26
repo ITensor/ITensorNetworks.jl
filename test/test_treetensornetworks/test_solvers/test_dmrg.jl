@@ -22,6 +22,7 @@ using KrylovKit: eigsolve
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Observers: observer
 using StableRNGs: StableRNG
+using Suppressor: @capture_out
 using Test: @test, @test_broken, @testset
 
 # This is needed since `eigen` is broken
@@ -76,6 +77,31 @@ ITensors.disable_auto_fermion()
   new_E = inner(psi', H, psi)
   @test new_E ≈ orig_E
   =#
+
+  #
+  # Test outputlevels are working
+  #
+  prev_output = ""
+  for outputlevel in 0:2
+    output = @capture_out begin
+      e, psi = dmrg(
+        H,
+        psi;
+        outputlevel,
+        nsweeps,
+        maxdim,
+        cutoff,
+        nsites,
+        updater_kwargs=(; krylovdim=3, maxiter=1),
+      )
+    end
+    if outputlevel == 0
+      @test length(output) == 0
+    else
+      @test length(output) > length(prev_output)
+    end
+    prev_output = output
+  end
 end
 
 @testset "Observers" begin
@@ -139,7 +165,7 @@ end
     nsweeps,
     maxdim,
     cutoff,
-    outputlevel=2,
+    outputlevel=0,
     transform_operator=ITensorNetworks.cache_operator_to_disk,
     transform_operator_kwargs=(; write_when_maxdim_exceeds=11),
   )
