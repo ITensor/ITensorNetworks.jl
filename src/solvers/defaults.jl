@@ -21,9 +21,9 @@ function default_region_printer(;
     region = first(sweep_plan[which_region_update])
     @printf("Sweep %d, region=%s \n", which_sweep, region)
     print("  Truncated using")
-    haskey(inserter_kwargs, :cutoff) && @printf(" cutoff=%.1E", inserter_kwargs[:cutoff])
-    haskey(inserter_kwargs, :maxdim) && @printf(" maxdim=%d", inserter_kwargs[:maxdim])
-    haskey(inserter_kwargs, :mindim) && @printf(" mindim=%d", inserter_kwargs[:mindim])
+    haskey(inserter_kwargs, :cutoff) && @printf(" cutoff=%.1E", inserter_kwargs.cutoff)
+    haskey(inserter_kwargs, :maxdim) && @printf(" maxdim=%d", inserter_kwargs.maxdim)
+    haskey(inserter_kwargs, :mindim) && @printf(" mindim=%d", inserter_kwargs.mindim)
     println()
     if spec != nothing
       @printf(
