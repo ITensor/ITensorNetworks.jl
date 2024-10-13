@@ -1,12 +1,12 @@
 @eval module $(gensym())
-using ITensors: contract
 using ITensorNetworks: ITensorNetworks, TimeDependentSum, ttn, mpo, mps, siteinds, tdvp
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
-using OrdinaryDiffEq: Tsit5
+using ITensors: contract
 using KrylovKit: exponentiate
 using LinearAlgebra: norm
 using NamedGraphs: AbstractNamedEdge
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using OrdinaryDiffEqTsit5: Tsit5
 using Test: @test, @test_broken, @testset
 
 include(
