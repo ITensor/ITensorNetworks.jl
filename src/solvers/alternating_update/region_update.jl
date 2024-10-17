@@ -7,36 +7,27 @@ function current_ortho(sweep_plan, which_region_update)
   if !isa(region, AbstractEdge) && length(region) == 1
     return only(current_verts)
   end
-  if which_region_update == length(regions)
-    # look back by one should be sufficient, but may be brittle?
-    overlapping_vertex = only(
-      intersect(current_verts, support(regions[which_region_update - 1]))
+  # look forward
+  other_regions = filter(
+    x -> !(issetequal(x, current_verts)), support.(regions[(which_region_update + 1):end])
+  )
+  # find the first region that has overlapping support with current region 
+  ind = findfirst(x -> !isempty(intersect(support(x), support(region))), other_regions)
+  if isnothing(ind)
+    # look backward
+    other_regions = reverse(
+      filter(
+        x -> !(issetequal(x, current_verts)), support.(regions[1:(which_region_update - 1)])
+      ),
     )
-    return overlapping_vertex
-  else
-    # look forward
-    other_regions = filter(
-      x -> !(issetequal(x, current_verts)), support.(regions[(which_region_update + 1):end])
-    )
-    # find the first region that has overlapping support with current region 
     ind = findfirst(x -> !isempty(intersect(support(x), support(region))), other_regions)
-    if isnothing(ind)
-      # look backward
-      other_regions = reverse(
-        filter(
-          x -> !(issetequal(x, current_verts)),
-          support.(regions[1:(which_region_update - 1)]),
-        ),
-      )
-      ind = findfirst(x -> !isempty(intersect(support(x), support(region))), other_regions)
-    end
-    @assert !isnothing(ind)
-    future_verts = union(support(other_regions[ind]))
-    # return ortho_ceter as the vertex in current region that does not overlap with following one
-    overlapping_vertex = intersect(current_verts, future_verts)
-    nonoverlapping_vertex = only(setdiff(current_verts, overlapping_vertex))
-    return nonoverlapping_vertex
   end
+  @assert !isnothing(ind)
+  future_verts = union(support(other_regions[ind]))
+  # return ortho_ceter as the vertex in current region that does not overlap with following one
+  overlapping_vertex = intersect(current_verts, future_verts)
+  nonoverlapping_vertex = only(setdiff(current_verts, overlapping_vertex))
+  return nonoverlapping_vertex
 end
 
 function region_update(
