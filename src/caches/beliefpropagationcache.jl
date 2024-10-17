@@ -16,11 +16,11 @@ using NDTensors: NDTensors
 
 default_message(elt, inds_e) = ITensor[denseblocks(delta(elt, i)) for i in inds_e]
 default_messages(ptn::PartitionedGraph) = Dictionary()
-function default_message_update(contract_list::Vector{ITensor}; kwargs...)
+function default_message_update(contract_list::Vector{ITensor}; normalize=true, kwargs...)
   sequence = optimal_contraction_sequence(contract_list)
   updated_messages = contract(contract_list; sequence, kwargs...)
   message_norm = norm(updated_messages)
-  if !iszero(message_norm)
+  if normalize && !iszero(message_norm)
     updated_messages /= message_norm
   end
   return ITensor[updated_messages]
@@ -106,7 +106,7 @@ end
 
 function message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
   mts = messages(bp_cache)
-  return get(mts, edge, default_message(bp_cache, edge))
+  return get(() -> default_message(bp_cache, edge), mts, edge)
 end
 function messages(bp_cache::BeliefPropagationCache, edges; kwargs...)
   return map(edge -> message(bp_cache, edge; kwargs...), edges)
@@ -152,15 +152,16 @@ end
 function environment(bp_cache::BeliefPropagationCache, verts::Vector)
   partition_verts = partitionvertices(bp_cache, verts)
   messages = environment(bp_cache, partition_verts)
-  central_tensors = ITensor[
-    tensornetwork(bp_cache)[v] for v in setdiff(vertices(bp_cache, partition_verts), verts)
-  ]
+  central_tensors = factors(bp_cache, setdiff(vertices(bp_cache, partition_verts), verts))
   return vcat(messages, central_tensors)
 end
 
+function factors(bp_cache::BeliefPropagationCache, verts::Vector)
+  return ITensor[tensornetwork(bp_cache)[v] for v in verts]
+end
+
 function factor(bp_cache::BeliefPropagationCache, vertex::PartitionVertex)
-  ptn = partitioned_tensornetwork(bp_cache)
-  return collect(eachtensor(subgraph(ptn, vertex)))
+  return factors(bp_cache, vertices(bp_cache, vertex))
 end
 
 """

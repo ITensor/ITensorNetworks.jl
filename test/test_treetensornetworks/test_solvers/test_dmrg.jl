@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using DataGraphs: edge_data, vertex_data
 using Dictionaries: Dictionary
-using Graphs: nv, vertices
+using Graphs: nv, vertices, uniform_tree
 using ITensorMPS: ITensorMPS
 using ITensorNetworks:
   ITensorNetworks,
@@ -19,9 +19,11 @@ using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: ITensors
 using KrylovKit: eigsolve
+using NamedGraphs: NamedGraph, rename_vertices
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Observers: observer
 using StableRNGs: StableRNG
+using Suppressor: @capture_out
 using Test: @test, @test_broken, @testset
 
 # This is needed since `eigen` is broken
@@ -76,6 +78,31 @@ ITensors.disable_auto_fermion()
   new_E = inner(psi', H, psi)
   @test new_E ≈ orig_E
   =#
+
+  #
+  # Test outputlevels are working
+  #
+  prev_output = ""
+  for outputlevel in 0:2
+    output = @capture_out begin
+      e, psi = dmrg(
+        H,
+        psi;
+        outputlevel,
+        nsweeps,
+        maxdim,
+        cutoff,
+        nsites,
+        updater_kwargs=(; krylovdim=3, maxiter=1),
+      )
+    end
+    if outputlevel == 0
+      @test length(output) == 0
+    else
+      @test length(output) > length(prev_output)
+    end
+    prev_output = output
+  end
 end
 
 @testset "Observers" begin
@@ -139,7 +166,7 @@ end
     nsweeps,
     maxdim,
     cutoff,
-    outputlevel=2,
+    outputlevel=0,
     transform_operator=ITensorNetworks.cache_operator_to_disk,
     transform_operator_kwargs=(; write_when_maxdim_exceeds=11),
   )
@@ -287,11 +314,12 @@ end
   nsites = 2
   nsweeps = 10
 
-  c = named_comb_tree((3, 2))
-  s = siteinds("S=1/2", c)
-  os = ModelHamiltonians.heisenberg(c)
-  H = ttn(os, s)
   rng = StableRNG(1234)
+  g = NamedGraph(uniform_tree(10))
+  g = rename_vertices(v -> (v, 1), g)
+  s = siteinds("S=1/2", g)
+  os = ModelHamiltonians.heisenberg(g)
+  H = ttn(os, s)
   psi = random_ttn(rng, s; link_space=5)
   e, psi = dmrg(H, psi; nsweeps, maxdim, nsites)
 

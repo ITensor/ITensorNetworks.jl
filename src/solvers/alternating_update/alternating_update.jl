@@ -9,8 +9,8 @@ function alternating_update(
   nsites, # define default for each level of solver implementation
   updater,  # this specifies the update performed locally
   outputlevel=default_outputlevel(),
-  region_printer=nothing,
-  sweep_printer=nothing,
+  region_printer=default_region_printer,
+  sweep_printer=default_sweep_printer,
   (sweep_observer!)=nothing,
   (region_observer!)=nothing,
   root_vertex=GraphsExtensions.default_root_vertex(init_state),
@@ -59,7 +59,7 @@ function alternating_update(
   (sweep_observer!)=nothing,
   sweep_printer=default_sweep_printer,#?
   (region_observer!)=nothing,
-  region_printer=nothing,
+  region_printer=default_region_printer,
 )
   state = copy(init_state)
   @assert !isnothing(sweep_plans)
