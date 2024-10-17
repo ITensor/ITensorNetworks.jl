@@ -48,14 +48,14 @@ ITensors.product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
 
 function ITensors.contract(P::ProjTTNSum, v::ITensor)
   res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
-    f * contract(p, v)
+    return f * contract(p, v)
   end
   return res
 end
 
 function contract_ket(P::ProjTTNSum, v::ITensor)
   res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
-    f * contract_ket(p, v)
+    return f * contract_ket(p, v)
   end
   return res
 end

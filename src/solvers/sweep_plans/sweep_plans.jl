@@ -108,19 +108,19 @@ function default_sweep_plans(
   transform_operator_kwargs,
   kwargs...,
 )
-  extracter, updater, inserter, transform_operator =
-    extend_or_truncate.((extracter, updater, inserter, transform_operator), nsweeps)
-  inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs, kwargs =
-    expand.(
-      (
-        inserter_kwargs,
-        updater_kwargs,
-        extracter_kwargs,
-        transform_operator_kwargs,
-        NamedTuple(kwargs),
-      ),
-      nsweeps,
-    )
+  extracter, updater, inserter, transform_operator = extend_or_truncate.(
+    (extracter, updater, inserter, transform_operator), nsweeps
+  )
+  inserter_kwargs, updater_kwargs, extracter_kwargs, transform_operator_kwargs, kwargs = expand.(
+    (
+      inserter_kwargs,
+      updater_kwargs,
+      extracter_kwargs,
+      transform_operator_kwargs,
+      NamedTuple(kwargs),
+    ),
+    nsweeps,
+  )
   sweep_plans = []
   for i in 1:nsweeps
     sweep_plan = sweep_plan_func(
@@ -187,7 +187,7 @@ function tdvp_sweep_plan(
           region_kwargs...,
         ),
         reverse_kwargs=(;
-          internal_kwargs=(; substep, time_step=-sub_time_step, t=t_evolved),
+          internal_kwargs=(; substep, time_step=(-sub_time_step), t=t_evolved),
           region_kwargs...,
         ),
         reverse_step,

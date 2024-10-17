@@ -6,7 +6,7 @@ function contract_boundary_mps(tn::ITensorNetwork; kwargs...)
   dims = maximum(vertices(tn))
   d1, d2 = dims
   vL = ITensorMPS.MPS([tn[i1, 1] for i1 in 1:d1])
-  for i2 in 2:(d2 - 2)
+  for i2 in 2:(d2-2)
     T = ITensorMPS.MPO([tn[i1, i2] for i1 in 1:d1])
     vL = contract(T, vL; kwargs...)
   end

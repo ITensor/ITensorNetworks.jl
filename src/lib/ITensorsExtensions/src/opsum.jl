@@ -32,7 +32,7 @@ end
 function group_terms(ℋ::Sum, g)
   grouped_terms = group(ITensors.terms(ℋ)) do t
     findfirst(edges(g)) do e
-      to_tuple.(ITensors.sites(t)) ⊆ [src(e), dst(e)]
+      return to_tuple.(ITensors.sites(t)) ⊆ [src(e), dst(e)]
     end
   end
   return Sum(collect(sum.(grouped_terms)))

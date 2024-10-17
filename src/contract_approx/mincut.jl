@@ -99,9 +99,9 @@ function _distance(tn::ITensorNetwork, outinds::Vector)
   new_tensors = [ITensor(i) for i in outinds]
   tn = disjoint_union(ITensorNetwork(new_tensors), tn)
   distances = 0.0
-  for i in 1:(length(new_tensors) - 1)
+  for i in 1:(length(new_tensors)-1)
     ds = dijkstra_shortest_paths(tn, [(i, 1)], weights(tn))
-    for j in (i + 1):length(new_tensors)
+    for j in (i+1):length(new_tensors)
       distances += ds.dists[(j, 1)]
     end
   end

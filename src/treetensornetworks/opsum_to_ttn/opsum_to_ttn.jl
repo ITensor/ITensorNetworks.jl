@@ -289,7 +289,7 @@ function compress_ttn(
 
   H = ttn(sites0)   # initialize TTN without the dummy indices added
   function qnblock(i::Index, q::QN)
-    for b in 2:(nblocks(i) - 1)
+    for b in 2:(nblocks(i)-1)
       flux(i, Block(b)) == q && return b
     end
     return error("Could not find block of QNIndex with matching QN")

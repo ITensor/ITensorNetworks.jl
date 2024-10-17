@@ -65,7 +65,7 @@ end
   return IndsNetwork{V,I}(g, link_space, site_space)
 end
 
-@traitfn function IndsNetwork(g::G, link_space, site_space) where {G; IsUnderlyingGraph{G}}
+@traitfn function IndsNetwork(g::G, link_space, site_space) where {G;IsUnderlyingGraph{G}}
   V = vertextype(g)
   return IndsNetwork{V}(g, link_space, site_space)
 end
@@ -133,7 +133,7 @@ end
   return IndsNetwork{V}(g, link_space, site_space)
 end
 
-@traitfn function IndsNetwork(g::G; kwargs...) where {G; IsUnderlyingGraph{G}}
+@traitfn function IndsNetwork(g::G; kwargs...) where {G;IsUnderlyingGraph{G}}
   return IndsNetwork{vertextype(g)}(g; kwargs...)
 end
 

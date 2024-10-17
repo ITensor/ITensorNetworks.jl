@@ -27,7 +27,7 @@ using Test: @testset, @test
 
     s = siteinds("S=1/2", N)
     os = OpSum()
-    for j in 1:(N - 1)
+    for j in 1:(N-1)
       os += 0.5, "S+", j, "S-", j + 1
       os += 0.5, "S-", j, "S+", j + 1
       os += "Sz", j, "Sz", j + 1
@@ -84,12 +84,12 @@ using Test: @testset, @test
     s = siteinds("S=1/2", N)
 
     os1 = OpSum()
-    for j in 1:(N - 1)
+    for j in 1:(N-1)
       os1 += 0.5, "S+", j, "S-", j + 1
       os1 += 0.5, "S-", j, "S+", j + 1
     end
     os2 = OpSum()
-    for j in 1:(N - 1)
+    for j in 1:(N-1)
       os2 += "Sz", j, "Sz", j + 1
     end
 
@@ -127,7 +127,7 @@ using Test: @testset, @test
     s = siteinds("S=1/2", N)
 
     os = OpSum()
-    for j in 1:(N - 1)
+    for j in 1:(N-1)
       os += 0.5, "S+", j, "S-", j + 1
       os += 0.5, "S-", j, "S+", j + 1
       os += "Sz", j, "Sz", j + 1
@@ -164,7 +164,7 @@ using Test: @testset, @test
     s = siteinds("S=1/2", N; conserve_qns=false)
 
     os = OpSum()
-    for j in 1:(N - 1)
+    for j in 1:(N-1)
       os += 0.5, "S+", j, "S-", j + 1
       os += 0.5, "S-", j, "S+", j + 1
       os += "Sz", j, "Sz", j + 1
@@ -232,7 +232,7 @@ using Test: @testset, @test
     s = siteinds("S=1/2", N; conserve_qns=true)
 
     os = OpSum()
-    for j in 1:(N - 1)
+    for j in 1:(N-1)
       os += 0.5, "S+", j, "S-", j + 1
       os += 0.5, "S-", j, "S+", j + 1
       os += "Sz", j, "Sz", j + 1
@@ -241,7 +241,7 @@ using Test: @testset, @test
     H = mpo(os, s)
 
     gates = ITensor[]
-    for j in 1:(N - 1)
+    for j in 1:(N-1)
       s1 = s[j]
       s2 = s[j + 1]
       hj =
@@ -324,7 +324,7 @@ using Test: @testset, @test
     s = siteinds("S=1/2", N)
 
     os = OpSum()
-    for j in 1:(N - 1)
+    for j in 1:(N-1)
       os += 0.5, "S+", j, "S-", j + 1
       os += 0.5, "S-", j, "S+", j + 1
       os += "Sz", j, "Sz", j + 1
@@ -341,7 +341,7 @@ using Test: @testset, @test
       H,
       -ttotal,
       state;
-      time_step=-tau,
+      time_step=(-tau),
       maxdim,
       cutoff,
       nsites,
@@ -362,7 +362,7 @@ using Test: @testset, @test
     s = siteinds("S=1/2", N; conserve_qns=true)
 
     os = OpSum()
-    for j in 1:(N - 1)
+    for j in 1:(N-1)
       os += 0.5, "S+", j, "S-", j + 1
       os += 0.5, "S-", j, "S+", j + 1
       os += "Sz", j, "Sz", j + 1
