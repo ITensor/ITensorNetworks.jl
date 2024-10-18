@@ -10,7 +10,6 @@ using NamedGraphs: namedgraph_a_star
 using IsApprox: IsApprox, Approx
 using ITensors: @Algorithm_str, directsum, hasinds, permute, plev
 using ITensorMPS: linkind, loginner, lognorm, orthogonalize
-using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
 
@@ -36,11 +35,9 @@ function set_ortho_region(tn::AbstractTTN, new_region)
 end
 
 function ITensorMPS.orthogonalize(ttn::AbstractTTN, region::Vector; kwargs...)
-  paths = [
-    namedgraph_a_star(underlying_graph(ttn), rp, r) for r in region for
-    rp in ortho_region(ttn)
-  ]
-  path = unique(reduce(vcat, paths))
+  new_path = post_order_dfs_edges_region(ttn, region)
+  existing_path = post_order_dfs_edges_region(ttn, ortho_region(ttn))
+  path = setdiff(new_path, existing_path)
   if !isempty(path)
     ttn = typeof(ttn)(orthogonalize(ITensorNetwork(ttn), path; kwargs...))
   end

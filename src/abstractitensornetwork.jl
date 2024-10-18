@@ -631,10 +631,7 @@ end
 # the network as a tree spanned by a spanning tree.
 # TODO: Rename `tree_orthogonalize`.
 function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, region::Vector)
-  spanning_tree_edges = post_order_dfs_edges(bfs_tree(ψ, first(region)), first(region))
-  spanning_tree_edges = filter(
-    e -> !(src(e) ∈ region && dst(e) ∈ region), spanning_tree_edges
-  )
+  spanning_tree_edges = post_order_dfs_edges_region(bfs_tree(ψ, first(region)), region)
   return orthogonalize(ψ, spanning_tree_edges)
 end
 
