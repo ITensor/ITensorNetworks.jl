@@ -7,18 +7,19 @@
 # insert_local_tensors takes that tensor and factorizes it back
 # apart and puts it back into the network.
 #
-function default_extracter(state, projected_operator, region, ortho; internal_kwargs)
-  state = orthogonalize(state, ortho)
+function default_extracter(state, projected_operator, region; internal_kwargs)
   if isa(region, AbstractEdge)
-    other_vertex = only(setdiff(support(region), [ortho]))
-    left_inds = uniqueinds(state[ortho], state[other_vertex])
+    vsrc, vdst = src(region), dst(region)
+    state = orthogonalize(state, vsrc)
+    left_inds = uniqueinds(state[vsrc], state[vdst])
     #ToDo: replace with call to factorize
     U, S, V = svd(
-      state[ortho], left_inds; lefttags=tags(state, region), righttags=tags(state, region)
+      state[vsrc], left_inds; lefttags=tags(state, region), righttags=tags(state, region)
     )
-    state[ortho] = U
+    state[vsrc] = U
     local_tensor = S * V
   else
+    state = orthogonalize(state, region)
     local_tensor = prod(state[v] for v in region)
   end
   projected_operator = position(projected_operator, state, region)

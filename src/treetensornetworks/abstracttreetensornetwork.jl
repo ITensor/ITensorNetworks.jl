@@ -1,6 +1,12 @@
 using Graphs: has_vertex
 using NamedGraphs.GraphsExtensions:
-  GraphsExtensions, edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
+  GraphsExtensions,
+  edge_path,
+  leaf_vertices,
+  post_order_dfs_edges,
+  post_order_dfs_vertices,
+  a_star
+using NamedGraphs: namedgraph_a_star
 using IsApprox: IsApprox, Approx
 using ITensors: @Algorithm_str, directsum, hasinds, permute, plev
 using ITensorMPS: linkind, loginner, lognorm, orthogonalize
@@ -29,30 +35,16 @@ function set_ortho_region(tn::AbstractTTN, new_region)
   return error("Not implemented")
 end
 
-# 
-# Orthogonalization
-# 
-
-function ITensorMPS.orthogonalize(tn::AbstractTTN, ortho_center; kwargs...)
-  if isone(length(ortho_region(tn))) && ortho_center == only(ortho_region(tn))
-    return tn
+function ITensorMPS.orthogonalize(ttn::AbstractTTN, region::Vector; kwargs...)
+  paths = [
+    namedgraph_a_star(underlying_graph(ttn), rp, r) for r in region for
+    rp in ortho_region(ttn)
+  ]
+  path = unique(reduce(vcat, paths))
+  if !isempty(path)
+    ttn = typeof(ttn)(orthogonalize(ITensorNetwork(ttn), path; kwargs...))
   end
-  # TODO: Rewrite this in a more general way.
-  if isone(length(ortho_region(tn)))
-    edge_list = edge_path(tn, only(ortho_region(tn)), ortho_center)
-  else
-    edge_list = post_order_dfs_edges(tn, ortho_center)
-  end
-  for e in edge_list
-    tn = orthogonalize(tn, e)
-  end
-  return set_ortho_region(tn, typeof(ortho_region(tn))([ortho_center]))
-end
-
-# For ambiguity error
-
-function ITensorMPS.orthogonalize(tn::AbstractTTN, edge::AbstractEdge; kwargs...)
-  return typeof(tn)(orthogonalize(ITensorNetwork(tn), edge; kwargs...))
+  return set_ortho_region(ttn, region)
 end
 
 # 
