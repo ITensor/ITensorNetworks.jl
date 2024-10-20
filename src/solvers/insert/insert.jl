@@ -33,8 +33,7 @@ end
 function default_inserter(
   state::AbstractTTN,
   phi::ITensor,
-  region::NamedEdge,
-  ortho;
+  region::NamedEdge;
   cutoff=nothing,
   maxdim=nothing,
   mindim=nothing,

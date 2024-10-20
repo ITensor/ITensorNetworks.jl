@@ -55,6 +55,7 @@ function region_update(
   #  drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
   # so noiseterm is a solver
   #end
+  #if isa(region, AbstractEdge) && 
   state, spec = inserter(state, phi, region; inserter_kwargs..., internal_kwargs)
   all_kwargs = (;
     which_region_update,
