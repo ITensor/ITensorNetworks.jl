@@ -2,8 +2,8 @@ using Graphs: has_vertex
 using NamedGraphs.GraphsExtensions:
   GraphsExtensions, edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
 using IsApprox: IsApprox, Approx
-using ITensors: @Algorithm_str, directsum, hasinds, permute, plev
-using ITensorMPS: linkind, loginner, lognorm, orthogonalize
+using ITensors: ITensors, @Algorithm_str, directsum, hasinds, permute, plev
+using ITensorMPS: ITensorMPS, linkind, loginner, lognorm, orthogonalize
 using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
@@ -273,13 +273,13 @@ end
 
 Base.:+(tn::AbstractTTN) = tn
 
-ITensors.add(tns::AbstractTTN...; kwargs...) = +(tns...; kwargs...)
+ITensorMPS.add(tns::AbstractTTN...; kwargs...) = +(tns...; kwargs...)
 
 function Base.:-(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
   return +(tn1, -tn2; kwargs...)
 end
 
-function ITensors.add(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
+function ITensorMPS.add(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
   return +(tn1, tn2; kwargs...)
 end
 
