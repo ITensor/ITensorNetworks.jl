@@ -781,7 +781,7 @@ end
 # Link dimensions
 # 
 
-function ITensors.maxlinkdim(tn::AbstractITensorNetwork)
+function ITensorMPS.maxlinkdim(tn::AbstractITensorNetwork)
   md = 1
   for e in edges(tn)
     md = max(md, linkdim(tn, e))
