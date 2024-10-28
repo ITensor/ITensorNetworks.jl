@@ -31,12 +31,12 @@ on_edge(P::AbstractProjTTN) = isa(pos(P), edgetype(P))
 
 ITensorMPS.nsite(P::AbstractProjTTN) = on_edge(P) ? 0 : length(pos(P))
 
-function sites(P::AbstractProjTTN{V}) where {V}
-  on_edge(P) && return V[]
+function sites(P::AbstractProjTTN)
+  on_edge(P) && return vertextype(P)[]
   return pos(P)
 end
 
-function NamedGraphs.incident_edges(P::AbstractProjTTN{V}) where {V}
+function NamedGraphs.incident_edges(P::AbstractProjTTN)
   on_edge(P) && return [pos(P), reverse(pos(P))]
   edges = [
     [edgetype(P)(n => v) for n in setdiff(neighbors(underlying_graph(P), v), sites(P))] for
@@ -45,7 +45,7 @@ function NamedGraphs.incident_edges(P::AbstractProjTTN{V}) where {V}
   return collect(Base.Iterators.flatten(edges))
 end
 
-function internal_edges(P::AbstractProjTTN{V}) where {V}
+function internal_edges(P::AbstractProjTTN)
   on_edge(P) && return edgetype(P)[]
   edges = [
     [edgetype(P)(v => n) for n in neighbors(underlying_graph(P), v) ∩ sites(P)] for
