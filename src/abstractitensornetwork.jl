@@ -584,12 +584,12 @@ function LinearAlgebra.factorize(tn::AbstractITensorNetwork, edge::Pair; kwargs.
 end
 
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function orthogonalize_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+function orthogonalize_path(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
   return orthogonalize_path(tn, [edge]; kwargs...)
 end
 
-function orthogonalize_edge(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-  return orthogonalize_edge(tn, edgetype(tn)(edge); kwargs...)
+function orthogonalize_path(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return orthogonalize_path(tn, edgetype(tn)(edge); kwargs...)
 end
 
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
@@ -620,11 +620,27 @@ end
 # TODO: Rename `tree_orthogonalize`.
 function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, region::Vector)
   spanning_tree_edges = post_order_dfs_edges_region(bfs_tree(ψ, first(region)), region)
-  return orthogonalize(ψ, spanning_tree_edges)
+  return orthogonalize_path(ψ, spanning_tree_edges)
 end
 
 function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, region)
   return orthogonalize(ψ, [region])
+end
+
+function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, edges::Vector{<:AbstractEdge})
+  return orthogonalize(ψ, unique(vcat([src(e) for e in edges], [dst(e) for e in edges])))
+end
+
+function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, edges::Vector{<:Pair})
+  return orthogonalize(ψ, edgetype(ψ).(edges))
+end
+
+function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, edge::AbstractEdge)
+  return orthogonalize(ψ, [edge])
+end
+
+function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, edge::Pair)
+  return orthogonalize(ψ, edgetype(ψ)(edge))
 end
 
 # TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
