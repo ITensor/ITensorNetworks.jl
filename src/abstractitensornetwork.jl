@@ -584,12 +584,16 @@ function LinearAlgebra.factorize(tn::AbstractITensorNetwork, edge::Pair; kwargs.
 end
 
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function _orthogonalize_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  return _orthogonalize_edges(tn, [edge]; kwargs...)
+function orthogonalize_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+  return orthogonalize_path(tn, [edge]; kwargs...)
+end
+
+function orthogonalize_edge(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return orthogonalize_edge(tn, edgetype(tn)(edge); kwargs...)
 end
 
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function _orthogonalize_edges(
+function orthogonalize_path(
   tn::AbstractITensorNetwork, edges::Vector{<:AbstractEdge}; kwargs...
 )
   # tn = factorize(tn, edge; kwargs...)
@@ -607,24 +611,8 @@ function _orthogonalize_edges(
   return tn
 end
 
-function ITensorMPS.orthogonalize(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  return _orthogonalize_edge(tn, edge; kwargs...)
-end
-
-function ITensorMPS.orthogonalize(
-  tn::AbstractITensorNetwork, edges::Vector{<:AbstractEdge}; kwargs...
-)
-  return _orthogonalize_edges(tn, edges; kwargs...)
-end
-
-function ITensorMPS.orthogonalize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-  return orthogonalize(tn, edgetype(tn)(edge); kwargs...)
-end
-
-function ITensorMPS.orthogonalize(
-  tn::AbstractITensorNetwork, edges::Vector{Pair}; kwargs...
-)
-  return orthogonalize(tn, edgetype(tn).(edges); kwargs...)
+function orthogonalize_path(tn::AbstractITensorNetwork, edges::Vector{<:Pair}; kwargs...)
+  return orthogonalize_path(tn, edgetype(tn).(edges); kwargs...)
 end
 
 # Orthogonalize an ITensorNetwork towards a region, treating
