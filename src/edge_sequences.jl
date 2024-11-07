@@ -44,8 +44,3 @@ end
 @traitfn function edge_sequence(::Algorithm"parallel", g::::(!IsDirected))
   return [[e] for e in vcat(edges(g), reverse.(edges(g)))]
 end
-
-function post_order_dfs_edges_region(g::AbstractGraph, region)
-  es = post_order_dfs_edges(g, first(region))
-  return filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), es)
-end

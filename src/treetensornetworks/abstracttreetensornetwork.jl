@@ -6,7 +6,7 @@ using NamedGraphs.GraphsExtensions:
   post_order_dfs_edges,
   post_order_dfs_vertices,
   a_star
-using NamedGraphs: namedgraph_a_star
+using NamedGraphs: namedgraph_a_star, steiner_tree
 using IsApprox: IsApprox, Approx
 using ITensors: ITensors, @Algorithm_str, directsum, hasinds, permute, plev
 using ITensorMPS: ITensorMPS, linkind, loginner, lognorm, orthogonalize
@@ -36,13 +36,17 @@ function set_ortho_region(tn::AbstractTTN, new_region)
 end
 
 function ITensorMPS.orthogonalize(ttn::AbstractTTN, region::Vector; kwargs...)
-  new_path = post_order_dfs_edges_region(ttn, region)
-  existing_path = post_order_dfs_edges_region(ttn, ortho_region(ttn))
-  path = setdiff(new_path, existing_path)
+  st = steiner_tree(ttn, union(region, ortho_region(ttn)))
+  path = post_order_dfs_edges(st, first(region))
+  path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
   if !isempty(path)
     ttn = typeof(ttn)(orthogonalize_path(ITensorNetwork(ttn), path; kwargs...))
   end
   return set_ortho_region(ttn, region)
+end
+
+function ITensorMPS.orthogonalize(ttn::AbstractTTN, region; kwargs...)
+  return orthogonalize(ttn, [region]; kwargs...)
 end
 
 # 

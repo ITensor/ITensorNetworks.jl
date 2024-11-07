@@ -40,7 +40,7 @@ using ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using LinearAlgebra: LinearAlgebra, factorize
 using MacroTools: @capture
-using NamedGraphs: NamedGraphs, NamedGraph, not_implemented
+using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, steiner_tree
 using NamedGraphs.GraphsExtensions:
   ⊔, directed_graph, incident_edges, rename_vertices, vertextype
 using NDTensors: NDTensors, dim
@@ -617,30 +617,15 @@ end
 
 # Orthogonalize an ITensorNetwork towards a region, treating
 # the network as a tree spanned by a spanning tree.
-# TODO: Rename `tree_orthogonalize`.
-function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, region::Vector)
-  spanning_tree_edges = post_order_dfs_edges_region(bfs_tree(ψ, first(region)), region)
-  return orthogonalize_path(ψ, spanning_tree_edges)
+function tree_orthogonalize(ψ::AbstractITensorNetwork, region::Vector)
+  region = collect(vertices(steiner_tree(underlying_graph(ψ), region)))
+  path = post_order_dfs_edges(bfs_tree(ψ, first(region)), first(region))
+  path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
+  return orthogonalize_path(ψ, path)
 end
 
-function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, region)
-  return orthogonalize(ψ, [region])
-end
-
-function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, edges::Vector{<:AbstractEdge})
-  return orthogonalize(ψ, unique(vcat([src(e) for e in edges], [dst(e) for e in edges])))
-end
-
-function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, edges::Vector{<:Pair})
-  return orthogonalize(ψ, edgetype(ψ).(edges))
-end
-
-function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, edge::AbstractEdge)
-  return orthogonalize(ψ, [edge])
-end
-
-function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, edge::Pair)
-  return orthogonalize(ψ, edgetype(ψ)(edge))
+function tree_orthogonalize(ψ::AbstractITensorNetwork, region)
+  return tree_orthogonalize(ψ, [region])
 end
 
 # TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
