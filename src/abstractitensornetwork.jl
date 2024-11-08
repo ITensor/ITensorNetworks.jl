@@ -585,16 +585,16 @@ function LinearAlgebra.factorize(tn::AbstractITensorNetwork, edge::Pair; kwargs.
 end
 
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function orthogonalize_path(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  return orthogonalize_path(tn, [edge]; kwargs...)
+function orthogonalize_walk(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+  return orthogonalize_walk(tn, [edge]; kwargs...)
 end
 
-function orthogonalize_path(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-  return orthogonalize_path(tn, edgetype(tn)(edge); kwargs...)
+function orthogonalize_walk(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return orthogonalize_walk(tn, edgetype(tn)(edge); kwargs...)
 end
 
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function orthogonalize_path(
+function orthogonalize_walk(
   tn::AbstractITensorNetwork, edges::Vector{<:AbstractEdge}; kwargs...
 )
   # tn = factorize(tn, edge; kwargs...)
@@ -612,18 +612,18 @@ function orthogonalize_path(
   return tn
 end
 
-function orthogonalize_path(tn::AbstractITensorNetwork, edges::Vector{<:Pair}; kwargs...)
-  return orthogonalize_path(tn, edgetype(tn).(edges); kwargs...)
+function orthogonalize_walk(tn::AbstractITensorNetwork, edges::Vector{<:Pair}; kwargs...)
+  return orthogonalize_walk(tn, edgetype(tn).(edges); kwargs...)
 end
 
 # Orthogonalize an ITensorNetwork towards a region, treating
 # the network as a tree spanned by a spanning tree.
 function tree_orthogonalize(ψ::AbstractITensorNetwork, region::Vector)
-  region_centre =
+  region_center =
     length(region) != 1 ? first(center(steiner_tree(ψ, region))) : only(region)
-  path = post_order_dfs_edges(bfs_tree(ψ, region_centre), region_centre)
+  path = post_order_dfs_edges(bfs_tree(ψ, region_center), region_center)
   path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
-  return orthogonalize_path(ψ, path)
+  return orthogonalize_walk(ψ, path)
 end
 
 function tree_orthogonalize(ψ::AbstractITensorNetwork, region)

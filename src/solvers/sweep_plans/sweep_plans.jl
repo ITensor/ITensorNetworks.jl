@@ -70,20 +70,17 @@ function forward_sweep(
   kwargs...,
 )
   edges = post_order_dfs_edges(graph, root_vertex)
-  regions = collect(
-    flatten(map(i -> forward_region(edges, i; region_kwargs, kwargs...), eachindex(edges)))
-  )
+  regions = map(eachindex(edges)) do i
+    forward_region(edges, i; region_kwargs, kwargs...)
+  end
+  regions = collect(flatten(regions))
   if reverse_step
-    reverse_regions = collect(
-      flatten(
-        map(
-          i -> reverse_region(
-            edges, i; reverse_edge=reverse_edges, region_kwargs=reverse_kwargs, kwargs...
-          ),
-          eachindex(edges),
-        ),
-      ),
-    )
+    reverse_regions = map(eachindex(edges)) do i
+      reverse_region(
+        edges, i; reverse_edge=reverse_edges, region_kwargs=reverse_kwargs, kwargs...
+      )
+    end
+    reverse_regions = collect(flatten(reverse_regions))
     _check_reverse_sweeps(regions, reverse_regions, graph; kwargs...)
     regions = interleave(regions, reverse_regions)
   end

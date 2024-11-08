@@ -41,7 +41,7 @@ function ITensorMPS.orthogonalize(ttn::AbstractTTN, region::Vector; kwargs...)
   path = post_order_dfs_edges(st, first(region))
   path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
   if !isempty(path)
-    ttn = typeof(ttn)(orthogonalize_path(ITensorNetwork(ttn), path; kwargs...))
+    ttn = typeof(ttn)(orthogonalize_walk(ITensorNetwork(ttn), path; kwargs...))
   end
   return set_ortho_region(ttn, region)
 end
