@@ -50,6 +50,10 @@ function ITensorMPS.orthogonalize(ttn::AbstractTTN, region; kwargs...)
   return orthogonalize(ttn, [region]; kwargs...)
 end
 
+function tree_orthogonalize(ttn::AbstractTTN, args...; kwargs...)
+  return orthogonalize(ttn, args...; kwargs...)
+end
+
 # 
 # Truncation
 # 
