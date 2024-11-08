@@ -7,6 +7,7 @@ using Graphs:
   add_edge!,
   add_vertex!,
   bfs_tree,
+  center,
   dst,
   edges,
   edgetype,
@@ -618,8 +619,9 @@ end
 # Orthogonalize an ITensorNetwork towards a region, treating
 # the network as a tree spanned by a spanning tree.
 function tree_orthogonalize(ψ::AbstractITensorNetwork, region::Vector)
-  region = collect(vertices(steiner_tree(underlying_graph(ψ), region)))
-  path = post_order_dfs_edges(bfs_tree(ψ, first(region)), first(region))
+  region_centre =
+    length(region) != 1 ? first(center(steiner_tree(ψ, region))) : only(region)
+  path = post_order_dfs_edges(bfs_tree(ψ, region_centre), region_centre)
   path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
   return orthogonalize_path(ψ, path)
 end

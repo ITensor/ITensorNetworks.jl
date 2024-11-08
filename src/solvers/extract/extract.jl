@@ -7,12 +7,13 @@
 # insert_local_tensors takes that tensor and factorizes it back
 # apart and puts it back into the network.
 #
+
 function default_extracter(state, projected_operator, region; internal_kwargs)
   if isa(region, AbstractEdge)
+    # TODO: add functionality for orthogonalizing onto a bond so that can be called instead
     vsrc, vdst = src(region), dst(region)
     state = orthogonalize(state, vsrc)
     left_inds = uniqueinds(state[vsrc], state[vdst])
-    #ToDo: replace with call to factorize
     U, S, V = svd(
       state[vsrc], left_inds; lefttags=tags(state, region), righttags=tags(state, region)
     )

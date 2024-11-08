@@ -36,6 +36,11 @@ function set_ortho_region(tn::AbstractTTN, new_region)
 end
 
 function ITensorMPS.orthogonalize(ttn::AbstractTTN, region::Vector; kwargs...)
+  return orthogonalize_ttn(ttn, region; kwargs...)
+end
+
+function orthogonalize_ttn(ttn::AbstractTTN, region::Vector; kwargs...)
+  issetequal(region, ortho_region(ttn)) && return ttn
   st = steiner_tree(ttn, union(region, ortho_region(ttn)))
   path = post_order_dfs_edges(st, first(region))
   path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
