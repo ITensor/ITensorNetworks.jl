@@ -1,6 +1,12 @@
 using Graphs: has_vertex
 using NamedGraphs.GraphsExtensions:
-  GraphsExtensions, edge_path, leaf_vertices, post_order_dfs_edges, post_order_dfs_vertices
+  GraphsExtensions,
+  edge_path,
+  leaf_vertices,
+  post_order_dfs_edges,
+  post_order_dfs_vertices,
+  a_star
+using NamedGraphs: namedgraph_a_star, steiner_tree
 using IsApprox: IsApprox, Approx
 using ITensors: ITensors, @Algorithm_str, directsum, hasinds, permute, plev
 using ITensorMPS: ITensorMPS, linkind, loginner, lognorm, orthogonalize
@@ -29,30 +35,23 @@ function set_ortho_region(tn::AbstractTTN, new_region)
   return error("Not implemented")
 end
 
-# 
-# Orthogonalization
-# 
-
-function ITensorMPS.orthogonalize(tn::AbstractTTN, ortho_center; kwargs...)
-  if isone(length(ortho_region(tn))) && ortho_center == only(ortho_region(tn))
-    return tn
+function ITensorMPS.orthogonalize(ttn::AbstractTTN, region::Vector; kwargs...)
+  issetequal(region, ortho_region(ttn)) && return ttn
+  st = steiner_tree(ttn, union(region, ortho_region(ttn)))
+  path = post_order_dfs_edges(st, first(region))
+  path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
+  if !isempty(path)
+    ttn = typeof(ttn)(orthogonalize_walk(ITensorNetwork(ttn), path; kwargs...))
   end
-  # TODO: Rewrite this in a more general way.
-  if isone(length(ortho_region(tn)))
-    edge_list = edge_path(tn, only(ortho_region(tn)), ortho_center)
-  else
-    edge_list = post_order_dfs_edges(tn, ortho_center)
-  end
-  for e in edge_list
-    tn = orthogonalize(tn, e)
-  end
-  return set_ortho_region(tn, typeof(ortho_region(tn))([ortho_center]))
+  return set_ortho_region(ttn, region)
 end
 
-# For ambiguity error
+function ITensorMPS.orthogonalize(ttn::AbstractTTN, region; kwargs...)
+  return orthogonalize(ttn, [region]; kwargs...)
+end
 
-function ITensorMPS.orthogonalize(tn::AbstractTTN, edge::AbstractEdge; kwargs...)
-  return typeof(tn)(orthogonalize(ITensorNetwork(tn), edge; kwargs...))
+function tree_orthogonalize(ttn::AbstractTTN, args...; kwargs...)
+  return orthogonalize(ttn, args...; kwargs...)
 end
 
 # 
