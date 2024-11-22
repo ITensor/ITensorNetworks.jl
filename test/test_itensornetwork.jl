@@ -51,6 +51,7 @@ using ITensorNetworks:
   orthogonalize,
   random_tensornetwork,
   siteinds,
+  tree_orthogonalize,
   ttn
 using LinearAlgebra: factorize
 using NamedGraphs: NamedEdge
@@ -287,13 +288,13 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     @test nv(tn_ortho) == 5
     @test nv(tn) == 4
     @test Z ≈ Z̃
-    tn_ortho = orthogonalize(tn, 4 => 3)
+    tn_ortho = tree_orthogonalize(tn, [3, 4])
     Z̃ = norm_sqr(tn_ortho)
     @test nv(tn_ortho) == 4
     @test nv(tn) == 4
     @test Z ≈ Z̃
 
-    tn_ortho = orthogonalize(tn, 1)
+    tn_ortho = tree_orthogonalize(tn, 1)
     Z̃ = norm_sqr(tn_ortho)
     @test Z ≈ Z̃
     Z̃ = inner(tn_ortho, tn)

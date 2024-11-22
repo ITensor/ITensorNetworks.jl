@@ -200,7 +200,7 @@ function ITensors.apply(
   v⃗ = neighbor_vertices(ψ, o)
   if length(v⃗) == 1
     if ortho
-      ψ = orthogonalize(ψ, v⃗[1])
+      ψ = tree_orthogonalize(ψ, v⃗[1])
     end
     oψᵥ = apply(o, ψ[v⃗[1]])
     if normalize
@@ -215,7 +215,7 @@ function ITensors.apply(
       error("Vertices where the gates are being applied must be neighbors for now.")
     end
     if ortho
-      ψ = orthogonalize(ψ, v⃗[1])
+      ψ = tree_orthogonalize(ψ, v⃗[1])
     end
     if variational_optimization_only || !is_product_env
       ψᵥ₁, ψᵥ₂ = full_update_bp(

@@ -1,5 +1,6 @@
 using Graphs: nv, vertices
-using ITensors: ITensors, linkinds, sim
+using ITensors: ITensors, sim
+using ITensorMPS: linkinds
 using ITensors.NDTensors: Algorithm, @Algorithm_str, contract
 using NamedGraphs: vertextype
 
