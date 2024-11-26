@@ -586,36 +586,35 @@ function LinearAlgebra.factorize(tn::AbstractITensorNetwork, edge::Pair; kwargs.
 end
 
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function gauge_walk(
-  alg::Algorithm, tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...
-)
-  return gauge_walk(tn, [edge]; kwargs...)
-end
-
-function gauge_walk(alg::Algorithm, tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-  return gauge_walk(alg::Algorithm, tn, edgetype(tn)(edge); kwargs...)
-end
-
-# For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function gauge_walk(
-  alg::Algorithm"orthogonalize",
-  tn::AbstractITensorNetwork,
-  edges::Vector{<:AbstractEdge};
-  kwargs...,
+function gauge_edge(
+  alg::Algorithm"orthogonalize", tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...
 )
   # tn = factorize(tn, edge; kwargs...)
   # # TODO: Implement as `only(common_neighbors(tn, src(edge), dst(edge)))`
   # new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
   # return contract(tn, new_vertex => dst(edge))
   tn = copy(tn)
+  left_inds = uniqueinds(tn, edge)
+  ltags = tags(tn, edge)
+  X, Y = factorize(tn[src(edge)], left_inds; tags=ltags, ortho="left", kwargs...)
+  tn[src(edge)] = X
+  tn[dst(edge)] *= Y
+  return tn
+end
+
+# For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
+function gauge_walk(
+  alg::Algorithm, tn::AbstractITensorNetwork, edges::Vector{<:AbstractEdge}; kwargs...
+)
+  tn = copy(tn)
   for edge in edges
-    left_inds = uniqueinds(tn, edge)
-    ltags = tags(tn, edge)
-    X, Y = factorize(tn[src(edge)], left_inds; tags=ltags, ortho="left", kwargs...)
-    tn[src(edge)] = X
-    tn[dst(edge)] *= Y
+    tn = gauge_edge(alg, tn, edge; kwargs...)
   end
   return tn
+end
+
+function gauge_walk(alg::Algorithm, tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return gauge_edge(alg::Algorithm, tn, edgetype(tn)(edge); kwargs...)
 end
 
 function gauge_walk(
