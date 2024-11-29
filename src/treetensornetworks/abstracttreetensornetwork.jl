@@ -8,7 +8,7 @@ using NamedGraphs.GraphsExtensions:
   a_star
 using NamedGraphs: namedgraph_a_star, steiner_tree
 using IsApprox: IsApprox, Approx
-using ITensors: ITensors, @Algorithm_str, directsum, hasinds, permute, plev
+using ITensors: ITensors, Algorithm, @Algorithm_str, directsum, hasinds, permute, plev
 using ITensorMPS: ITensorMPS, linkind, loginner, lognorm, orthogonalize
 using TupleTools: TupleTools
 
@@ -35,19 +35,23 @@ function set_ortho_region(tn::AbstractTTN, new_region)
   return error("Not implemented")
 end
 
-function ITensorMPS.orthogonalize(ttn::AbstractTTN, region::Vector; kwargs...)
+function gauge(alg::Algorithm, ttn::AbstractTTN, region::Vector; kwargs...)
   issetequal(region, ortho_region(ttn)) && return ttn
   st = steiner_tree(ttn, union(region, ortho_region(ttn)))
   path = post_order_dfs_edges(st, first(region))
   path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
   if !isempty(path)
-    ttn = typeof(ttn)(orthogonalize_walk(ITensorNetwork(ttn), path; kwargs...))
+    ttn = typeof(ttn)(gauge_walk(alg, ITensorNetwork(ttn), path; kwargs...))
   end
   return set_ortho_region(ttn, region)
 end
 
+function gauge(alg::Algorithm, ttn::AbstractTTN, region; kwargs...)
+  return gauge(alg, ttn, [region]; kwargs...)
+end
+
 function ITensorMPS.orthogonalize(ttn::AbstractTTN, region; kwargs...)
-  return orthogonalize(ttn, [region]; kwargs...)
+  return gauge(Algorithm("orthogonalize"), ttn, region; kwargs...)
 end
 
 function tree_orthogonalize(ttn::AbstractTTN, args...; kwargs...)

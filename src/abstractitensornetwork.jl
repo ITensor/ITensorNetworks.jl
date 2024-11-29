@@ -19,6 +19,7 @@ using Graphs:
 using ITensors:
   ITensors,
   ITensor,
+  @Algorithm_str,
   addtags,
   combiner,
   commoninds,
@@ -44,7 +45,7 @@ using MacroTools: @capture
 using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, steiner_tree
 using NamedGraphs.GraphsExtensions:
   ⊔, directed_graph, incident_edges, rename_vertices, vertextype
-using NDTensors: NDTensors, dim
+using NDTensors: NDTensors, dim, Algorithm
 using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
@@ -585,49 +586,59 @@ function LinearAlgebra.factorize(tn::AbstractITensorNetwork, edge::Pair; kwargs.
 end
 
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function orthogonalize_walk(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  return orthogonalize_walk(tn, [edge]; kwargs...)
-end
-
-function orthogonalize_walk(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-  return orthogonalize_walk(tn, edgetype(tn)(edge); kwargs...)
-end
-
-# For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function orthogonalize_walk(
-  tn::AbstractITensorNetwork, edges::Vector{<:AbstractEdge}; kwargs...
+function gauge_edge(
+  alg::Algorithm"orthogonalize", tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...
 )
   # tn = factorize(tn, edge; kwargs...)
   # # TODO: Implement as `only(common_neighbors(tn, src(edge), dst(edge)))`
   # new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
   # return contract(tn, new_vertex => dst(edge))
   tn = copy(tn)
+  left_inds = uniqueinds(tn, edge)
+  ltags = tags(tn, edge)
+  X, Y = factorize(tn[src(edge)], left_inds; tags=ltags, ortho="left", kwargs...)
+  tn[src(edge)] = X
+  tn[dst(edge)] *= Y
+  return tn
+end
+
+# For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
+function gauge_walk(
+  alg::Algorithm, tn::AbstractITensorNetwork, edges::Vector{<:AbstractEdge}; kwargs...
+)
+  tn = copy(tn)
   for edge in edges
-    left_inds = uniqueinds(tn, edge)
-    ltags = tags(tn, edge)
-    X, Y = factorize(tn[src(edge)], left_inds; tags=ltags, ortho="left", kwargs...)
-    tn[src(edge)] = X
-    tn[dst(edge)] *= Y
+    tn = gauge_edge(alg, tn, edge; kwargs...)
   end
   return tn
 end
 
-function orthogonalize_walk(tn::AbstractITensorNetwork, edges::Vector{<:Pair}; kwargs...)
-  return orthogonalize_walk(tn, edgetype(tn).(edges); kwargs...)
+function gauge_walk(alg::Algorithm, tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return gauge_edge(alg::Algorithm, tn, edgetype(tn)(edge); kwargs...)
 end
 
-# Orthogonalize an ITensorNetwork towards a region, treating
+function gauge_walk(
+  alg::Algorithm, tn::AbstractITensorNetwork, edges::Vector{<:Pair}; kwargs...
+)
+  return gauge_walk(alg, tn, edgetype(tn).(edges); kwargs...)
+end
+
+# Gauge a ITensorNetwork towards a region, treating
 # the network as a tree spanned by a spanning tree.
-function tree_orthogonalize(ψ::AbstractITensorNetwork, region::Vector)
+function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region::Vector)
   region_center =
     length(region) != 1 ? first(center(steiner_tree(ψ, region))) : only(region)
   path = post_order_dfs_edges(bfs_tree(ψ, region_center), region_center)
   path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
-  return orthogonalize_walk(ψ, path)
+  return gauge_walk(alg, ψ, path)
 end
 
-function tree_orthogonalize(ψ::AbstractITensorNetwork, region)
-  return tree_orthogonalize(ψ, [region])
+function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region)
+  return tree_gauge(alg, ψ, [region])
+end
+
+function tree_orthogonalize(ψ::AbstractITensorNetwork, region; kwargs...)
+  return tree_gauge(Algorithm("orthogonalize"), ψ, region; kwargs...)
 end
 
 # TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
