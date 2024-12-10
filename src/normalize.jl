@@ -1,19 +1,21 @@
 using LinearAlgebra
 
+function rescale(tn::AbstractITensorNetwork, c::Number, vs=collect(vertices(tn)))
+  tn = copy(tn)
+  for v in vs
+    tn[v] *= c
+  end
+  return tn
+end
+
 function LinearAlgebra.normalize(tn::AbstractITensorNetwork; alg="exact", kwargs...)
   return normalize(Algorithm(alg), tn; kwargs...)
 end
 
 function LinearAlgebra.normalize(alg::Algorithm"exact", tn::AbstractITensorNetwork)
-  norm_tn = norm_sqr_network(tn)
-  log_norm = logscalar(alg, norm_tn)
-  tn = copy(tn)
-  L = length(vertices(tn))
-  c = exp(log_norm / L)
-  for v in vertices(tn)
-    tn[v] = tn[v] / sqrt(c)
-  end
-  return tn
+  norm_tn = QuadraticFormNetwork(tn)
+  c = exp(logscalar(alg, norm_tn) / (2 * length(vertices(tn))))
+  return rescale(tn, 1 / c)
 end
 
 function LinearAlgebra.normalize(
@@ -40,17 +42,12 @@ function LinearAlgebra.normalize(
     v_ket, v_bra = ket_vertex(norm_tn, v), bra_vertex(norm_tn, v)
     pv = only(partitionvertices(cache![], [v_ket]))
     vn = region_scalar(cache![], pv)
-    state = tn[v] / sqrt(vn)
-    state_dag = copy(dag(state))
-    state_dag = replaceinds(
-      state_dag, inds(state_dag), dual_index_map(norm_tn).(inds(state_dag))
-    )
-    set!(vertices_states, v_ket, state)
-    set!(vertices_states, v_bra, state_dag)
-    tn[v] = state
+    norm_tn = rescale(norm_tn, 1 / sqrt(vn), [v_ket, v_bra])
+    set!(vertices_states, v_ket, norm_tn[v_ket])
+    set!(vertices_states, v_bra, norm_tn[v_bra])
   end
 
   cache![] = update_factors(cache![], vertices_states)
 
-  return tn
+  return ket_network(norm_tn)
 end
