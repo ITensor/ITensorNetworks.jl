@@ -311,3 +311,29 @@ end
 function scalar_factors_quotient(bp_cache::BeliefPropagationCache)
   return vertex_scalars(bp_cache), edge_scalars(bp_cache)
 end
+
+function normalize_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
+  bp_cache = copy(bp_cache)
+  mts = messages(bp_cache)
+  for pe in pes
+    me, mer = only(mts[pe]), only(mts[reverse(pe)])
+    me, mer = normalize(me), normalize(mer)
+    n = dot(me, mer)
+    if isreal(n) && n < 0
+      set!(mts, pe, ITensor[(sgn(n) / sqrt(abs(n))) * me])
+      set!(mts, reverse(pe), ITensor[(1 / sqrt(abs(n))) * mer])
+    else
+      set!(mts, pe, ITensor[(1 / sqrt(n)) * me])
+      set!(mts, reverse(pe), ITensor[(1 / sqrt(n)) * mer])
+    end
+  end
+  return bp_cache
+end
+
+function normalize_message(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
+  return normalize_messages(bp_cache, PartitionEdge[pe])
+end
+
+function normalize_messages(bp_cache::BeliefPropagationCache)
+  return normalize_messages(bp_cache, partitionedges(partitioned_tensornetwork(bp_cache)))
+end
