@@ -17,15 +17,16 @@ function rescale(
 end
 
 function rescale(
-  alg::Algorithm"bp",
+  alg::Algorithm,
   tn::AbstractITensorNetwork,
   vs=collect(vertices(tn));
   (cache!)=nothing,
+  cache_construction_kwargs=default_cache_construction_kwargs(alg, tn),
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(cache!),
 )
   if isnothing(cache!)
-    cache! = Ref(BeliefPropagationCache(tn, group(v -> v, vertices(tn))))
+    cache! = Ref(cache(alg, tn; cache_construction_kwargs...))
   end
 
   if update_cache
