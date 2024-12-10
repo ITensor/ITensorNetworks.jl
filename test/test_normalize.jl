@@ -5,32 +5,32 @@ using ITensorNetworks:
   edge_scalars,
   norm_sqr_network,
   random_tensornetwork,
-  vertex_scalars
+  vertex_scalars,
+  rescale
 using ITensors: dag, inner, siteinds, scalar
 using Graphs: SimpleGraph, uniform_tree
 using LinearAlgebra: normalize
 using NamedGraphs: NamedGraph
-using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs.NamedGraphGenerators: named_grid, named_comb_tree
 using StableRNGs: StableRNG
 using Test: @test, @testset
 @testset "Normalize" begin
 
-  #First lets do a tree 
-  L = 6
+  #First lets do a flat tree 
+  nx, ny = 2, 3
   χ = 2
   rng = StableRNG(1234)
 
-  g = NamedGraph(SimpleGraph(uniform_tree(L)))
-  s = siteinds("S=1/2", g)
-  x = random_tensornetwork(rng, s; link_space=χ)
+  g = named_comb_tree((nx, ny))
+  tn = random_tensornetwork(rng, g; link_space=χ)
 
-  ψ = normalize(x; alg="exact")
-  @test scalar(norm_sqr_network(ψ); alg="exact") ≈ 1.0
+  tn_r = rescale(tn; alg="exact")
+  @test scalar(tn_r; alg="exact") ≈ 1.0
 
-  ψ = normalize(x; alg="bp")
-  @test scalar(norm_sqr_network(ψ); alg="exact") ≈ 1.0
+  tn_r = rescale(tn; alg="bp")
+  @test scalar(tn_r; alg="exact") ≈ 1.0
 
-  #Now a loopy graph
+  #Now a state on a loopy graph
   Lx, Ly = 3, 2
   χ = 2
   rng = StableRNG(1234)
