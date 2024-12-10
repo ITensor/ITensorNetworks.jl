@@ -1,4 +1,5 @@
-using ITensors: inner, scalar, loginner
+using ITensors: inner, scalar
+using ITensorMPS: ITensorMPS, loginner
 using LinearAlgebra: norm, norm_sqr
 
 default_contract_alg(tns::Tuple) = "bp"
@@ -53,7 +54,7 @@ function ITensors.inner(
   return scalar(tn; sequence)
 end
 
-function ITensors.loginner(
+function ITensorMPS.loginner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   alg=default_contract_alg((ϕ, ψ)),
@@ -62,7 +63,7 @@ function ITensors.loginner(
   return loginner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
 
-function ITensors.loginner(
+function ITensorMPS.loginner(
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -72,13 +73,13 @@ function ITensors.loginner(
   return loginner(Algorithm(alg), ϕ, A, ψ; kwargs...)
 end
 
-function ITensors.loginner(
+function ITensorMPS.loginner(
   alg::Algorithm"exact", ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...
 )
   return log(inner(alg, ϕ, ψ); kwargs...)
 end
 
-function ITensors.loginner(
+function ITensorMPS.loginner(
   alg::Algorithm"exact",
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
@@ -88,7 +89,7 @@ function ITensors.loginner(
   return log(inner(alg, ϕ, A, ψ); kwargs...)
 end
 
-function ITensors.loginner(
+function ITensorMPS.loginner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -99,7 +100,7 @@ function ITensors.loginner(
   return logscalar(alg, tn; kwargs...)
 end
 
-function ITensors.loginner(
+function ITensorMPS.loginner(
   alg::Algorithm"bp",
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,

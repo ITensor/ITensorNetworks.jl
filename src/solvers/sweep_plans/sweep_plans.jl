@@ -13,10 +13,11 @@ end
 
 support(r) = r
 
-function reverse_region(edges, which_edge; nsites=1, region_kwargs=(;))
+function reverse_region(edges, which_edge; reverse_edge=false, nsites=1, region_kwargs=(;))
   current_edge = edges[which_edge]
   if nsites == 1
-    return [(current_edge, region_kwargs)]
+    !reverse_edge && return [(current_edge, region_kwargs)]
+    reverse_edge && return [(reverse(current_edge), region_kwargs)]
   elseif nsites == 2
     if last(edges) == current_edge
       return ()
@@ -62,25 +63,24 @@ function forward_sweep(
   dir::Base.ForwardOrdering,
   graph::AbstractGraph;
   root_vertex=GraphsExtensions.default_root_vertex(graph),
+  reverse_edges=false,
   region_kwargs,
   reverse_kwargs=region_kwargs,
   reverse_step=false,
   kwargs...,
 )
   edges = post_order_dfs_edges(graph, root_vertex)
-  regions = collect(
-    flatten(map(i -> forward_region(edges, i; region_kwargs, kwargs...), eachindex(edges)))
-  )
-
+  regions = map(eachindex(edges)) do i
+    forward_region(edges, i; region_kwargs, kwargs...)
+  end
+  regions = collect(flatten(regions))
   if reverse_step
-    reverse_regions = collect(
-      flatten(
-        map(
-          i -> reverse_region(edges, i; region_kwargs=reverse_kwargs, kwargs...),
-          eachindex(edges),
-        ),
-      ),
-    )
+    reverse_regions = map(eachindex(edges)) do i
+      reverse_region(
+        edges, i; reverse_edge=reverse_edges, region_kwargs=reverse_kwargs, kwargs...
+      )
+    end
+    reverse_regions = collect(flatten(reverse_regions))
     _check_reverse_sweeps(regions, reverse_regions, graph; kwargs...)
     regions = interleave(regions, reverse_regions)
   end
@@ -90,7 +90,7 @@ end
 
 #ToDo: is there a better name for this? unidirectional_sweep? traversal?
 function forward_sweep(dir::Base.ReverseOrdering, args...; kwargs...)
-  return reverse(forward_sweep(Base.Forward, args...; kwargs...))
+  return reverse(forward_sweep(Base.Forward, args...; reverse_edges=true, kwargs...))
 end
 
 function default_sweep_plans(

@@ -7,6 +7,7 @@ using Graphs:
   add_edge!,
   add_vertex!,
   bfs_tree,
+  center,
   dst,
   edges,
   edgetype,
@@ -18,6 +19,7 @@ using Graphs:
 using ITensors:
   ITensors,
   ITensor,
+  @Algorithm_str,
   addtags,
   combiner,
   commoninds,
@@ -40,10 +42,10 @@ using ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using LinearAlgebra: LinearAlgebra, factorize
 using MacroTools: @capture
-using NamedGraphs: NamedGraphs, NamedGraph, not_implemented
+using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, steiner_tree
 using NamedGraphs.GraphsExtensions:
   ⊔, directed_graph, incident_edges, rename_vertices, vertextype
-using NDTensors: NDTensors, dim
+using NDTensors: NDTensors, dim, Algorithm
 using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
@@ -584,7 +586,9 @@ function LinearAlgebra.factorize(tn::AbstractITensorNetwork, edge::Pair; kwargs.
 end
 
 # For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function _orthogonalize_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+function gauge_edge(
+  alg::Algorithm"orthogonalize", tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...
+)
   # tn = factorize(tn, edge; kwargs...)
   # # TODO: Implement as `only(common_neighbors(tn, src(edge), dst(edge)))`
   # new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
@@ -598,23 +602,43 @@ function _orthogonalize_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwa
   return tn
 end
 
-function ITensorMPS.orthogonalize(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  return _orthogonalize_edge(tn, edge; kwargs...)
-end
-
-function ITensorMPS.orthogonalize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-  return orthogonalize(tn, edgetype(tn)(edge); kwargs...)
-end
-
-# Orthogonalize an ITensorNetwork towards a source vertex, treating
-# the network as a tree spanned by a spanning tree.
-# TODO: Rename `tree_orthogonalize`.
-function ITensorMPS.orthogonalize(ψ::AbstractITensorNetwork, source_vertex)
-  spanning_tree_edges = post_order_dfs_edges(bfs_tree(ψ, source_vertex), source_vertex)
-  for e in spanning_tree_edges
-    ψ = orthogonalize(ψ, e)
+# For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
+function gauge_walk(
+  alg::Algorithm, tn::AbstractITensorNetwork, edges::Vector{<:AbstractEdge}; kwargs...
+)
+  tn = copy(tn)
+  for edge in edges
+    tn = gauge_edge(alg, tn, edge; kwargs...)
   end
-  return ψ
+  return tn
+end
+
+function gauge_walk(alg::Algorithm, tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+  return gauge_edge(alg::Algorithm, tn, edgetype(tn)(edge); kwargs...)
+end
+
+function gauge_walk(
+  alg::Algorithm, tn::AbstractITensorNetwork, edges::Vector{<:Pair}; kwargs...
+)
+  return gauge_walk(alg, tn, edgetype(tn).(edges); kwargs...)
+end
+
+# Gauge a ITensorNetwork towards a region, treating
+# the network as a tree spanned by a spanning tree.
+function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region::Vector)
+  region_center =
+    length(region) != 1 ? first(center(steiner_tree(ψ, region))) : only(region)
+  path = post_order_dfs_edges(bfs_tree(ψ, region_center), region_center)
+  path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
+  return gauge_walk(alg, ψ, path)
+end
+
+function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region)
+  return tree_gauge(alg, ψ, [region])
+end
+
+function tree_orthogonalize(ψ::AbstractITensorNetwork, region; kwargs...)
+  return tree_gauge(Algorithm("orthogonalize"), ψ, region; kwargs...)
 end
 
 # TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
@@ -759,7 +783,7 @@ end
 # Link dimensions
 # 
 
-function ITensors.maxlinkdim(tn::AbstractITensorNetwork)
+function ITensorMPS.maxlinkdim(tn::AbstractITensorNetwork)
   md = 1
   for e in edges(tn)
     md = max(md, linkdim(tn, e))
