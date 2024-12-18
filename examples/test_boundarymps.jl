@@ -1,5 +1,5 @@
 using ITensorNetworks: BoundaryMPSCache, BeliefPropagationCache, QuadraticFormNetwork, IndsNetwork, siteinds, ttn, random_tensornetwork,
-    partitionedplanargraph, gauges, partitionedges, messages, update
+    partitionedplanargraph, gauges, partitionedges, messages, update, partition_update
 using ITensorNetworks.ModelHamiltonians: ising
 using ITensors: Index, OpSum, terms, sites
 using NamedGraphs: NamedEdge
@@ -16,4 +16,4 @@ s = siteinds("S=1/2", g)
 
 #@show PartitionEdge(NamedEdge(1 => 2))
 #@show PartitionEdge(1 => 2)
-#@show partitionedges(ψIψ, PartitionEdge(NamedEdge(2 => 1)))
+@show partition_update(ψIψ, (1,1), (1,2))

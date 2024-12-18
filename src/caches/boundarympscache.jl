@@ -5,12 +5,19 @@ using NamedGraphs.PartitionedGraphs: partitioned_graph
 struct BoundaryMPSCache{BPC,G, D}
     bp_cache::BPC
     gauges::G
-    partitionedvertices::D
+    partitions::D
 end
 
 bp_cache(bmpsc::BoundaryMPSCache) = bmpsc.bp_cache
 gauges(bmpsc::BoundaryMPSCache) = bmpsc.gauges
-partitionedplanargraph(bmpsc::BoundaryMPSCache) = bmpsc.partitionedplanargraph
+partitions(bmpsc::BoundaryMPSCache) = bmpsc.partitions
+planargraph(bmpsc::BoundaryMPSCache) = partitioned_graph(bp_cache(bmpsc))
+
+ITensorNetworks.partitionvertices(bmpsc::BoundaryMPSCache, partition::Int64) = partitions(bmpsc)[partition]
+
+function get_partition(bmpsc::BoundaryMPSCache, v)
+  return only(filter(pv -> v ∈ partitionvertices(bmpsc, pv), keys(partitions(bmpsc))))
+end
 
 function BoundaryMPSCache(bpc::BeliefPropagationCache; sort_f = v -> first(v))
     planar_graph = partitioned_graph(bpc)
@@ -19,22 +26,36 @@ function BoundaryMPSCache(bpc::BeliefPropagationCache; sort_f = v -> first(v))
     return BoundaryMPSCache(bpc, gauges, vertex_groups)
 end
 
-#Get all partitionedges within a column / row partition
-function ITensorNetworks.partitionedges(bmpsc::BoundaryMPSCache, pv::PartitionVertex)
-  pg = partitionedplanargraph(bmpsc)
-  vs = sort(vertices(pg, pv))
-  return PartitionEdge.([vs[i] => vs[i+1] for i in 1:length(vs)])
+#Get all partitionedges within a partition, sorted top to bottom 
+function ITensorNetworks.partitionedges(bmpsc::BoundaryMPSCache, partition::Int64)
+  vs = partitionvertices(bmpsc, partition)
+  return PartitionEdge.([vs[i] => vs[i+1] for i in 1:(length(vs)-1)])
 end
 
 # #Get all partitionedges between rows/ columns
-function ITensorNetworks.partitionedges(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
-  pg = partitionedplanargraph(bmpsc)
-  pv_src_verts, pv_dst_verts = vertices(pg, src(pe)), vertices(pg, dst(pe))
-  es = vcat(edges(pg), reverse.(edges(pg)))
-  return PartitionEdge.(filter(e -> src(e) ∈ pv_src_verts && dst(e) ∈ pv_dst_verts, es))
+# function ITensorNetworks.partitionedges(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
+#   pg = partitionedplanargraph(bmpsc)
+#   pv_src_verts, pv_dst_verts = vertices(pg, src(pe)), vertices(pg, dst(pe))
+#   es = vcat(edges(pg), reverse.(edges(pg)))
+#   return PartitionEdge.(filter(e -> src(e) ∈ pv_src_verts && dst(e) ∈ pv_dst_verts, es))
+# end
+
+#Update all messages flowing within a partition
+function partition_update(bmpsc::BoundaryMPSCache, pv::PartitionVertex; kwargs...)
+  edges = partitionedges(bmpsc, pv)
+  return update(bmpsc, vcat(edges, reverse(reverse.(edges))); kwargs...)
 end
 
-# function partition_update(bmpsc::BoundaryMPSCache, pv::PartitionVertex)
+#Update all messages flowing within a partition from v1 to v2
+function partition_update(bmpsc::BoundaryMPSCache, v1, v2; kwargs...)
+  pv1, pv2 = get_partition(bmpsc, v1), get_partition(bmpsc, v2)
+  @assert pv1 == pv2
+  vs = sort(partitionvertices(bmpsc, pv1))
+  v1_pos, v2_pos = only(findall(x->x==v1, vs)), only(findall(x->x==v2, vs))
+  v1_pos < v2_pos && return PartitionEdge.([vs[i] => vs[i+1] for i in v1_pos:(v2_pos-1)])
+  es = PartitionEdge.([vs[i] => vs[i-1] for i in v2_pos:(v1_pos+1)])
+  return update(bmpsc, es; kwargs...)
+end
 
 #Needed for implementation, forward from beliefpropagationcache
 for f in [
