@@ -21,7 +21,9 @@ end
 
 function BoundaryMPSCache(bpc::BeliefPropagationCache; sort_f = v -> first(v))
     planar_graph = partitioned_graph(bpc)
+    #TODO: Make sure these are sorted
     vertex_groups = group(sort_f, collect(vertices(planar_graph)))
+
     gauges = Dictionary(keys(vertex_groups), ["Nothing" for pv in keys(vertex_groups)])
     return BoundaryMPSCache(bpc, gauges, vertex_groups)
 end
@@ -32,29 +34,25 @@ function ITensorNetworks.partitionedges(bmpsc::BoundaryMPSCache, partition::Int6
   return PartitionEdge.([vs[i] => vs[i+1] for i in 1:(length(vs)-1)])
 end
 
-# #Get all partitionedges between rows/ columns
-# function ITensorNetworks.partitionedges(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
-#   pg = partitionedplanargraph(bmpsc)
-#   pv_src_verts, pv_dst_verts = vertices(pg, src(pe)), vertices(pg, dst(pe))
-#   es = vcat(edges(pg), reverse.(edges(pg)))
-#   return PartitionEdge.(filter(e -> src(e) ∈ pv_src_verts && dst(e) ∈ pv_dst_verts, es))
-# end
-
 #Update all messages flowing within a partition
 function partition_update(bmpsc::BoundaryMPSCache, pv::PartitionVertex; kwargs...)
   edges = partitionedges(bmpsc, pv)
   return update(bmpsc, vcat(edges, reverse(reverse.(edges))); kwargs...)
 end
 
-#Update all messages flowing within a partition from v1 to v2
-function partition_update(bmpsc::BoundaryMPSCache, v1, v2; kwargs...)
+#Edges between v1 and v2 within a partition
+function update_sequence(bmpsc::BoundaryMPSCache, v1, v2)
   pv1, pv2 = get_partition(bmpsc, v1), get_partition(bmpsc, v2)
   @assert pv1 == pv2
-  vs = sort(partitionvertices(bmpsc, pv1))
+  vs = partitionvertices(bmpsc, pv1)
   v1_pos, v2_pos = only(findall(x->x==v1, vs)), only(findall(x->x==v2, vs))
   v1_pos < v2_pos && return PartitionEdge.([vs[i] => vs[i+1] for i in v1_pos:(v2_pos-1)])
-  es = PartitionEdge.([vs[i] => vs[i-1] for i in v2_pos:(v1_pos+1)])
-  return update(bmpsc, es; kwargs...)
+  return PartitionEdge.([vs[i] => vs[i-1] for i in v2_pos:(v1_pos+1)])
+end
+
+#Update all messages flowing within a partition from v1 to v2
+function partition_update(bmpsc::BoundaryMPSCache, v1, v2; kwargs...)
+  return update(bmpsc, update_sequence(bmpsc, v1, v2); kwargs...)
 end
 
 #Needed for implementation, forward from beliefpropagationcache
