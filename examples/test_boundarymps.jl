@@ -1,5 +1,5 @@
 using ITensorNetworks: BoundaryMPSCache, BeliefPropagationCache, QuadraticFormNetwork, IndsNetwork, siteinds, ttn, random_tensornetwork,
-    gauges, partitionedges, messages, update, partition_update, set_messages, message,
+    partitionedges, messages, update, partition_update, set_messages, message,
     planargraph_partitionedges, update_sequence, switch_messages, mps_update, environment, VidalITensorNetwork, ITensorNetwork, expect
 using ITensorNetworks.ModelHamiltonians: ising
 using ITensors: ITensors, Index, OpSum, terms, sites, contract
@@ -14,12 +14,12 @@ using Random
 
 Random.seed!(1234)
 
-L = 3
+L = 4
 g = named_grid((L,L))
-#g = rem_vertex(g, (2,2))
+g = rem_vertex(g, (2,2))
 vc = first(center(g))
 s = siteinds("S=1/2", g)
-ψ = random_tensornetwork(s; link_space = 2)
+ψ = random_tensornetwork(ComplexF64, s; link_space = 4)
 bp_update_kwargs = (; maxiter = 50, tol = 1e-14)
 
 #Run BP first to normalize and put in a stable gauge
@@ -29,13 +29,13 @@ bp_update_kwargs = (; maxiter = 50, tol = 1e-14)
 ψ = ITensorNetwork(ψ)
 ψIψ = BeliefPropagationCache(QuadraticFormNetwork(ψ))
 
-ψIψ = BoundaryMPSCache(ψIψ)
+ψIψ = BoundaryMPSCache(ψIψ; sort_f = v -> first(v))
 
-ψIψ = set_messages(ψIψ; message_rank = 12)
+ψIψ = set_messages(ψIψ; message_rank = 4)
 
-ψIψ = mps_update(ψIψ; maxiter = 10, niters = 10)
+ψIψ = mps_update(ψIψ; maxiter = 10, niters = 5)
 
-ψIψ = partition_update(ψIψ, nothing, vc)
+ψIψ = partition_update(ψIψ, vc)
 
 ρ = contract(environment(ψIψ, [(vc, "operator")]); sequence = "automatic")
 sz = contract([ρ, ITensors.op("Z", s[vc])])[] /contract([ρ, ITensors.op("I", s[vc])])[]

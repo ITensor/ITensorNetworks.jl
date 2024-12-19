@@ -3,31 +3,29 @@ using ITensorNetworks: ITensorNetworks, BeliefPropagationCache
 using NamedGraphs.PartitionedGraphs: partitioned_graph, PartitionVertex, partitionvertex
 using SplitApplyCombine: group
 
-struct BoundaryMPSCache{BPC,G, PG}
+struct BoundaryMPSCache{BPC,PG}
     bp_cache::BPC
-    gauges::G
     partitionedplanargraph::PG
 end
 
 bp_cache(bmpsc::BoundaryMPSCache) = bmpsc.bp_cache
-gauges(bmpsc::BoundaryMPSCache) = bmpsc.gauges
 partitionedplanargraph(bmpsc::BoundaryMPSCache) = bmpsc.partitionedplanargraph
 ppg(bmpsc) = partitionedplanargraph(bmpsc)
 planargraph(bmpsc::BoundaryMPSCache) = unpartitioned_graph(partitionedplanargraph(bmpsc))
 
 function Base.copy(bmpsc::BoundaryMPSCache)
-  return BoundaryMPSCache(copy(bp_cache(bmpsc)), copy(gauges(bmpsc)), copy(ppg(bmpsc)))
+  return BoundaryMPSCache(copy(bp_cache(bmpsc)), copy(ppg(bmpsc)))
 end
 
 planargraph_vertices(bmpsc::BoundaryMPSCache, pv::PartitionVertex) = vertices(ppg(bmpsc), pv)
 planargraph_partitionvertex(bmpsc::BoundaryMPSCache, vertex) = partitionvertex(ppg(bmpsc), vertex)
+planargraph_partitionedge(bmpsc::BoundaryMPSCache, pe::PartitionEdge) = partitionedge(ppg(bmpsc), parent(pe))
 
-function BoundaryMPSCache(bpc::BeliefPropagationCache; sort_f = v -> first(v))
+function BoundaryMPSCache(bpc::BeliefPropagationCache; sort_f::Function = v -> first(v))
     planar_graph = partitioned_graph(bpc)
     vertex_groups = group(sort_f, collect(vertices(planar_graph)))
     ppg = PartitionedGraph(planar_graph, vertex_groups)
-    gauges = Dictionary(partitionvertices(ppg), ["Nothing" for pv in partitionvertices(ppg)])
-    return BoundaryMPSCache(bpc, gauges, ppg)
+    return BoundaryMPSCache(bpc, ppg)
 end
 
 #Get all partitionedges within a partition, sorted top to bottom 
@@ -38,12 +36,40 @@ end
 
 #Edges between v1 and v2 within a partition
 function update_sequence(bmpsc::BoundaryMPSCache, v1, v2)
+  v1 == v2 && return PartitionEdge[]
   pv1, pv2 = planargraph_partitionvertex(bmpsc, v1), planargraph_partitionvertex(bmpsc, v2)
   @assert pv1 == pv2
-  vs = planargraph_vertices(bmpsc, pv1)
+  vs = sort(planargraph_vertices(bmpsc, pv1))
   v1_pos, v2_pos = only(findall(x->x==v1, vs)), only(findall(x->x==v2, vs))
   v1_pos < v2_pos && return PartitionEdge.([vs[i] => vs[i+1] for i in v1_pos:(v2_pos-1)])
-  return PartitionEdge.([vs[i] => vs[i-1] for i in v1_pos:(v2_pos+1)])
+  return PartitionEdge.([vs[i] => vs[i-1] for i in v1_pos:-1:(v2_pos+1)])
+end
+
+#Edges toward v within a partition
+function update_sequence(bmpsc::BoundaryMPSCache, v)
+  pv = planargraph_partitionvertex(bmpsc, v)
+  vs = sort(planargraph_vertices(bmpsc, pv))
+  seq = vcat(update_sequence(bmpsc, last(vs), v), update_sequence(bmpsc, first(vs), v))
+  return seq
+end
+
+#Edges between pe1 and pe2 along an interpartition
+function update_sequence(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge)
+  ppgpe1, ppgpe2 = planargraph_partitionedge(bmpsc, pe1), planargraph_partitionedge(bmpsc, pe2)
+  @assert ppgpe1 == ppgpe2
+  #TODO: Sort these top to bottom
+  pes = planargraph_partitionedges(bmpsc, ppgpe1)
+  pe1_pos, pe2_pos = only(findall(x->x==pe1, pes)), only(findall(x->x==pe2, pes))
+  pe1_pos < pe2_pos && return PartitionEdge.([parent(pes[i]) => parent(pes[i+1]) for i in pe1_pos:(pe2_pos-1)])
+  return PartitionEdge.([parent(pes[i]) => parent(pes[i-1]) for i in pe1_pos:-1:(pe2_pos+1)])
+end
+
+#Edges toward pe1 along an interpartition
+function update_sequence(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
+  ppgpe = planargraph_partitionedge(bmpsc, pe)
+  #TODO: Sort these top to bottom
+  pes =  planargraph_partitionedges(bmpsc, ppgpe)
+  return vcat(update_sequence(pv, last(pes), pe), update_sequence(pv, first(pes), pe))
 end
 
 #Get all partitionedges from p1 to p2, flowing from top to bottom 
@@ -107,9 +133,12 @@ end
 
 #Update all messages flowing within a partition from v1 to v2
 function partition_update(bmpsc::BoundaryMPSCache, v1, v2; kwargs...)
-  v1 == v2 && return bmpsc
-  isnothing(v1) && return partition_update(bmpsc, planargraph_partitionvertex(bmpsc, v2))
   return update(bmpsc, update_sequence(bmpsc, v1, v2); kwargs...)
+end
+
+#Update all messages flowing within a partition from v1 to v2
+function partition_update(bmpsc::BoundaryMPSCache, v; kwargs...)
+  return update(bmpsc, update_sequence(bmpsc, v); kwargs...)
 end
 
 function mps_update(bmpsc::BoundaryMPSCache, pe::PartitionEdge; niters::Int64 = 1)
@@ -122,7 +151,11 @@ function mps_update(bmpsc::BoundaryMPSCache, pe::PartitionEdge; niters::Int64 = 
       cur_v = parent(src(update_pe))
       #TODO: Move gauge centre to update_pe
 
-      bmpsc = partition_update(bmpsc, prev_v, cur_v)
+      if !isnothing(prev_v)
+        bmpsc = partition_update(bmpsc, prev_v, cur_v)
+      else
+        bmpsc = partition_update(bmpsc, cur_v)
+      end
       me = update_message(bmpsc, update_pe)
       bmpsc = set_message(bmpsc, reverse(update_pe), dag.(me))
       prev_v = cur_v
@@ -164,7 +197,7 @@ for f in [
   @eval begin
     function $f(bmpsc::BoundaryMPSCache, args...; kwargs...)
       bpc = $f(bp_cache(bmpsc), args...; kwargs...)
-      return BoundaryMPSCache(bpc, gauges(bmpsc), ppg(bmpsc))
+      return BoundaryMPSCache(bpc, ppg(bmpsc))
     end
   end
 end
