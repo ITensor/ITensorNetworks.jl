@@ -19,7 +19,7 @@ g = named_grid((L,L))
 g = rem_vertex(g, (2,2))
 vc = first(center(g))
 s = siteinds("S=1/2", g)
-ψ = random_tensornetwork(ComplexF64, s; link_space = 4)
+ψ = random_tensornetwork(s; link_space = 4)
 bp_update_kwargs = (; maxiter = 50, tol = 1e-14)
 
 #Run BP first to normalize and put in a stable gauge
@@ -31,9 +31,9 @@ bp_update_kwargs = (; maxiter = 50, tol = 1e-14)
 
 ψIψ = BoundaryMPSCache(ψIψ; sort_f = v -> first(v))
 
-ψIψ = set_messages(ψIψ; message_rank = 4)
+ψIψ = set_messages(ψIψ; message_rank = 1)
 
-ψIψ = mps_update(ψIψ; maxiter = 10, niters = 5)
+ψIψ = mps_update(ψIψ; niters = 50)
 
 ψIψ = partition_update(ψIψ, vc)
 
