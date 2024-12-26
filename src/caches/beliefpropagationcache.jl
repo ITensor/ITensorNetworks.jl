@@ -14,7 +14,7 @@ using NamedGraphs.PartitionedGraphs:
 using SimpleTraits: SimpleTraits, Not, @traitfn
 using NDTensors: NDTensors
 
-default_message(elt, inds_e) = ITensor[denseblocks(delta(elt, i)) for i in inds_e]
+default_message(elt, inds_e) = ITensor[denseblocks(delta(elt, inds_e))]
 default_messages(ptn::PartitionedGraph) = Dictionary()
 function default_message_update(contract_list::Vector{ITensor}; normalize=true, kwargs...)
   sequence = optimal_contraction_sequence(contract_list)

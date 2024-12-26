@@ -2,6 +2,7 @@ using NamedGraphs: NamedGraphs
 using ITensorNetworks: ITensorNetworks, BeliefPropagationCache
 using NamedGraphs.PartitionedGraphs: partitioned_graph, PartitionVertex, partitionvertex
 using SplitApplyCombine: group
+using ITensors: commoninds
 
 struct BoundaryMPSCache{BPC,PG}
     bp_cache::BPC
@@ -69,7 +70,7 @@ function update_sequence(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
   ppgpe = planargraph_partitionedge(bmpsc, pe)
   #TODO: Sort these top to bottom
   pes =  planargraph_partitionedges(bmpsc, ppgpe)
-  return vcat(update_sequence(pv, last(pes), pe), update_sequence(pv, first(pes), pe))
+  return vcat(update_sequence(bmpsc, last(pes), pe), update_sequence(bmpsc, first(pes), pe))
 end
 
 #Get all partitionedges from p1 to p2, flowing from top to bottom 
@@ -98,7 +99,7 @@ function set_messages(bmpsc::BoundaryMPSCache, pe::PartitionEdge; message_rank::
     siteinds = linkinds(bmpsc, pg_pe)
     next_virtual_index = i != length(pes) ? Index(message_rank, "m$(i)$(i+1)") : nothing
     inds = filter(x -> !isnothing(x), [siteinds; prev_virtual_ind; next_virtual_index])
-    set!(ms, pg_pe, ITensor[ITensor(1.0, inds)])
+    set!(ms, pg_pe, ITensor[delta(inds)])
     prev_virtual_ind = next_virtual_index
   end
   return bmpsc
@@ -141,24 +142,75 @@ function partition_update(bmpsc::BoundaryMPSCache, v; kwargs...)
   return update(bmpsc, update_sequence(bmpsc, v); kwargs...)
 end
 
+function ortho_gauge(a::ITensor, b::ITensor; kwargs...)
+  @assert !isempty(commoninds(a,b))
+  left_inds = uniqueinds(a, b)
+  X, Y = factorize(a, left_inds; ortho="left", kwargs...)
+  return X, b*Y
+end
+
+function gauge_move(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge; kwargs...)
+  if length(message(bmpsc, pe1)) == 1
+    m1 = only(message(bmpsc, pe1))
+  else
+    m1 = contract(message(bmpsc, pe1); sequence = "automatic")
+  end
+  if length(message(bmpsc, pe2)) == 1
+    m2 = only(message(bmpsc, pe2))
+  else
+    m2 = contract(message(bmpsc, pe2); sequence = "automatic")
+  end
+  m1, m2 = ortho_gauge(m1, m2; kwargs...)
+  bmpsc = set_message(bmpsc, pe1, ITensor[m1])
+  bmpsc = set_message(bmpsc, pe2, ITensor[m2])
+  return bmpsc
+end
+
+function ortho_gauge(bmpsc::BoundaryMPSCache, pe::PartitionEdge; kwargs...)
+  pe_seq = update_sequence(bmpsc, pe)
+  @show pe_seq
+  for pe_pair in pe_seq
+    pe1, pe2 = PartitionEdge(parent(src(pe_pair))), PartitionEdge(parent(dst(pe_pair)))
+    bmpsc = gauge_move(bmpsc, pe1, pe2)
+  end
+  return bmpsc
+end
+
+function ortho_gauge(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge; kwargs...)
+  pe_seq = update_sequence(bmpsc, pe1, pe2)
+  for pe_pair in pe_seq
+    pe1, pe2 = PartitionEdge(parent(src(pe_pair))), PartitionEdge(parent(dst(pe_pair)))
+    bmpsc = gauge_move(bmpsc, pe1, pe2)
+  end
+  return bmpsc
+end
+
+
 function mps_update(bmpsc::BoundaryMPSCache, pe::PartitionEdge; niters::Int64 = 1)
   bmpsc = switch_messages(bmpsc, pe)
   pes = planargraph_partitionedges(bmpsc, pe)
   update_seq = vcat(pes, reverse(pes))
   prev_v = nothing
+  prev_pe = nothing
   for i in 1:niters
     for update_pe in update_seq
+      @show update_pe
       cur_v = parent(src(update_pe))
-      #TODO: Move gauge centre to update_pe
-
+      if !isnothing(prev_pe)
+        bmpsc = ortho_gauge(bmpsc, reverse(prev_pe), reverse(update_pe))
+      else
+        bmpsc = ortho_gauge(bmpsc, reverse(update_pe))
+      end
       if !isnothing(prev_v)
         bmpsc = partition_update(bmpsc, prev_v, cur_v)
       else
         bmpsc = partition_update(bmpsc, cur_v)
       end
+      #TODO: This will be missing incoming messages in depleted square graphs?!?!
       me = update_message(bmpsc, update_pe)
       bmpsc = set_message(bmpsc, reverse(update_pe), dag.(me))
       prev_v = cur_v
+      prev_pe = update_pe
     end
   end
   return switch_messages(bmpsc, pe)
