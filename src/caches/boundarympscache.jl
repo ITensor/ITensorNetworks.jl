@@ -168,7 +168,6 @@ end
 
 function ortho_gauge(bmpsc::BoundaryMPSCache, pe::PartitionEdge; kwargs...)
   pe_seq = update_sequence(bmpsc, pe)
-  @show pe_seq
   for pe_pair in pe_seq
     pe1, pe2 = PartitionEdge(parent(src(pe_pair))), PartitionEdge(parent(dst(pe_pair)))
     bmpsc = gauge_move(bmpsc, pe1, pe2)
@@ -194,7 +193,6 @@ function mps_update(bmpsc::BoundaryMPSCache, pe::PartitionEdge; niters::Int64 = 
   prev_pe = nothing
   for i in 1:niters
     for update_pe in update_seq
-      @show update_pe
       cur_v = parent(src(update_pe))
       if !isnothing(prev_pe)
         bmpsc = ortho_gauge(bmpsc, reverse(prev_pe), reverse(update_pe))

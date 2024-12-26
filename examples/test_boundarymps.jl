@@ -38,9 +38,9 @@ end
 
 Random.seed!(1234)
 
-L = 3
+L = 4
 g = named_grid((L,L))
-g = rem_vertex(g, (2,2))
+#g = rem_vertex(g, (2,2))
 vc = first(center(g))
 s = siteinds("S=1/2", g)
 ψ = random_tensornetwork(ComplexF64, s; link_space = 2)
@@ -55,7 +55,7 @@ bp_update_kwargs = (; maxiter = 50, tol = 1e-14, message_update = ms -> make_eig
 
 ψIψ = BoundaryMPSCache(ψIψ; sort_f = v -> first(v))
 
-ψIψ = set_messages(ψIψ; message_rank = 2)
+ψIψ = set_messages(ψIψ; message_rank = 4)
 
 #@show inds.(message(ψIψ, PartitionEdge((2,3) => (1,3))))
 #@show inds.(message(ψIψ, PartitionEdge((2,1) => (1,1))))
@@ -65,17 +65,17 @@ bp_update_kwargs = (; maxiter = 50, tol = 1e-14, message_update = ms -> make_eig
 #ψIψ = ortho_gauge(ψIψ, PartitionEdge((1,1) => (2,1)))
 #ψIψ = ortho_gauge(ψIψ, PartitionEdge((1,1) => (2,1)),PartitionEdge((1,3) => (2,3)))
 #TODO: Fix issue with not having messages on depleted square graphss
-ψIψ = mps_update(ψIψ, PartitionEdge(2=>1); niters = 15)
+#ψIψ = mps_update(ψIψ, PartitionEdge(2=>1); niters = 15)
 
-#ψIψ = mps_update(ψIψ; niters = 15)
+ψIψ = mps_update(ψIψ; niters = 15)
 
-# ψIψ = partition_update(ψIψ, vc)
+ψIψ = partition_update(ψIψ, vc)
 
-# ρ = contract(environment(ψIψ, [(vc, "operator")]); sequence = "automatic")
-# sz = contract([ρ, ITensors.op("Z", s[vc])])[] /contract([ρ, ITensors.op("I", s[vc])])[]
+ρ = contract(environment(ψIψ, [(vc, "operator")]); sequence = "automatic")
+sz = contract([ρ, ITensors.op("Z", s[vc])])[] /contract([ρ, ITensors.op("I", s[vc])])[]
 
-# @show sz
+@show sz
 
-# @show expect(ψ, "Z", [vc]; alg = "bp")
+@show expect(ψ, "Z", [vc]; alg = "bp")
 
-# @show exact_expect(ψ, "Z", vc)
+@show exact_expect(ψ, "Z", vc)
