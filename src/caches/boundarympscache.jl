@@ -60,6 +60,7 @@ function update_sequence(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::Parti
   @assert ppgpe1 == ppgpe2
   #TODO: Sort these top to bottom
   pes = planargraph_partitionedges(bmpsc, ppgpe1)
+  pes = sort(pes; by = x -> src(parent(x)))
   pe1_pos, pe2_pos = only(findall(x->x==pe1, pes)), only(findall(x->x==pe2, pes))
   pe1_pos < pe2_pos && return PartitionEdge.([parent(pes[i]) => parent(pes[i+1]) for i in pe1_pos:(pe2_pos-1)])
   return PartitionEdge.([parent(pes[i]) => parent(pes[i-1]) for i in pe1_pos:-1:(pe2_pos+1)])
@@ -70,6 +71,7 @@ function update_sequence(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
   ppgpe = planargraph_partitionedge(bmpsc, pe)
   #TODO: Sort these top to bottom
   pes =  planargraph_partitionedges(bmpsc, ppgpe)
+  pes = sort(pes; by = x -> src(parent(x)))
   return vcat(update_sequence(bmpsc, last(pes), pe), update_sequence(bmpsc, first(pes), pe))
 end
 
@@ -94,6 +96,7 @@ function set_messages(bmpsc::BoundaryMPSCache, pe::PartitionEdge; message_rank::
   bmpsc = copy(bmpsc)
   ms = messages(bmpsc)
   pes = planargraph_partitionedges(bmpsc, pe)
+  pes = sort(pes; by = x -> src(parent(x)))
   prev_virtual_ind = nothing
   for (i, pg_pe) in enumerate(pes)
     siteinds = linkinds(bmpsc, pg_pe)
@@ -118,6 +121,7 @@ function switch_messages(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
   bmpsc = copy(bmpsc)
   ms = messages(bmpsc)
   pes = planargraph_partitionedges(bmpsc, pe)
+  pes = sort(pes; by = x -> src(parent(x)))
   for pe_i in pes
     me, mer = message(bmpsc, pe_i), message(bmpsc, reverse(pe_i))
     set!(ms, pe_i, dag.(mer))
@@ -188,6 +192,7 @@ end
 function mps_update(bmpsc::BoundaryMPSCache, pe::PartitionEdge; niters::Int64 = 1)
   bmpsc = switch_messages(bmpsc, pe)
   pes = planargraph_partitionedges(bmpsc, pe)
+  pe
   update_seq = vcat(pes, reverse(pes))
   prev_v = nothing
   prev_pe = nothing
