@@ -1,15 +1,17 @@
 using ITensorNetworks: BoundaryMPSCache, BeliefPropagationCache, QuadraticFormNetwork, IndsNetwork, siteinds, ttn, random_tensornetwork,
     partitionedges, messages, update, partition_update, set_messages, message,
     planargraph_partitionedges, update_sequence, switch_messages, mps_update, environment, VidalITensorNetwork, ITensorNetwork, expect,
-    default_message_update, contraction_sequence, gauge_move, ortho_gauge, insert_linkinds
+    default_message_update, contraction_sequence, gauge_move, ortho_gauge, insert_linkinds,
+    partitioned_tensornetwork, default_message
 using OMEinsumContractionOrders
 using ITensorNetworks.ITensorsExtensions: map_eigvals
 using ITensorNetworks.ModelHamiltonians: ising
 using ITensors: ITensor, ITensors, Index, OpSum, terms, sites, contract, commonind, replaceind, replaceinds, prime, dag, noncommonind, noncommoninds, inds
-using NamedGraphs: AbstractGraph, NamedEdge, NamedGraph, vertices, neighbors
+using NamedGraphs: NamedGraphs, AbstractGraph, NamedEdge, NamedGraph, vertices, neighbors
 using NamedGraphs.NamedGraphGenerators: named_grid, named_hexagonal_lattice_graph
-using NamedGraphs.GraphsExtensions: rem_vertex
-using NamedGraphs.PartitionedGraphs: partitioned_graph, PartitionVertex, PartitionEdge
+using NamedGraphs.GraphsExtensions: rem_vertex, add_edges
+using NamedGraphs.PartitionedGraphs: PartitionedGraph, partitioned_graph, PartitionVertex, PartitionEdge, unpartitioned_graph,
+    partitioned_vertices, which_partition
 using LinearAlgebra: normalize
 using Graphs: center
 
@@ -36,56 +38,31 @@ function make_eigs_real(A::ITensor)
     return map_eigvals(x -> real(x), A, first(inds(A)), last(inds(A)); ishermitian=true)
 end
 
-function missing_edges(g::AbstractGraph)
-    cols = unique(first.(collect(vertices(g))))
-    missing_es = NamedEdge[]
-    for c in cols
-        c_vs = sort(filter(v -> first(v) == c, collect(vertices(g))))
-        for i in 1:(length(c_vs) - 1)
-            if c_vs[i] ∉ neighbors(g, c_vs[i+1])
-                push!(missing_es, NamedEdge(c_vs[i] => c_vs[i+1]))
-            end
-        end
-    end
-    return missing_es
-end
-
 Random.seed!(1834)
 ITensors.disable_warn_order()
 
 L = 4
-#g = named_grid((L,L))
-#g = rem_vertex(g, (2,2))
-g = named_hexagonal_lattice_graph(L, L)
+g = named_grid((10,3))
+g = rem_vertex(g, (2,2))
+#g = named_hexagonal_lattice_graph(L, L)
 vc = first(center(g))
 s = siteinds("S=1/2", g)
-ψ = random_tensornetwork(ComplexF64, s; link_space = 4)
-ψ = insert_linkinds(ψ, missing_edges(ψ))
+ψ = random_tensornetwork(ComplexF64, s; link_space = 2)
 bp_update_kwargs = (; maxiter = 50, tol = 1e-14, message_update = ms -> make_eigs_real.(default_message_update(ms)))
 
 #Run BP first to normalize and put in a stable gauge
+#bpc = BeliefPropagationCache(QuadraticFormNetwork(ψ))
+#bpc = add_edges(bpc, PartitionEdge.(missing_edges(ψ)))
 ψIψ = BeliefPropagationCache(QuadraticFormNetwork(ψ))
 ψIψ = update(ψIψ; bp_update_kwargs...)
 ψ = VidalITensorNetwork(ψ; cache! = Ref(ψIψ), update_cache = false, cache_update_kwargs = (; maxiter = 0))
 ψ = ITensorNetwork(ψ)
+
 ψIψ = BeliefPropagationCache(QuadraticFormNetwork(ψ))
 
-ψIψ = BoundaryMPSCache(ψIψ; sort_f = v -> first(v))
+ψIψ = BoundaryMPSCache(ψIψ; sort_f = v -> last(v))
 
-ψIψ = set_messages(ψIψ; message_rank = 64)
-
-#@show inds.(message(ψIψ, PartitionEdge((2,3) => (1,3))))
-#@show inds.(message(ψIψ, PartitionEdge((2,1) => (1,1))))
-#ψIψ = gauge_move(ψIψ, PartitionEdge((1,3) => (2,3)), PartitionEdge((1,1) => (2,1)))
-
-#@show message(ψIψ, PartitionEdge((3,2) => (4,2)))
-#@show message(ψIψ, PartitionEdge((4,2) => (3,2)))
-#ψIψ = switch_messages(ψIψ, PartitionEdge(3 => 4))
-#ψIψ = switch_messages(ψIψ, PartitionEdge(3 => 4))
-#ψIψ = ortho_gauge(ψIψ, PartitionEdge((3,1) => (4,1)))
-#ψIψ = ortho_gauge(ψIψ, PartitionEdge((1,1) => (2,1)),PartitionEdge((1,3) => (2,3)))
-#TODO: Fix issue with not having messages on depleted square graphss
-#ψIψ = mps_update(ψIψ, PartitionEdge(4=>3); niters = 15)
+ψIψ = set_messages(ψIψ; message_rank = 4)
 
 ψIψ = mps_update(ψIψ; niters = 15)
 

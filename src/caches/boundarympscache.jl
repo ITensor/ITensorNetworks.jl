@@ -1,6 +1,8 @@
 using NamedGraphs: NamedGraphs
+using NamedGraphs.GraphsExtensions: add_edges
 using ITensorNetworks: ITensorNetworks, BeliefPropagationCache
-using NamedGraphs.PartitionedGraphs: partitioned_graph, PartitionVertex, partitionvertex
+using NamedGraphs.PartitionedGraphs: partitioned_graph, PartitionVertex, partitionvertex, partitioned_vertices,
+  which_partition
 using SplitApplyCombine: group
 using ITensors: commoninds
 
@@ -23,10 +25,11 @@ planargraph_partitionvertex(bmpsc::BoundaryMPSCache, vertex) = partitionvertex(p
 planargraph_partitionedge(bmpsc::BoundaryMPSCache, pe::PartitionEdge) = partitionedge(ppg(bmpsc), parent(pe))
 
 function BoundaryMPSCache(bpc::BeliefPropagationCache; sort_f::Function = v -> first(v))
-    planar_graph = partitioned_graph(bpc)
-    vertex_groups = group(sort_f, collect(vertices(planar_graph)))
-    ppg = PartitionedGraph(planar_graph, vertex_groups)
-    return BoundaryMPSCache(bpc, ppg)
+  bpc = insert_missing_planar_edges(bpc; sort_f)
+  planar_graph = partitioned_graph(bpc)
+  vertex_groups = group(sort_f, collect(vertices(planar_graph)))
+  ppg = PartitionedGraph(planar_graph, vertex_groups)
+  return BoundaryMPSCache(bpc, ppg)
 end
 
 #Get all partitionedges within a partition, sorted top to bottom 
@@ -255,4 +258,30 @@ for f in [
       return BoundaryMPSCache(bpc, ppg(bmpsc))
     end
   end
+end
+
+function NamedGraphs.GraphsExtensions.add_edges(pg::PartitionedGraph, pes::Vector{<:PartitionEdge})
+  g = partitioned_graph(pg)
+  g = add_edges(g, parent.(pes))
+  return PartitionedGraph(unpartitioned_graph(pg), g, partitioned_vertices(pg), which_partition(pg))
+end
+
+function NamedGraphs.GraphsExtensions.add_edges(bpc::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
+  pg = add_edges(partitioned_tensornetwork(bpc), pes)
+  return BeliefPropagationCache(pg, messages(bpc), default_message(bpc))
+end
+
+function insert_missing_planar_edges(bpc::BeliefPropagationCache; sort_f = v -> first(v))
+  pg = partitioned_graph(bpc)
+  partitions = unique(sort_f.(collect(vertices(pg))))
+  es_to_add = PartitionEdge[]
+  for p in partitions
+      vs = sort(filter(v -> sort_f(v) == p, collect(vertices(pg))))
+      for i in 1:(length(vs) - 1)
+          if vs[i] ∉ neighbors(pg, vs[i+1])
+              push!(es_to_add, PartitionEdge(NamedEdge(vs[i] => vs[i+1])))
+          end
+      end
+  end
+  return add_edges(bpc, es_to_add)
 end
