@@ -1,6 +1,6 @@
 using ITensorNetworks: BoundaryMPSCache, BeliefPropagationCache, QuadraticFormNetwork, IndsNetwork, siteinds, ttn, random_tensornetwork,
     partitionedges, messages, update, partition_update, set_messages, message,
-    planargraph_partitionedges, update_sequence, switch_messages, mps_update, environment, VidalITensorNetwork, ITensorNetwork, expect,
+    planargraph_partitionedges, update_sequence, switch_messages, orthogonal_mps_update, environment, VidalITensorNetwork, ITensorNetwork, expect,
     default_message_update, contraction_sequence, gauge_move, ortho_gauge, insert_linkinds,
     partitioned_tensornetwork, default_message
 using OMEinsumContractionOrders
@@ -41,13 +41,13 @@ end
 Random.seed!(1834)
 ITensors.disable_warn_order()
 
-L = 4
-g = named_grid((10,3))
+L = 5
+g = named_grid((L,L))
 g = rem_vertex(g, (2,2))
 #g = named_hexagonal_lattice_graph(L, L)
 vc = first(center(g))
 s = siteinds("S=1/2", g)
-ψ = random_tensornetwork(ComplexF64, s; link_space = 2)
+ψ = random_tensornetwork(ComplexF64, s; link_space = 4)
 bp_update_kwargs = (; maxiter = 50, tol = 1e-14, message_update = ms -> make_eigs_real.(default_message_update(ms)))
 
 #Run BP first to normalize and put in a stable gauge
@@ -60,13 +60,9 @@ bp_update_kwargs = (; maxiter = 50, tol = 1e-14, message_update = ms -> make_eig
 
 ψIψ = BeliefPropagationCache(QuadraticFormNetwork(ψ))
 
-ψIψ = BoundaryMPSCache(ψIψ; sort_f = v -> last(v))
+ψIψ = BoundaryMPSCache(ψIψ; sort_f = v -> last(v), message_rank = 6)
 
-ψIψ = set_messages(ψIψ; message_rank = 4)
-
-ψIψ = mps_update(ψIψ; niters = 15)
-
-ψIψ = partition_update(ψIψ, vc)
+ψIψ = orthogonal_mps_update(ψIψ; niters = 25)
 
 ρ = contract(environment(ψIψ, [(vc, "operator")]); sequence = "automatic")
 sz = contract([ρ, ITensors.op("Z", s[vc])])[] /contract([ρ, ITensors.op("I", s[vc])])[]
