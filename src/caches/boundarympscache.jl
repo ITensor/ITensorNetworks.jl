@@ -38,30 +38,10 @@ function planargraph_partitionedges(bmpsc::BoundaryMPSCache, pv::PartitionVertex
   return PartitionEdge.([vs[i] => vs[i+1] for i in 1:(length(vs)-1)])
 end
 
-#Edges between v1 and v2 within a partition
-function update_sequence(bmpsc::BoundaryMPSCache, v1, v2)
-  v1 == v2 && return PartitionEdge[]
-  pv1, pv2 = planargraph_partitionvertex(bmpsc, v1), planargraph_partitionvertex(bmpsc, v2)
-  @assert pv1 == pv2
-  vs = sort(planargraph_vertices(bmpsc, pv1))
-  v1_pos, v2_pos = only(findall(x->x==v1, vs)), only(findall(x->x==v2, vs))
-  v1_pos < v2_pos && return PartitionEdge.([vs[i] => vs[i+1] for i in v1_pos:(v2_pos-1)])
-  return PartitionEdge.([vs[i] => vs[i-1] for i in v1_pos:-1:(v2_pos+1)])
-end
-
-#Edges toward v within a partition
-function update_sequence(bmpsc::BoundaryMPSCache, v)
-  pv = planargraph_partitionvertex(bmpsc, v)
-  vs = sort(planargraph_vertices(bmpsc, pv))
-  seq = vcat(update_sequence(bmpsc, last(vs), v), update_sequence(bmpsc, first(vs), v))
-  return seq
-end
-
 #Edges between pe1 and pe2 along an interpartition
 function update_sequence(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge)
   ppgpe1, ppgpe2 = planargraph_partitionedge(bmpsc, pe1), planargraph_partitionedge(bmpsc, pe2)
   @assert ppgpe1 == ppgpe2
-  #TODO: Sort these top to bottom
   pes = planargraph_partitionedges(bmpsc, ppgpe1)
   pes = sort(pes; by = x -> src(parent(x)))
   pe1_pos, pe2_pos = only(findall(x->x==pe1, pes)), only(findall(x->x==pe2, pes))
@@ -72,7 +52,6 @@ end
 #Edges toward pe1 along an interpartition
 function update_sequence(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
   ppgpe = planargraph_partitionedge(bmpsc, pe)
-  #TODO: Sort these top to bottom
   pes =  planargraph_partitionedges(bmpsc, ppgpe)
   pes = sort(pes; by = x -> src(parent(x)))
   return vcat(update_sequence(bmpsc, last(pes), pe), update_sequence(bmpsc, first(pes), pe))
@@ -135,18 +114,22 @@ end
 
 #Update all messages flowing within a partition
 function partition_update(bmpsc::BoundaryMPSCache, pv::PartitionVertex; kwargs...)
-  edges = planargraph_partitionedges(bmpsc, pv)
-  return update(bmpsc, vcat(edges, reverse(reverse.(edges))); kwargs...)
+  vs = sort(planargraph_vertices(bmpsc, pv))
+  bmpsc = update(bmpsc, first(vs); kwargs...)
+  bmpsc = update(bmpsc, last(vs); kwargs...)
+  return bmpsc
 end
 
 #Update all messages flowing within a partition from v1 to v2
 function partition_update(bmpsc::BoundaryMPSCache, v1, v2; kwargs...)
-  return update(bmpsc, update_sequence(bmpsc, v1, v2); kwargs...)
+  return update(bmpsc, PartitionEdge.(a_star(ppg(bmpsc), v1, v2)); kwargs...)
 end
 
 #Update all messages flowing within a partition from v1 to v2
 function partition_update(bmpsc::BoundaryMPSCache, v; kwargs...)
-  return update(bmpsc, update_sequence(bmpsc, v); kwargs...)
+  pv = planargraph_partitionvertex(bmpsc, v)
+  g = subgraph(unpartitioned_graph(ppg(bmpsc)), planargraph_vertices(bmpsc, pv))
+  return update(bmpsc, PartitionEdge.(post_order_dfs_edges(g, v)); kwargs...)
 end
 
 function ortho_gauge(a::ITensor, b::ITensor; kwargs...)
@@ -157,16 +140,7 @@ function ortho_gauge(a::ITensor, b::ITensor; kwargs...)
 end
 
 function gauge_move(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge; kwargs...)
-  if length(message(bmpsc, pe1)) == 1
-    m1 = only(message(bmpsc, pe1))
-  else
-    m1 = contract(message(bmpsc, pe1); sequence = "automatic")
-  end
-  if length(message(bmpsc, pe2)) == 1
-    m2 = only(message(bmpsc, pe2))
-  else
-    m2 = contract(message(bmpsc, pe2); sequence = "automatic")
-  end
+  m1, m2 = only(message(bmpsc, pe1)), only(message(bmpsc, pe2))
   m1, m2 = ortho_gauge(m1, m2; kwargs...)
   bmpsc = set_message(bmpsc, pe1, ITensor[m1])
   bmpsc = set_message(bmpsc, pe2, ITensor[m2])
@@ -195,28 +169,16 @@ end
 function mps_update(bmpsc::BoundaryMPSCache, pe::PartitionEdge; niters::Int64 = 1)
   bmpsc = switch_messages(bmpsc, pe)
   pes = planargraph_partitionedges(bmpsc, pe)
-  pe
   update_seq = vcat(pes, reverse(pes))
-  prev_v = nothing
-  prev_pe = nothing
+  prev_v, prev_pe = nothing, nothing
   for i in 1:niters
     for update_pe in update_seq
       cur_v = parent(src(update_pe))
-      if !isnothing(prev_pe)
-        bmpsc = ortho_gauge(bmpsc, reverse(prev_pe), reverse(update_pe))
-      else
-        bmpsc = ortho_gauge(bmpsc, reverse(update_pe))
-      end
-      if !isnothing(prev_v)
-        bmpsc = partition_update(bmpsc, prev_v, cur_v)
-      else
-        bmpsc = partition_update(bmpsc, cur_v)
-      end
-      #TODO: This will be missing incoming messages in depleted square graphs?!?!
+      bmpsc = !isnothing(prev_pe) ? ortho_gauge(bmpsc, reverse(prev_pe), reverse(update_pe)) : ortho_gauge(bmpsc, reverse(update_pe))
+      bmpsc = !isnothing(prev_v) ? partition_update(bmpsc, prev_v, cur_v) : partition_update(bmpsc, cur_v)
       me = update_message(bmpsc, update_pe)
       bmpsc = set_message(bmpsc, reverse(update_pe), dag.(me))
-      prev_v = cur_v
-      prev_pe = update_pe
+      prev_v, prev_pe = cur_v, update_pe
     end
   end
   return switch_messages(bmpsc, pe)
