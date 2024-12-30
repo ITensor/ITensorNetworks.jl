@@ -1,7 +1,7 @@
 using ITensorNetworks: BoundaryMPSCache, BeliefPropagationCache, QuadraticFormNetwork, IndsNetwork, siteinds, ttn, random_tensornetwork,
     partitionedges, messages, update, partition_update, set_messages, message,
-    planargraph_partitionedges, update_sequence, switch_messages, orthogonal_mps_update, environment, VidalITensorNetwork, ITensorNetwork, expect,
-    default_message_update, contraction_sequence, insert_linkinds,
+    planargraph_partitionedges, switch_messages, orthogonal_mps_update, environment, VidalITensorNetwork, ITensorNetwork, expect,
+    default_message_update, contraction_sequence, insert_linkinds, biorthognal_update
     partitioned_tensornetwork, default_message
 using OMEinsumContractionOrders
 using ITensorNetworks.ITensorsExtensions: map_eigvals
@@ -9,7 +9,7 @@ using ITensorNetworks.ModelHamiltonians: ising
 using ITensors: ITensor, ITensors, Index, OpSum, terms, sites, contract, commonind, replaceind, replaceinds, prime, dag, noncommonind, noncommoninds, inds
 using NamedGraphs: NamedGraphs, AbstractGraph, NamedEdge, NamedGraph, vertices, neighbors
 using NamedGraphs.NamedGraphGenerators: named_grid, named_hexagonal_lattice_graph
-using NamedGraphs.GraphsExtensions: rem_vertex, add_edges
+using NamedGraphs.GraphsExtensions: rem_vertex, add_edges, add_edge
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, partitioned_graph, PartitionVertex, PartitionEdge, unpartitioned_graph,
     partitioned_vertices, which_partition
 using LinearAlgebra: normalize
@@ -24,6 +24,15 @@ function lieb_lattice_grid(nx::Int64, ny::Int64; periodic=false)
       if iseven(first(v)) && iseven(last(v))
         g = rem_vertex(g, v)
       end
+    end
+    return g
+end
+
+function named_grid_periodic_x(nxny::Tuple)
+    nx, ny = nxny
+    g = named_grid((nx, ny))
+    for i in 1:ny
+      g = add_edge(g, NamedEdge((nx, i) => (1, i)))
     end
     return g
 end
@@ -54,9 +63,10 @@ ITensors.disable_warn_order()
 
 
 function main()
-    L = 4
+    L = 12
     #g = lieb_lattice_grid(L, L)
-    g = named_hexagonal_lattice_graph(L, L)
+    #g = named_hexagonal_lattice_graph(L, L)
+    g = named_grid_periodic_x((L,2))
     vc = first(center(g))
     s = siteinds("S=1/2", g)
     ψ = random_tensornetwork(ComplexF64, s; link_space = 2)
@@ -74,13 +84,14 @@ function main()
 
     ψIψ_bp = BeliefPropagationCache(QuadraticFormNetwork(ψ))
 
-    rs = [2]
+    rs = [16]
 
     @show exact_expect(ψ, "Z", vc)
 
     for r in rs
         ψIψ = BoundaryMPSCache(ψIψ_bp; sort_f = v -> first(v), message_rank = r)
-        ψIψ = update(ψIψ; mps_fit_kwargs = fit_kwargs)
+        #ψIψ = update(ψIψ; maxiter = 5, mps_fit_kwargs = fit_kwargs)
+        ψIψ = biorthognal_update(ψIψ; maxiter = 5)
         ρ = contract(environment(ψIψ, [(vc, "operator")]); sequence = "automatic")
         sz = contract([ρ, ITensors.op("Z", s[vc])])[] /contract([ρ, ITensors.op("I", s[vc])])[]
         @show sz
