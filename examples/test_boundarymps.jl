@@ -1,7 +1,7 @@
 using ITensorNetworks: BoundaryMPSCache, BeliefPropagationCache, QuadraticFormNetwork, IndsNetwork, siteinds, ttn, random_tensornetwork,
     partitionedges, messages, update, partition_update, set_messages, message,
     planargraph_partitionedges, update_sequence, switch_messages, orthogonal_mps_update, environment, VidalITensorNetwork, ITensorNetwork, expect,
-    default_message_update, contraction_sequence, gauge_move, ortho_gauge, insert_linkinds,
+    default_message_update, contraction_sequence, insert_linkinds,
     partitioned_tensornetwork, default_message
 using OMEinsumContractionOrders
 using ITensorNetworks.ITensorsExtensions: map_eigvals
@@ -16,6 +16,17 @@ using LinearAlgebra: normalize
 using Graphs: center
 
 using Random
+
+function lieb_lattice_grid(nx::Int64, ny::Int64; periodic=false)
+    @assert (!periodic && isodd(nx) && isodd(ny)) || (periodic && iseven(nx) && iseven(ny))
+    g = named_grid((nx, ny); periodic)
+    for v in vertices(g)
+      if iseven(first(v)) && iseven(last(v))
+        g = rem_vertex(g, v)
+      end
+    end
+    return g
+end
 
 function exact_expect(ψ::ITensorNetwork, ops::Vector{<:String}, vs::Vector)
     s = siteinds(ψ)
@@ -41,34 +52,39 @@ end
 Random.seed!(1834)
 ITensors.disable_warn_order()
 
-L = 5
-g = named_grid((L,L))
-g = rem_vertex(g, (2,2))
-#g = named_hexagonal_lattice_graph(L, L)
-vc = first(center(g))
-s = siteinds("S=1/2", g)
-ψ = random_tensornetwork(ComplexF64, s; link_space = 4)
-bp_update_kwargs = (; maxiter = 50, tol = 1e-14, message_update = ms -> make_eigs_real.(default_message_update(ms)))
 
-#Run BP first to normalize and put in a stable gauge
-#bpc = BeliefPropagationCache(QuadraticFormNetwork(ψ))
-#bpc = add_edges(bpc, PartitionEdge.(missing_edges(ψ)))
-ψIψ = BeliefPropagationCache(QuadraticFormNetwork(ψ))
-ψIψ = update(ψIψ; bp_update_kwargs...)
-ψ = VidalITensorNetwork(ψ; cache! = Ref(ψIψ), update_cache = false, cache_update_kwargs = (; maxiter = 0))
-ψ = ITensorNetwork(ψ)
+function main()
+    L = 4
+    #g = lieb_lattice_grid(L, L)
+    g = named_hexagonal_lattice_graph(L, L)
+    vc = first(center(g))
+    s = siteinds("S=1/2", g)
+    ψ = random_tensornetwork(ComplexF64, s; link_space = 2)
+    bp_update_kwargs = (; maxiter = 50, tol = 1e-14, message_update = ms -> make_eigs_real.(default_message_update(ms)))
 
-ψIψ = BeliefPropagationCache(QuadraticFormNetwork(ψ))
+    #Run BP first to normalize and put in a stable gauge
+    #bpc = BeliefPropagationCache(QuadraticFormNetwork(ψ))
+    #bpc = add_edges(bpc, PartitionEdge.(missing_edges(ψ)))
+    ψIψ = BeliefPropagationCache(QuadraticFormNetwork(ψ))
+    ψIψ = update(ψIψ; bp_update_kwargs...)
+    ψ = VidalITensorNetwork(ψ; cache! = Ref(ψIψ), update_cache = false, cache_update_kwargs = (; maxiter = 0))
+    ψ = ITensorNetwork(ψ)
 
-ψIψ = BoundaryMPSCache(ψIψ; sort_f = v -> last(v), message_rank = 6)
+    fit_kwargs = (;niters = 50, tolerance = 1e-12)
 
-ψIψ = orthogonal_mps_update(ψIψ; niters = 25)
+    ψIψ_bp = BeliefPropagationCache(QuadraticFormNetwork(ψ))
 
-ρ = contract(environment(ψIψ, [(vc, "operator")]); sequence = "automatic")
-sz = contract([ρ, ITensors.op("Z", s[vc])])[] /contract([ρ, ITensors.op("I", s[vc])])[]
+    rs = [2]
 
-@show sz
+    @show exact_expect(ψ, "Z", vc)
 
-@show expect(ψ, "Z", [vc]; alg = "bp")
+    for r in rs
+        ψIψ = BoundaryMPSCache(ψIψ_bp; sort_f = v -> first(v), message_rank = r)
+        ψIψ = update(ψIψ; mps_fit_kwargs = fit_kwargs)
+        ρ = contract(environment(ψIψ, [(vc, "operator")]); sequence = "automatic")
+        sz = contract([ρ, ITensors.op("Z", s[vc])])[] /contract([ρ, ITensors.op("I", s[vc])])[]
+        @show sz
+    end
+end
 
-@show exact_expect(ψ, "Z", vc)
+main()
