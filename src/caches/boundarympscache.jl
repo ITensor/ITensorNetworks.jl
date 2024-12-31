@@ -46,6 +46,10 @@ function BoundaryMPSCache(bpc::BeliefPropagationCache; sort_f::Function = v -> f
   return set_interpartition_messages(bmpsc, message_rank)
 end
 
+function BoundaryMPSCache(tn::AbstractITensorNetwork; kwargs...)
+  return BoundaryMPSCache(BeliefPropagationCache(tn); kwargs...)
+end
+
 #Get all partitionedges within a column/row, ordered top to bottom
 function planargraph_partitionedges(bmpsc::BoundaryMPSCache, partition::Int64)
   vs = sort(planargraph_vertices(bmpsc, partition))
