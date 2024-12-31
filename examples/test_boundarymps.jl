@@ -85,14 +85,14 @@ function main()
 
     ψIψ_bp = BeliefPropagationCache(QuadraticFormNetwork(ψ))
     #ψIψ = BoundaryMPSCache(ψIψ_bp; sort_f = v -> first(v), message_rank = 4)
-    rs = [16]
+    rs = [1,2,4,8,16]
 
     @show exact_expect(ψ, "Z", vc)
 
     for r in rs
         ψIψ = BoundaryMPSCache(ψIψ_bp; sort_f = v -> first(v), message_rank = r)
-        #ψIψ = update(ψIψ; mps_fit_kwargs = fit_kwargs)
-        ψIψ = update(ψIψ; alg = "biorthogonal", maxiter =50)
+        ψIψ = update(ψIψ; mps_fit_kwargs = fit_kwargs)
+        #ψIψ = update(ψIψ; alg = "biorthogonal", maxiter =50)
         ρ = contract(environment(ψIψ, [(vc, "operator")]); sequence = "automatic")
         sz = contract([ρ, ITensors.op("Z", s[vc])])[] /contract([ρ, ITensors.op("I", s[vc])])[]
         @show sz
