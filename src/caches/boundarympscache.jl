@@ -6,7 +6,7 @@ using ITensorMPS: ITensorMPS, orthogonalize
 using NamedGraphs.PartitionedGraphs: partitioned_graph, PartitionVertex, partitionvertex, partitioned_vertices,
   which_partition
 using SplitApplyCombine: group
-using ITensors: commoninds
+using ITensors: commoninds, random_itensor
 using LinearAlgebra: pinv
 
 pair(pe::PartitionEdge) = parent(src(pe)) => parent(dst(pe))
@@ -31,8 +31,10 @@ tensornetwork(bmpsc::BoundaryMPSCache) = tensornetwork(bp_cache(bmpsc))
 partitioned_tensornetwork(bmpsc::BoundaryMPSCache) = partitioned_tensornetwork(bp_cache(bmpsc))
 
 default_edge_sequence(bmpsc::BoundaryMPSCache) = pair.(default_edge_sequence(ppg(bmpsc)))
-default_bp_maxiter(bmpsc::BoundaryMPSCache) = default_bp_maxiter(partitioned_graph(ppg(bmpsc)))
-default_mps_fit_kwargs(bmpsc::BoundaryMPSCache) = (; niters = 25, tolerance = 1e-10)
+default_bp_maxiter(alg::Algorithm"orthogonal", bmpsc::BoundaryMPSCache) = default_bp_maxiter(partitioned_graph(ppg(bmpsc)))
+default_bp_maxiter(alg::Algorithm"biorthogonal", bmpsc::BoundaryMPSCache) = 50
+default_mps_fit_kwargs(alg::Algorithm"orthogonal", bmpsc::BoundaryMPSCache) = (; niters = 50, tolerance = 1e-10)
+default_mps_fit_kwargs(alg::Algorithm"biorthogonal", bmpsc::BoundaryMPSCache) = (; )
 
 function Base.copy(bmpsc::BoundaryMPSCache)
   return BoundaryMPSCache(copy(bp_cache(bmpsc)), copy(ppg(bmpsc)))
@@ -76,9 +78,9 @@ end
 
 #Get all partitionedges between the pair of neighboring partitions, sorted top to bottom
 #TODO: Bring in line with NamedGraphs change
-function planargraph_partitionpair_partitionedges(bmpsc::BoundaryMPSCache, pe::Pair)
+function planargraph_partitionpair_partitionedges(bmpsc::BoundaryMPSCache, partitionpair::Pair)
   pg = planargraph(bmpsc)
-  src_vs, dst_vs = planargraph_vertices(bmpsc, first(pe)), planargraph_vertices(bmpsc, last(pe))
+  src_vs, dst_vs = planargraph_vertices(bmpsc, first(partitionpair)), planargraph_vertices(bmpsc, last(partitionpair))
   es = filter(x -> !isempty(last(x)), [src_v => intersect(neighbors(pg, src_v), dst_vs) for src_v in src_vs])
   es = map(x -> first(x) => only(last(x)), es)
   return sort(PartitionEdge.(NamedEdge.(es)); by = x -> src(parent(x)))
@@ -92,22 +94,29 @@ function set_message(bmpsc::BoundaryMPSCache, pe::PartitionEdge, m::Vector{ITens
 end
 
 #Initialise all the message tensors for the pair of neighboring partitions, with virtual rank given by message rank
-function set_interpartition_messages(bmpsc::BoundaryMPSCache, pe::Pair, message_rank::Int64)
+function set_interpartition_messages(bmpsc::BoundaryMPSCache, partitionpair::Pair, message_rank::Int64)
   bmpsc = copy(bmpsc)
   ms = messages(bmpsc)
-  pes = planargraph_partitionpair_partitionedges(bmpsc, pe)
+  pes = planargraph_partitionpair_partitionedges(bmpsc, partitionpair)
   prev_virtual_ind = nothing
   for (i, pg_pe) in enumerate(pes)
     siteinds = linkinds(bmpsc, pg_pe)
     next_virtual_index = i != length(pes) ? Index(message_rank, "m$(i)$(i+1)") : nothing
-    inds = filter(x -> !isnothing(x), [siteinds; prev_virtual_ind; next_virtual_index])
-    set!(ms, pg_pe, ITensor[delta(inds)])
+    me = delta(siteinds)
+    if !isnothing(prev_virtual_ind)
+      me *= ITensor(1.0, prev_virtual_ind)
+    end
+    if !isnothing(next_virtual_index)
+      me *= ITensor(1.0, next_virtual_index)
+    end
+
+    set!(ms, pg_pe, ITensor[me])
     prev_virtual_ind = next_virtual_index
   end
   return bmpsc
 end
 
-#Initialise all the inerpartition message tensors with virtual rank given by message rank
+#Initialise all the interpartition message tensors with virtual rank given by message rank
 function set_interpartition_messages(bmpsc::BoundaryMPSCache, message_rank::Int64 = 1)
   bmpsc = copy(bmpsc)
   pes = partitionedges(ppg(bmpsc))
@@ -118,10 +127,10 @@ function set_interpartition_messages(bmpsc::BoundaryMPSCache, message_rank::Int6
 end
 
 #Switch the message tensors from column/row  i -> i + 1 with those from i + 1 -> i
-function switch_messages(bmpsc::BoundaryMPSCache, pe::Pair)
+function switch_messages(bmpsc::BoundaryMPSCache, partitionpair::Pair)
   bmpsc = copy(bmpsc)
   ms = messages(bmpsc)
-  pes = planargraph_partitionpair_partitionedges(bmpsc, pe)
+  pes = planargraph_partitionpair_partitionedges(bmpsc, partitionpair)
   for pe_i in pes
     me, mer = message(bmpsc, pe_i), message(bmpsc, reverse(pe_i))
     set!(ms, pe_i, dag.(mer))
@@ -151,7 +160,7 @@ function partition_update(bmpsc::BoundaryMPSCache, v; kwargs...)
 end
 
 #Move the orthogonality centre one step on an interpartition from the message tensor on pe1 to that on pe2 
-function orthogonal_gauge_step(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge; kwargs...)
+function gauge_step(alg::Algorithm"orthogonalize", bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge; kwargs...)
   bmpsc = copy(bmpsc)
   ms = messages(bmpsc)
   m1, m2 = only(message(bmpsc, pe1)), only(message(bmpsc, pe2))
@@ -164,46 +173,53 @@ function orthogonal_gauge_step(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2:
   return bmpsc
 end
 
-#Move the orthogonality centre on an interpartition via a sequence of steps between message tensors
-function orthogonal_gauge_walk(bmpsc::BoundaryMPSCache, seq::Vector; kwargs...)
+#Move the biorthogonality centre one step on an interpartition from the message tensor on pe1 to that on pe2 
+function gauge_step(alg::Algorithm"biorthogonalize", bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge; regularization = 1e-12)
+  bmpsc = copy(bmpsc)
+  ms = messages(bmpsc)
+
+  m1, m1r = only(message(bmpsc, pe1)), only(message(bmpsc, reverse(pe1)))
+  m2, m2r = only(message(bmpsc, pe2)), only(message(bmpsc, reverse(pe2)))
+  top_cind, bottom_cind = commonind(m1, m2), commonind(m1r, m2r)
+  m1_siteinds, m2_siteinds = commoninds(m1, m1r), commoninds(m2, m2r)
+  top_ncind, bottom_ncind = setdiff(inds(m1), [m1_siteinds; top_cind]), setdiff(inds(m1r), [m1_siteinds; bottom_cind])
+
+  E = isempty(top_ncind) ? m1 * m1r : m1 * replaceind(m1r, only(bottom_ncind), only(top_ncind))
+  U, S, V = svd(E, bottom_cind; alg = "recursive")
+
+  S_sqrtinv = map_diag(x -> pinv(sqrt(x)), S)
+  S_sqrt = map_diag(x -> sqrt(x), S)
+
+  set!(ms, pe1, ITensor[replaceind((m1 * dag(V)) * S_sqrtinv, commonind(U, S), top_cind)])
+  set!(ms, reverse(pe1), ITensor[replaceind((m1r * dag(U)) * S_sqrtinv, commonind(V, S), bottom_cind)])
+  set!(ms, pe2, ITensor[replaceind((m2 * V) * S_sqrt, commonind(U, S), top_cind)])
+  set!(ms, reverse(pe2), ITensor[replaceind((m2r * U) * S_sqrt, commonind(V, S), bottom_cind)])
+
+  return bmpsc
+end
+
+#Move the orthogonality / biorthogonality centre on an interpartition via a sequence of steps between message tensors
+function gauge_walk(alg::Algorithm, bmpsc::BoundaryMPSCache, seq::Vector; kwargs...)
   for (pe1, pe2) in seq
-    bmpsc = orthogonal_gauge_step(bmpsc, pe1, pe2)
+    bmpsc = gauge_step(alg::Algorithm, bmpsc, pe1, pe2)
   end
   return bmpsc
 end
 
-#Move the biorthogonality centre on an interpartition via a sequence of steps between message tensors
-function biorthogonal_gauge_walk(bmpsc::BoundaryMPSCache, seq::Vector; kwargs...)
-  for (pe1, pe2) in seq
-    bmpsc = biorthogonal_gauge_step(bmpsc, pe1, pe2)
-  end
-  return bmpsc
+#Move the orthogonality centre on an interpartition to the message tensor on pe or between two pes
+function ITensorMPS.orthogonalize(bmpsc::BoundaryMPSCache, args...; kwargs...)
+  return gauge_walk(Algorithm("orthogonalize"), bmpsc, mps_gauge_update_sequence(bmpsc, args...); kwargs...)
 end
 
-#Move the orthogonality centre on an interpartition to the message tensor on pe
-function ITensorMPS.orthogonalize(bmpsc::BoundaryMPSCache, pe::PartitionEdge; kwargs...)
-  return orthogonal_gauge_walk(bmpsc, mps_gauge_update_sequence(bmpsc, pe); kwargs...)
-end
-
-#Move the orthogonality centre on an interpartition from the message tensor on pe1 to that on pe2 
-function ITensorMPS.orthogonalize(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge; kwargs...)
-  return orthogonal_gauge_walk(bmpsc, mps_gauge_update_sequence(bmpsc, pe1, pe2); kwargs...)
-end
-
-#Move the biorthogonality centre on an interpartition to the message tensor on pe
-function biorthogonalize(bmpsc::BoundaryMPSCache, pe::PartitionEdge; kwargs...)
-  return biorthogonal_gauge_walk(bmpsc, mps_gauge_update_sequence(bmpsc, pe); kwargs...)
-end
-
-#Move the biorthogonality centre on an interpartition from the message tensor on pe1 to that on pe2 
-function biorthogonalize(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge; kwargs...)
-  return biorthogonal_gauge_walk(bmpsc, mps_gauge_update_sequence(bmpsc, pe1, pe2); kwargs...)
+#Move the biorthogonality centre on an interpartition to the message tensor or between two pes
+function biorthogonalize(bmpsc::BoundaryMPSCache, args...; kwargs...)
+  return gauge_walk(Algorithm("biorthogonalize"), bmpsc, mps_gauge_update_sequence(bmpsc, args...); kwargs...)
 end
 
 #Update all the message tensors on an interpartition via an orthogonal fitting procedure
-function orthogonal_mps_update(bmpsc::BoundaryMPSCache, pe::Pair; niters::Int64 = 25, tolerance = 1e-10, normalize = true)
-  bmpsc = switch_messages(bmpsc, pe)
-  pes = planargraph_partitionpair_partitionedges(bmpsc, pe)
+function mps_update(alg::Algorithm"orthogonal", bmpsc::BoundaryMPSCache, partitionpair::Pair; niters::Int64 = 25, tolerance = 1e-10, normalize = true)
+  bmpsc = switch_messages(bmpsc, partitionpair)
+  pes = planargraph_partitionpair_partitionedges(bmpsc, partitionpair)
   update_seq = vcat(pes, reverse(pes)[2:length(pes)])
   prev_v, prev_pe = nothing, nothing
   prev_costfunction = 0
@@ -220,26 +236,28 @@ function orthogonal_mps_update(bmpsc::BoundaryMPSCache, pe::Pair; niters::Int64 
     end
     epsilon = abs(costfunction - prev_costfunction) / length(update_seq)
     if !isnothing(tolerance) && epsilon < tolerance
-      return switch_messages(bmpsc, pe)
+      return switch_messages(bmpsc, partitionpair)
     else
       prev_costfunction = costfunction
     end
   end
-  return switch_messages(bmpsc, pe)
+  return switch_messages(bmpsc, partitionpair)
 end 
 
 #Update all the message tensors on an interpartition via a biorthogonal fitting procedure
-function biorthogonal_mps_update(bmpsc::BoundaryMPSCache, pe::Pair; normalize = true)
-  pes = planargraph_partitionpair_partitionedges(bmpsc, pe)
-  update_seq = pes
+function mps_update(alg::Algorithm"biorthogonal", bmpsc::BoundaryMPSCache, partitionpair::Pair; normalize = true)
   prev_v, prev_pe = nothing, nothing
-  for update_pe in update_seq
+  for update_pe in planargraph_partitionpair_partitionedges(bmpsc, partitionpair)
     cur_v = parent(src(update_pe))
     bmpsc = !isnothing(prev_pe) ? biorthogonalize(bmpsc, prev_pe, update_pe) : biorthogonalize(bmpsc, update_pe)
     bmpsc = !isnothing(prev_v) ? partition_update(bmpsc, prev_v, cur_v; message_update = ms -> default_message_update(ms; normalize = false)) : partition_update(bmpsc, cur_v; message_update = ms -> default_message_update(ms; normalize = false))
+    me_prev = only(message(bmpsc, update_pe))
     me = only(update_message(bmpsc, update_pe; message_update = ms -> default_message_update(ms; normalize)))
-    mer = only(message(bmpsc, reverse(update_pe)))
-    me = replaceinds(me, noncommoninds(me, mer), noncommoninds(mer, me))
+    is, is_to_replace = uniqueinds(me, me_prev), uniqueinds(me_prev, me)
+    for i in is
+      i_replacement = only(filter(ip -> tags(ip) == tags(i), is_to_replace))
+      me = replaceind(me, i, i_replacement)
+    end
     bmpsc = set_message(bmpsc, update_pe, ITensor[me])
     prev_v, prev_pe = cur_v, update_pe
   end
@@ -247,48 +265,30 @@ function biorthogonal_mps_update(bmpsc::BoundaryMPSCache, pe::Pair; normalize = 
   return bmpsc
 end 
 
-
 """
 More generic interface for update, with default params
 """
 function update(
+  alg::Algorithm,
   bmpsc::BoundaryMPSCache;
-  pes=default_edge_sequence(bmpsc),
-  maxiter=default_bp_maxiter(bmpsc),
-  mps_fit_kwargs = default_mps_fit_kwargs(bmpsc)
+  partitionpairs=default_edge_sequence(bmpsc),
+  maxiter=default_bp_maxiter(alg, bmpsc),
+  mps_fit_kwargs = default_mps_fit_kwargs(alg, bmpsc)
 )
   if isnothing(maxiter)
     error("You need to specify a number of iterations for Boundary MPS!")
   end
   for i in 1:maxiter
-    for pe in pes
-      bmpsc = orthogonal_mps_update(bmpsc, pe; mps_fit_kwargs...)
+    for partitionpair in partitionpairs
+      bmpsc = mps_update(alg, bmpsc, partitionpair; mps_fit_kwargs...)
     end
   end
   return bmpsc
 end
 
-"""
-More generic interface for update, with default params
-"""
-function biorthognal_update(
-  bmpsc::BoundaryMPSCache;
-  pes=default_edge_sequence(bmpsc),
-  maxiter=25,
-)
-  if isnothing(maxiter)
-    error("You need to specify a number of iterations for Boundary MPS!")
-  end
-  for i in 1:maxiter
-    for pe in pes
-      bmpsc = biorthogonal_mps_update(bmpsc, pe)
-    end
-  end
-  return bmpsc
+function update(bmpsc::BoundaryMPSCache; alg::String = "orthogonal", kwargs...)
+  return update(Algorithm(alg), bmpsc; kwargs...)
 end
-
-
-
 
 function ITensorNetworks.environment(bmpsc::BoundaryMPSCache, verts::Vector; kwargs...)
   vs = parent.((partitionvertices(bp_cache(bmpsc), verts)))
@@ -368,61 +368,4 @@ function insert_pseudo_planar_edges(bpc::BeliefPropagationCache; sort_f = v -> f
       end
   end
   return add_pseudo_partitionedges(bpc, pseudo_edges)
-end
-
-
-function biorthogonal_gauge_step(bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge; regularization = 0)
-  bmpsc = copy(bmpsc)
-  ms = messages(bmpsc)
-
-  m1, m1r = only(message(bmpsc, pe1)), only(message(bmpsc, reverse(pe1)))
-  m2, m2r = only(message(bmpsc, pe2)), only(message(bmpsc, reverse(pe2)))
-  top_cind, bottom_cind = commonind(m1, m2), commonind(m1r, m2r)
-  m1_siteinds, m2_siteinds = commoninds(m1, m1r), commoninds(m2, m2r)
-  top_ncind, bottom_ncind = setdiff(inds(m1), [m1_siteinds; top_cind]), setdiff(inds(m1r), [m1_siteinds; bottom_cind])
-
-  E = isempty(top_ncind) ? m1 * m1r : m1 * replaceind(m1r, only(bottom_ncind), only(top_ncind))
-  U, S, V = svd(E, bottom_cind; alg = "recursive")
-  S_sqrtinv = map_diag(x -> pinv(sqrt(x + regularization)), S)
-  S_sqrt = map_diag(x -> sqrt(x + regularization), S)
-
-  set!(ms, pe1, ITensor[replaceind((m1 * dag(V)) * S_sqrtinv, commonind(U, S), top_cind)])
-  set!(ms, reverse(pe1), ITensor[replaceind((m1r * dag(U)) * S_sqrtinv, commonind(V, S), bottom_cind)])
-  set!(ms, pe2, ITensor[replaceind((m2 * V) * S_sqrt, commonind(U, S), top_cind)])
-  set!(ms, reverse(pe2), ITensor[replaceind((m2r * U) * S_sqrt, commonind(V, S), bottom_cind)])
-
-  @show inds(only(ms[pe1])), inds(only(ms[reverse(pe1)]))
-  @show inds(only(ms[pe2])), inds(only(ms[reverse(pe2)]))
-  return bmpsc
-end
-
-function biorthogonalize_walk(ψ::ITensorNetwork, ϕ::ITensorNetwork, path::Vector{<:NamedEdge};
-  regularization = 0)
-  ψ, ϕ = copy(ψ), copy(ϕ)
-  ep = first(path)
-  for e in path
-      vsrc, vdst = src(e), dst(e)
-      top_cind = commonind(ψ[vsrc], ψ[vdst])
-      bottom_cind = commonind(ϕ[vsrc], ϕ[vdst])
-      vsrc_siteinds = commoninds(ψ[vsrc], ϕ[vsrc])
-      top_src_ncind = setdiff(inds(ψ[vsrc]), [vsrc_siteinds; top_cind])
-      bottom_src_ncind = setdiff(inds(ϕ[vsrc]), [vsrc_siteinds; bottom_cind])
-      if isempty(top_src_ncind)
-          E = ψ[vsrc] * ϕ[vsrc]
-      else
-          E = ψ[vsrc] * replaceind(ϕ[vsrc], only(bottom_src_ncind), only(top_src_ncind))
-      end
-
-      U, S, V = svd(E, bottom_cind; alg = "recursive")
-      S_sqrtinv = map_diag(x -> pinv(sqrt(x + regularization)), S)
-      S_sqrt = map_diag(x -> sqrt(x + regularization), S)
-      ψ[vsrc] = replaceind((ψ[vsrc] * dag(V)) * S_sqrtinv, commonind(U, S), top_cind)
-      ϕ[vsrc] = replaceind((ϕ[vsrc] * dag(U)) * S_sqrtinv, commonind(V, S), bottom_cind)
-
-      ψ[vdst] = replaceind((ψ[vdst] * V) * S_sqrt, commonind(U, S), top_cind)
-      ϕ[vdst] = replaceind((ϕ[vdst] * U) * S_sqrt, commonind(V, S), bottom_cind)
-
-  end
-
-  return ψ, ϕ
 end

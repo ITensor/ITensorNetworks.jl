@@ -1,8 +1,8 @@
 using ITensorNetworks: BoundaryMPSCache, BeliefPropagationCache, QuadraticFormNetwork, IndsNetwork, siteinds, ttn, random_tensornetwork,
     partitionedges, messages, update, partition_update, set_messages, message,
     planargraph_partitionedges, switch_messages, orthogonal_mps_update, environment, VidalITensorNetwork, ITensorNetwork, expect,
-    default_message_update, contraction_sequence, insert_linkinds, biorthognal_update
-    partitioned_tensornetwork, default_message
+    default_message_update, contraction_sequence, insert_linkinds, biorthognal_update,
+    partitioned_tensornetwork, default_message, biorthogonalize
 using OMEinsumContractionOrders
 using ITensorNetworks.ITensorsExtensions: map_eigvals
 using ITensorNetworks.ModelHamiltonians: ising
@@ -63,13 +63,14 @@ ITensors.disable_warn_order()
 
 
 function main()
-    L = 12
-    #g = lieb_lattice_grid(L, L)
+    L = 5
+    g = lieb_lattice_grid(L, L)
     #g = named_hexagonal_lattice_graph(L, L)
-    g = named_grid_periodic_x((L,2))
+    #g = named_grid_periodic_x((L,2))
+    #g = named_grid((L, 3))
     vc = first(center(g))
     s = siteinds("S=1/2", g)
-    ψ = random_tensornetwork(ComplexF64, s; link_space = 2)
+    ψ = random_tensornetwork(s; link_space = 4)
     bp_update_kwargs = (; maxiter = 50, tol = 1e-14, message_update = ms -> make_eigs_real.(default_message_update(ms)))
 
     #Run BP first to normalize and put in a stable gauge
@@ -83,15 +84,15 @@ function main()
     fit_kwargs = (;niters = 50, tolerance = 1e-12)
 
     ψIψ_bp = BeliefPropagationCache(QuadraticFormNetwork(ψ))
-
+    #ψIψ = BoundaryMPSCache(ψIψ_bp; sort_f = v -> first(v), message_rank = 4)
     rs = [16]
 
     @show exact_expect(ψ, "Z", vc)
 
     for r in rs
         ψIψ = BoundaryMPSCache(ψIψ_bp; sort_f = v -> first(v), message_rank = r)
-        #ψIψ = update(ψIψ; maxiter = 5, mps_fit_kwargs = fit_kwargs)
-        ψIψ = biorthognal_update(ψIψ; maxiter = 5)
+        #ψIψ = update(ψIψ; mps_fit_kwargs = fit_kwargs)
+        ψIψ = update(ψIψ; alg = "biorthogonal", maxiter =50)
         ρ = contract(environment(ψIψ, [(vc, "operator")]); sequence = "automatic")
         sz = contract([ρ, ITensors.op("Z", s[vc])])[] /contract([ρ, ITensors.op("I", s[vc])])[]
         @show sz
