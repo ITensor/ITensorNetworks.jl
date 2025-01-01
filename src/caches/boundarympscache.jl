@@ -108,6 +108,7 @@ function set_interpartition_messages(bmpsc::BoundaryMPSCache, partitionpair::Pai
     set!(ms, pg_pe, ITensor[me])
     prev_virtual_ind = next_virtual_index
   end
+
   return bmpsc
 end
 
@@ -336,3 +337,5 @@ function update(bmpsc::BoundaryMPSCache, pes::Vector{<:PartitionEdge}; kwargs...
   bpc = update(bpc, pes; kwargs...)
   return BoundaryMPSCache(bpc, partitionedplanargraph(bmpsc))
 end
+
+#TODO: Function to get the virtual indices coming from above and below an interparititon message tensor
