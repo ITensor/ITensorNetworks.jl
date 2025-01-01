@@ -6,7 +6,9 @@ using ITensorNetworks:
   ITensorNetworks,
   BeliefPropagationCache,
   BoundaryMPSCache,
+  ITensorNetwork,
   QuadraticFormNetwork,
+  VidalITensorNetwork,
   ⊗,
   combine_linkinds,
   contract,
@@ -17,6 +19,7 @@ using ITensorNetworks:
   inner_network,
   linkinds_combiners,
   message,
+  messages,
   partitioned_tensornetwork,
   random_tensornetwork,
   scalar,
@@ -27,14 +30,14 @@ using ITensorNetworks:
   update_factor,
   update_message,
   message_diff
-using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
+using ITensors: ITensors, ITensor, combiner, dag, dim, inds, inner, normalize, op, prime, random_itensor
 using ITensorNetworks.ModelNetworks: ModelNetworks
 using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
 using NamedGraphs: NamedEdge, NamedGraph, subgraph
 using NamedGraphs.GraphsExtensions: rem_vertices
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedges
+using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid, named_hexagonal_lattice_graph
+using NamedGraphs.PartitionedGraphs: PartitionEdge, PartitionVertex, partitionedges
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using Test: @test, @testset
@@ -47,12 +50,12 @@ using LinearAlgebra: norm
   begin
     ITensors.disable_warn_order()
     mps_fit_kwargs = (; niters = 50, tolerance = 1e-10)
+    rng = StableRNG(1234)
 
     #First a comb tree (which is still a planar graph)
     g = named_comb_tree((4,4))
     s = siteinds("S=1/2", g)
     χ = 2
-    rng = StableRNG(1234)
     ψ = random_tensornetwork(rng, elt, s; link_space=χ)
     ψIψ = QuadraticFormNetwork(ψ)
     vc = (first(center(g)), "operator")
@@ -77,7 +80,6 @@ using LinearAlgebra: norm
     g = rem_vertices(g, [(2,2), (3,3)])
     s = siteinds("S=1/2", g)
     χ = 3
-    rng = StableRNG(1234)
     ψ = random_tensornetwork(rng, elt, s; link_space=χ)
     ψIψ = QuadraticFormNetwork(ψ)
     vc = (first(center(g)), "operator")
@@ -91,6 +93,31 @@ using LinearAlgebra: norm
     ρ_boundaryMPS /= tr(ρ_boundaryMPS)
 
     @test norm(ρ_boundaryMPS - ρ_exact) <= 10*eps(real(elt))
+
+    #Now test BP and Boundary MPS are equivalent in the symmetric gauge
+    g = named_hexagonal_lattice_graph(5, 5)
+    s = siteinds("S=1/2", g)
+    χ = 2
+    ψ = random_tensornetwork(rng, elt, s; link_space=χ)
+
+    #Move to symmetric gauge
+    ψ_vidal = VidalITensorNetwork(ψ; cache_update_kwargs=(; maxiter=30))
+    cache_ref = Ref{BeliefPropagationCache}()
+    ψ_symm = ITensorNetwork(ψ_vidal; (cache!) = cache_ref)
+    bp_cache = cache_ref[]
+
+    #Do Boundary MPS
+    ψIψ_boundaryMPS = BoundaryMPSCache(QuadraticFormNetwork(ψ_symm); message_rank = 1)
+    ψIψ_boundaryMPS = update(ψIψ_boundaryMPS)
+
+    for pe in keys(messages(bp_cache))
+      m_boundarymps = only(message(ψIψ_boundaryMPS, pe))
+      m_boundarymps = m_boundarymps * ITensor(1.0, filter(i -> dim(i) ==1, inds(m_boundarymps)))
+      m_bp = only(message(bp_cache, pe))
+      m_bp /= norm(m_bp)
+      m_boundarymps /= norm(m_boundarymps)
+      @show norm(m_bp - m_boundarymps)
+    end
     
 
   
