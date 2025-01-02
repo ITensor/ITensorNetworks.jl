@@ -17,13 +17,13 @@ using NDTensors: NDTensors
 abstract type AbstractBeliefPropagationCache end
 
 function default_message_update(contract_list::Vector{ITensor}; normalize=true, kwargs...)
-    sequence = optimal_contraction_sequence(contract_list)
-    updated_messages = contract(contract_list; sequence, kwargs...)
-    message_norm = norm(updated_messages)
-    if normalize && !iszero(message_norm)
-      updated_messages /= message_norm
-    end
-    return ITensor[updated_messages]
+  sequence = optimal_contraction_sequence(contract_list)
+  updated_messages = contract(contract_list; sequence, kwargs...)
+  message_norm = norm(updated_messages)
+  if normalize && !iszero(message_norm)
+    updated_messages /= message_norm
+  end
+  return ITensor[updated_messages]
 end
 
 #TODO: Take `dot` without precontracting the messages to allow scaling to more complex messages
@@ -47,73 +47,90 @@ default_cache_update_kwargs(cache) = (; maxiter=25, tol=1e-8)
 
 partitioned_tensornetwork(bpc::AbstractBeliefPropagationCache) = not_implemented()
 messages(bpc::AbstractBeliefPropagationCache) = not_implemented()
-default_message(bpc::AbstractBeliefPropagationCache, edge::PartitionEdge; kwargs...) = not_implemented()
+function default_message(
+  bpc::AbstractBeliefPropagationCache, edge::PartitionEdge; kwargs...
+)
+  return not_implemented()
+end
 Base.copy(bpc::AbstractBeliefPropagationCache) = not_implemented()
 default_bp_maxiter(bpc::AbstractBeliefPropagationCache) = not_implemented()
 default_edge_sequence(bpc::AbstractBeliefPropagationCache) = not_implemented()
-environment(bpc::AbstractBeliefPropagationCache, partition_vertices::Vector{<:PartitionVertex}; kwargs...) = not_implemented()
-region_scalar(bpc::AbstractBeliefPropagationCache, pv::PartitionVertex; kwargs...) = not_implemented()
-region_scalar(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge; kwargs...) = not_implemented()
-
-function factors(bpc::AbstractBeliefPropagationCache, verts::Vector)
-    return ITensor[tensornetwork(bpc)[v] for v in verts]
+function environment(bpc::AbstractBeliefPropagationCache, verts::Vector; kwargs...)
+  return not_implemented()
 end
-  
-function factor(bpc::AbstractBeliefPropagationCache, vertex::PartitionVertex)
-    return factors(bpc, vertices(bpc, vertex))
+function region_scalar(bpc::AbstractBeliefPropagationCache, pv::PartitionVertex; kwargs...)
+  return not_implemented()
 end
-
-function vertex_scalars(
-    bpc::AbstractBeliefPropagationCache,
-    pvs=partitionvertices(partitioned_tensornetwork(bpc));
-    kwargs...,
-  )
-    return map(pv -> region_scalar(bpc, pv; kwargs...), pvs)
-end
-  
-function edge_scalars(
-    bpc::AbstractBeliefPropagationCache,
-    pes=partitionedges(partitioned_tensornetwork(bpc));
-    kwargs...,
-    )
-    return map(pe -> region_scalar(bpc, pe; kwargs...), pes)
-end
-  
-function scalar_factors_quotient(bpc::AbstractBeliefPropagationCache)
-    return vertex_scalars(bpc), edge_scalars(bpc)
-end
-
-function environment(
-    bpc::AbstractBeliefPropagationCache, partition_vertex::PartitionVertex; kwargs...
-  )
-    return environment(bpc, [partition_vertex]; kwargs...)
-end
-  
-function environment(bpc::AbstractBeliefPropagationCache, verts::Vector)
-    partition_verts = partitionvertices(bpc, verts)
-    messages = environment(bpc, partition_verts)
-    central_tensors = factors(bpc, setdiff(vertices(bpc, partition_verts), verts))
-    return vcat(messages, central_tensors)
+function region_scalar(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge; kwargs...)
+  return not_implemented()
 end
 
 function tensornetwork(bpc::AbstractBeliefPropagationCache)
-    return unpartitioned_graph(partitioned_tensornetwork(bpc))
+  return unpartitioned_graph(partitioned_tensornetwork(bpc))
+end
+
+function factors(bpc::AbstractBeliefPropagationCache, verts::Vector)
+  return ITensor[tensornetwork(bpc)[v] for v in verts]
+end
+
+function factor(bpc::AbstractBeliefPropagationCache, vertex::PartitionVertex)
+  return factors(bpc, vertices(bpc, vertex))
+end
+
+function vertex_scalars(
+  bpc::AbstractBeliefPropagationCache,
+  pvs=partitionvertices(partitioned_tensornetwork(bpc));
+  kwargs...,
+)
+  return map(pv -> region_scalar(bpc, pv; kwargs...), pvs)
+end
+
+function edge_scalars(
+  bpc::AbstractBeliefPropagationCache,
+  pes=partitionedges(partitioned_tensornetwork(bpc));
+  kwargs...,
+)
+  return map(pe -> region_scalar(bpc, pe; kwargs...), pes)
+end
+
+function scalar_factors_quotient(bpc::AbstractBeliefPropagationCache)
+  return vertex_scalars(bpc), edge_scalars(bpc)
+end
+
+function incoming_messages(
+  bpc::AbstractBeliefPropagationCache,
+  partition_vertices::Vector{<:PartitionVertex};
+  ignore_edges=(),
+)
+  bpes = boundary_partitionedges(bpc, partition_vertices; dir=:in)
+  ms = messages(bpc, setdiff(bpes, ignore_edges))
+  return reduce(vcat, ms; init=ITensor[])
+end
+
+function incoming_messages(
+  bpc::AbstractBeliefPropagationCache, partition_vertex::PartitionVertex; kwargs...
+)
+  return incoming_messages(bpc, [partition_vertex]; kwargs...)
+end
+
+function tensornetwork(bpc::AbstractBeliefPropagationCache)
+  return unpartitioned_graph(partitioned_tensornetwork(bpc))
 end
 
 #Forward from partitioned graph
 for f in [
-    :(PartitionedGraphs.partitioned_graph),
-    :(PartitionedGraphs.partitionedge),
-    :(PartitionedGraphs.partitionvertices),
-    :(PartitionedGraphs.vertices),
-    :(PartitionedGraphs.boundary_partitionedges),
-    :(ITensorMPS.linkinds),
-  ]
-    @eval begin
-      function $f(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
-        return $f(partitioned_tensornetwork(bpc), args...; kwargs...)
-      end
+  :(PartitionedGraphs.partitioned_graph),
+  :(PartitionedGraphs.partitionedge),
+  :(PartitionedGraphs.partitionvertices),
+  :(PartitionedGraphs.vertices),
+  :(PartitionedGraphs.boundary_partitionedges),
+  :(ITensorMPS.linkinds),
+]
+  @eval begin
+    function $f(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
+      return $f(partitioned_tensornetwork(bpc), args...; kwargs...)
     end
+  end
 end
 
 NDTensors.scalartype(bpc::AbstractBeliefPropagationCache) = scalartype(tensornetwork(bpc))
@@ -136,11 +153,11 @@ function update_factor(bpc, vertex, factor)
 end
 
 function message(bpc::AbstractBeliefPropagationCache, edge::PartitionEdge; kwargs...)
-    mts = messages(bpc)
-    return get(() -> default_message(bpc, edge; kwargs...), mts, edge)
+  mts = messages(bpc)
+  return get(() -> default_message(bpc, edge; kwargs...), mts, edge)
 end
 function messages(bpc::AbstractBeliefPropagationCache, edges; kwargs...)
-    return map(edge -> message(bpc, edge; kwargs...), edges)
+  return map(edge -> message(bpc, edge; kwargs...), edges)
 end
 
 """
@@ -153,7 +170,7 @@ function update_message(
   message_update_kwargs=(;),
 )
   vertex = src(edge)
-  messages = environment(bpc, vertex; ignore_edges=PartitionEdge[reverse(edge)])
+  messages = incoming_messages(bpc, vertex; ignore_edges=PartitionEdge[reverse(edge)])
   state = factor(bpc, vertex)
 
   return message_update(ITensor[messages; state]; message_update_kwargs...)
@@ -171,14 +188,13 @@ function update(
   bpc_updated = copy(bpc)
   mts = messages(bpc_updated)
   for e in edges
-    set!(mts, e, update_message(bpc, e; kwargs...))
+    set!(mts, e, update_message(bpc_updated, e; kwargs...))
     if !isnothing(update_diff!)
       update_diff![] += message_diff(message(bpc, e), mts[e])
     end
   end
   return bpc_updated
 end
-
 
 """
 Update the message tensor on a single edge

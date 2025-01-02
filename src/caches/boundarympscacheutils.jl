@@ -13,7 +13,7 @@ end
 #Add partition edges that may not have meaning in the underlying graph
 function add_partitionedges(bpc::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
   pg = add_partitionedges(partitioned_tensornetwork(bpc), pes)
-  return BeliefPropagationCache(pg, messages(bpc), default_message(bpc))
+  return BeliefPropagationCache(pg, messages(bpc))
 end
 
 #Add partition edges necessary to connect up all vertices in a partition in the planar graph created by the sort function

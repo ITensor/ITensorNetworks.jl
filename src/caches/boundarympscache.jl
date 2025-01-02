@@ -9,7 +9,7 @@ using SplitApplyCombine: group
 using ITensors: commoninds, random_itensor
 using LinearAlgebra: pinv
 
-struct BoundaryMPSCache{BPC,PG}
+struct BoundaryMPSCache{BPC,PG} <: AbstractBeliefPropagationCache
   bp_cache::BPC
   partitionedplanargraph::PG
 end
@@ -18,9 +18,13 @@ bp_cache(bmpsc::BoundaryMPSCache) = bmpsc.bp_cache
 partitionedplanargraph(bmpsc::BoundaryMPSCache) = bmpsc.partitionedplanargraph
 ppg(bmpsc) = partitionedplanargraph(bmpsc)
 planargraph(bmpsc::BoundaryMPSCache) = unpartitioned_graph(partitionedplanargraph(bmpsc))
-tensornetwork(bmpsc::BoundaryMPSCache) = tensornetwork(bp_cache(bmpsc))
+
 function partitioned_tensornetwork(bmpsc::BoundaryMPSCache)
   return partitioned_tensornetwork(bp_cache(bmpsc))
+end
+messages(bmpsc::BoundaryMPSCache) = messages(bp_cache(bmpsc))
+function default_message(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
+  return default_message(bp_cache(bmpsc), args...; kwargs...)
 end
 
 default_edge_sequence(bmpsc::BoundaryMPSCache) = pair.(default_edge_sequence(ppg(bmpsc)))
@@ -456,45 +460,4 @@ function ITensorNetworks.environment(bmpsc::BoundaryMPSCache, verts::Vector; kwa
   pv = only(planargraph_partitions(bmpsc, vs))
   bmpsc = partition_update(bmpsc, pv)
   return environment(bp_cache(bmpsc), verts; kwargs...)
-end
-
-function ITensorNetworks.environment(bmpsc::BoundaryMPSCache, vertex; kwargs...)
-  return environment(bmpsc, [vertex]; kwargs...)
-end
-
-#Forward onto beliefpropagationcache
-for f in [
-  :messages,
-  :message,
-  :update_message,
-  :(ITensorNetworks.linkinds),
-  :default_edge_sequence,
-  :factor,
-  :factors,
-]
-  @eval begin
-    function $f(bmpsc::BoundaryMPSCache, args...; kwargs...)
-      return $f(bp_cache(bmpsc), args...; kwargs...)
-    end
-  end
-end
-
-#Wrap around beliefpropagationcache
-for f in [:update_factors, :update_factor]
-  @eval begin
-    function $f(bmpsc::BoundaryMPSCache, args...; kwargs...)
-      bmpsc = copy(bmpsc)
-      bpc = bp_cache(bmpsc)
-      bpc = $f(bpc, args...; kwargs...)
-      return BoundaryMPSCache(bpc, partitionedplanargraph(bmpsc))
-    end
-  end
-end
-
-#Wrap around beliefpropagationcache but only for specific argument
-function update(bmpsc::BoundaryMPSCache, pes::Vector{<:PartitionEdge}; kwargs...)
-  bmpsc = copy(bmpsc)
-  bpc = bp_cache(bmpsc)
-  bpc = update(bpc, pes; kwargs...)
-  return BoundaryMPSCache(bpc, partitionedplanargraph(bmpsc))
 end

@@ -24,9 +24,7 @@ struct BeliefPropagationCache{PTN,MTS} <: AbstractBeliefPropagationCache
 end
 
 #Constructors...
-function BeliefPropagationCache(
-  ptn::PartitionedGraph; messages=default_messages(ptn)
-)
+function BeliefPropagationCache(ptn::PartitionedGraph; messages=default_messages(ptn))
   return BeliefPropagationCache(ptn, messages)
 end
 
@@ -36,7 +34,9 @@ function BeliefPropagationCache(tn::AbstractITensorNetwork, partitioned_vertices
 end
 
 function BeliefPropagationCache(
-  tn::AbstractITensorNetwork; partitioned_vertices=default_partitioned_vertices(tn), kwargs...
+  tn::AbstractITensorNetwork;
+  partitioned_vertices=default_partitioned_vertices(tn),
+  kwargs...,
 )
   return BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
 end
@@ -50,9 +50,6 @@ function partitioned_tensornetwork(bp_cache::BeliefPropagationCache)
 end
 
 messages(bp_cache::BeliefPropagationCache) = bp_cache.messages
-function tensornetwork(bp_cache::BeliefPropagationCache)
-  return unpartitioned_graph(partitioned_tensornetwork(bp_cache))
-end
 
 function default_message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
   return default_message(scalartype(bp_cache), linkinds(bp_cache, edge))
@@ -60,8 +57,7 @@ end
 
 function Base.copy(bp_cache::BeliefPropagationCache)
   return BeliefPropagationCache(
-    copy(partitioned_tensornetwork(bp_cache)),
-    copy(messages(bp_cache)),
+    copy(partitioned_tensornetwork(bp_cache)), copy(messages(bp_cache))
   )
 end
 
@@ -73,19 +69,14 @@ function default_edge_sequence(bp_cache::BeliefPropagationCache)
 end
 
 function set_messages(cache::BeliefPropagationCache, messages)
-  return BeliefPropagationCache(
-    partitioned_tensornetwork(cache), messages
-  )
+  return BeliefPropagationCache(partitioned_tensornetwork(cache), messages)
 end
 
-function environment(
-  bp_cache::BeliefPropagationCache,
-  partition_vertices::Vector{<:PartitionVertex};
-  ignore_edges=(),
-)
-  bpes = boundary_partitionedges(bp_cache, partition_vertices; dir=:in)
-  ms = messages(bp_cache, setdiff(bpes, ignore_edges))
-  return reduce(vcat, ms; init=ITensor[])
+function environment(bpc::BeliefPropagationCache, verts::Vector; kwargs...)
+  partition_verts = partitionvertices(bpc, verts)
+  messages = incoming_messages(bpc, partition_verts; kwargs...)
+  central_tensors = factors(bpc, setdiff(vertices(bpc, partition_verts), verts))
+  return vcat(messages, central_tensors)
 end
 
 function region_scalar(
@@ -93,7 +84,7 @@ function region_scalar(
   pv::PartitionVertex;
   contract_kwargs=(; sequence="automatic"),
 )
-  incoming_mts = environment(bp_cache, [pv])
+  incoming_mts = incoming_messages(bp_cache, [pv])
   local_state = factor(bp_cache, pv)
   return contract(vcat(incoming_mts, local_state); contract_kwargs...)[]
 end
