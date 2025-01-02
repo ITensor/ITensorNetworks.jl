@@ -17,12 +17,14 @@ function add_partitionedges(bpc::BeliefPropagationCache, pes::Vector{<:Partition
 end
 
 #Add partition edges necessary to connect up all vertices in a partition in the planar graph created by the sort function
-function insert_pseudo_planar_edges(bpc::BeliefPropagationCache; sort_f=v -> first(v))
+function insert_pseudo_planar_edges(
+  bpc::BeliefPropagationCache; grouping_function=v -> first(v)
+)
   pg = partitioned_graph(bpc)
-  partitions = unique(sort_f.(collect(vertices(pg))))
+  partitions = unique(grouping_function.(collect(vertices(pg))))
   pseudo_edges = PartitionEdge[]
   for p in partitions
-    vs = sort(filter(v -> sort_f(v) == p, collect(vertices(pg))))
+    vs = sort(filter(v -> grouping_function(v) == p, collect(vertices(pg))))
     for i in 1:(length(vs) - 1)
       if vs[i] ∉ neighbors(pg, vs[i + 1])
         push!(pseudo_edges, PartitionEdge(NamedEdge(vs[i] => vs[i + 1])))

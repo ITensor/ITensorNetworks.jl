@@ -51,11 +51,13 @@ function planargraph_partitionpair(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
 end
 
 function BoundaryMPSCache(
-  bpc::BeliefPropagationCache; sort_f::Function=v -> first(v), message_rank::Int64=1
+  bpc::BeliefPropagationCache;
+  grouping_function::Function=v -> first(v),
+  message_rank::Int64=1,
 )
-  bpc = insert_pseudo_planar_edges(bpc; sort_f)
+  bpc = insert_pseudo_planar_edges(bpc; grouping_function)
   planar_graph = partitioned_graph(bpc)
-  vertex_groups = group(sort_f, collect(vertices(planar_graph)))
+  vertex_groups = group(grouping_function, collect(vertices(planar_graph)))
   ppg = PartitionedGraph(planar_graph, vertex_groups)
   bmpsc = BoundaryMPSCache(bpc, ppg)
   return set_interpartition_messages(bmpsc, message_rank)
@@ -319,15 +321,15 @@ function mps_update(
       end
       bmpsc = if !isnothing(prev_v)
         partition_update(
-        bmpsc,
-        prev_v,
-        cur_v;
-        message_update=ms -> default_message_update(ms; normalize=false),
-      )
+          bmpsc,
+          prev_v,
+          cur_v;
+          message_update=ms -> default_message_update(ms; normalize=false),
+        )
       else
         partition_update(
-        bmpsc, cur_v; message_update=ms -> default_message_update(ms; normalize=false)
-      )
+          bmpsc, cur_v; message_update=ms -> default_message_update(ms; normalize=false)
+        )
       end
       me = update_message(
         bmpsc, update_pe; message_update=ms -> default_message_update(ms; normalize)
@@ -360,15 +362,15 @@ function mps_update(
     end
     bmpsc = if !isnothing(prev_v)
       partition_update(
-      bmpsc,
-      prev_v,
-      cur_v;
-      message_update=ms -> default_message_update(ms; normalize=false),
-    )
+        bmpsc,
+        prev_v,
+        cur_v;
+        message_update=ms -> default_message_update(ms; normalize=false),
+      )
     else
       partition_update(
-      bmpsc, cur_v; message_update=ms -> default_message_update(ms; normalize=false)
-    )
+        bmpsc, cur_v; message_update=ms -> default_message_update(ms; normalize=false)
+      )
     end
 
     me_prev = only(message(bmpsc, update_pe))

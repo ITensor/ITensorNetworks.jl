@@ -69,8 +69,8 @@ using LinearAlgebra: norm
     ∂tn_∂vc_exact = contract(∂tn_∂vc; sequence=contraction_sequence(∂tn_∂vc; alg="greedy"))
     ∂tn_∂vc_exact /= norm(∂tn_∂vc_exact)
 
-    #Orthogonal Boundary MPS
-    tn_boundaryMPS = BoundaryMPSCache(tn; message_rank=1)
+    #Orthogonal Boundary MPS, group by row
+    tn_boundaryMPS = BoundaryMPSCache(tn; grouping_function=v -> last(v), message_rank=1)
     tn_boundaryMPS = update(tn_boundaryMPS; mps_fit_kwargs)
     ∂tn_∂vc_boundaryMPS = contract(environment(tn_boundaryMPS, [vc]); sequence="automatic")
     ∂tn_∂vc_boundaryMPS /= norm(∂tn_∂vc_boundaryMPS)
@@ -78,8 +78,8 @@ using LinearAlgebra: norm
     @test norm(∂tn_∂vc_boundaryMPS - ∂tn_∂vc_exact) <= 10 * eps(real(elt))
     @test norm(∂tn_∂vc_boundaryMPS - ∂tn_∂vc_bp) <= 10 * eps(real(elt))
 
-    #Biorthogonal Boundary MPS
-    tn_boundaryMPS = BoundaryMPSCache(tn; message_rank=1)
+    #Biorthogonal Boundary MPS, , group by row
+    tn_boundaryMPS = BoundaryMPSCache(tn; grouping_function=v -> last(v), message_rank=1)
     tn_boundaryMPS = update(tn_boundaryMPS; alg="biorthogonal")
     ∂tn_∂vc_boundaryMPS = contract(environment(tn_boundaryMPS, [vc]); sequence="automatic")
     ∂tn_∂vc_boundaryMPS /= norm(∂tn_∂vc_boundaryMPS)
@@ -99,7 +99,7 @@ using LinearAlgebra: norm
     ρ_exact = contract(ρ; sequence=contraction_sequence(ρ; alg="greedy"))
     ρ_exact /= tr(ρ_exact)
 
-    #Orthogonal Boundary MPS
+    #Orthogonal Boundary MPS, group by column (default)
     ψIψ_boundaryMPS = BoundaryMPSCache(ψIψ; message_rank=χ * χ)
     ψIψ_boundaryMPS = update(ψIψ_boundaryMPS)
     ρ_boundaryMPS = contract(environment(ψIψ_boundaryMPS, [vc]); sequence="automatic")
@@ -107,7 +107,7 @@ using LinearAlgebra: norm
 
     @test norm(ρ_boundaryMPS - ρ_exact) <= 10 * eps(real(elt))
 
-    #BiOrthogonal Boundary MPS
+    #BiOrthogonal Boundary MPS, group by column (default)
     ψIψ_boundaryMPS = BoundaryMPSCache(ψIψ; message_rank=χ * χ)
     ψIψ_boundaryMPS = update(ψIψ_boundaryMPS; alg="biorthogonal", maxiter=50)
     ρ_boundaryMPS = contract(environment(ψIψ_boundaryMPS, [vc]); sequence="automatic")
