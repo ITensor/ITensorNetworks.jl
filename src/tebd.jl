@@ -23,7 +23,7 @@ function tebd(
     ψ = apply(u⃗, ψ; cutoff, maxdim, normalize=true, ortho, kwargs...)
     if ortho
       for v in vertices(ψ)
-        ψ = orthogonalize(ψ, v)
+        ψ = tree_orthogonalize(ψ, v)
       end
     end
   end

@@ -6,8 +6,7 @@
 function default_inserter(
   state::AbstractTTN,
   phi::ITensor,
-  region,
-  ortho_vert;
+  region;
   normalize=false,
   maxdim=nothing,
   mindim=nothing,
@@ -16,16 +15,14 @@ function default_inserter(
 )
   state = copy(state)
   spec = nothing
-  other_vertex = setdiff(support(region), [ortho_vert])
-  if !isempty(other_vertex)
-    v = only(other_vertex)
-    e = edgetype(state)(ortho_vert, v)
-    indsTe = inds(state[ortho_vert])
+  if length(region) == 2
+    v = last(region)
+    e = edgetype(state)(first(region), last(region))
+    indsTe = inds(state[first(region)])
     L, phi, spec = factorize(phi, indsTe; tags=tags(state, e), maxdim, mindim, cutoff)
-    state[ortho_vert] = L
-
+    state[first(region)] = L
   else
-    v = ortho_vert
+    v = only(region)
   end
   state[v] = phi
   state = set_ortho_region(state, [v])
@@ -36,16 +33,14 @@ end
 function default_inserter(
   state::AbstractTTN,
   phi::ITensor,
-  region::NamedEdge,
-  ortho;
+  region::NamedEdge;
   cutoff=nothing,
   maxdim=nothing,
   mindim=nothing,
   normalize=false,
   internal_kwargs,
 )
-  v = only(setdiff(support(region), [ortho]))
-  state[v] *= phi
-  state = set_ortho_region(state, [v])
+  state[dst(region)] *= phi
+  state = set_ortho_region(state, [dst(region)])
   return state, nothing
 end

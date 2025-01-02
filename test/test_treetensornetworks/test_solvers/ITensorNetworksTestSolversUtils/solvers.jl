@@ -1,7 +1,7 @@
-using OrdinaryDiffEq: ODEProblem, Tsit5, solve
-using ITensors: ITensor
 using ITensorNetworks: TimeDependentSum, to_vec
+using ITensors: ITensor
 using KrylovKit: exponentiate
+using OrdinaryDiffEqTsit5: ODEProblem, Tsit5, solve
 
 function ode_solver(
   H::TimeDependentSum,
