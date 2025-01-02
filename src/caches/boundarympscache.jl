@@ -160,10 +160,10 @@ function set_interpartition_messages(
     maximum_virtual_dim_from_below *= prod(dim.(siteinds))
     maximum_virtual_dim_from_above = if i != length(pes)
       prod(
-      dim.(
-        reduce(vcat, [linkinds(bmpsc, pe) for pe in partitionedges_above(bmpsc, pg_pe)])
-      ),
-    )
+        dim.(
+          reduce(vcat, [linkinds(bmpsc, pe) for pe in partitionedges_above(bmpsc, pg_pe)])
+        ),
+      )
     else
       1
     end
