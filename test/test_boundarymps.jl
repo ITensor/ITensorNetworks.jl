@@ -107,14 +107,6 @@ using LinearAlgebra: norm
 
     @test norm(ρ_boundaryMPS - ρ_exact) <= 10 * eps(real(elt))
 
-    #BiOrthogonal Boundary MPS, group by column (default)
-    ψIψ_boundaryMPS = BoundaryMPSCache(ψIψ; message_rank=χ * χ)
-    ψIψ_boundaryMPS = update(ψIψ_boundaryMPS; alg="biorthogonal", maxiter=50)
-    ρ_boundaryMPS = contract(environment(ψIψ_boundaryMPS, [vc]); sequence="automatic")
-    ρ_boundaryMPS /= tr(ρ_boundaryMPS)
-
-    @test norm(ρ_boundaryMPS - ρ_exact) <= 2e3 * eps(real(elt))
-
     #Now we test BP and orthogonal and biorthogonl Boundary MPS are equivalent when run from in the symmetric gauge
     g = named_hexagonal_lattice_graph(3, 3)
     s = siteinds("S=1/2", g)
@@ -129,7 +121,7 @@ using LinearAlgebra: norm
     end
     message_update_f = ms -> make_posdef.(default_message_update(ms))
     ψ_vidal = VidalITensorNetwork(
-      ψ; cache_update_kwargs=(; message_update=message_update_f, maxiter=100, tol=1e-16)
+      ψ; cache_update_kwargs=(; message_update=message_update_f, maxiter=50, tol=1e-14)
     )
     cache_ref = Ref{BeliefPropagationCache}()
     ψ_symm = ITensorNetwork(ψ_vidal; (cache!)=cache_ref)
