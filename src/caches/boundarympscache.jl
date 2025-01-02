@@ -73,23 +73,49 @@ function planargraph_partitionedges(bmpsc::BoundaryMPSCache, partition::Int64)
   return PartitionEdge.([vs[i] => vs[i + 1] for i in 1:(length(vs) - 1)])
 end
 
-#Functions to get the partitionedge sitting parallel above and below a message tensor
-function partitionedge_above(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
+#Get all partitionedges between the pair of neighboring partitions, sorted top to bottom
+#TODO: Bring in line with NamedGraphs change
+function planargraph_partitionpair_partitionedges(
+  bmpsc::BoundaryMPSCache, partitionpair::Pair
+)
+  pg = planargraph(bmpsc)
+  src_vs, dst_vs = planargraph_vertices(bmpsc, first(partitionpair)),
+  planargraph_vertices(bmpsc, last(partitionpair))
+  es = filter(
+    x -> !isempty(last(x)),
+    [src_v => intersect(neighbors(pg, src_v), dst_vs) for src_v in src_vs],
+  )
+  es = map(x -> first(x) => only(last(x)), es)
+  return sort(PartitionEdge.(NamedEdge.(es)); by=x -> src(parent(x)))
+end
+
+#Functions to get the parellel partitionedges sitting above and below a partitionedge
+function partitionedges_above(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
   pes = planargraph_partitionpair_partitionedges(
     bmpsc, planargraph_partitionpair(bmpsc, pe)
   )
   pe_pos = only(findall(x -> x == pe, pes))
-  pe_pos == length(pes) && return nothing
-  return pes[pe_pos + 1]
+  return PartitionEdge[pes[i] for i in (pe_pos + 1):length(pes)]
+end
+
+function partitionedges_below(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
+  pes = planargraph_partitionpair_partitionedges(
+    bmpsc, planargraph_partitionpair(bmpsc, pe)
+  )
+  pe_pos = only(findall(x -> x == pe, pes))
+  return PartitionEdge[pes[i] for i in 1:(pe_pos - 1)]
+end
+
+function partitionedge_above(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
+  pes_above = partitionedges_above(bmpsc, pe)
+  isempty(pes_above) && return nothing
+  return first(pes_above)
 end
 
 function partitionedge_below(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
-  pes = planargraph_partitionpair_partitionedges(
-    bmpsc, planargraph_partitionpair(bmpsc, pe)
-  )
-  pe_pos = only(findall(x -> x == pe, pes))
-  pe_pos == 1 && return nothing
-  return pes[pe_pos - 1]
+  pes_below = partitionedges_below(bmpsc, pe)
+  isempty(pes_below) && return nothing
+  return last(pes_below)
 end
 
 #Get the sequence of pairs partitionedges that need to be updated to move the MPS gauge from pe1 to pe2
@@ -113,22 +139,6 @@ function mps_gauge_update_sequence(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
   )
 end
 
-#Get all partitionedges between the pair of neighboring partitions, sorted top to bottom
-#TODO: Bring in line with NamedGraphs change
-function planargraph_partitionpair_partitionedges(
-  bmpsc::BoundaryMPSCache, partitionpair::Pair
-)
-  pg = planargraph(bmpsc)
-  src_vs, dst_vs = planargraph_vertices(bmpsc, first(partitionpair)),
-  planargraph_vertices(bmpsc, last(partitionpair))
-  es = filter(
-    x -> !isempty(last(x)),
-    [src_v => intersect(neighbors(pg, src_v), dst_vs) for src_v in src_vs],
-  )
-  es = map(x -> first(x) => only(last(x)), es)
-  return sort(PartitionEdge.(NamedEdge.(es)); by=x -> src(parent(x)))
-end
-
 function set_message(bmpsc::BoundaryMPSCache, pe::PartitionEdge, m::Vector{ITensor})
   bmpsc = copy(bmpsc)
   ms = messages(bmpsc)
@@ -144,9 +154,23 @@ function set_interpartition_messages(
   ms = messages(bmpsc)
   pes = planargraph_partitionpair_partitionedges(bmpsc, partitionpair)
   prev_virtual_ind = nothing
+  maximum_virtual_dim_from_below = 1
   for (i, pg_pe) in enumerate(pes)
     siteinds = linkinds(bmpsc, pg_pe)
-    next_virtual_index = i != length(pes) ? Index(message_rank, "m$(i)$(i+1)") : nothing
+    maximum_virtual_dim_from_below *= prod(dim.(siteinds))
+    maximum_virtual_dim_from_above = if i != length(pes)
+      prod(
+      dim.(
+        reduce(vcat, [linkinds(bmpsc, pe) for pe in partitionedges_above(bmpsc, pg_pe)])
+      ),
+    )
+    else
+      1
+    end
+    virtualind_dim = minimum([
+      message_rank, maximum_virtual_dim_from_above, maximum_virtual_dim_from_below
+    ])
+    next_virtual_index = i != length(pes) ? Index(virtualind_dim, "m$(i)$(i+1)") : nothing
     me = denseblocks(delta(siteinds))
     virt_inds = filter(x -> !isnothing(x), [prev_virtual_ind, next_virtual_index])
     if !isempty(virt_inds)
@@ -234,8 +258,7 @@ function gauge_step(
   alg::Algorithm"biorthogonalize",
   bmpsc::BoundaryMPSCache,
   pe1::PartitionEdge,
-  pe2::PartitionEdge;
-  regularization=1e-12,
+  pe2::PartitionEdge,
 )
   bmpsc = copy(bmpsc)
   ms = messages(bmpsc)
@@ -274,7 +297,7 @@ end
 #Move the orthogonality / biorthogonality centre on an interpartition via a sequence of steps between message tensors
 function gauge_walk(alg::Algorithm, bmpsc::BoundaryMPSCache, seq::Vector; kwargs...)
   for (pe1, pe2) in seq
-    bmpsc = gauge_step(alg::Algorithm, bmpsc, pe1, pe2)
+    bmpsc = gauge_step(alg::Algorithm, bmpsc, pe1, pe2; kwargs...)
   end
   return bmpsc
 end
