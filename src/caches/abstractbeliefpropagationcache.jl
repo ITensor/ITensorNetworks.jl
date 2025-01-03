@@ -113,10 +113,6 @@ function incoming_messages(
   return incoming_messages(bpc, [partition_vertex]; kwargs...)
 end
 
-function tensornetwork(bpc::AbstractBeliefPropagationCache)
-  return unpartitioned_graph(partitioned_tensornetwork(bpc))
-end
-
 #Forward from partitioned graph
 for f in [
   :(PartitionedGraphs.partitioned_graph),
@@ -158,6 +154,12 @@ function message(bpc::AbstractBeliefPropagationCache, edge::PartitionEdge; kwarg
 end
 function messages(bpc::AbstractBeliefPropagationCache, edges; kwargs...)
   return map(edge -> message(bpc, edge; kwargs...), edges)
+end
+function set_message(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge, message)
+  bpc = copy(bpc)
+  ms = messages(bpc)
+  set!(ms, pe, message)
+  return bpc
 end
 
 """
