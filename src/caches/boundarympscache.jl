@@ -9,19 +9,22 @@ using SplitApplyCombine: group
 using ITensors: commoninds, random_itensor
 using LinearAlgebra: pinv
 
-struct BoundaryMPSCache{BPC,PG}
+struct BoundaryMPSCache{BPC,PG} <: AbstractBeliefPropagationCache
   bp_cache::BPC
   partitionedplanargraph::PG
+  maximum_virtual_dimension::Int64
 end
 
 bp_cache(bmpsc::BoundaryMPSCache) = bmpsc.bp_cache
 partitionedplanargraph(bmpsc::BoundaryMPSCache) = bmpsc.partitionedplanargraph
+maximum_virtual_dimension(bmpsc::BoundaryMPSCache) = bmpsc.maximum_virtual_dimension
 ppg(bmpsc) = partitionedplanargraph(bmpsc)
 planargraph(bmpsc::BoundaryMPSCache) = unpartitioned_graph(partitionedplanargraph(bmpsc))
-tensornetwork(bmpsc::BoundaryMPSCache) = tensornetwork(bp_cache(bmpsc))
+
 function partitioned_tensornetwork(bmpsc::BoundaryMPSCache)
   return partitioned_tensornetwork(bp_cache(bmpsc))
 end
+messages(bmpsc::BoundaryMPSCache) = messages(bp_cache(bmpsc))
 
 default_edge_sequence(bmpsc::BoundaryMPSCache) = pair.(default_edge_sequence(ppg(bmpsc)))
 function default_bp_maxiter(alg::Algorithm"orthogonal", bmpsc::BoundaryMPSCache)
@@ -34,7 +37,39 @@ end
 default_mps_fit_kwargs(alg::Algorithm"biorthogonal", bmpsc::BoundaryMPSCache) = (;)
 
 function Base.copy(bmpsc::BoundaryMPSCache)
-  return BoundaryMPSCache(copy(bp_cache(bmpsc)), copy(ppg(bmpsc)))
+  return BoundaryMPSCache(
+    copy(bp_cache(bmpsc)), copy(ppg(bmpsc)), maximum_virtual_dimension(bmpsc)
+  )
+end
+
+function default_message(bmpsc::BoundaryMPSCache, args...; kwargs...)
+  return default_message(bp_cache(bmpsc), args...; kwargs...)
+end
+
+function virtual_index_dimension(
+  bmpsc::BoundaryMPSCache, pe1::PartitionEdge, pe2::PartitionEdge
+)
+  pes = planargraph_partitionpair_partitionedges(
+    bmpsc, planargraph_partitionpair(bmpsc, pe1)
+  )
+  if findfirst(x -> x == pe1, pes) > findfirst(x -> x == pe2, pes)
+    inds_above = reduce(
+      vcat, [linkinds(bmpsc, pe) for pe in partitionedges_above(bmpsc, pe2)]
+    )
+    inds_below = reduce(
+      vcat, [linkinds(bmpsc, pe) for pe in partitionedges_below(bmpsc, pe1)]
+    )
+  else
+    inds_above = reduce(
+      vcat, [linkinds(bmpsc, pe) for pe in partitionedges_above(bmpsc, pe1)]
+    )
+    inds_below = reduce(
+      vcat, [linkinds(bmpsc, pe) for pe in partitionedges_below(bmpsc, pe2)]
+    )
+  end
+  return minimum((
+    prod(dim.(inds_above)), prod(dim.(inds_below)), maximum_virtual_dimension(bmpsc)
+  ))
 end
 
 function planargraph_vertices(bmpsc::BoundaryMPSCache, partition::Int64)
@@ -59,8 +94,8 @@ function BoundaryMPSCache(
   planar_graph = partitioned_graph(bpc)
   vertex_groups = group(grouping_function, collect(vertices(planar_graph)))
   ppg = PartitionedGraph(planar_graph, vertex_groups)
-  bmpsc = BoundaryMPSCache(bpc, ppg)
-  return set_interpartition_messages(bmpsc, message_rank)
+  bmpsc = BoundaryMPSCache(bpc, ppg, message_rank)
+  return set_interpartition_messages(bmpsc)
 end
 
 function BoundaryMPSCache(tn::AbstractITensorNetwork, args...; kwargs...)
@@ -139,60 +174,32 @@ function mps_gauge_update_sequence(bmpsc::BoundaryMPSCache, pe::PartitionEdge)
   )
 end
 
-function set_message(bmpsc::BoundaryMPSCache, pe::PartitionEdge, m::Vector{ITensor})
-  bmpsc = copy(bmpsc)
-  ms = messages(bmpsc)
-  set!(ms, pe, m)
-  return bmpsc
-end
-
-#Initialise all the message tensors for the pair of neighboring partitions, with virtual rank given by message rank
+#Initialise all the message tensors for the pairs of neighboring partitions, with virtual rank given by message rank
 function set_interpartition_messages(
-  bmpsc::BoundaryMPSCache, partitionpair::Pair, message_rank::Int64
+  bmpsc::BoundaryMPSCache, partitionpairs::Vector{<:Pair}
 )
   bmpsc = copy(bmpsc)
   ms = messages(bmpsc)
-  pes = planargraph_partitionpair_partitionedges(bmpsc, partitionpair)
-  prev_virtual_ind = nothing
-  maximum_virtual_dim_from_below = 1
-  for (i, pg_pe) in enumerate(pes)
-    siteinds = linkinds(bmpsc, pg_pe)
-    maximum_virtual_dim_from_below *= prod(dim.(siteinds))
-    maximum_virtual_dim_from_above = if i != length(pes)
-      prod(
-        dim.(
-          reduce(vcat, [linkinds(bmpsc, pe) for pe in partitionedges_above(bmpsc, pg_pe)])
-        ),
-      )
-    else
-      1
+  for partitionpair in partitionpairs
+    pes = planargraph_partitionpair_partitionedges(bmpsc, partitionpair)
+    for pe in pes
+      set!(ms, pe, ITensor[dense(delta(linkinds(bmpsc, pe)))])
     end
-    virtualind_dim = minimum([
-      message_rank, maximum_virtual_dim_from_above, maximum_virtual_dim_from_below
-    ])
-    next_virtual_index = i != length(pes) ? Index(virtualind_dim, "m$(i)$(i+1)") : nothing
-    me = denseblocks(delta(siteinds))
-    virt_inds = filter(x -> !isnothing(x), [prev_virtual_ind, next_virtual_index])
-    if !isempty(virt_inds)
-      me *= delta(virt_inds)
+    for i in 1:(length(pes) - 1)
+      virt_dim = virtual_index_dimension(bmpsc, pes[i], pes[i + 1])
+      ind = Index(virt_dim, "m$(i)$(i+1)")
+      m1, m2 = only(ms[pes[i]]), only(ms[pes[i + 1]])
+      set!(ms, pes[i], ITensor[m1 * delta(ind)])
+      set!(ms, pes[i + 1], ITensor[m2 * delta(ind)])
     end
-    set!(ms, pg_pe, ITensor[me])
-    prev_virtual_ind = next_virtual_index
   end
-
   return bmpsc
 end
 
 #Initialise all the interpartition message tensors with virtual rank given by message rank
-function set_interpartition_messages(bmpsc::BoundaryMPSCache, message_rank::Int64=1)
-  bmpsc = copy(bmpsc)
-  pes = partitionedges(ppg(bmpsc))
-  for pe in vcat(pes, reverse(reverse.(pes)))
-    bmpsc = set_interpartition_messages(
-      bmpsc, parent(src(pe)) => parent(dst(pe)), message_rank
-    )
-  end
-  return bmpsc
+function set_interpartition_messages(bmpsc::BoundaryMPSCache)
+  partitionpairs = pair.(partitionedges(ppg(bmpsc)))
+  return set_interpartition_messages(bmpsc, vcat(partitionpairs, reverse.(partitionpairs)))
 end
 
 #Switch the message on partition edge pe with its reverse (and dagger them)
@@ -456,45 +463,4 @@ function ITensorNetworks.environment(bmpsc::BoundaryMPSCache, verts::Vector; kwa
   pv = only(planargraph_partitions(bmpsc, vs))
   bmpsc = partition_update(bmpsc, pv)
   return environment(bp_cache(bmpsc), verts; kwargs...)
-end
-
-function ITensorNetworks.environment(bmpsc::BoundaryMPSCache, vertex; kwargs...)
-  return environment(bmpsc, [vertex]; kwargs...)
-end
-
-#Forward onto beliefpropagationcache
-for f in [
-  :messages,
-  :message,
-  :update_message,
-  :(ITensorNetworks.linkinds),
-  :default_edge_sequence,
-  :factor,
-  :factors,
-]
-  @eval begin
-    function $f(bmpsc::BoundaryMPSCache, args...; kwargs...)
-      return $f(bp_cache(bmpsc), args...; kwargs...)
-    end
-  end
-end
-
-#Wrap around beliefpropagationcache
-for f in [:update_factors, :update_factor]
-  @eval begin
-    function $f(bmpsc::BoundaryMPSCache, args...; kwargs...)
-      bmpsc = copy(bmpsc)
-      bpc = bp_cache(bmpsc)
-      bpc = $f(bpc, args...; kwargs...)
-      return BoundaryMPSCache(bpc, partitionedplanargraph(bmpsc))
-    end
-  end
-end
-
-#Wrap around beliefpropagationcache but only for specific argument
-function update(bmpsc::BoundaryMPSCache, pes::Vector{<:PartitionEdge}; kwargs...)
-  bmpsc = copy(bmpsc)
-  bpc = bp_cache(bmpsc)
-  bpc = update(bpc, pes; kwargs...)
-  return BoundaryMPSCache(bpc, partitionedplanargraph(bmpsc))
 end
