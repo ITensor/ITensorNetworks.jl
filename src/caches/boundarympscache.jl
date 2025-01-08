@@ -26,15 +26,19 @@ function partitioned_tensornetwork(bmpsc::BoundaryMPSCache)
 end
 messages(bmpsc::BoundaryMPSCache) = messages(bp_cache(bmpsc))
 
-default_edge_sequence(bmpsc::BoundaryMPSCache) = pair.(default_edge_sequence(ppg(bmpsc)))
+default_message_update_alg(bmpsc::BoundaryMPSCache) = "orthogonal"
+
 function default_bp_maxiter(alg::Algorithm"orthogonal", bmpsc::BoundaryMPSCache)
   return default_bp_maxiter(partitioned_graph(ppg(bmpsc)))
 end
 default_bp_maxiter(alg::Algorithm"biorthogonal", bmpsc::BoundaryMPSCache) = 50
-function default_mps_fit_kwargs(alg::Algorithm"orthogonal", bmpsc::BoundaryMPSCache)
+function default_edge_sequence(alg::Algorithm, bmpsc::BoundaryMPSCache)
+  return pair.(default_edge_sequence(ppg(bmpsc)))
+end
+function default_message_update_kwargs(alg::Algorithm"orthogonal", bmpsc::BoundaryMPSCache)
   return (; niters=50, tolerance=1e-10)
 end
-default_mps_fit_kwargs(alg::Algorithm"biorthogonal", bmpsc::BoundaryMPSCache) = (;)
+default_message_update_kwargs(alg::Algorithm"biorthogonal", bmpsc::BoundaryMPSCache) = (;)
 
 function Base.copy(bmpsc::BoundaryMPSCache)
   return BoundaryMPSCache(
@@ -221,23 +225,33 @@ function switch_messages(bmpsc::BoundaryMPSCache, partitionpair::Pair)
 end
 
 #Update all messages tensors within a partition
-function partition_update(bmpsc::BoundaryMPSCache, partition::Int64; kwargs...)
+function partition_update(bmpsc::BoundaryMPSCache, partition::Int64)
   vs = sort(planargraph_vertices(bmpsc, partition))
-  bmpsc = partition_update(bmpsc, first(vs); kwargs...)
-  bmpsc = partition_update(bmpsc, last(vs); kwargs...)
+  bmpsc = partition_update(bmpsc, first(vs))
+  bmpsc = partition_update(bmpsc, last(vs))
   return bmpsc
 end
 
 #Update all messages within a partition along the path from from v1 to v2
-function partition_update(bmpsc::BoundaryMPSCache, v1, v2; kwargs...)
-  return update(bmpsc, PartitionEdge.(a_star(ppg(bmpsc), v1, v2)); kwargs...)
+function partition_update(bmpsc::BoundaryMPSCache, v1, v2)
+  return update(
+    Algorithm("SimpleBP"),
+    bmpsc,
+    PartitionEdge.(a_star(ppg(bmpsc), v1, v2));
+    message_update_kwargs=(; normalize=false),
+  )
 end
 
 #Update all message tensors within a partition pointing towards v
-function partition_update(bmpsc::BoundaryMPSCache, v; kwargs...)
+function partition_update(bmpsc::BoundaryMPSCache, v)
   pv = planargraph_partition(bmpsc, v)
   g = subgraph(unpartitioned_graph(ppg(bmpsc)), planargraph_vertices(bmpsc, pv))
-  return update(bmpsc, PartitionEdge.(post_order_dfs_edges(g, v)); kwargs...)
+  return update(
+    Algorithm("SimpleBP"),
+    bmpsc,
+    PartitionEdge.(post_order_dfs_edges(g, v));
+    message_update_kwargs=(; normalize=false),
+  )
 end
 
 #Move the orthogonality centre one step on an interpartition from the message tensor on pe1 to that on pe2 
@@ -327,7 +341,8 @@ function biorthogonalize(bmpsc::BoundaryMPSCache, args...; kwargs...)
 end
 
 #Update all the message tensors on an interpartition via an orthogonal fitting procedure 
-function mps_update(
+#TODO: Unify this to one function and make two-site possible
+function update(
   alg::Algorithm"orthogonal",
   bmpsc::BoundaryMPSCache,
   partitionpair::Pair;
@@ -350,18 +365,11 @@ function mps_update(
         orthogonalize(bmpsc, reverse(update_pe))
       end
       bmpsc = if !isnothing(prev_v)
-        partition_update(
-          bmpsc,
-          prev_v,
-          cur_v;
-          message_update=ms -> default_message_update(ms; normalize=false),
-        )
+        partition_update(bmpsc, prev_v, cur_v)
       else
-        partition_update(
-          bmpsc, cur_v; message_update=ms -> default_message_update(ms; normalize=false)
-        )
+        partition_update(bmpsc, cur_v)
       end
-      me = update_message(
+      me = updated_message(
         bmpsc, update_pe; message_update=ms -> default_message_update(ms; normalize)
       )
       costfunction += region_scalar(bp_cache(bmpsc), src(update_pe)) / norm(me)
@@ -379,7 +387,7 @@ function mps_update(
 end
 
 #Update all the message tensors on an interpartition via a biorthogonal fitting procedure
-function mps_update(
+function update(
   alg::Algorithm"biorthogonal", bmpsc::BoundaryMPSCache, partitionpair::Pair; normalize=true
 )
   prev_v, prev_pe = nothing, nothing
@@ -391,21 +399,14 @@ function mps_update(
       biorthogonalize(bmpsc, update_pe)
     end
     bmpsc = if !isnothing(prev_v)
-      partition_update(
-        bmpsc,
-        prev_v,
-        cur_v;
-        message_update=ms -> default_message_update(ms; normalize=false),
-      )
+      partition_update(bmpsc, prev_v, cur_v)
     else
-      partition_update(
-        bmpsc, cur_v; message_update=ms -> default_message_update(ms; normalize=false)
-      )
+      partition_update(bmpsc, cur_v)
     end
 
     me_prev = only(message(bmpsc, update_pe))
     me = only(
-      update_message(
+      updated_message(
         bmpsc, update_pe; message_update=ms -> default_message_update(ms; normalize)
       ),
     )
@@ -430,31 +431,6 @@ function mps_update(
   end
 
   return bmpsc
-end
-
-"""
-More generic interface for update, with default params
-"""
-function update(
-  alg::Algorithm,
-  bmpsc::BoundaryMPSCache;
-  partitionpairs=default_edge_sequence(bmpsc),
-  maxiter=default_bp_maxiter(alg, bmpsc),
-  mps_fit_kwargs=default_mps_fit_kwargs(alg, bmpsc),
-)
-  if isnothing(maxiter)
-    error("You need to specify a number of iterations for Boundary MPS!")
-  end
-  for i in 1:maxiter
-    for partitionpair in partitionpairs
-      bmpsc = mps_update(alg, bmpsc, partitionpair; mps_fit_kwargs...)
-    end
-  end
-  return bmpsc
-end
-
-function update(bmpsc::BoundaryMPSCache; alg::String="orthogonal", kwargs...)
-  return update(Algorithm(alg), bmpsc; kwargs...)
 end
 
 #Assume all vertices live in the same partition for now

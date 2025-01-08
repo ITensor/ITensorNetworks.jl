@@ -52,9 +52,15 @@ function default_message(
 )
   return not_implemented()
 end
+default_message_update_alg(bpc::AbstractBeliefPropagationCache) = not_implemented()
 Base.copy(bpc::AbstractBeliefPropagationCache) = not_implemented()
-default_bp_maxiter(bpc::AbstractBeliefPropagationCache) = not_implemented()
-default_edge_sequence(bpc::AbstractBeliefPropagationCache) = not_implemented()
+default_bp_maxiter(alg::Algorithm, bpc::AbstractBeliefPropagationCache) = not_implemented()
+function default_edge_sequence(alg::Algorithm, bpc::AbstractBeliefPropagationCache)
+  return not_implemented()
+end
+function default_message_update_kwargs(alg::Algorithm, bpc::AbstractBeliefPropagationCache)
+  return not_implemented()
+end
 function environment(bpc::AbstractBeliefPropagationCache, verts::Vector; kwargs...)
   return not_implemented()
 end
@@ -63,6 +69,22 @@ function region_scalar(bpc::AbstractBeliefPropagationCache, pv::PartitionVertex;
 end
 function region_scalar(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge; kwargs...)
   return not_implemented()
+end
+
+function default_edge_sequence(
+  bpc::AbstractBeliefPropagationCache; alg=default_message_update_alg(bpc)
+)
+  return default_edge_sequence(Algorithm(alg), bpc)
+end
+function default_bp_maxiter(
+  bpc::AbstractBeliefPropagationCache; alg=default_message_update_alg(bpc)
+)
+  return default_bp_maxiter(Algorithm(alg), bpc)
+end
+function default_message_update_kwargs(
+  bpc::AbstractBeliefPropagationCache; alg=default_message_update_alg(bpc)
+)
+  return default_message_update_kwargs(Algorithm(alg), bpc)
 end
 
 function tensornetwork(bpc::AbstractBeliefPropagationCache)
@@ -165,44 +187,49 @@ end
 """
 Compute message tensor as product of incoming mts and local state
 """
-function update_message(
+function updated_message(
   bpc::AbstractBeliefPropagationCache,
   edge::PartitionEdge;
   message_update=default_message_update,
   message_update_kwargs=(;),
 )
   vertex = src(edge)
-  messages = incoming_messages(bpc, vertex; ignore_edges=PartitionEdge[reverse(edge)])
+  incoming_ms = incoming_messages(bpc, vertex; ignore_edges=PartitionEdge[reverse(edge)])
   state = factor(bpc, vertex)
 
-  return message_update(ITensor[messages; state]; message_update_kwargs...)
+  return message_update(ITensor[incoming_ms; state]; message_update_kwargs...)
+end
+
+function update(
+  alg::Algorithm"SimpleBP",
+  bpc::AbstractBeliefPropagationCache,
+  edge::PartitionEdge;
+  kwargs...,
+)
+  new_m = updated_message(bpc, edge; kwargs...)
+  bpc = set_message(bpc, edge, new_m)
+  return bpc
 end
 
 """
 Do a sequential update of the message tensors on `edges`
 """
 function update(
+  alg::Algorithm,
   bpc::AbstractBeliefPropagationCache,
-  edges::Vector{<:PartitionEdge};
+  edges::Vector;
   (update_diff!)=nothing,
   kwargs...,
 )
-  bpc_updated = copy(bpc)
-  mts = messages(bpc_updated)
+  bpc = copy(bpc)
   for e in edges
-    set!(mts, e, update_message(bpc_updated, e; kwargs...))
+    prev_message = !isnothing(update_diff!) ? message(bpc, e) : nothing
+    bpc = update(alg, bpc, e; kwargs...)
     if !isnothing(update_diff!)
-      update_diff![] += message_diff(message(bpc, e), mts[e])
+      update_diff![] += message_diff(message(bpc, e), prev_message)
     end
   end
-  return bpc_updated
-end
-
-"""
-Update the message tensor on a single edge
-"""
-function update(bpc::AbstractBeliefPropagationCache, edge::PartitionEdge; kwargs...)
-  return update(bpc, [edge]; kwargs...)
+  return bpc
 end
 
 """
@@ -211,13 +238,14 @@ Currently we send the full message tensor data struct to update for each edge_gr
 mts relevant to that group.
 """
 function update(
+  alg::Algorithm,
   bpc::AbstractBeliefPropagationCache,
   edge_groups::Vector{<:Vector{<:PartitionEdge}};
   kwargs...,
 )
   new_mts = copy(messages(bpc))
   for edges in edge_groups
-    bpc_t = update(bpc, edges; kwargs...)
+    bpc_t = update(alg, bpc, edges; kwargs...)
     for e in edges
       new_mts[e] = message(bpc_t, e)
     end
@@ -229,12 +257,13 @@ end
 More generic interface for update, with default params
 """
 function update(
+  alg::Algorithm,
   bpc::AbstractBeliefPropagationCache;
-  edges=default_edge_sequence(bpc),
-  maxiter=default_bp_maxiter(bpc),
+  edges=default_edge_sequence(alg, bpc),
+  maxiter=default_bp_maxiter(alg, bpc),
+  message_update_kwargs=default_message_update_kwargs(alg, bpc),
   tol=nothing,
   verbose=false,
-  kwargs...,
 )
   compute_error = !isnothing(tol)
   if isnothing(maxiter)
@@ -242,7 +271,7 @@ function update(
   end
   for i in 1:maxiter
     diff = compute_error ? Ref(0.0) : nothing
-    bpc = update(bpc, edges; (update_diff!)=diff, kwargs...)
+    bpc = update(alg, bpc, edges; (update_diff!)=diff, message_update_kwargs...)
     if compute_error && (diff.x / length(edges)) <= tol
       if verbose
         println("BP converged to desired precision after $i iterations.")
@@ -251,4 +280,12 @@ function update(
     end
   end
   return bpc
+end
+
+function update(
+  bpc::AbstractBeliefPropagationCache;
+  alg::String=default_message_update_alg(bpc),
+  kwargs...,
+)
+  return update(Algorithm(alg), bpc; kwargs...)
 end

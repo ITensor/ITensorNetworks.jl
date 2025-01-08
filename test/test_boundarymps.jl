@@ -29,7 +29,6 @@ using ITensorNetworks:
   tensornetwork,
   update,
   update_factor,
-  update_message,
   message_diff
 using ITensors:
   ITensors, ITensor, combiner, dag, dim, inds, inner, normalize, op, prime, random_itensor
@@ -53,7 +52,6 @@ using LinearAlgebra: norm
 )
   begin
     ITensors.disable_warn_order()
-    mps_fit_kwargs = (; niters=50, tolerance=1e-10)
     rng = StableRNG(1234)
 
     #First a comb tree (which is still a planar graph) and a flat tensor network
@@ -71,7 +69,7 @@ using LinearAlgebra: norm
 
     #Orthogonal Boundary MPS, group by row
     tn_boundaryMPS = BoundaryMPSCache(tn; grouping_function=v -> last(v), message_rank=1)
-    tn_boundaryMPS = update(tn_boundaryMPS; mps_fit_kwargs)
+    tn_boundaryMPS = update(tn_boundaryMPS)
     ∂tn_∂vc_boundaryMPS = contract(environment(tn_boundaryMPS, [vc]); sequence="automatic")
     ∂tn_∂vc_boundaryMPS /= norm(∂tn_∂vc_boundaryMPS)
 
@@ -121,15 +119,19 @@ using LinearAlgebra: norm
     end
     message_update_f = ms -> make_posdef.(default_message_update(ms))
     ψ_vidal = VidalITensorNetwork(
-      ψ; cache_update_kwargs=(; message_update=message_update_f, maxiter=50, tol=1e-14)
+      ψ;
+      cache_update_kwargs=(;
+        maxiter=50, tol=1e-14, message_update_kwargs=(; message_update=message_update_f)
+      ),
     )
     cache_ref = Ref{BeliefPropagationCache}()
     ψ_symm = ITensorNetwork(ψ_vidal; (cache!)=cache_ref)
     bp_cache = cache_ref[]
 
     #Do Orthogonal Boundary MPS
+    message_update_kwargs = (; niters=25, tolerance=1e-10)
     ψIψ_boundaryMPS = BoundaryMPSCache(QuadraticFormNetwork(ψ_symm); message_rank=1)
-    ψIψ_boundaryMPS = update(ψIψ_boundaryMPS; mps_fit_kwargs)
+    ψIψ_boundaryMPS = update(ψIψ_boundaryMPS; message_update_kwargs)
 
     for pe in keys(messages(bp_cache))
       m_boundarymps = only(message(ψIψ_boundaryMPS, pe))
