@@ -45,6 +45,30 @@ function default_message_update_kwargs(
 )
   return (; niters=3, tolerance=nothing)
 end
+default_boundarymps_message_rank(tn::AbstractITensorNetwork) = maxlinkdim(tn)^2
+partitions(bmpsc::BoundaryMPSCache) = parent.(collect(partitionvertices(ppg(bmpsc))))
+partitionpairs(bmpsc::BoundaryMPSCache) = pair.(partitionedges(ppg(bmpsc)))
+
+function cache(
+  alg::Algorithm"boundarymps",
+  tn;
+  bp_cache_construction_kwargs=default_cache_construction_kwargs(Algorithm("bp"), tn),
+  kwargs...,
+)
+  return BoundaryMPSCache(
+    BeliefPropagationCache(tn; bp_cache_construction_kwargs...); kwargs...
+  )
+end
+
+function default_cache_construction_kwargs(alg::Algorithm"boundarymps", tn)
+  return (;
+    bp_cache_construction_kwargs=default_cache_construction_kwargs(Algorithm("bp"), tn)
+  )
+end
+
+function default_cache_update_kwargs(alg::Algorithm"boundarymps")
+  return (; alg="orthogonal", message_update_kwargs=(; niters=25, tolerance=1e-10))
+end
 
 function Base.copy(bmpsc::BoundaryMPSCache)
   return BoundaryMPSCache(
@@ -100,7 +124,7 @@ function BoundaryMPSCache(
   bpc::BeliefPropagationCache;
   grouping_function::Function=v -> first(v),
   group_sorting_function::Function=v -> last(v),
-  message_rank::Int64=1,
+  message_rank::Int64=default_boundarymps_message_rank(tensornetwork(bpc)),
 )
   bpc = insert_pseudo_planar_edges(bpc; grouping_function)
   planar_graph = partitioned_graph(bpc)
@@ -113,7 +137,7 @@ function BoundaryMPSCache(
   return set_interpartition_messages(bmpsc)
 end
 
-function BoundaryMPSCache(tn::AbstractITensorNetwork, args...; kwargs...)
+function BoundaryMPSCache(tn, args...; kwargs...)
   return BoundaryMPSCache(BeliefPropagationCache(tn, args...); kwargs...)
 end
 
@@ -253,7 +277,7 @@ end
 #Update all messages within a partition along the path from from v1 to v2
 function partition_update(bmpsc::BoundaryMPSCache, args...)
   return update(
-    Algorithm("SimpleBP"),
+    Algorithm("simplebp"),
     bmpsc,
     partition_update_sequence(bmpsc, args...);
     message_update_function_kwargs=(; normalize=false),
@@ -464,4 +488,19 @@ function ITensorNetworks.environment(bmpsc::BoundaryMPSCache, verts::Vector; kwa
   pv = only(planargraph_partitions(bmpsc, vs))
   bmpsc = partition_update(bmpsc, pv)
   return environment(bp_cache(bmpsc), verts; kwargs...)
+end
+
+function region_scalar(bmpsc::BoundaryMPSCache, partition)
+  partition_vs = planargraph_vertices(bmpsc, partition)
+  bmpsc = partition_update(bmpsc, first(partition_vs), last(partition_vs))
+  return region_scalar(bp_cache(bmpsc), PartitionVertex(last(partition_vs)))
+end
+
+function region_scalar(bmpsc::BoundaryMPSCache, partitionpair::Pair)
+  pes = planargraph_partitionpair_partitionedges(bmpsc, partitionpair)
+  out = ITensor(1.0)
+  for pe in pes
+    out = (out * (only(message(bmpsc, pe)))) * only(message(bmpsc, reverse(pe)))
+  end
+  return out[]
 end

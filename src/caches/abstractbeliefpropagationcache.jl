@@ -43,7 +43,6 @@ default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertice
 function default_partitioned_vertices(f::AbstractFormNetwork)
   return group(v -> original_state_vertex(f, v), vertices(f))
 end
-default_cache_update_kwargs(cache) = (; maxiter=25, tol=1e-8)
 
 partitioned_tensornetwork(bpc::AbstractBeliefPropagationCache) = not_implemented()
 messages(bpc::AbstractBeliefPropagationCache) = not_implemented()
@@ -70,6 +69,8 @@ end
 function region_scalar(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge; kwargs...)
   return not_implemented()
 end
+partitions(bpc::AbstractBeliefPropagationCache) = not_implemented()
+partitionpairs(bpc::AbstractBeliefPropagationCache) = not_implemented()
 
 function default_edge_sequence(
   bpc::AbstractBeliefPropagationCache; alg=default_message_update_alg(bpc)
@@ -99,18 +100,12 @@ function factor(bpc::AbstractBeliefPropagationCache, vertex::PartitionVertex)
   return factors(bpc, vertices(bpc, vertex))
 end
 
-function vertex_scalars(
-  bpc::AbstractBeliefPropagationCache,
-  pvs=partitionvertices(partitioned_tensornetwork(bpc));
-  kwargs...,
-)
+function vertex_scalars(bpc::AbstractBeliefPropagationCache, pvs=partitions(bpc); kwargs...)
   return map(pv -> region_scalar(bpc, pv; kwargs...), pvs)
 end
 
 function edge_scalars(
-  bpc::AbstractBeliefPropagationCache,
-  pes=partitionedges(partitioned_tensornetwork(bpc));
-  kwargs...,
+  bpc::AbstractBeliefPropagationCache, pes=partitionpairs(bpc); kwargs...
 )
   return map(pe -> region_scalar(bpc, pe; kwargs...), pes)
 end
@@ -203,7 +198,7 @@ function updated_message(
 end
 
 function update(
-  alg::Algorithm"SimpleBP",
+  alg::Algorithm"simplebp",
   bpc::AbstractBeliefPropagationCache,
   edge::PartitionEdge;
   kwargs...,

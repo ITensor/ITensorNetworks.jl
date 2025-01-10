@@ -55,35 +55,26 @@ using LinearAlgebra: norm
     rng = StableRNG(1234)
 
     #First a comb tree (which is still a planar graph) and a flat tensor network
-    g = named_comb_tree((4, 4))
+    g = named_comb_tree((3, 3))
     χ = 2
     tn = random_tensornetwork(rng, elt, g; link_space=χ)
     vc = first(center(g))
 
-    ∂tn_∂vc_bp = contract(environment(tn, [vc]; alg="bp"); sequence="automatic")
-    ∂tn_∂vc_bp /= norm(∂tn_∂vc_bp)
+    λ_bp = scalar(tn; alg="bp")
+    λ_exact = scalar(tn; alg="exact")
+    #Orthogonal boundary MPS group by column (default)
+    λ_ortho_bmps = scalar(tn; alg="boundarymps")
+    #Orthogonal boundary MPS group by column
+    λ_biortho_bmps = scalar(
+      tn;
+      alg="boundarymps",
+      cache_construction_kwargs=(; grouping_function=v -> last(v)),
+      cache_update_kwargs=(; maxiter=1, alg="biorthogonal"),
+    )
 
-    ∂tn_∂vc = subgraph(tn, setdiff(vertices(tn), [vc]))
-    ∂tn_∂vc_exact = contract(∂tn_∂vc; sequence=contraction_sequence(∂tn_∂vc; alg="greedy"))
-    ∂tn_∂vc_exact /= norm(∂tn_∂vc_exact)
-
-    #Orthogonal Boundary MPS, group by row
-    tn_boundaryMPS = BoundaryMPSCache(tn; grouping_function=v -> last(v), message_rank=1)
-    tn_boundaryMPS = update(tn_boundaryMPS)
-    ∂tn_∂vc_boundaryMPS = contract(environment(tn_boundaryMPS, [vc]); sequence="automatic")
-    ∂tn_∂vc_boundaryMPS /= norm(∂tn_∂vc_boundaryMPS)
-
-    @test norm(∂tn_∂vc_boundaryMPS - ∂tn_∂vc_exact) <= 10 * eps(real(elt))
-    @test norm(∂tn_∂vc_boundaryMPS - ∂tn_∂vc_bp) <= 10 * eps(real(elt))
-
-    #Biorthogonal Boundary MPS, , group by row
-    tn_boundaryMPS = BoundaryMPSCache(tn; grouping_function=v -> last(v), message_rank=1)
-    tn_boundaryMPS = update(tn_boundaryMPS; alg="biorthogonal")
-    ∂tn_∂vc_boundaryMPS = contract(environment(tn_boundaryMPS, [vc]); sequence="automatic")
-    ∂tn_∂vc_boundaryMPS /= norm(∂tn_∂vc_boundaryMPS)
-
-    @test norm(∂tn_∂vc_boundaryMPS - ∂tn_∂vc_exact) <= 10 * eps(real(elt))
-    @test norm(∂tn_∂vc_boundaryMPS - ∂tn_∂vc_bp) <= 10 * eps(real(elt))
+    @test abs(λ_ortho_bmps - λ_exact) <= 10 * eps(real(elt))
+    @test abs(λ_ortho_bmps - λ_bp) <= 10 * eps(real(elt))
+    @test abs(λ_ortho_bmps - λ_biortho_bmps) <= 10 * eps(real(elt))
 
     #Now the norm tensor network of a square graph with a few vertices missing for added complexity
     g = named_grid((5, 5))
@@ -98,14 +89,14 @@ using LinearAlgebra: norm
     ρ_exact /= tr(ρ_exact)
 
     #Orthogonal Boundary MPS, group by column (default)
-    ψIψ_boundaryMPS = BoundaryMPSCache(ψIψ; message_rank=χ * χ)
-    ψIψ_boundaryMPS = update(ψIψ_boundaryMPS)
-    ρ_boundaryMPS = contract(environment(ψIψ_boundaryMPS, [vc]); sequence="automatic")
+    ρ_boundaryMPS = contract(
+      environment(ψIψ, [vc]; alg="boundarymps"); sequence="automatic"
+    )
     ρ_boundaryMPS /= tr(ρ_boundaryMPS)
 
     @test norm(ρ_boundaryMPS - ρ_exact) <= 10 * eps(real(elt))
 
-    #Now we test BP and orthogonal and biorthogonl Boundary MPS are equivalent when run from in the symmetric gauge
+    #Now we test BP and orthogonal and biorthogonal Boundary MPS are equivalent when run from in the symmetric gauge
     g = named_hexagonal_lattice_graph(3, 3)
     s = siteinds("S=1/2", g)
     χ = 2

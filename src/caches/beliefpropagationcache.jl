@@ -18,6 +18,10 @@ function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITens
   return (; partitioned_vertices=default_partitioned_vertices(ψ))
 end
 
+function default_cache_construction_kwargs(alg::Algorithm"bp", pg::PartitionedGraph)
+  return (;)
+end
+
 struct BeliefPropagationCache{PTN,MTS} <: AbstractBeliefPropagationCache
   partitioned_tensornetwork::PTN
   messages::MTS
@@ -44,6 +48,7 @@ end
 function cache(alg::Algorithm"bp", tn; kwargs...)
   return BeliefPropagationCache(tn; kwargs...)
 end
+default_cache_update_kwargs(alg::Algorithm"bp") = (; maxiter=25, tol=1e-8)
 
 function partitioned_tensornetwork(bp_cache::BeliefPropagationCache)
   return bp_cache.partitioned_tensornetwork
@@ -61,19 +66,22 @@ function Base.copy(bp_cache::BeliefPropagationCache)
   )
 end
 
-default_message_update_alg(bp_cache::BeliefPropagationCache) = "SimpleBP"
+default_message_update_alg(bp_cache::BeliefPropagationCache) = "simplebp"
 
-function default_bp_maxiter(alg::Algorithm"SimpleBP", bp_cache::BeliefPropagationCache)
+function default_bp_maxiter(alg::Algorithm"simplebp", bp_cache::BeliefPropagationCache)
   return default_bp_maxiter(partitioned_graph(bp_cache))
 end
-function default_edge_sequence(alg::Algorithm"SimpleBP", bp_cache::BeliefPropagationCache)
+function default_edge_sequence(alg::Algorithm"simplebp", bp_cache::BeliefPropagationCache)
   return default_edge_sequence(partitioned_tensornetwork(bp_cache))
 end
 function default_message_update_kwargs(
-  alg::Algorithm"SimpleBP", bpc::AbstractBeliefPropagationCache
+  alg::Algorithm"simplebp", bpc::AbstractBeliefPropagationCache
 )
   return (;)
 end
+
+partitions(bpc::BeliefPropagationCache) = partitionvertices(partitioned_tensornetwork(bpc))
+partitionpairs(bpc::BeliefPropagationCache) = partitionedges(partitioned_tensornetwork(bpc))
 
 function set_messages(cache::BeliefPropagationCache, messages)
   return BeliefPropagationCache(partitioned_tensornetwork(cache), messages)
