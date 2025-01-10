@@ -38,8 +38,8 @@ pair(pe::PartitionEdge) = parent(src(pe)) => parent(dst(pe))
 
 #Return a sequence of pairs to go from item1 to item2 in an ordered_list
 function pair_sequence(ordered_list::Vector, item1, item2)
-  item1_pos, item2_pos = only(findall(x -> x == item1, ordered_list)),
-  only(findall(x -> x == item2, ordered_list))
+  item1_pos, item2_pos = findfirst(x -> x == item1, ordered_list),
+  findfirst(x -> x == item2, ordered_list)
   item1_pos < item2_pos &&
     return [ordered_list[i] => ordered_list[i + 1] for i in item1_pos:(item2_pos - 1)]
   return [ordered_list[i] => ordered_list[i - 1] for i in item1_pos:-1:(item2_pos + 1)]

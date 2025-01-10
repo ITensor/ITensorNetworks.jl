@@ -190,14 +190,16 @@ Compute message tensor as product of incoming mts and local state
 function updated_message(
   bpc::AbstractBeliefPropagationCache,
   edge::PartitionEdge;
-  message_update=default_message_update,
-  message_update_kwargs=(;),
+  message_update_function=default_message_update,
+  message_update_function_kwargs=(;),
 )
   vertex = src(edge)
   incoming_ms = incoming_messages(bpc, vertex; ignore_edges=PartitionEdge[reverse(edge)])
   state = factor(bpc, vertex)
 
-  return message_update(ITensor[incoming_ms; state]; message_update_kwargs...)
+  return message_update_function(
+    ITensor[incoming_ms; state]; message_update_function_kwargs...
+  )
 end
 
 function update(

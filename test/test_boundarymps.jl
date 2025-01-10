@@ -117,11 +117,11 @@ using LinearAlgebra: norm
         x -> abs(real(x)), A, first(inds(A)), last(inds(A)); ishermitian=true
       )
     end
-    message_update_f = ms -> make_posdef.(default_message_update(ms))
+    f = ms -> make_posdef.(default_message_update(ms))
     ψ_vidal = VidalITensorNetwork(
       ψ;
       cache_update_kwargs=(;
-        maxiter=50, tol=1e-14, message_update_kwargs=(; message_update=message_update_f)
+        maxiter=50, tol=1e-14, message_update_kwargs=(; message_update_function=f)
       ),
     )
     cache_ref = Ref{BeliefPropagationCache}()
