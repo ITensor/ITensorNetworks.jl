@@ -100,7 +100,7 @@ function region_scalar(
   contract_kwargs=(; sequence="automatic"),
 )
   incoming_mts = incoming_messages(bp_cache, [pv])
-  local_state = factor(bp_cache, pv)
+  local_state = factors(bp_cache, pv)
   return contract(vcat(incoming_mts, local_state); contract_kwargs...)[]
 end
 

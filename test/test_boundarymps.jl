@@ -80,7 +80,7 @@ using LinearAlgebra: norm
     g = named_grid((5, 5))
     g = rem_vertices(g, [(2, 2), (3, 3)])
     s = siteinds("S=1/2", g)
-    χ = 3
+    χ = 2
     ψ = random_tensornetwork(rng, elt, s; link_space=χ)
     ψIψ = QuadraticFormNetwork(ψ)
     vc = (first(center(g)), "operator")
@@ -88,9 +88,14 @@ using LinearAlgebra: norm
     ρ_exact = contract(ρ; sequence=contraction_sequence(ρ; alg="greedy"))
     ρ_exact /= tr(ρ_exact)
 
-    #Orthogonal Boundary MPS, group by column (default)
+    #Orthogonal Boundary MPS, group by column (default), do two-site fitting
     ρ_boundaryMPS = contract(
-      environment(ψIψ, [vc]; alg="boundarymps"); sequence="automatic"
+      environment(
+        ψIψ,
+        [vc];
+        alg="boundarymps",
+        cache_update_kwargs=(; message_update_kwargs=(; nsites=2)),
+      ),
     )
     ρ_boundaryMPS /= tr(ρ_boundaryMPS)
 
@@ -128,7 +133,7 @@ using LinearAlgebra: norm
       m_boundarymps = only(message(ψIψ_boundaryMPS, pe))
       #Prune the dimension 1 virtual index from boundary MPS message tensor
       m_boundarymps =
-        m_boundarymps * ITensor(1.0, filter(i -> dim(i) == 1, inds(m_boundarymps)))
+        m_boundarymps * ITensor(one(Bool), filter(i -> dim(i) == 1, inds(m_boundarymps)))
       m_bp = only(message(bp_cache, pe))
       m_bp /= tr(m_bp)
       m_boundarymps /= tr(m_boundarymps)
@@ -143,7 +148,7 @@ using LinearAlgebra: norm
       m_boundarymps = only(message(ψIψ_boundaryMPS, pe))
       #Prune the dimension 1 virtual index from boundary MPS message tensor
       m_boundarymps =
-        m_boundarymps * ITensor(1.0, filter(i -> dim(i) == 1, inds(m_boundarymps)))
+        m_boundarymps * ITensor(one(Bool), filter(i -> dim(i) == 1, inds(m_boundarymps)))
       m_bp = only(message(bp_cache, pe))
       m_bp /= tr(m_bp)
       m_boundarymps /= tr(m_boundarymps)

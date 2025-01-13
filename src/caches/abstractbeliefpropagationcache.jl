@@ -96,8 +96,14 @@ function factors(bpc::AbstractBeliefPropagationCache, verts::Vector)
   return ITensor[tensornetwork(bpc)[v] for v in verts]
 end
 
-function factor(bpc::AbstractBeliefPropagationCache, vertex::PartitionVertex)
-  return factors(bpc, vertices(bpc, vertex))
+function factors(
+  bpc::AbstractBeliefPropagationCache, partition_verts::Vector{<:PartitionVertex}
+)
+  return factors(bpc, vertices(bpc, partition_verts))
+end
+
+function factors(bpc::AbstractBeliefPropagationCache, partition_vertex::PartitionVertex)
+  return factors(bpc, [partition_vertex])
 end
 
 function vertex_scalars(bpc::AbstractBeliefPropagationCache, pvs=partitions(bpc); kwargs...)
@@ -190,7 +196,7 @@ function updated_message(
 )
   vertex = src(edge)
   incoming_ms = incoming_messages(bpc, vertex; ignore_edges=PartitionEdge[reverse(edge)])
-  state = factor(bpc, vertex)
+  state = factors(bpc, vertex)
 
   return message_update_function(
     ITensor[incoming_ms; state]; message_update_function_kwargs...
@@ -203,9 +209,7 @@ function update(
   edge::PartitionEdge;
   kwargs...,
 )
-  new_m = updated_message(bpc, edge; kwargs...)
-  bpc = set_message(bpc, edge, new_m)
-  return bpc
+  return set_message(bpc, edge, updated_message(bpc, edge; kwargs...))
 end
 
 """
