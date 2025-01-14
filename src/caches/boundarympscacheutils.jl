@@ -1,7 +1,6 @@
 using ITensorNetworks: ITensorNetworks, BeliefPropagationCache
 using NamedGraphs.PartitionedGraphs: PartitionedGraph
 
-#Add partition edges that may not have meaning in the underlying graph
 function add_partitionedges(pg::PartitionedGraph, pes::Vector{<:PartitionEdge})
   g = partitioned_graph(pg)
   g = add_edges(g, parent.(pes))
@@ -10,7 +9,6 @@ function add_partitionedges(pg::PartitionedGraph, pes::Vector{<:PartitionEdge})
   )
 end
 
-#Add partition edges that may not have meaning in the underlying graph
 function add_partitionedges(bpc::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
   pg = add_partitionedges(partitioned_tensornetwork(bpc), pes)
   return BeliefPropagationCache(pg, messages(bpc))
