@@ -590,7 +590,6 @@ function update(
       cf += !isnothing(tolerance) ? costfunction(alg, bmpsc, update_pe_region) : 0.0
     end
     epsilon = abs(cf - prev_cf) / length(update_seq)
-    @show cf
     if !isnothing(tolerance) && epsilon < tolerance
       return cache_prep_function(alg, bmpsc, partitionpair)
     else
