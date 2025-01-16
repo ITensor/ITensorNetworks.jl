@@ -25,13 +25,12 @@ function ITensorMPS.expect(
   (cache!)=nothing,
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(alg),
-  cache_construction_function=tn ->
-    cache(alg, tn; default_cache_construction_kwargs(alg, tn)...),
+  cache_construction_kwargs=default_cache_construction_kwargs(alg, inner_network(ψ, ψ)),
   kwargs...,
 )
   ψIψ = inner_network(ψ, ψ)
   if isnothing(cache!)
-    cache! = Ref(cache_construction_function(ψIψ))
+    cache! = Ref(cache(alg, ψIψ; cache_construction_kwargs...))
   end
 
   if update_cache
