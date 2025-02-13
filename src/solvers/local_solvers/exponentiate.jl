@@ -22,6 +22,7 @@ function exponentiate_updater(
     projected_operator![],
     time_step,
     init;
+    eager,
     krylovdim,
     maxiter,
     verbosity,
