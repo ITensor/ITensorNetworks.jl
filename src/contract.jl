@@ -30,7 +30,7 @@ function NDTensors.contract(
   return contract_approx(alg, tn, output_structure; kwargs...)
 end
 
-function ITensors.scalar(alg::Algorithm, tn::AbstractITensorNetwork; kwargs...)
+function ITensors.scalar(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
   return contract(alg, tn; kwargs...)[]
 end
 
@@ -54,7 +54,7 @@ function logscalar(
   (cache!)=nothing,
   cache_construction_kwargs=default_cache_construction_kwargs(alg, tn),
   update_cache=isnothing(cache!),
-  cache_update_kwargs=default_cache_update_kwargs(cache!),
+  cache_update_kwargs=default_cache_update_kwargs(alg),
 )
   if isnothing(cache!)
     cache! = Ref(cache(alg, tn; cache_construction_kwargs...))
@@ -77,6 +77,6 @@ function logscalar(
   return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
 end
 
-function ITensors.scalar(alg::Algorithm"bp", tn::AbstractITensorNetwork; kwargs...)
+function ITensors.scalar(alg::Algorithm, tn::AbstractITensorNetwork; kwargs...)
   return exp(logscalar(alg, tn; kwargs...))
 end

@@ -23,7 +23,7 @@ using ITensorNetworks:
   tensornetwork,
   update,
   update_factor,
-  update_message,
+  updated_message,
   message_diff
 using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
 using ITensorNetworks.ModelNetworks: ModelNetworks
@@ -51,7 +51,7 @@ using Test: @test, @testset
     bpc = update(bpc; maxiter=25, tol=eps(real(elt)))
     #Test messages are converged
     for pe in partitionedges(partitioned_tensornetwork(bpc))
-      @test message_diff(update_message(bpc, pe), message(bpc, pe)) < 10 * eps(real(elt))
+      @test message_diff(updated_message(bpc, pe), message(bpc, pe)) < 10 * eps(real(elt))
       @test eltype(only(message(bpc, pe))) == elt
     end
     #Test updating the underlying tensornetwork in the cache
