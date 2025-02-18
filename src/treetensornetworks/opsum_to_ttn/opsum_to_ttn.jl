@@ -1,13 +1,14 @@
-#using FillArrays: OneElement
-#using DataGraphs: DataGraph
-using Graphs: degree, is_tree
+using DataGraphs: DataGraph
+using Graphs: degree, is_tree, steiner_tree
 using ITensorMPS: ITensorMPS, cutoff, linkdims, ops, truncate!, val
 using ITensors: flux, has_fermion_string, itensor, removeqns, space
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks
 using ITensors.Ops: argument, coefficient, Op, OpSum, name, params, site, terms, which_op
+using IterTools: partition
 using NamedGraphs.GraphsExtensions:
   GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
+using NDTensors.SparseArrayDOKs: SparseArrayDOK
 using StaticArrays: MVector
 
 # 
@@ -38,18 +39,6 @@ function determine_coefficient_type(terms)
     return real(typeof(coefficient(first(terms))))
   end
   return typeof(coefficient(first(terms)))
-end
-
-"""
-    ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex, kwargs...)
-
-Construct a TreeTensorNetwork from a symbolic OpSum representation of a
-Hamiltonian, compressing shared interaction channels.
-"""
-function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kwargs...)
-  # Function barrier to improve type stability
-  coefficient_type = determine_coefficient_type(terms(os))
-  return ttn_svd(coefficient_type, os, sites, root_vertex; kwargs...)
 end
 
 # TODO: should be equivalent to `sort!(v); unique!(v)` however,
@@ -88,77 +77,71 @@ function pos_in_link!(linkmap::Dict, k)
 end
 
 function make_symbolic_ttn(
-  coefficient_type,
-  opsum::OpSum,
-  sites::IndsNetwork;
-  ordered_verts,
-  ordered_edges,
-  root_vertex,
-  term_qn_map,
+  coefficient_type, opsum::OpSum, sites::IndsNetwork; root_vertex, term_qn_map
 )
+  ordered_edges = _default_edge_ordering(sites, root_vertex)
   inmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
   outmaps = Dict{Pair{edgetype(sites),QN},Dict{Vector{Op},Int}}()
 
-  #g = underlying_graph(sites)
-
   # Bond coefficients for incoming edge channels.
   # These become the "M" coefficient matrices that get SVD'd.
-  inbond_coefs = Dict(
-    e => Dict{QN,Vector{MatElem{coefficient_type}}}() for e in ordered_edges
-  )
+  #edge_matrix_type = SparseArrayDOK{coefficient_type}
+  edge_matrix_type = Vector{MatElem{coefficient_type}}
+  edge_data_eltype = Dict{QN,edge_matrix_type}
+  bond_coefs = DataGraph(sites; edge_data_eltype)
+  # Default initialize the coefs DataGraph
+  for e in edges(bond_coefs)
+    bond_coefs[e] = edge_data_eltype()
+  end
 
   # List of terms for which the coefficient has been added to a site factor
   site_coef_done = Prod{Op}[]
 
   # Temporary symbolic representation of TTN Hamiltonian
-  symbolic_ttn = Dict(
-    v => QNArrElem{Scaled{coefficient_type,Prod{Op}},degree(sites, v)}[] for
-    v in ordered_verts
-  )
+  vertex_data_eltype = Vector{QNArrElem{Scaled{coefficient_type,Prod{Op}}}}
+  symbolic_ttn = DataGraph(sites; vertex_data_eltype)
 
   # Build compressed finite state machine representation (symbolic_ttn)
-  for v in ordered_verts
+  for v in vertices(sites)
+    symbolic_ttn[v] = vertex_data_eltype()
     v_degree = degree(sites, v)
+
     # For every vertex, find all edges that contain this vertex
     # (align_and_reorder_edges makes the output of indicident edges match the
     #  direction and ordering match that of ordered_edges)
-    edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
+    v_edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
 
     # Use the corresponding ordering as index order for tensor elements at this site
-    dim_in = findfirst(e -> dst(e) == v, edges)
-    edge_in = (isnothing(dim_in) ? nothing : edges[dim_in])
-    dims_out = findall(e -> src(e) == v, edges)
-    edges_out = edges[dims_out]
+    dim_in = findfirst(e -> dst(e) == v, v_edges)
+    edge_in = (isnothing(dim_in) ? nothing : v_edges[dim_in])
+    dims_out = findall(e -> src(e) == v, v_edges)
+    edges_out = v_edges[dims_out]
 
     # For every site v' except v, determine the incident edge to v
     # that lies in the edge_path(v',v)
     # TODO: better way to make which_incident_edge below?
+    # TODO: instead of split at vertex, should
+    #       be able to traverse subtrees formed by cutting incoming bond
     subgraphs = split_at_vertex(sites, v)
-    _boundary_edges = [
-      only(boundary_edges(underlying_graph(sites), subgraph)) for subgraph in subgraphs
-    ]
-    _boundary_edges = align_edges(_boundary_edges, edges)
+    _boundary_edges = [only(boundary_edges(sites, subgraph)) for subgraph in subgraphs]
+    _boundary_edges = align_edges(_boundary_edges, v_edges)
     which_incident_edge = Dict(
       Iterators.flatten([
         subgraphs[i] .=> ((_boundary_edges[i]),) for i in eachindex(subgraphs)
       ]),
     )
 
-    # Sanity check, leaves only have single incoming or outgoing edge
-    @assert !isempty(dims_out) || !isnothing(dim_in)
-    (isempty(dims_out) || isnothing(dim_in)) && @assert is_leaf_vertex(sites, v)
-
     for term in opsum
-      # Loop over OpSum and pick out terms that act on current vertex
-      ops = ITensors.terms(term)
-      if v in ITensors.site.(ops)
-        crosses_vertex = true
-      else
-        crosses_vertex =
-          !isone(length(Set([which_incident_edge[site] for site in site.(ops)])))
-      end
-      # If term doesn't cross vertex, skip it
-      crosses_vertex || continue
+      ops = terms(term)
+      op_sites = ITensors.sites(term)
+
+      # Only consider terms crossing current vertex
+      crosses_v((s1, s2),) = (v ∈ vertex_path(sites, s1, s2))
+      v_crossed = (v ∈ op_sites) || any(crosses_v, partition(op_sites, 2, 1))
+      # TODO: seems we could make this just
+      # v_crossed = (v ∈ vertices(steiner_tree(sites,op_sites))))
+      # but it is not working - steiner_tree seems to have spurious extra vertices?
+      v_crossed || continue
 
       # Filter out ops that acts on current vertex
       onsite_ops = filter(t -> (site(t) == v), ops)
@@ -166,52 +149,47 @@ function make_symbolic_ttn(
 
       # Filter out ops that come in from the direction of the incoming edge
       incoming_ops = filter(t -> which_incident_edge[site(t)] == edge_in, non_onsite_ops)
-
       # Also store all non-incoming ops in standard order, used for channel merging
-      non_incoming_ops = filter(
-        t -> (site(t) == v) || which_incident_edge[site(t)] != edge_in, ops
-      )
-
-      # For every outgoing edge, filter out ops that go out along that edge
-      outgoing_ops = Dict(
-        e => filter(t -> which_incident_edge[site(t)] == e, non_onsite_ops) for
-        e in edges_out
-      )
+      non_incoming_ops = setdiff(ops, incoming_ops)
 
       # Compute QNs
       incoming_qn = term_qn_map(incoming_ops)
       non_incoming_qn = term_qn_map(non_incoming_ops)
-      site_qn = term_qn_map(onsite_ops)
 
       # Initialize QNArrayElement indices and quantum numbers 
-      T_inds = MVector{v_degree}(fill(-1, v_degree))
-      T_qns = MVector{v_degree}(fill(QN(), v_degree))
-      # initialize ArrayElement indices for inbond_coefs
+      T_inds = fill(-1, v_degree)
+      T_qns = fill(QN(), v_degree)
+      # Initialize ArrayElement indices for bond_coefs
       bond_row = -1
       bond_col = -1
       if !isempty(incoming_ops)
         # Get the correct map from edge=>QN to term and channel.
         # This checks if term exists on edge=>QN (otherwise insert it) and returns its index.
-        coutmap = get!(outmaps, edge_in => non_incoming_qn, Dict{Vector{Op},Int}())
-        cinmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
+        qn_outmap = get!(outmaps, edge_in => non_incoming_qn, Dict{Vector{Op},Int}())
+        qn_inmap = get!(inmaps, edge_in => -incoming_qn, Dict{Vector{Op},Int}())
 
-        bond_row = pos_in_link!(cinmap, incoming_ops)
-        bond_col = pos_in_link!(coutmap, non_incoming_ops) # get incoming channel
+        bond_row = pos_in_link!(qn_inmap, incoming_ops)
+        bond_col = pos_in_link!(qn_outmap, non_incoming_ops) # get incoming channel
         bond_coef = convert(coefficient_type, coefficient(term))
-        q_inbond_coefs = get!(
-          inbond_coefs[edge_in], incoming_qn, MatElem{coefficient_type}[]
-        )
-        push!(q_inbond_coefs, MatElem(bond_row, bond_col, bond_coef))
+
+        # TODO: alternate version using SparseArraysDOK
+        #q_edge_coefs = get!(edge_coefs, incoming_qn, edge_matrix_type())
+        #q_edge_coefs[bond_row,bond_col] = bond_coef
+
+        # Version using MatElem
+        q_edge_coefs = get!(bond_coefs[edge_in], incoming_qn, edge_matrix_type[])
+        push!(q_edge_coefs, MatElem(bond_row, bond_col, bond_coef))
+
         T_inds[dim_in] = bond_col
         T_qns[dim_in] = -incoming_qn
       end
       for dout in dims_out
-        out_edge = edges[dout]
-        out_op = outgoing_ops[out_edge]
-        coutmap = get!(outmaps, out_edge => term_qn_map(out_op), Dict{Vector{Op},Int}())
+        out_edge = v_edges[dout]
+        out_ops = filter(t -> which_incident_edge[site(t)] == out_edge, non_onsite_ops)
+        qn_outmap = get!(outmaps, out_edge => term_qn_map(out_ops), Dict{Vector{Op},Int}())
         # Add outgoing channel
-        T_inds[dout] = pos_in_link!(coutmap, out_op)
-        T_qns[dout] = term_qn_map(out_op)
+        T_inds[dout] = pos_in_link!(qn_outmap, out_ops)
+        T_qns[dout] = term_qn_map(out_ops)
       end
       # If term starts at this site, add its coefficient as a site factor
       site_coef = one(coefficient_type)
@@ -234,44 +212,40 @@ function make_symbolic_ttn(
     _sort_unique!(symbolic_ttn[v])
   end
 
-  return symbolic_ttn, inbond_coefs
+  return symbolic_ttn, bond_coefs
 end
 
-function svd_bond_coefs(
-  coefficient_type, sites, inbond_coefs; ordered_verts, ordered_edges, kws...
-)
-  Vs = Dict(e => Dict{QN,Matrix{coefficient_type}}() for e in ordered_edges)
-  for v in ordered_verts
-    edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
-    dim_in = findfirst(e -> dst(e) == v, edges)
-    if !isnothing(dim_in) && !isempty(inbond_coefs[edges[dim_in]])
-      for (q, mat) in inbond_coefs[edges[dim_in]]
-        M = toMatrix(mat)
-        U, S, V = svd(M)
-        P = S .^ 2
-        truncate!(P; kws...)
-        tdim = length(P)
-        nc = size(M, 2)
-        Vs[edges[dim_in]][q] = Matrix{coefficient_type}(V[1:nc, 1:tdim])
-      end
+function svd_bond_coefs(coefficient_type, sites, bond_coefs; kws...)
+  edge_data_eltype = Dict{QN,Matrix{coefficient_type}}
+  Vs = DataGraph(sites; edge_data_eltype)
+  for e in edges(sites)
+    Vs[e] = edge_data_eltype()
+    for (q, coefs) in bond_coefs[e]
+      M = to_matrix(coefs)
+      U, S, V = svd(M)
+      P = S .^ 2
+      truncate!(P; kws...)
+      Vs[e][q] = Matrix(V[:, 1:length(P)])
     end
   end
   return Vs
 end
 
 function compress_ttn(
-  coefficient_type, sites0, Hflux, symbolic_ttn, Vs; ordered_verts, ordered_edges
+  coefficient_type, sites0, symbolic_ttn, Vs; root_vertex, total_qn=QN()
 )
   # Insert dummy indices on internal vertices, these will not show up in the final tensor
   # TODO: come up with a better solution for this
+  ordered_edges = _default_edge_ordering(sites0, root_vertex)
   sites = copy(sites0)
-  is_internal = Dict{vertextype(sites),Bool}()
-  for v in ordered_verts
+
+  is_internal = DataGraph(sites; vertex_data_eltype=Bool)
+  for v in vertices(sites)
     is_internal[v] = isempty(sites[v])
     if isempty(sites[v])
       # FIXME: This logic only works for trivial flux, breaks for nonzero flux
       # TODO: add assert or fix and add test!
-      sites[v] = [Index(Hflux => 1)]
+      sites[v] = [Index(total_qn => 1)]
     end
   end
 
@@ -279,11 +253,11 @@ function compress_ttn(
   # Compress this symbolic_ttn representation into dense form
   thishasqns = any(v -> hasqns(sites[v]), vertices(sites))
 
-  link_space = Dict{edgetype(sites),Index}()
-  for e in ordered_edges
+  link_space = DataGraph(sites; edge_data_eltype=Index)
+  for e in edges(sites)
     operator_blocks = [q => size(Vq, 2) for (q, Vq) in Vs[e]]
     link_space[e] = Index(
-      QN() => 1, operator_blocks..., Hflux => 1; tags=edge_tag(e), dir=linkdir_ref
+      QN() => 1, operator_blocks..., total_qn => 1; tags=edge_tag(e), dir=linkdir_ref
     )
   end
 
@@ -296,16 +270,16 @@ function compress_ttn(
   end
   qnblockdim(i::Index, q::QN) = blockdim(i, qnblock(i, q))
 
-  for v in ordered_verts
+  for v in vertices(sites)
     v_degree = degree(sites, v)
     # Redo the whole thing like before
     # TODO: use neighborhood instead of going through all edges, see above
-    edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
-    dim_in = findfirst(e -> dst(e) == v, edges)
-    dims_out = findall(e -> src(e) == v, edges)
+    v_edges = align_and_reorder_edges(incident_edges(sites, v), ordered_edges)
+    dim_in = findfirst(e -> dst(e) == v, v_edges)
+    dims_out = findall(e -> src(e) == v, v_edges)
     # slice isometries at this vertex
-    Vv = [Vs[e] for e in edges]
-    linkinds = [link_space[e] for e in edges]
+    Vv = [Vs[e] for e in v_edges]
+    linkinds = [link_space[e] for e in v_edges]
 
     # construct blocks
     blocks = Dict{Tuple{Block{v_degree},Vector{Op}},Array{coefficient_type,v_degree}}()
@@ -366,14 +340,14 @@ function compress_ttn(
     end
 
     for ((b, q_op), m) in blocks
-      Op = computeSiteProd(sites, Prod(q_op))
+      Op = compute_site_prod(sites, Prod(q_op))
       if hasqns(Op)
         # FIXME: this may not be safe, we may want to check for the equivalent (zero tensor?) case in the dense case as well
         iszero(nnzblocks(Op)) && continue
       end
       sq = flux(Op)
       if !isnothing(sq)
-        rq = (b[1] == 1 ? Hflux : first(space(linkinds[1])[b[1]])) # get row (dim_in) QN
+        rq = (b[1] == 1 ? total_qn : first(space(linkinds[1])[b[1]])) # get row (dim_in) QN
         cq = rq - sq # get column (out_dims) QN
         if ITensors.using_auto_fermion()
           # we need to account for the direct product below ordering the physical indices as the last indices
@@ -394,10 +368,6 @@ function compress_ttn(
       if is_internal[v]
         H[v] += iT
       else
-        #TODO: Remove this assert since it seems to be costly
-        #if hasqns(iT)
-        #  @assert flux(iT * Op) == Hflux
-        #end
         H[v] += (iT * Op)
       end
     end
@@ -432,7 +402,7 @@ function compress_ttn(
     if is_internal[v]
       H[v] += T
     else
-      H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
+      H[v] += T * compute_site_prod(sites, Prod([(Op("Id", v))]))
     end
   end
   return H
@@ -465,29 +435,25 @@ function (t::TermQNMap)(term)
   return q
 end
 
-function ttn_svd(
-  coefficient_type::Type{<:Number}, os::OpSum, sites::IndsNetwork, root_vertex; kws...
-)
+"""
+    ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex, kwargs...)
+
+Construct a TreeTensorNetwork from a symbolic OpSum representation of a
+Hamiltonian, compressing shared interaction channels.
+"""
+function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kws...)
+  coefficient_type = determine_coefficient_type(terms(os))
+
   term_qn_map = TermQNMap{vertextype(sites)}(sites)
 
-  # Traverse tree outwards from root vertex
-  ordered_verts = _default_vertex_ordering(sites, root_vertex)
-  # Store edges in fixed ordering relative to root
-  ordered_edges = _default_edge_ordering(sites, root_vertex)
-
-  symbolic_ttn, inbond_coefs = make_symbolic_ttn(
-    coefficient_type, os, sites; ordered_verts, ordered_edges, root_vertex, term_qn_map
+  symbolic_ttn, bond_coefs = make_symbolic_ttn(
+    coefficient_type, os, sites; root_vertex, term_qn_map
   )
 
-  Vs = svd_bond_coefs(
-    coefficient_type, sites, inbond_coefs; ordered_verts, ordered_edges, kws...
-  )
+  Vs = svd_bond_coefs(coefficient_type, sites, bond_coefs; kws...)
 
-  Hflux = -term_qn_map(terms(first(terms(os))))
-
-  T = compress_ttn(
-    coefficient_type, sites, Hflux, symbolic_ttn, Vs; ordered_verts, ordered_edges
-  )
+  total_qn = -term_qn_map(terms(first(terms(os))))
+  T = compress_ttn(coefficient_type, sites, symbolic_ttn, Vs; root_vertex, total_qn)
 
   return T
 end
@@ -498,9 +464,9 @@ end
 
 # TODO: fix fermion support, definitely broken
 
-# needed an extra `only` compared to ITensors version since IndsNetwork has Vector{<:Index}
+# Needed an extra `only` compared to ITensors version since IndsNetwork has Vector{<:Index}
 # as vertex data
-function isfermionic(t::Vector{Op}, sites::IndsNetwork{V,<:Index}) where {V}
+function isfermionic(t::Vector{Op}, sites::IndsNetwork)
   p = +1
   for op in t
     if has_fermion_string(name(op), only(sites[site(op)]))
@@ -511,13 +477,14 @@ function isfermionic(t::Vector{Op}, sites::IndsNetwork{V,<:Index}) where {V}
 end
 
 # only(site(ops[1])) in ITensors breaks for Tuple site labels, had to drop the only
-function computeSiteProd(sites::IndsNetwork{V,<:Index}, ops::Prod{Op})::ITensor where {V}
-  v = site(ops[1])
-  T = op(sites[v], which_op(ops[1]); params(ops[1])...)
-  for j in 2:length(ops)
-    (site(ops[j]) != v) && error("Mismatch of vertex labels in computeSiteProd")
-    opj = op(sites[v], which_op(ops[j]); params(ops[j])...)
-    T = product(T, opj)
+function compute_site_prod(sites::IndsNetwork, ops::Prod{Op})
+  v = site(first(ops))
+  s = sites[v]
+  T = op(s, which_op(ops[1]); params(ops[1])...)
+  for o in ops[2:end]
+    (site(o) != v) && error("Mismatch of vertex labels in compute_site_prod")
+    t = op(s, which_op(o); params(o)...)
+    T = product(T, t)
   end
   return T
 end
