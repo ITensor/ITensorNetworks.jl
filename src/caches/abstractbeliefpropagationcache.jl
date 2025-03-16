@@ -204,10 +204,7 @@ function updated_message(
 end
 
 function update(
-  alg::Algorithm"simplebp",
-  bpc::AbstractBeliefPropagationCache,
-  edge::PartitionEdge;
-  kwargs...,
+  alg::Algorithm"bp", bpc::AbstractBeliefPropagationCache, edge::PartitionEdge; kwargs...
 )
   return set_message(bpc, edge, updated_message(bpc, edge; kwargs...))
 end

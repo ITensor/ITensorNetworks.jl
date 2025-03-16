@@ -66,16 +66,16 @@ function Base.copy(bp_cache::BeliefPropagationCache)
   )
 end
 
-default_message_update_alg(bp_cache::BeliefPropagationCache) = "simplebp"
+default_message_update_alg(bp_cache::BeliefPropagationCache) = "bp"
 
-function default_bp_maxiter(alg::Algorithm"simplebp", bp_cache::BeliefPropagationCache)
+function default_bp_maxiter(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
   return default_bp_maxiter(partitioned_graph(bp_cache))
 end
-function default_edge_sequence(alg::Algorithm"simplebp", bp_cache::BeliefPropagationCache)
+function default_edge_sequence(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
   return default_edge_sequence(partitioned_tensornetwork(bp_cache))
 end
 function default_message_update_kwargs(
-  alg::Algorithm"simplebp", bpc::AbstractBeliefPropagationCache
+  alg::Algorithm"bp", bpc::AbstractBeliefPropagationCache
 )
   return (;)
 end
