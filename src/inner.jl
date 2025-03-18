@@ -90,7 +90,7 @@ function ITensorMPS.loginner(
 end
 
 function ITensorMPS.loginner(
-  alg::Algorithm"bp",
+  alg::Algorithm,
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   dual_link_index_map=sim,
@@ -101,7 +101,7 @@ function ITensorMPS.loginner(
 end
 
 function ITensorMPS.loginner(
-  alg::Algorithm"bp",
+  alg::Algorithm,
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -113,7 +113,7 @@ function ITensorMPS.loginner(
 end
 
 function ITensors.inner(
-  alg::Algorithm"bp",
+  alg::Algorithm,
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   dual_link_index_map=sim,
@@ -124,7 +124,7 @@ function ITensors.inner(
 end
 
 function ITensors.inner(
-  alg::Algorithm"bp",
+  alg::Algorithm,
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;

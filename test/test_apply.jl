@@ -30,7 +30,7 @@ using Test: @test, @testset
   #Simple Belief Propagation Grouping
   bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bp_cache = update(bp_cache; maxiter=20)
-  envsSBP = environment(bp_cache, PartitionVertex.([v1, v2]))
+  envsSBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
   ψv = VidalITensorNetwork(ψ)
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
   bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
