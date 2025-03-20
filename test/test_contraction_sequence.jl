@@ -5,7 +5,7 @@ using ITensorNetworks:
 using ITensors: ITensors, contract
 using NamedGraphs.NamedGraphGenerators: named_grid
 using OMEinsumContractionOrders: OMEinsumContractionOrders
-using TensorOperations
+using TensorOperations: TensorOperations
 using StableRNGs: StableRNG
 using Test: @test, @testset
 @testset "contraction_sequence" begin
