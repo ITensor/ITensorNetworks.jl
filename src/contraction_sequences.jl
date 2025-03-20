@@ -1,6 +1,6 @@
 using Graphs: vertices
 using ITensors: ITensor, contract
-using ITensors.ContractionSequenceOptimization: deepmap, optimal_contraction_sequence
+using ITensors.ContractionSequenceOptimization: deepmap
 using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs.Keys: Key
 using NamedGraphs.OrdinalIndexing: th
