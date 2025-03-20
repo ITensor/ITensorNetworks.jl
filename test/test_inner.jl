@@ -16,6 +16,7 @@ using Graphs: SimpleGraph, uniform_tree
 using NamedGraphs: NamedGraph
 using StableRNGs: StableRNG
 using Test: @test, @testset
+using TensorOperations: TensorOperations
 @testset "Inner products, BP vs exact comparison" begin
   L = 4
   χ = 2

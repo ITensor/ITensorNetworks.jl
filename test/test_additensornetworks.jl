@@ -7,6 +7,7 @@ using ITensors: ITensors, apply, op, scalar, inner
 using LinearAlgebra: norm_sqr
 using StableRNGs: StableRNG
 using Test: @test, @testset
+using TensorOperations: TensorOperations
 @testset "add_itensornetworks" begin
   g = named_grid((2, 2))
   s = siteinds("S=1/2", g)

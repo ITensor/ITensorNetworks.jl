@@ -10,6 +10,7 @@ using NamedGraphs.GraphsExtensions:
   is_leaf_vertex, leaf_vertices, non_leaf_edges, root_vertex
 using NamedGraphs.NamedGraphGenerators: named_grid
 using StableRNGs: StableRNG
+using TensorOperations: TensorOperations
 using Test: @test, @testset
 @testset "contraction_sequence_to_graph" begin
   n = 3

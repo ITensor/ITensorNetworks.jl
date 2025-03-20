@@ -24,6 +24,7 @@ using NamedGraphs.GraphsExtensions:
   is_binary_arborescence, post_order_dfs_vertices, root_vertex
 using OMEinsumContractionOrders: OMEinsumContractionOrders
 using StableRNGs: StableRNG
+using TensorOperations: TensorOperations
 using Test: @test, @testset
 
 @testset "test mincut functions on top of MPS" begin
