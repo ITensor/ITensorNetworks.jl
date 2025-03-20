@@ -2,7 +2,7 @@ module ITensorNetworksTensorOperationsExt
 
 using ITensors: ITensors, ITensor, dim, inds
 using ITensorNetworks: ITensorNetworks
-using TensorOperations: optimaltree
+using TensorOperations: optimaltree, TensorOperations
 using NDTensors.AlgorithmSelection: @Algorithm_str
 
 function ITensorNetworks.contraction_sequence(::Algorithm"optimal", tn::Vector{ITensor})

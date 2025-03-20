@@ -8,6 +8,14 @@ function contraction_sequence(tn::Vector{ITensor}; alg="optimal", kwargs...)
   return contraction_sequence(Algorithm(alg), tn; kwargs...)
 end
 
+function contraction_sequence(alg::Algorithm, tn::Vector{ITensor})
+  return throw(
+    ArgumentError(
+      "Algorithm $alg isn't defined for contraction sequence finding. Try loading a backend package like TensorOperations.jl.",
+    ),
+  )
+end
+
 function deepmap(f, tree; filter=(x -> x isa AbstractArray))
   return filter(tree) ? map(t -> deepmap(f, t; filter=filter), tree) : f(tree)
 end
