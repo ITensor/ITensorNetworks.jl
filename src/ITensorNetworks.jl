@@ -1,7 +1,6 @@
 module ITensorNetworks
 include("lib/BaseExtensions/src/BaseExtensions.jl")
 include("lib/ITensorsExtensions/src/ITensorsExtensions.jl")
-include("lib/TensorOperationsExt/TensorOperationsExt.jl")
 include("visualize.jl")
 include("graphs.jl")
 include("abstractindsnetwork.jl")
