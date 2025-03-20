@@ -5,8 +5,8 @@ using ITensorNetworks:
 using ITensors: ITensors, contract
 using NamedGraphs.NamedGraphGenerators: named_grid
 using OMEinsumContractionOrders: OMEinsumContractionOrders
-using TensorOperations: TensorOperations
 using StableRNGs: StableRNG
+using TensorOperations: TensorOperations
 using Test: @test, @testset
 @testset "contraction_sequence" begin
   ITensors.@disable_warn_order begin

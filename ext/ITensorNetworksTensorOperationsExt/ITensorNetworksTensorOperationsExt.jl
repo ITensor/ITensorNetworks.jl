@@ -2,8 +2,8 @@ module ITensorNetworksTensorOperationsExt
 
 using ITensors: ITensors, ITensor, dim, inds
 using ITensorNetworks: ITensorNetworks
-using TensorOperations: optimaltree, TensorOperations
 using NDTensors.AlgorithmSelection: @Algorithm_str
+using TensorOperations: TensorOperations, optimaltree
 
 function ITensorNetworks.contraction_sequence(::Algorithm"optimal", tn::Vector{ITensor})
   network = collect.(inds.(tn))
