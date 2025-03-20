@@ -11,7 +11,8 @@ end
 function contraction_sequence(alg::Algorithm, tn::Vector{ITensor})
   return throw(
     ArgumentError(
-      "Algorithm $alg isn't defined for contraction sequence finding. Try loading a backend package like TensorOperations.jl.",
+      "Algorithm $alg isn't defined for contraction sequence finding. Try loading a backend package like 
+        TensorOperations.jl or OMEinsumContractionOrders.jl.",
     ),
   )
 end
