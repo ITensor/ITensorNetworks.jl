@@ -126,7 +126,7 @@ Optimize the einsum contraction pattern using the simulated annealing on tensor 
 ### References
 * [Recursive Multi-Tensor Contraction for XEB Verification of Quantum Circuits](https://arxiv.org/abs/2108.05665)
 """
-function ITensorNetworks.contraction_sequence(::Algorithm"tree_sa", tn; kwargs...)
+function ITensorNetworks.contraction_sequence(::Algorithm"tree_sa", tn::ITensorList; kwargs...)
   return optimize_contraction_sequence(
     tn; optimizer=OMEinsumContractionOrders.TreeSA(; kwargs...)
   )
@@ -153,7 +153,7 @@ Then finds the contraction order inside each group with the greedy search algori
 ### References
 * [Hyper-optimized tensor network contraction](https://arxiv.org/abs/2002.01935)
 """
-function ITensorNetworks.contraction_sequence(::Algorithm"sa_bipartite", tn; kwargs...)
+function ITensorNetworks.contraction_sequence(::Algorithm"sa_bipartite", tn::ITensorList; kwargs...)
   return optimize_contraction_sequence(
     tn; optimizer=OMEinsumContractionOrders.SABipartite(; kwargs...)
   )
@@ -177,7 +177,7 @@ Then finds the contraction order inside each group with the greedy search algori
 * [Hyper-optimized tensor network contraction](https://arxiv.org/abs/2002.01935)
 * [Simulating the Sycamore quantum supremacy circuits](https://arxiv.org/abs/2103.03074)
 """
-function ITensorNetworks.contraction_sequence(::Algorithm"kahypar_bipartite", tn; kwargs...)
+function ITensorNetworks.contraction_sequence(::Algorithm"kahypar_bipartite", tn::ITensorList; kwargs...)
   return optimize_contraction_sequence(
     tn; optimizer=OMEinsumContractionOrders.KaHyParBipartite(; kwargs...)
   )
