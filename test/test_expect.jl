@@ -12,6 +12,7 @@ using ITensorNetworks:
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using Test: @test, @testset
+using TensorOperations
 @testset "Test Expect" begin
   #Test on a tree
   L, χ = 4, 2

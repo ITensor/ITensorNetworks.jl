@@ -1,5 +1,4 @@
 using ITensors: ITensor, scalar
-using ITensors.ContractionSequenceOptimization: deepmap
 using ITensors.NDTensors: NDTensors, Algorithm, @Algorithm_str, contract
 using LinearAlgebra: normalize!
 using NamedGraphs: NamedGraphs
