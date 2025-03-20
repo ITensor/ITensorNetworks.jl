@@ -4,11 +4,13 @@ using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs.Keys: Key
 using NamedGraphs.OrdinalIndexing: th
 
-function contraction_sequence(tn::Vector{ITensor}; alg="optimal", kwargs...)
+const ITensorList = Union{Vector{ITensor},Tuple{Vararg{ITensor}}}
+
+function contraction_sequence(tn::ITensorList; alg="optimal", kwargs...)
   return contraction_sequence(Algorithm(alg), tn; kwargs...)
 end
 
-function contraction_sequence(alg::Algorithm, tn::Vector{ITensor})
+function contraction_sequence(alg::Algorithm, tn::ITensorList)
   return throw(
     ArgumentError(
       "Algorithm $alg isn't defined for contraction sequence finding. Try loading a backend package like 

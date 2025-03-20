@@ -1,6 +1,6 @@
 module ITensorNetworksOMEinsumContractionOrdersExt
 using DocStringExtensions: TYPEDSIGNATURES
-using ITensorNetworks: ITensorNetworks
+using ITensorNetworks: ITensorNetworks, ITensorList
 using ITensors: ITensors, Index, ITensor, inds
 using NDTensors: dim
 using NDTensors.AlgorithmSelection: @Algorithm_str
@@ -8,8 +8,6 @@ using OMEinsumContractionOrders: OMEinsumContractionOrders
 
 # OMEinsumContractionOrders wrapper for ITensors
 # Slicing is not supported, because it might require extra work to slice an `ITensor` correctly.
-
-const ITensorList = Union{Vector{ITensor},Tuple{Vararg{ITensor}}}
 
 # infer the output tensor labels
 # TODO: Use `symdiff` instead.
