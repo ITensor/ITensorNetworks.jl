@@ -32,7 +32,6 @@ SplitApplyCombine = "03a91e81-4c3e-53e1-a0a4-9c0c8f19dd66"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StructWalk = "31cdf514-beb7-4750-89db-dda9d2eb8d3d"
 Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
-TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 TupleTools = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 
@@ -42,6 +41,7 @@ EinExprs = "b1794770-133b-4de1-afb4-526377e9f4c5"
 GraphsFlows = "06909019-6f44-4949-96fc-b9d9aaa02889"
 OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715"
 Observers = "338f10d5-c7f1-4033-a7d1-f9dec39bcaa0"
+TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
 [extensions]
 ITensorNetworksAdaptExt = "Adapt"
