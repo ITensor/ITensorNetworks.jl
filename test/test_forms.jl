@@ -23,6 +23,7 @@ using ITensorNetworks:
 using ITensors: contract, dag, inds, prime, random_itensor
 using LinearAlgebra: norm
 using StableRNGs: StableRNG
+using TensorOperations: TensorOperations
 using Test: @test, @testset
 @testset "FormNetworks" begin
   g = named_grid((1, 4))

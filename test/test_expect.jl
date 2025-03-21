@@ -11,6 +11,7 @@ using ITensorNetworks:
   original_state_vertex
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
+using TensorOperations: TensorOperations
 using Test: @test, @testset
 @testset "Test Expect" begin
   #Test on a tree
