@@ -16,6 +16,7 @@ using NamedGraphs.NamedGraphGenerators: named_grid
 using NamedGraphs.PartitionedGraphs: PartitionVertex
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
+using TensorOperations: TensorOperations
 using Test: @test, @testset
 @testset "apply" begin
   g_dims = (2, 2)
