@@ -42,7 +42,7 @@ using ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using LinearAlgebra: LinearAlgebra, factorize
 using MacroTools: @capture
-using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, steiner_tree
+using NamedGraphs: NamedGraphs, NamedGraph, vertextype, not_implemented, steiner_tree
 using NamedGraphs.GraphsExtensions:
   ⊔, directed_graph, incident_edges, rename_vertices, vertextype
 using NDTensors: NDTensors, dim, Algorithm
@@ -630,6 +630,7 @@ end
 #Get the path that moves the gauge from a to b (minimum path between a and b)
 #TODO: Moved to NamedGraphs
 function gauge_path(g::AbstractGraph, region_a::Vector, region_b::Vector)
+  issetequal(region_a, region_b) && return edgetype(g)[]
   st = steiner_tree(g, union(region_a, region_b))
   path = post_order_dfs_edges(st, first(region_b))
   path = filter(e -> !((src(e) ∈ region_b) && (dst(e) ∈ region_b)), path)
@@ -639,7 +640,6 @@ end
 # Gauge a ITensorNetwork from cur_region towards new_region, treating
 # the network as a tree spanned by a spanning tree.
 function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, cur_region::Vector, new_region::Vector; kwargs...)
-  issetequal(new_region, cur_region) && return ψ
   path = gauge_path(cur_region, new_region)
   if !isempty(path)
     ψ = typeof(ψ)(gauge_walk(alg, ψ, path; kwargs...))
