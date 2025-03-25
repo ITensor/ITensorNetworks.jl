@@ -642,7 +642,7 @@ end
 function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, cur_region::Vector, new_region::Vector; kwargs...)
   path = gauge_path(ψ, cur_region, new_region)
   if !isempty(path)
-    ψ = typeof(ψ)(gauge_walk(alg, ψ, path; kwargs...))
+    ψ = gauge_walk(alg, ψ, path; kwargs...)
   end
   return ψ
 end

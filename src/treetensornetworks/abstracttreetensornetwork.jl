@@ -36,7 +36,7 @@ function set_ortho_region(tn::AbstractTTN, new_region)
 end
 
 function gauge(alg::Algorithm, ttn::AbstractTTN, region::Vector; kwargs...)
-  ttn = gauge(alg, ttn, ortho_region(ttn), region; kwargs...)
+  ttn = tree_gauge(alg, ttn, collect(ortho_region(ttn)), region; kwargs...)
   return set_ortho_region(ttn, region)
 end
 
