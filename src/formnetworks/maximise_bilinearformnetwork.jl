@@ -1,10 +1,5 @@
-using ITensorNetworks: AbstractITensorNetwork, AbstractBeliefPropagationCache, ITensorNetworks, ITensorNetwork, random_tensornetwork, siteinds, QuadraticFormNetwork, prime,
-    BilinearFormNetwork, environment, subgraph, BeliefPropagationCache, partitioned_graph,
-    ket_network, tree_gauge, tree_orthogonalize, gauge_path, gauge_walk, update_factors, partitioned_tensornetwork,
-    update, update_factor, region_scalar
 using NamedGraphs.NamedGraphGenerators: named_grid
 using NamedGraphs: NamedEdge
-using TensorOperations: TensorOperations
 using ITensors: ITensors, ITensor, contract, dag
 using Graphs: is_tree
 using NamedGraphs.PartitionedGraphs: partitioned_graph, partitionedges, partitionvertex, partitionvertices
@@ -16,7 +11,9 @@ using LinearAlgebra: norm_sqr
 default_solver_algorithm() = "orthogonalize"
 default_solver_kwargs() = (; niters = 25, nsites = 1, tolerance = 1e-10, normalize = true, maxdim = nothing, cutoff = nothing)
 
+#TODO: Come up with reasonable sequence for non-trees
 function blf_update_sequence(g::AbstractGraph; nsites::Int64=1)
+    @assert is_tree(g)
     if nsites == 1 || nsites == 2
         es = post_order_dfs_edges(g, first(leaf_vertices(g)))
         vs = [[src(e), dst(e)] for e in es]
@@ -27,6 +24,7 @@ function blf_update_sequence(g::AbstractGraph; nsites::Int64=1)
     end
 end
 
+#TODO: biorthogonal updater and gauging
 function blf_updater(alg::Algorithm"orthogonalize", xAy_bpc::AbstractBeliefPropagationCache, y::AbstractITensorNetwork, prev_region::Vector, region::Vector)
     path = gauge_path(y, prev_region, region)
     y = gauge_walk(alg, y, path)
@@ -73,6 +71,7 @@ function blf_costfunction(xAy::AbstractBeliefPropagationCache, region)
 end
 
 #Optimize over y to maximize <x|A|y> * <y|dag(A)|x> / <y|y> based on a designated partitioning of the bilinearform
+#For now, y should be a tree tensor network and <x|A|y> should be a tree under the partitioning
 function maximize_bilinearform(
     alg::Algorithm"orthogonalize",
     xAy::BilinearFormNetwork,
@@ -90,7 +89,10 @@ function maximize_bilinearform(
     maxdim = nothing,
     cutoff = nothing)
 
+    #These assertions can easily be lessened in the future
+    @assert is_tree(y)
     xAy_bpc = BeliefPropagationCache(xAy, partition_verts)
+    @assert is_tree(partitioned_graph(xAy_bpc))
     seq = sequence(y; nsites)
 
     prev_region = collect(vertices(y))
@@ -104,23 +106,25 @@ function maximize_bilinearform(
             prev_region = region
         end
         if i >= 2 && (abs(sum(cs[i, :]) - sum(cs[i-1, :]))) / length(seq) <= tolerance
-            return dag(y)
+            return xAy_bpc, dag(y)
         end
     end
     
-    return dag(y)
+    return xAy_bpc, dag(y)
 end
 
 function Base.truncate(x::AbstractITensorNetwork; maxdim_init::Int64, kwargs...)
     y = ITensorNetwork(v -> inds -> delta(inds), siteinds(x); link_space = maxdim_init)
     xIy = BilinearFormNetwork(x, y)
-    return maximize_bilinearform(xIy, y; kwargs...)
+    xIy_bpc, y_out = maximize_bilinearform(xIy, y; kwargs...)
+    return y_out
 end
 
 function ITensors.apply(A::AbstractITensorNetwork, x::AbstractITensorNetwork; maxdim_init::Int64, kwargs...)
     y = ITensorNetwork(v -> inds -> delta(inds), siteinds(x); link_space = maxdim_init)
     xAy = BilinearFormNetwork(A, x, y)
-    return maximize_bilinearform(xAy, y; kwargs...)
+    xAy_bpc, y_out = maximize_bilinearform(xAy, y; kwargs...)
+    return y_out
 end
 
 function maximize_bilinearform(xAy::BilinearFormNetwork, args...; alg = default_solver_algorithm(), solver_kwargs = default_solver_kwargs())
