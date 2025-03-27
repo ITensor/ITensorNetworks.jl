@@ -446,7 +446,7 @@ function optimise_p_q(
   qs_ind = setdiff(inds(q_cur), collect(Iterators.flatten(inds.(vcat(envs, p_cur)))))
   ps_ind = setdiff(inds(p_cur), collect(Iterators.flatten(inds.(vcat(envs, q_cur)))))
 
-  function b(p::ITensor, q::ITensor, o::ITensor, envs::Vector{ITensor}, r::ITensor;)
+  function b(p::ITensor, q::ITensor, o::ITensor, envs::Vector{ITensor}, r::ITensor)
     return noprime(
       ITensors.contract(vcat(ITensor[p, q, o, dag(prime(r))], envs); sequence="automatic")
     )
