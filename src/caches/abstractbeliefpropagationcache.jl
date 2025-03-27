@@ -17,8 +17,7 @@ using NDTensors: NDTensors
 abstract type AbstractBeliefPropagationCache end
 
 function default_message_update(contract_list::Vector{ITensor}; normalize=true, kwargs...)
-  sequence = optimal_contraction_sequence(contract_list)
-  updated_messages = contract(contract_list; sequence, kwargs...)
+  updated_messages = contract(contract_list; sequence="automatic", kwargs...)
   message_norm = norm(updated_messages)
   if normalize && !iszero(message_norm)
     updated_messages /= message_norm

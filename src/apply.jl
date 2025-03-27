@@ -22,7 +22,6 @@ using ITensors:
   replaceinds,
   unioninds,
   uniqueinds
-using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
 using ITensorMPS: siteinds
 using KrylovKit: linsolve
 using LinearAlgebra: eigen, norm, svd
@@ -407,7 +406,7 @@ function fidelity(
     ],
     envs,
   )
-  term1 = ITensors.contract(term1_tns; sequence=optimal_contraction_sequence(term1_tns))
+  term1 = ITensors.contract(term1_tns; sequence="automatic")
 
   term2_tns = vcat(
     [
@@ -418,9 +417,9 @@ function fidelity(
     ],
     envs,
   )
-  term2 = ITensors.contract(term2_tns; sequence=optimal_contraction_sequence(term2_tns))
+  term2 = ITensors.contract(term2_tns; sequence="automatic")
   term3_tns = vcat([p_prev, q_prev, prime(dag(p_cur)), prime(dag(q_cur)), gate], envs)
-  term3 = ITensors.contract(term3_tns; sequence=optimal_contraction_sequence(term3_tns))
+  term3 = ITensors.contract(term3_tns; sequence="automatic")
 
   f = term3[] / sqrt(term1[] * term2[])
   return f * conj(f)
@@ -447,37 +446,13 @@ function optimise_p_q(
   qs_ind = setdiff(inds(q_cur), collect(Iterators.flatten(inds.(vcat(envs, p_cur)))))
   ps_ind = setdiff(inds(p_cur), collect(Iterators.flatten(inds.(vcat(envs, q_cur)))))
 
-  opt_b_seq = optimal_contraction_sequence(vcat(ITensor[p, q, o, dag(prime(q_cur))], envs))
-  opt_b_tilde_seq = optimal_contraction_sequence(
-    vcat(ITensor[p, q, o, dag(prime(p_cur))], envs)
-  )
-  opt_M_seq = optimal_contraction_sequence(
-    vcat(ITensor[q_cur, replaceinds(prime(dag(q_cur)), prime(qs_ind), qs_ind), p_cur], envs)
-  )
-  opt_M_tilde_seq = optimal_contraction_sequence(
-    vcat(ITensor[p_cur, replaceinds(prime(dag(p_cur)), prime(ps_ind), ps_ind), q_cur], envs)
-  )
-
-  function b(
-    p::ITensor,
-    q::ITensor,
-    o::ITensor,
-    envs::Vector{ITensor},
-    r::ITensor;
-    opt_sequence=nothing,
-  )
+  function b(p::ITensor, q::ITensor, o::ITensor, envs::Vector{ITensor}, r::ITensor;)
     return noprime(
-      ITensors.contract(vcat(ITensor[p, q, o, dag(prime(r))], envs); sequence=opt_sequence)
+      ITensors.contract(vcat(ITensor[p, q, o, dag(prime(r))], envs); sequence="automatic")
     )
   end
 
-  function M_p(
-    envs::Vector{ITensor},
-    p_q_tensor::ITensor,
-    s_ind,
-    apply_tensor::ITensor;
-    opt_sequence=nothing,
-  )
+  function M_p(envs::Vector{ITensor}, p_q_tensor::ITensor, s_ind, apply_tensor::ITensor;)
     return noprime(
       ITensors.contract(
         vcat(
@@ -488,20 +463,20 @@ function optimise_p_q(
           ],
           envs,
         );
-        sequence=opt_sequence,
+        sequence="automatic",
       ),
     )
   end
   for i in 1:nfullupdatesweeps
-    b_vec = b(p, q, o, envs, q_cur; opt_sequence=opt_b_seq)
-    M_p_partial = partial(M_p, envs, q_cur, qs_ind; opt_sequence=opt_M_seq)
+    b_vec = b(p, q, o, envs, q_cur)
+    M_p_partial = partial(M_p, envs, q_cur, qs_ind)
 
     p_cur, info = linsolve(
       M_p_partial, b_vec, p_cur; isposdef=envisposdef, ishermitian=false
     )
 
-    b_tilde_vec = b(p, q, o, envs, p_cur; opt_sequence=opt_b_tilde_seq)
-    M_p_tilde_partial = partial(M_p, envs, p_cur, ps_ind; opt_sequence=opt_M_tilde_seq)
+    b_tilde_vec = b(p, q, o, envs, p_cur)
+    M_p_tilde_partial = partial(M_p, envs, p_cur, ps_ind)
 
     q_cur, info = linsolve(
       M_p_tilde_partial, b_tilde_vec, q_cur; isposdef=envisposdef, ishermitian=false

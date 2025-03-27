@@ -34,7 +34,6 @@ using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedges
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
-using TensorOperations: TensorOperations
 using Test: @test, @testset
 
 @testset "belief_propagation (eltype=$elt)" for elt in (
