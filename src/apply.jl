@@ -406,7 +406,8 @@ function fidelity(
     ],
     envs,
   )
-  term1 = ITensors.contract(term1_tns; sequence="automatic")
+  sequence = contraction_sequence(term1_tns; alg="optimal")
+  term1 = ITensors.contract(term1_tns; sequence)
 
   term2_tns = vcat(
     [
@@ -417,9 +418,11 @@ function fidelity(
     ],
     envs,
   )
-  term2 = ITensors.contract(term2_tns; sequence="automatic")
+  sequence = contraction_sequence(term2_tns; alg="optimal")
+  term2 = ITensors.contract(term2_tns; sequence)
   term3_tns = vcat([p_prev, q_prev, prime(dag(p_cur)), prime(dag(q_cur)), gate], envs)
-  term3 = ITensors.contract(term3_tns; sequence="automatic")
+  sequence = contraction_sequence(term3_tns; alg="optimal")
+  term3 = ITensors.contract(term3_tns; sequence)
 
   f = term3[] / sqrt(term1[] * term2[])
   return f * conj(f)
@@ -447,25 +450,20 @@ function optimise_p_q(
   ps_ind = setdiff(inds(p_cur), collect(Iterators.flatten(inds.(vcat(envs, q_cur)))))
 
   function b(p::ITensor, q::ITensor, o::ITensor, envs::Vector{ITensor}, r::ITensor;)
-    return noprime(
-      ITensors.contract(vcat(ITensor[p, q, o, dag(prime(r))], envs); sequence="automatic")
-    )
+    ts = vcat(ITensor[p, q, o, dag(prime(r))], envs)
+    sequence = contraction_sequence(ts; alg="optimal")
+    return noprime(ITensors.contract(ts; sequence))
   end
 
   function M_p(envs::Vector{ITensor}, p_q_tensor::ITensor, s_ind, apply_tensor::ITensor;)
-    return noprime(
-      ITensors.contract(
-        vcat(
-          ITensor[
-            p_q_tensor,
-            replaceinds(prime(dag(p_q_tensor)), prime(s_ind), s_ind),
-            apply_tensor,
-          ],
-          envs,
-        );
-        sequence="automatic",
-      ),
+    ts = vcat(
+      ITensor[
+        p_q_tensor, replaceinds(prime(dag(p_q_tensor)), prime(s_ind), s_ind), apply_tensor
+      ],
+      envs,
     )
+    sequence = contraction_sequence(ts; alg="optimal")
+    return noprime(ITensors.contract(ts; sequence))
   end
   for i in 1:nfullupdatesweeps
     b_vec = b(p, q, o, envs, q_cur)
