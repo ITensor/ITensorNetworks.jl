@@ -94,14 +94,12 @@ function environment(bpc::BeliefPropagationCache, verts::Vector; kwargs...)
   return vcat(messages, central_tensors)
 end
 
-function region_scalar(
-  bp_cache::BeliefPropagationCache,
-  pv::PartitionVertex;
-  contract_kwargs=(; sequence="automatic"),
-)
+function region_scalar(bp_cache::BeliefPropagationCache, pv::PartitionVertex;)
   incoming_mts = incoming_messages(bp_cache, [pv])
   local_state = factors(bp_cache, pv)
-  return contract(vcat(incoming_mts, local_state); contract_kwargs...)[]
+  ts = vcat(incoming_mts, local_state)
+  sequence = contraction_sequence(ts; alg="optimal")
+  return contract(ts; sequence)[]
 end
 
 function region_scalar(
@@ -109,7 +107,7 @@ function region_scalar(
   pe::PartitionEdge;
   contract_kwargs=(; sequence="automatic"),
 )
-  return contract(
-    vcat(message(bp_cache, pe), message(bp_cache, reverse(pe))); contract_kwargs...
-  )[]
+  ts = vcat(message(bp_cache, pe), message(bp_cache, reverse(pe)))
+  sequence = contraction_sequence(ts; alg="optimal")
+  return contract(ts; sequence)[]
 end

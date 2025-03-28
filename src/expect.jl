@@ -4,16 +4,18 @@ using ITensorMPS: ITensorMPS, expect
 
 default_expect_alg() = "bp"
 
-function ITensorMPS.expect(
-  ψIψ::AbstractFormNetwork, op::Op; contract_kwargs=(; sequence="automatic"), kwargs...
-)
+function ITensorMPS.expect(ψIψ::AbstractFormNetwork, op::Op; kwargs...)
   v = only(op.sites)
   ψIψ_v = ψIψ[operator_vertex(ψIψ, v)]
   s = commonind(ψIψ[ket_vertex(ψIψ, v)], ψIψ_v)
   operator = ITensors.op(op.which_op, s)
   ∂ψIψ_∂v = environment(ψIψ, operator_vertices(ψIψ, [v]); kwargs...)
-  numerator = contract(vcat(∂ψIψ_∂v, operator); contract_kwargs...)[]
-  denominator = contract(vcat(∂ψIψ_∂v, ψIψ_v); contract_kwargs...)[]
+  numerator_ts = vcat(∂ψIψ_∂v, operator)
+  denominator_ts = vcat(∂ψIψ_∂v, ψIψ_v)
+  numerator_seq = contraction_sequence(numerator_ts; alg="optimal")
+  denominator_seq = contraction_sequence(denominator_ts; alg="optimal")
+  numerator = contract(numerator_ts; sequence)[]
+  denominator = contract(denominator_ts; sequence)[]
 
   return numerator / denominator
 end
