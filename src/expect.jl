@@ -14,8 +14,8 @@ function ITensorMPS.expect(ψIψ::AbstractFormNetwork, op::Op; kwargs...)
   denominator_ts = vcat(∂ψIψ_∂v, ψIψ_v)
   numerator_seq = contraction_sequence(numerator_ts; alg="optimal")
   denominator_seq = contraction_sequence(denominator_ts; alg="optimal")
-  numerator = contract(numerator_ts; sequence = numerator_seq)[]
-  denominator = contract(denominator_ts; sequence = denominator_seq)[]
+  numerator = contract(numerator_ts; sequence=numerator_seq)[]
+  denominator = contract(denominator_ts; sequence=denominator_seq)[]
 
   return numerator / denominator
 end
