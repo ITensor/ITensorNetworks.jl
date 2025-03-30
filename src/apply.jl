@@ -449,13 +449,13 @@ function optimise_p_q(
   qs_ind = setdiff(inds(q_cur), collect(Iterators.flatten(inds.(vcat(envs, p_cur)))))
   ps_ind = setdiff(inds(p_cur), collect(Iterators.flatten(inds.(vcat(envs, q_cur)))))
 
-  function b(p::ITensor, q::ITensor, o::ITensor, envs::Vector{ITensor}, r::ITensor;)
+  function b(p::ITensor, q::ITensor, o::ITensor, envs::Vector{ITensor}, r::ITensor)
     ts = vcat(ITensor[p, q, o, dag(prime(r))], envs)
     sequence = contraction_sequence(ts; alg="optimal")
     return noprime(ITensors.contract(ts; sequence))
   end
 
-  function M_p(envs::Vector{ITensor}, p_q_tensor::ITensor, s_ind, apply_tensor::ITensor;)
+  function M_p(envs::Vector{ITensor}, p_q_tensor::ITensor, s_ind, apply_tensor::ITensor)
     ts = vcat(
       ITensor[
         p_q_tensor, replaceinds(prime(dag(p_q_tensor)), prime(s_ind), s_ind), apply_tensor
