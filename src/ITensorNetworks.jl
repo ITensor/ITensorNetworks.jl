@@ -1,4 +1,5 @@
 module ITensorNetworks
+
 include("lib/BaseExtensions/src/BaseExtensions.jl")
 include("lib/ITensorsExtensions/src/ITensorsExtensions.jl")
 include("visualize.jl")
@@ -68,8 +69,4 @@ include("exports.jl")
 include("lib/ModelHamiltonians/src/ModelHamiltonians.jl")
 include("lib/ModelNetworks/src/ModelNetworks.jl")
 
-using PackageExtensionCompat: @require_extensions
-function __init__()
-  @require_extensions
-end
 end
