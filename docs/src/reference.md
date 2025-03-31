@@ -1,5 +1,5 @@
 # Reference
 
 ```@autodocs
-Modules = [ITensorNetworks]
+Modules = [ITensorNetworks, ITensorNetworks.ModelNetworks, ITensorNetworks.ModelHamiltonians]
 ```
