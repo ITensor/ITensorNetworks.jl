@@ -628,7 +628,7 @@ function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region)
 end
 
 #Get the path that moves the gauge from a to b on a tree
-#TODO: Moved to NamedGraphs
+#TODO: Move to NamedGraphs
 function gauge_path(g::AbstractGraph, region_a::Vector, region_b::Vector)
   issetequal(region_a, region_b) && return edgetype(g)[]
   st = steiner_tree(g, union(region_a, region_b))
