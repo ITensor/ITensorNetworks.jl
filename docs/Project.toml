@@ -1,3 +1,9 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 ITensorNetworks = "2919e153-833c-4bdc-8836-1ea460a35fc7"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
+
+[compat]
+Documenter = "1.10.0"
+ITensorNetworks = "0.12.0"
+Literate = "2.20.1"
