@@ -639,7 +639,13 @@ end
 
 # Gauge a ITensorNetwork from cur_region towards new_region, treating
 # the network as a tree spanned by a spanning tree.
-function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, cur_region::Vector, new_region::Vector; kwargs...)
+function tree_gauge(
+  alg::Algorithm,
+  ψ::AbstractITensorNetwork,
+  cur_region::Vector,
+  new_region::Vector;
+  kwargs...,
+)
   path = gauge_path(ψ, cur_region, new_region)
   if !isempty(path)
     ψ = gauge_walk(alg, ψ, path; kwargs...)
