@@ -42,7 +42,7 @@ using ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using LinearAlgebra: LinearAlgebra, factorize
 using MacroTools: @capture
-using NamedGraphs: NamedGraphs, NamedGraph, vertextype, not_implemented, steiner_tree
+using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, steiner_tree
 using NamedGraphs.GraphsExtensions:
   ⊔, directed_graph, incident_edges, rename_vertices, vertextype
 using NDTensors: NDTensors, dim, Algorithm
