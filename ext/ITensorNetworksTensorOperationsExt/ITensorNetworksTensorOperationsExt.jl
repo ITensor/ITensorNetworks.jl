@@ -7,7 +7,7 @@ using TensorOperations: TensorOperations, optimaltree
 
 function ITensorNetworks.contraction_sequence(::Algorithm"optimal", tn::ITensorList)
   network = collect.(inds.(tn))
-  inds_to_dims = Dict(i => dim(i) for i in unique(reduce(vcat, network)))
+  inds_to_dims = Dict(i => Float64(dim(i)) for i in unique(reduce(vcat, network)))
   seq, _ = optimaltree(network, inds_to_dims)
   return seq
 end
