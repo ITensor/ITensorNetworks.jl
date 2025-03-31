@@ -36,13 +36,7 @@ function set_ortho_region(tn::AbstractTTN, new_region)
 end
 
 function gauge(alg::Algorithm, ttn::AbstractTTN, region::Vector; kwargs...)
-  issetequal(region, ortho_region(ttn)) && return ttn
-  st = steiner_tree(ttn, union(region, ortho_region(ttn)))
-  path = post_order_dfs_edges(st, first(region))
-  path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
-  if !isempty(path)
-    ttn = typeof(ttn)(gauge_walk(alg, ITensorNetwork(ttn), path; kwargs...))
-  end
+  ttn = tree_gauge(alg, ttn, collect(ortho_region(ttn)), region; kwargs...)
   return set_ortho_region(ttn, region)
 end
 

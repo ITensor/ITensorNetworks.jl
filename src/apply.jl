@@ -378,7 +378,7 @@ function ITensors.apply(o, ψ::VidalITensorNetwork; normalize=false, apply_kwarg
 
   else
     updated_ψ = apply(o, updated_ψ; normalize)
-    return VidalITensorNetwork(ψ, updated_bond_tensors)
+    return VidalITensorNetwork(updated_ψ, updated_bond_tensors)
   end
 end
 
