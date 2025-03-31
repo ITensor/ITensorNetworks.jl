@@ -627,7 +627,7 @@ function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region)
   return tree_gauge(alg, ψ, [region])
 end
 
-#Get the path that moves the gauge from a to b (minimum path between a and b)
+#Get the path that moves the gauge from a to b on a tree
 #TODO: Moved to NamedGraphs
 function gauge_path(g::AbstractGraph, region_a::Vector, region_b::Vector)
   issetequal(region_a, region_b) && return edgetype(g)[]
