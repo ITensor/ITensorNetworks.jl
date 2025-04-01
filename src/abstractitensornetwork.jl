@@ -304,6 +304,10 @@ end
 function siteinds(tn::AbstractITensorNetwork, vertex)
   return uniqueinds(tn, vertex)
 end
+# Fix ambiguity error with IndsNetwork constructor.
+function siteinds(tn::AbstractITensorNetwork, vertex::Int)
+  return uniqueinds(tn, vertex)
+end
 
 function ITensors.commoninds(tn::AbstractITensorNetwork, edge)
   e = edgetype(tn)(edge)
