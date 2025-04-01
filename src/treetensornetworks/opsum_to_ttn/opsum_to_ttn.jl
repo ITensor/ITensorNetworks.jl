@@ -649,6 +649,10 @@ end
 function mpo(os::OpSum, external_inds::Vector; kwargs...)
   return ttn(os, path_indsnetwork(external_inds); kwargs...)
 end
+function mpo(os::OpSum, s::IndsNetwork; kwargs...)
+  # TODO: Check it is a path graph.
+  return ttn(os, s; kwargs...)
+end
 
 # Conversion from other formats
 function ttn(o::Op, s::IndsNetwork; kwargs...)

@@ -20,6 +20,11 @@ function siteinds(x, g::AbstractGraph; kwargs...)
   return siteinds(to_siteinds_callable(x), g; kwargs...)
 end
 
+# Convenient syntax for path graph.
+function siteinds(x, nv::Int; kwargs...)
+  return siteinds(x, path_graph(nv); kwargs...)
+end
+
 function to_siteind(x, vertex; kwargs...)
   return [siteind(x, vertex_tag(vertex); kwargs...)]
 end
