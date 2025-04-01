@@ -12,3 +12,4 @@ benchmark/*.json
 docs/Manifest.toml
 docs/build/
 docs/src/index.md
+docs/src/examples.md
