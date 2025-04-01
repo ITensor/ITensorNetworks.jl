@@ -1,5 +1,5 @@
 using Dictionaries: Dictionary, set!
-using ITensors: Op, op, contract, which_op
+using QuantumOperatorDefinitions: Op, op
 
 default_expect_alg() = "bp"
 

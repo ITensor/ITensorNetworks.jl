@@ -1,4 +1,4 @@
-using ITensors: ITensor, Op, prime, sim
+using ITensorBase: ITensor, Op, prime, sim
 
 default_dual_site_index_map = prime
 default_dual_link_index_map = sim

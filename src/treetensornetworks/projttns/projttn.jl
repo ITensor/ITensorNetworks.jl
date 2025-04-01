@@ -1,7 +1,7 @@
 using DataGraphs: DataGraphs, underlying_graph
 using Dictionaries: Dictionary, Indices
 using Graphs: edgetype, vertices
-using ITensors: ITensor
+using ITensorBase: ITensor
 using NamedGraphs: NamedEdge
 using NamedGraphs.GraphsExtensions: incident_edges, is_leaf_vertex
 

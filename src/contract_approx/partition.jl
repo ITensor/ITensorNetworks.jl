@@ -1,7 +1,7 @@
 using DataGraphs: AbstractDataGraph, DataGraph, edge_data, edge_data_eltype, vertex_data
 using Dictionaries: Dictionary
 using Graphs: AbstractGraph, add_edge!, has_edge, dst, edges, edgetype, src, vertices
-using ITensors: ITensor, noncommoninds
+using ITensorBase: ITensor, noncommoninds
 using NamedGraphs: NamedGraph, subgraph
 using SplitApplyCombine: flatten
 

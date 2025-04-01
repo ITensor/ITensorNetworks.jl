@@ -1,4 +1,4 @@
-using ITensors: Trotter
+using ITensorBase: Trotter
 function tebd(
   ℋ::Sum,
   ψ::AbstractITensorNetwork;

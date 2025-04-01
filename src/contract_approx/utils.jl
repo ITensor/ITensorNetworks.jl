@@ -1,6 +1,6 @@
 using NamedGraphs.GraphsExtensions: leaf_vertices, parent_vertex
 using Graphs: dfs_tree, rem_vertex!, vertices
-using ITensors: ITensor
+using ITensorBase: ITensor
 
 """
 For a given ITensorNetwork `tn` and a `root` vertex, remove leaf vertices in the directed tree

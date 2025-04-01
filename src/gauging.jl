@@ -1,5 +1,5 @@
-using ITensors: tags
-using ITensors.NDTensors: dense, scalartype
+using ITensorBase: tags
+## using ITensors.NDTensors: dense, scalartype
 using NamedGraphs.PartitionedGraphs: partitionedge
 
 function default_bond_tensors(ψ::ITensorNetwork)

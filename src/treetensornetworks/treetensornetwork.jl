@@ -1,6 +1,6 @@
 using Dictionaries: Indices
 using Graphs: path_graph
-using ITensors: ITensor
+using ITensorBase: ITensor
 using LinearAlgebra: factorize, normalize
 using NamedGraphs.GraphsExtensions: GraphsExtensions, vertextype
 

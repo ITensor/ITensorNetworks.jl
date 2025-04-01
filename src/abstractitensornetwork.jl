@@ -16,7 +16,7 @@ using Graphs:
   rem_edge!,
   src,
   vertices
-using ITensors:
+using ITensorBase:
   ITensors,
   ITensor,
   @Algorithm_str,
@@ -44,7 +44,7 @@ using MacroTools: @capture
 using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, steiner_tree
 using NamedGraphs.GraphsExtensions:
   ⊔, directed_graph, incident_edges, rename_vertices, vertextype
-using NDTensors: NDTensors, dim, Algorithm
+## using NDTensors: NDTensors, dim, Algorithm
 using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V,ITensor,ITensor} end
@@ -788,23 +788,23 @@ end
 
 Base.show(io::IO, graph::AbstractITensorNetwork) = show(io, MIME"text/plain"(), graph)
 
-# TODO: Move to an `ITensorNetworksVisualizationInterfaceExt`
-# package extension (and define a `VisualizationInterface` package
-# based on `ITensorVisualizationCore`.).
-using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-function ITensorVisualizationCore.visualize(
-  tn::AbstractITensorNetwork,
-  args...;
-  vertex_labels_prefix=nothing,
-  vertex_labels=nothing,
-  kwargs...,
-)
-  if !isnothing(vertex_labels_prefix)
-    vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
-  end
-  # TODO: Use `tokenize_vertex`.
-  return visualize(collect(eachtensor(tn)), args...; vertex_labels, kwargs...)
-end
+## # TODO: Move to an `ITensorNetworksVisualizationInterfaceExt`
+## # package extension (and define a `VisualizationInterface` package
+## # based on `ITensorVisualizationCore`.).
+## using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
+## function ITensorVisualizationCore.visualize(
+##   tn::AbstractITensorNetwork,
+##   args...;
+##   vertex_labels_prefix=nothing,
+##   vertex_labels=nothing,
+##   kwargs...,
+## )
+##   if !isnothing(vertex_labels_prefix)
+##     vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
+##   end
+##   # TODO: Use `tokenize_vertex`.
+##   return visualize(collect(eachtensor(tn)), args...; vertex_labels, kwargs...)
+## end
 
 # 
 # Link dimensions

@@ -1,6 +1,6 @@
 using Graphs: vertices
-using ITensors: ITensor
-using ITensors.NDTensors: Algorithm, @Algorithm_str
+using ITensorBase: ITensor
+## using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs.Keys: Key
 using NamedGraphs.OrdinalIndexing: th
 

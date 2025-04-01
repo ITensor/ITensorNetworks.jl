@@ -1,15 +1,14 @@
 using .BaseExtensions: maybe_real
-using ITensors: ITensor, hascommoninds, op
-using ITensors.LazyApply: Applied, Prod, Scaled, Sum
-using ITensors.Ops: Ops, Op
+using ITensorBase: ITensor, hascommoninds
+using QuantumOperatorAlgebra: Applied, Exp, Op, Prod, Scaled, Sum, op
 using .ITensorsExtensions: tensor_sum
 
-function ITensors.ITensor(o::Op, s::IndsNetwork)
+function ITensorBase.ITensor(o::Op, s::IndsNetwork)
   s⃗ = [only(s[nᵢ]) for nᵢ in Ops.sites(o)]
   return op(Ops.which_op(o), s⃗; Ops.params(o)...)
 end
 
-function ITensors.ITensor(∏o::Prod, s::IndsNetwork)
+function ITensorBase.ITensor(∏o::Prod, s::IndsNetwork)
   T = ITensor(1.0)
   for oᵢ in Ops.terms(∏o)
     Tᵢ = ITensor(oᵢ, s)
@@ -21,7 +20,7 @@ function ITensors.ITensor(∏o::Prod, s::IndsNetwork)
   return T
 end
 
-function ITensors.ITensor(∑o::Sum, s::IndsNetwork)
+function ITensorBase.ITensor(∑o::Sum, s::IndsNetwork)
   T = ITensor(0)
   for oᵢ in Ops.terms(∑o)
     Tᵢ = ITensor(oᵢ, s)
@@ -30,11 +29,11 @@ function ITensors.ITensor(∑o::Sum, s::IndsNetwork)
   return T
 end
 
-function ITensors.ITensor(o::Scaled, s::IndsNetwork)
+function ITensorBase.ITensor(o::Scaled, s::IndsNetwork)
   return maybe_real(Ops.coefficient(o)) * ITensor(Ops.argument(o), s)
 end
 
-function ITensors.ITensor(o::Ops.Exp, s::IndsNetwork)
+function ITensorBase.ITensor(o::Exp, s::IndsNetwork)
   return exp(ITensor(Ops.argument(o), s))
 end
 

@@ -1,5 +1,5 @@
-using ITensors: delta
-using ITensors.NDTensors: dim
+using ITensorBase: delta
+## using ITensors.NDTensors: dim
 using DataGraphs: IsUnderlyingGraph
 using Distributions: Distribution
 using Random: Random, AbstractRNG

@@ -1,4 +1,4 @@
-using ITensors: contract
+using ITensorBase: contract
 using NamedGraphs.PartitionedGraphs: PartitionedGraph
 
 default_environment_algorithm() = "bp"

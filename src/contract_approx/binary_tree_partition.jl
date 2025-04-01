@@ -1,6 +1,6 @@
 using DataGraphs: DataGraph
-using ITensors: Index, ITensor, delta, replaceinds, sim
-using ITensors.NDTensors: Algorithm, @Algorithm_str
+using ITensorBase: Index, ITensor, delta, replaceinds, sim
+## using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs.GraphsExtensions:
   disjoint_union,
   is_binary_arborescence,

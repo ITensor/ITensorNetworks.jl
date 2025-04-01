@@ -8,7 +8,7 @@ using NamedGraphs.GraphsExtensions:
   a_star
 using NamedGraphs: namedgraph_a_star, steiner_tree
 using IsApprox: IsApprox, Approx
-using ITensors: ITensors, Algorithm, @Algorithm_str, directsum, hasinds, permute, plev
+using ITensorBase: ITensors, Algorithm, @Algorithm_str, directsum, hasinds, permute, plev
 using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end

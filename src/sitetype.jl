@@ -1,13 +1,13 @@
 using Dictionaries: Dictionary
 using Graphs: AbstractGraph, nv, vertices
-using ITensors: ITensors, Index, siteind
+using ITensorBase: ITensorBase, Index, siteind
 
-function ITensors.siteind(sitetype::String, v::Tuple; kwargs...)
+function ITensorBase.siteind(sitetype::String, v::Tuple; kwargs...)
   return addtags(siteind(sitetype; kwargs...), vertex_tag(v))
 end
 
 # naming collision of ITensors.addtags and addtags keyword in siteind system
-function ITensors.siteind(d::Integer, v; addtags="", kwargs...)
+function ITensorBase.siteind(d::Integer, v; addtags="", kwargs...)
   return ITensors.addtags(Index(d; tags="Site, $addtags", kwargs...), vertex_tag(v))
 end
 

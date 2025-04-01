@@ -1,6 +1,6 @@
 using DataGraphs: DataGraph
 using Graphs: vertices
-using ITensors: ITensor, inds
+using ITensorBase: ITensor, inds
 using LinearAlgebra: ishermitian, norm
 using NamedGraphs: NamedEdge
 using NamedGraphs.GraphsExtensions: child_vertices, parent_vertex, post_order_dfs_vertices

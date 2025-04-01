@@ -1,7 +1,6 @@
-using ITensors: IndexSet
 using DataGraphs: DataGraphs, AbstractDataGraph, edge_data, vertex_data
 using Graphs: Graphs, AbstractEdge
-using ITensors: ITensors, unioninds, uniqueinds
+using ITensorBase: ITensorBase, Index, unioninds, uniqueinds
 using .ITensorsExtensions: ITensorsExtensions, promote_indtype
 using NamedGraphs: NamedGraphs
 using NamedGraphs.GraphsExtensions: incident_edges, rename_vertices
@@ -71,9 +70,9 @@ DataGraphs.edge_data_eltype(::Type{<:AbstractIndsNetwork{V,I}}) where {V,I} = Ve
 # Index access
 # 
 
-function ITensors.uniqueinds(is::AbstractIndsNetwork, edge::AbstractEdge)
+function ITensorBase.uniqueinds(is::AbstractIndsNetwork, edge::AbstractEdge)
   # TODO: Replace with `is[v]` once `getindex(::IndsNetwork, ...)` is smarter.
-  inds = IndexSet(get(is, src(edge), Index[]))
+  inds = get(is, src(edge), Index[])
   for ei in setdiff(incident_edges(is, src(edge)), [edge])
     # TODO: Replace with `is[v]` once `getindex(::IndsNetwork, ...)` is smarter.
     inds = unioninds(inds, get(is, ei, Index[]))
@@ -81,7 +80,7 @@ function ITensors.uniqueinds(is::AbstractIndsNetwork, edge::AbstractEdge)
   return inds
 end
 
-function ITensors.uniqueinds(is::AbstractIndsNetwork, edge::Pair)
+function ITensorBase.uniqueinds(is::AbstractIndsNetwork, edge::Pair)
   return uniqueinds(is, edgetype(is)(edge))
 end
 

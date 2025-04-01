@@ -1,5 +1,5 @@
-using ITensors: ITensor, contract, dag, onehot, uniqueind
-using ITensors.NDTensors: array
+using ITensorBase: ITensor, contract, dag, onehot, uniqueind
+## using ITensors.NDTensors: array
 using LinearAlgebra: eigen
 
 function dmrg_x_updater(

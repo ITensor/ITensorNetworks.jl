@@ -1,5 +1,5 @@
 using Graphs: IsDirected, connected_components, edges, edgetype
-using ITensors.NDTensors: Algorithm, @Algorithm_str
+## using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs: NamedGraphs
 using NamedGraphs.GraphsExtensions: GraphsExtensions, forest_cover, undirected_graph
 using NamedGraphs.PartitionedGraphs: PartitionEdge, PartitionedGraph, partitioned_graph

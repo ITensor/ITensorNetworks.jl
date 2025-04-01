@@ -1,5 +1,5 @@
 using Graphs.SimpleGraphs: SimpleGraphs, SimpleGraph
-using ITensors: ITensor, hascommoninds
+using ITensorBase: ITensor, hascommoninds
 
 function SimpleGraphs.SimpleGraph(itensors::Vector{ITensor})
   nv_graph = length(itensors)

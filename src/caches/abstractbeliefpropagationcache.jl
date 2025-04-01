@@ -1,7 +1,7 @@
 using Graphs: IsDirected
 using SplitApplyCombine: group
 using LinearAlgebra: diag, dot
-using ITensors: dir
+using GradedUnitRanges: dir
 using NamedGraphs.PartitionedGraphs:
   PartitionedGraphs,
   PartitionedGraph,
@@ -11,7 +11,6 @@ using NamedGraphs.PartitionedGraphs:
   partitionedges,
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
-using NDTensors: NDTensors
 
 abstract type AbstractBeliefPropagationCache end
 
@@ -148,7 +147,7 @@ for f in [
   end
 end
 
-NDTensors.scalartype(bpc::AbstractBeliefPropagationCache) = scalartype(tensornetwork(bpc))
+scalartype(bpc::AbstractBeliefPropagationCache) = scalartype(tensornetwork(bpc))
 
 """
 Update the tensornetwork inside the cache

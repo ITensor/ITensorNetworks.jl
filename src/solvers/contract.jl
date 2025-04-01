@@ -1,6 +1,6 @@
 using Graphs: nv, vertices
-using ITensors: ITensors, sim
-using ITensors.NDTensors: Algorithm, @Algorithm_str, contract
+using ITensorBase: ITensors, sim
+## using ITensors.NDTensors: Algorithm, @Algorithm_str, contract
 using NamedGraphs: vertextype
 
 function sum_contract(

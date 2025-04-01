@@ -1,5 +1,5 @@
 using DataStructures: DataStructures, DisjointSets, find_root!
-using ITensors.NDTensors: ind
+## using ITensors.NDTensors: ind
 using .ITensorsExtensions: is_delta
 
 """

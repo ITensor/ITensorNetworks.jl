@@ -1,10 +1,10 @@
 #using FillArrays: OneElement
 #using DataGraphs: DataGraph
 using Graphs: degree, is_tree
-using ITensors: flux, has_fermion_string, itensor, removeqns, space
-using ITensors.LazyApply: Prod, Sum, coefficient
-using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks, truncate!
-using ITensors.Ops: argument, coefficient, Op, OpSum, name, params, site, terms, which_op
+using ITensorBase: flux, has_fermion_string, itensor, removeqns, space
+## using ITensors.LazyApply: Prod, Sum, coefficient
+## using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks, truncate!
+## using ITensors.Ops: argument, coefficient, Op, OpSum, name, params, site, terms, which_op
 using NamedGraphs.GraphsExtensions:
   GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
 using StaticArrays: MVector

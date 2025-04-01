@@ -1,9 +1,8 @@
-using ITensors: inner, scalar
 using LinearAlgebra: norm, norm_sqr
 
 default_contract_alg(tns::Tuple) = "bp"
 
-function ITensors.inner(
+function inner(
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
   alg=default_contract_alg((ϕ, ψ)),
@@ -12,7 +11,7 @@ function ITensors.inner(
   return inner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
 
-function ITensors.inner(
+function inner(
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -22,7 +21,7 @@ function ITensors.inner(
   return inner(Algorithm(alg), ϕ, A, ψ; kwargs...)
 end
 
-function ITensors.inner(
+function inner(
   alg::Algorithm"exact",
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -37,7 +36,7 @@ function ITensors.inner(
   return scalar(tn; sequence)
 end
 
-function ITensors.inner(
+function inner(
   alg::Algorithm"exact",
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,
@@ -111,7 +110,7 @@ function loginner(
   return logscalar(alg, tn; kwargs...)
 end
 
-function ITensors.inner(
+function inner(
   alg::Algorithm,
   ϕ::AbstractITensorNetwork,
   ψ::AbstractITensorNetwork;
@@ -122,7 +121,7 @@ function ITensors.inner(
   return scalar(alg, tn; kwargs...)
 end
 
-function ITensors.inner(
+function inner(
   alg::Algorithm,
   ϕ::AbstractITensorNetwork,
   A::AbstractITensorNetwork,

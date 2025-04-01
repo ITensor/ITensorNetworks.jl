@@ -1,5 +1,5 @@
-using ITensors: ITensor, scalar
-using ITensors.NDTensors: NDTensors, Algorithm, @Algorithm_str, contract
+using BackendSelection: Algorithm, @Algorithm_str
+using ITensorBase: ITensor
 using LinearAlgebra: normalize!
 using NamedGraphs: NamedGraphs
 using NamedGraphs.OrdinalIndexing: th
@@ -20,7 +20,7 @@ function NDTensors.contract(
   return contract(ts; sequence=sequence_linear_index, kwargs...)
 end
 
-function NDTensors.contract(
+function contract(
   alg::Union{Algorithm"density_matrix",Algorithm"ttn_svd"},
   tn::AbstractITensorNetwork;
   output_structure::Function=path_graph_structure,
@@ -29,11 +29,11 @@ function NDTensors.contract(
   return contract_approx(alg, tn, output_structure; kwargs...)
 end
 
-function ITensors.scalar(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
+function scalar(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
   return contract(alg, tn; kwargs...)[]
 end
 
-function ITensors.scalar(tn::AbstractITensorNetwork; alg="exact", kwargs...)
+function scalar(tn::AbstractITensorNetwork; alg="exact", kwargs...)
   return scalar(Algorithm(alg), tn; kwargs...)
 end
 
@@ -76,6 +76,6 @@ function logscalar(
   return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
 end
 
-function ITensors.scalar(alg::Algorithm, tn::AbstractITensorNetwork; kwargs...)
+function scalar(alg::Algorithm, tn::AbstractITensorNetwork; kwargs...)
   return exp(logscalar(alg, tn; kwargs...))
 end

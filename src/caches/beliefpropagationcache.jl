@@ -1,7 +1,6 @@
 using Graphs: IsDirected
 using SplitApplyCombine: group
 using LinearAlgebra: diag, dot
-using ITensors: dir
 using NamedGraphs.PartitionedGraphs:
   PartitionedGraphs,
   PartitionedGraph,
@@ -11,7 +10,6 @@ using NamedGraphs.PartitionedGraphs:
   partitionedges,
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
-using NDTensors: NDTensors
 
 function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
   return (; partitioned_vertices=default_partitioned_vertices(ψ))

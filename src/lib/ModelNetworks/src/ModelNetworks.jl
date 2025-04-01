@@ -1,7 +1,7 @@
 module ModelNetworks
 using Graphs: degree, dst, edges, src
 using ..ITensorNetworks: IndsNetwork, delta_network, insert_linkinds, itensor
-using ITensors: commoninds, diag_itensor, inds, noprime
+using ITensorBase: commoninds, diag_itensor, inds, noprime
 using LinearAlgebra: Diagonal, eigen
 using NamedGraphs: NamedGraph
 

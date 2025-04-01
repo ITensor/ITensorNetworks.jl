@@ -1,5 +1,5 @@
 using Graphs: dst, src
-using ITensors: commoninds
+using ITensorBase: commoninds
 using NamedGraphs.GraphsExtensions: subgraph
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, PartitionEdge
 

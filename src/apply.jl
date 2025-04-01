@@ -1,8 +1,8 @@
 using .BaseExtensions: maybe_real
 using Graphs: has_edge
 using LinearAlgebra: qr
-using ITensors: Ops
-using ITensors:
+## using ITensorBase: Ops
+using ITensorBase:
   ITensors,
   Index,
   ITensor,
@@ -22,7 +22,7 @@ using ITensors:
   replaceinds,
   unioninds,
   uniqueinds
-using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
+## using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
 using KrylovKit: linsolve
 using LinearAlgebra: eigen, norm, svd
 using NamedGraphs: NamedEdge, has_edge

@@ -1,7 +1,7 @@
 module ModelHamiltonians
 using Dictionaries: AbstractDictionary
 using Graphs: AbstractGraph, dst, edges, edgetype, neighborhood, path_graph, src, vertices
-using ITensors.Ops: OpSum
+using QuantumOperatorAlgebra: OpSum
 
 to_callable(value::Type) = value
 to_callable(value::Function) = value
