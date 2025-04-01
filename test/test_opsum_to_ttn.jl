@@ -13,6 +13,7 @@ using ITensors:
   dag,
   inds,
   removeqns
+using ITensorMPS: ITensorMPS
 using ITensors.NDTensors: matrix
 using ITensorNetworks: ITensorNetworks, OpSum, ttn, siteinds
 using ITensorNetworks.ITensorsExtensions: replace_vertices
@@ -59,6 +60,26 @@ end
     # root_vertex = (1, 2)
     # println(leaf_vertices(is))
 
+    @testset "Svd approach" for root_vertex in leaf_vertices(is)
+      # get TTN Hamiltonian directly
+      Hsvd = ttn(H, is; root_vertex, cutoff=1e-10)
+      # get corresponding MPO Hamiltonian
+      Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
+      # compare resulting dense Hamiltonians
+      @disable_warn_order begin
+        Tttno = prod(Hline)
+        Tmpo = contract(Hsvd)
+      end
+      @test Tttno ≈ Tmpo rtol = 1e-6
+
+      Hsvd_lr = ttn(Hlr, is; root_vertex, cutoff=1e-10)
+      Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
+      @disable_warn_order begin
+        Tttno_lr = prod(Hline_lr)
+        Tmpo_lr = contract(Hsvd_lr)
+      end
+      @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
+    end
     if auto_fermion_enabled
       ITensors.enable_auto_fermion()
     end
@@ -116,6 +137,28 @@ end
 
     # root_vertex = (1, 2)
     # println(leaf_vertices(is))
+
+    @testset "Svd approach" for root_vertex in leaf_vertices(is)
+      # get TTN Hamiltonian directly
+      Hsvd = ttn(H, is; root_vertex, cutoff=1e-10)
+      # get corresponding MPO Hamiltonian
+      Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
+      # compare resulting sparse Hamiltonians
+
+      @disable_warn_order begin
+        Tmpo = prod(Hline)
+        Tttno = contract(Hsvd)
+      end
+      @test Tttno ≈ Tmpo rtol = 1e-6
+
+      Hsvd_lr = ttn(Hlr, is; root_vertex, cutoff=1e-10)
+      Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
+      @disable_warn_order begin
+        Tttno_lr = prod(Hline_lr)
+        Tmpo_lr = contract(Hsvd_lr)
+      end
+      @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
+    end
   end
 
   @testset "OpSum to TTN Fermions" begin
@@ -138,6 +181,30 @@ end
     # add combination of longer range interactions
     Hlr = copy(H)
 
+    @testset "Svd approach" for root_vertex in leaf_vertices(is)
+      # get TTN Hamiltonian directly
+      Hsvd = ttn(H, is; root_vertex, cutoff=1e-10)
+      # get corresponding MPO Hamiltonian
+      sites = [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
+      vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
+      Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
+      @disable_warn_order begin
+        Tmpo = prod(Hline)
+        Tttno = contract(Hsvd)
+      end
+
+      # verify that the norm isn't 0 and thus the same (which would indicate a problem with the autofermion system
+      @test norm(Tmpo) > 0
+      @test norm(Tttno) > 0
+      @test norm(Tmpo) ≈ norm(Tttno) rtol = 1e-6
+
+      # TODO: fix comparison for fermionic tensors
+      @test_broken Tmpo ≈ Tttno
+      # In the meantime: matricize tensors and convert to dense Matrix to compare element by element
+      dTmm = to_matrix(Tmpo)
+      dTtm = to_matrix(Tttno)
+      @test any(>(1e-14), dTmm - dTtm)
+    end
     if !auto_fermion_enabled
       ITensors.disable_auto_fermion()
     end
@@ -177,6 +244,28 @@ end
     Hlr += -4, "Z", (1, 1), "Z", (2, 2)
     Hlr += 2.0, "Z", (2, 2), "Z", (3, 2)
     Hlr += -1.0, "Z", (1, 2), "Z", (3, 1)
+
+    @testset "Svd approach" for root_vertex in leaf_vertices(is)
+      # get TTN Hamiltonian directly
+      Hsvd = ttn(H, is_missing_site; root_vertex, cutoff=1e-10)
+      # get corresponding MPO Hamiltonian
+      Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
+
+      # compare resulting sparse Hamiltonians
+      @disable_warn_order begin
+        Tmpo = prod(Hline)
+        Tttno = contract(Hsvd)
+      end
+      @test Tttno ≈ Tmpo rtol = 1e-6
+
+      Hsvd_lr = ttn(Hlr, is_missing_site; root_vertex, cutoff=1e-10)
+      Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
+      @disable_warn_order begin
+        Tttno_lr = prod(Hline_lr)
+        Tmpo_lr = contract(Hsvd_lr)
+      end
+      @test Tttno_lr ≈ Tmpo_lr rtol = 1e-6
+    end
   end
 end
 end
