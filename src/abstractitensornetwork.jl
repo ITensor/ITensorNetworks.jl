@@ -38,7 +38,6 @@ using ITensors:
   settags,
   sim,
   swaptags
-using ITensorMPS: ITensorMPS, add, linkdim, linkinds, siteinds
 using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using LinearAlgebra: LinearAlgebra, factorize
 using MacroTools: @capture
@@ -255,7 +254,7 @@ indsnetwork(tn::AbstractITensorNetwork) = IndsNetwork(tn)
 
 # TODO: Output a `VertexDataGraph`? Unfortunately
 # `IndsNetwork` doesn't allow iterating over vertex data.
-function ITensorMPS.siteinds(tn::AbstractITensorNetwork)
+function siteinds(tn::AbstractITensorNetwork)
   is = IndsNetwork(underlying_graph(tn))
   for v in vertices(tn)
     is[v] = uniqueinds(tn, v)
@@ -268,7 +267,7 @@ function flatten_siteinds(tn::AbstractITensorNetwork)
   return identity.(flatten(map(v -> siteinds(tn, v), vertices(tn))))
 end
 
-function ITensorMPS.linkinds(tn::AbstractITensorNetwork)
+function linkinds(tn::AbstractITensorNetwork)
   is = IndsNetwork(underlying_graph(tn))
   for e in edges(tn)
     is[e] = commoninds(tn, e)
@@ -302,7 +301,11 @@ function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
   return uniqueinds(tn, edgetype(tn)(edge))
 end
 
-function ITensors.siteinds(tn::AbstractITensorNetwork, vertex)
+function siteinds(tn::AbstractITensorNetwork, vertex)
+  return uniqueinds(tn, vertex)
+end
+# Fix ambiguity error with IndsNetwork constructor.
+function siteinds(tn::AbstractITensorNetwork, vertex::Int)
   return uniqueinds(tn, vertex)
 end
 
@@ -311,7 +314,7 @@ function ITensors.commoninds(tn::AbstractITensorNetwork, edge)
   return commoninds(tn[src(e)], tn[dst(e)])
 end
 
-function ITensorMPS.linkinds(tn::AbstractITensorNetwork, edge)
+function linkinds(tn::AbstractITensorNetwork, edge)
   return commoninds(tn, edge)
 end
 
@@ -807,7 +810,7 @@ end
 # Link dimensions
 # 
 
-function ITensorMPS.maxlinkdim(tn::AbstractITensorNetwork)
+function maxlinkdim(tn::AbstractITensorNetwork)
   md = 1
   for e in edges(tn)
     md = max(md, linkdim(tn, e))
@@ -815,16 +818,16 @@ function ITensorMPS.maxlinkdim(tn::AbstractITensorNetwork)
   return md
 end
 
-function ITensorMPS.linkdim(tn::AbstractITensorNetwork, edge::Pair)
+function linkdim(tn::AbstractITensorNetwork, edge::Pair)
   return linkdim(tn, edgetype(tn)(edge))
 end
 
-function ITensorMPS.linkdim(tn::AbstractITensorNetwork{V}, edge::AbstractEdge{V}) where {V}
+function linkdim(tn::AbstractITensorNetwork{V}, edge::AbstractEdge{V}) where {V}
   ls = linkinds(tn, edge)
   return prod([isnothing(l) ? 1 : dim(l) for l in ls])
 end
 
-function ITensorMPS.linkdims(tn::AbstractITensorNetwork{V}) where {V}
+function linkdims(tn::AbstractITensorNetwork{V}) where {V}
   ld = DataGraph{V}(
     copy(underlying_graph(tn)); vertex_data_eltype=Nothing, edge_data_eltype=Int
   )
@@ -882,7 +885,7 @@ is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
 is_multi_edge(tn::AbstractITensorNetwork) = Base.Fix1(is_multi_edge, tn)
 
 """Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex """
-function ITensorMPS.add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
+function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   @assert issetequal(vertices(tn1), vertices(tn2))
 
   tn1 = combine_linkinds(tn1; edges=filter(is_multi_edge(tn1), edges(tn1)))

@@ -7,10 +7,11 @@ using ITensorNetworks:
   logscalar,
   random_tensornetwork,
   scalar,
+  siteinds,
   ttn,
   underlying_graph
 using ITensorNetworks.ModelHamiltonians: heisenberg
-using ITensors: dag, siteinds
+using ITensors: dag
 using SplitApplyCombine: group
 using Graphs: SimpleGraph, uniform_tree
 using NamedGraphs: NamedGraph

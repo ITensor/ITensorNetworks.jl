@@ -2,7 +2,6 @@ using Graphs: IsDirected
 using SplitApplyCombine: group
 using LinearAlgebra: diag, dot
 using ITensors: dir
-using ITensorMPS: ITensorMPS
 using NamedGraphs.PartitionedGraphs:
   PartitionedGraphs,
   PartitionedGraph,
@@ -140,7 +139,7 @@ for f in [
   :(PartitionedGraphs.partitionvertices),
   :(PartitionedGraphs.vertices),
   :(PartitionedGraphs.boundary_partitionedges),
-  :(ITensorMPS.linkinds),
+  :(linkinds),
 ]
   @eval begin
     function $f(bpc::AbstractBeliefPropagationCache, args...; kwargs...)

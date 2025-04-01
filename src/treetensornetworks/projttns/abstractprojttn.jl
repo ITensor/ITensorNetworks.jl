@@ -1,7 +1,6 @@
 using DataGraphs: DataGraphs, underlying_graph
 using Graphs: neighbors
 using ITensors: ITensor, contract, order, product
-using ITensorMPS: ITensorMPS, nsite
 using NamedGraphs: NamedGraphs, NamedEdge, vertextype
 using NamedGraphs.GraphsExtensions: incident_edges
 
@@ -29,7 +28,7 @@ Graphs.edgetype(P::AbstractProjTTN) = edgetype(underlying_graph(P))
 
 on_edge(P::AbstractProjTTN) = isa(pos(P), edgetype(P))
 
-ITensorMPS.nsite(P::AbstractProjTTN) = on_edge(P) ? 0 : length(pos(P))
+nsite(P::AbstractProjTTN) = on_edge(P) ? 0 : length(pos(P))
 
 function sites(P::AbstractProjTTN{V}) where {V}
   on_edge(P) && return V[]

@@ -2,12 +2,12 @@
 using Graphs: SimpleGraph, uniform_tree
 using NamedGraphs: NamedGraph, vertices
 using NamedGraphs.NamedGraphGenerators: named_grid
-using ITensors: siteinds
 using ITensorNetworks:
   BeliefPropagationCache,
   ITensorNetwork,
   expect,
   random_tensornetwork,
+  siteinds,
   original_state_vertex
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
