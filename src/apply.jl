@@ -23,7 +23,6 @@ using ITensors:
   unioninds,
   uniqueinds
 using ITensors.ContractionSequenceOptimization: optimal_contraction_sequence
-using ITensorMPS: siteinds
 using KrylovKit: linsolve
 using LinearAlgebra: eigen, norm, svd
 using NamedGraphs: NamedEdge, has_edge

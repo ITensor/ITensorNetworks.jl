@@ -1,7 +1,6 @@
 #using FillArrays: OneElement
 #using DataGraphs: DataGraph
 using Graphs: degree, is_tree
-using ITensorMPS: ITensorMPS, cutoff, linkdims, ops, truncate!, val
 using ITensors: flux, has_fermion_string, itensor, removeqns, space
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks

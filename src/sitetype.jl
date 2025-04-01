@@ -1,6 +1,6 @@
 using Dictionaries: Dictionary
 using Graphs: AbstractGraph, nv, vertices
-using ITensors: ITensors, Index, siteind, siteinds
+using ITensors: ITensors, Index, siteind
 
 function ITensors.siteind(sitetype::String, v::Tuple; kwargs...)
   return addtags(siteind(sitetype; kwargs...), vertex_tag(v))
@@ -16,7 +16,7 @@ function to_siteinds_callable(x::AbstractDictionary)
   return Base.Fix1(getindex, x) ∘ keytype(x)
 end
 
-function ITensors.siteinds(x, g::AbstractGraph; kwargs...)
+function siteinds(x, g::AbstractGraph; kwargs...)
   return siteinds(to_siteinds_callable(x), g; kwargs...)
 end
 
@@ -26,7 +26,7 @@ end
 
 to_siteind(x::Index, vertex; kwargs...) = [x]
 
-function ITensors.siteinds(f::Function, g::AbstractGraph; kwargs...)
+function siteinds(f::Function, g::AbstractGraph; kwargs...)
   is = IndsNetwork(g)
   for v in vertices(g)
     is[v] = to_siteind(f(v), v; kwargs...)
