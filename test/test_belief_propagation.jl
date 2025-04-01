@@ -8,7 +8,6 @@ using ITensorNetworks:
   ⊗,
   combine_linkinds,
   contract,
-  contract_boundary_mps,
   contraction_sequence,
   eachtensor,
   environment,
