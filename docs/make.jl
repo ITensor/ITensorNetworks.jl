@@ -1,21 +1,25 @@
-using ITensorNetworks
-using Documenter
+using ITensorNetworks: ITensorNetworks
+using Documenter: Documenter, DocMeta, deploydocs, makedocs
 
 DocMeta.setdocmeta!(
   ITensorNetworks, :DocTestSetup, :(using ITensorNetworks); recursive=true
 )
 
+include("make_index.jl")
+
 makedocs(;
   modules=[ITensorNetworks],
-  authors="Matthew Fishman <mfishman@flatironinstitute.org>, Joseph Tindall <jtindall@flatironinstitute.org> and contributors",
-  repo="https://github.com/mtfishman/ITensorNetworks.jl/blob/{commit}{path}#{line}",
+  authors="ITensor developers <support@itensor.org> and contributors",
   sitename="ITensorNetworks.jl",
   format=Documenter.HTML(;
-    prettyurls=get(ENV, "CI", "false") == "true",
-    canonical="https://mtfishman.github.io/ITensorNetworks.jl",
-    assets=String[],
+    canonical="https://itensor.github.io/ITensorNetworks.jl",
+    edit_link="main",
+    assets=["assets/favicon.ico", "assets/extras.css"],
   ),
-  pages=["Home" => "index.md"],
+  pages=["Home" => "index.md", "Reference" => "reference.md"],
+  warnonly=true,
 )
 
-deploydocs(; repo="github.com/mtfishman/ITensorNetworks.jl", devbranch="main")
+deploydocs(;
+  repo="github.com/ITensor/ITensorNetworks.jl", devbranch="main", push_preview=true
+)

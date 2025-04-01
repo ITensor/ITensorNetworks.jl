@@ -623,18 +623,42 @@ function gauge_walk(
   return gauge_walk(alg, tn, edgetype(tn).(edges); kwargs...)
 end
 
+function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region)
+  return tree_gauge(alg, ψ, [region])
+end
+
+#Get the path that moves the gauge from a to b on a tree
+#TODO: Move to NamedGraphs
+function edge_sequence_between_regions(g::AbstractGraph, region_a::Vector, region_b::Vector)
+  issetequal(region_a, region_b) && return edgetype(g)[]
+  st = steiner_tree(g, union(region_a, region_b))
+  path = post_order_dfs_edges(st, first(region_b))
+  path = filter(e -> !((src(e) ∈ region_b) && (dst(e) ∈ region_b)), path)
+  return path
+end
+
+# Gauge a ITensorNetwork from cur_region towards new_region, treating
+# the network as a tree spanned by a spanning tree.
+function tree_gauge(
+  alg::Algorithm,
+  ψ::AbstractITensorNetwork,
+  cur_region::Vector,
+  new_region::Vector;
+  kwargs...,
+)
+  es = edge_sequence_between_regions(ψ, cur_region, new_region)
+  ψ = gauge_walk(alg, ψ, es; kwargs...)
+  return ψ
+end
+
 # Gauge a ITensorNetwork towards a region, treating
 # the network as a tree spanned by a spanning tree.
 function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region::Vector)
-  region_center =
-    length(region) != 1 ? first(center(steiner_tree(ψ, region))) : only(region)
-  path = post_order_dfs_edges(bfs_tree(ψ, region_center), region_center)
-  path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
-  return gauge_walk(alg, ψ, path)
+  return tree_gauge(alg, ψ, collect(vertices(ψ)), region)
 end
 
-function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region)
-  return tree_gauge(alg, ψ, [region])
+function tree_orthogonalize(ψ::AbstractITensorNetwork, cur_region, new_region; kwargs...)
+  return tree_gauge(Algorithm("orthogonalize"), ψ, cur_region, new_region; kwargs...)
 end
 
 function tree_orthogonalize(ψ::AbstractITensorNetwork, region; kwargs...)
