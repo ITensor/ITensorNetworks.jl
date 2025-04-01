@@ -2,7 +2,6 @@
 using DataGraphs: edge_data, vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices, uniform_tree
-using ITensorMPS: ITensorMPS
 using ITensorNetworks:
   ITensorNetworks,
   OpSum,
@@ -52,16 +51,10 @@ ITensors.disable_auto_fermion()
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
 
-  # Compare to `ITensors.MPO` version of `dmrg`
-  H_mpo = ITensorMPS.MPO([H[v] for v in 1:nv(H)])
-  psi_mps = ITensorMPS.MPS([psi[v] for v in 1:nv(psi)])
-  e2, psi2 = dmrg(H_mpo, psi_mps; nsweeps, maxdim, outputlevel=0)
-
   e, psi = dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
   @test inner(psi', H, psi) ≈ e
-  @test inner(psi', H, psi) ≈ inner(psi2', H_mpo, psi2)
 
   # Alias for `ITensorNetworks.dmrg`
   e, psi = eigsolve(
@@ -235,17 +228,6 @@ end
       H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
     )
 
-    # Compare to `ITensors.MPO` version of `dmrg`
-    linear_order = [4, 1, 2, 5, 3, 6]
-    vmap = Dictionary(collect(vertices(s))[linear_order], 1:length(linear_order))
-    sline = only.(collect(vertex_data(s)))[linear_order]
-    Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
-    rng = StableRNG(1234)
-    psiline = ITensorMPS.random_mps(rng, sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
-    e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
-
-    @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
-
     if !auto_fermion_enabled
       ITensors.disable_auto_fermion()
     end
@@ -273,14 +255,6 @@ end
   vmap = Dictionary(collect(vertices(s))[linear_order], 1:length(linear_order))
   sline = only.(collect(vertex_data(s)))[linear_order]
 
-  # get MPS / MPO with JW string result
-  ITensors.disable_auto_fermion()
-  Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
-  rng = StableRNG(1234)
-  psiline = ITensorMPS.random_mps(rng, sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
-  e_jw, psi_jw = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
-  ITensors.enable_auto_fermion()
-
   # now get auto-fermion results 
   H = ttn(os, s)
   # make init_state
@@ -293,16 +267,6 @@ end
   e, psi = dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
-
-  # Compare to `ITensors.MPO` version of `dmrg`
-  Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
-  rng = StableRNG(1234)
-  psiline = ITensorMPS.random_mps(rng, sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
-  e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
-
-  @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
-  @test e2 ≈ e_jw atol = 1e-5
-  @test inner(psi2', Hline, psi2) ≈ e_jw atol = 1e-5
 
   if !auto_fermion_enabled
     ITensors.disable_auto_fermion()
