@@ -1,11 +1,18 @@
-using ITensorNetworks: ITensorNetworks
 using Documenter: Documenter, DocMeta, deploydocs, makedocs
+using ITensorNetworks: ITensorNetworks
+using Literate: Literate
 
 DocMeta.setdocmeta!(
   ITensorNetworks, :DocTestSetup, :(using ITensorNetworks); recursive=true
 )
 
 include("make_index.jl")
+
+Literate.markdown(
+  joinpath(@__DIR__, "src", "examples.jl"),
+  joinpath(@__DIR__, "src");
+  flavor=Literate.DocumenterFlavor(),
+)
 
 makedocs(;
   modules=[ITensorNetworks],
@@ -16,7 +23,7 @@ makedocs(;
     edit_link="main",
     assets=["assets/favicon.ico", "assets/extras.css"],
   ),
-  pages=["Home" => "index.md", "Reference" => "reference.md"],
+  pages=["Home" => "index.md", "Examples" => "examples.md", "Reference" => "reference.md"],
   warnonly=true,
 )
 
