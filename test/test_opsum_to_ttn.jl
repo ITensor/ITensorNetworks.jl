@@ -14,7 +14,6 @@ using ITensors:
   inds,
   removeqns
 using ITensors.NDTensors: matrix
-using ITensorGaussianMPS: ITensorGaussianMPS
 using ITensorNetworks: ITensorNetworks, OpSum, ttn, siteinds
 using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
