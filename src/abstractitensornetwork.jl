@@ -627,9 +627,9 @@ function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region)
   return tree_gauge(alg, ψ, [region])
 end
 
-#Get the path that moves the gauge from a to b (minimum path between a and b)
-#TODO: Moved to NamedGraphs
-function gauge_path(g::AbstractGraph, region_a::Vector, region_b::Vector)
+#Get the path that moves the gauge from a to b on a tree
+#TODO: Move to NamedGraphs
+function edge_sequence_between_regions(g::AbstractGraph, region_a::Vector, region_b::Vector)
   issetequal(region_a, region_b) && return edgetype(g)[]
   st = steiner_tree(g, union(region_a, region_b))
   path = post_order_dfs_edges(st, first(region_b))
@@ -639,11 +639,15 @@ end
 
 # Gauge a ITensorNetwork from cur_region towards new_region, treating
 # the network as a tree spanned by a spanning tree.
-function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, cur_region::Vector, new_region::Vector; kwargs...)
-  path = gauge_path(ψ, cur_region, new_region)
-  if !isempty(path)
-    ψ = gauge_walk(alg, ψ, path; kwargs...)
-  end
+function tree_gauge(
+  alg::Algorithm,
+  ψ::AbstractITensorNetwork,
+  cur_region::Vector,
+  new_region::Vector;
+  kwargs...,
+)
+  es = edge_sequence_between_regions(ψ, cur_region, new_region)
+  ψ = gauge_walk(alg, ψ, es; kwargs...)
   return ψ
 end
 

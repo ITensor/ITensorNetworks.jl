@@ -1,4 +1,5 @@
 module ITensorNetworks
+
 include("lib/BaseExtensions/src/BaseExtensions.jl")
 include("lib/ITensorsExtensions/src/ITensorsExtensions.jl")
 include("visualize.jl")
@@ -25,6 +26,8 @@ include("specialitensornetworks.jl")
 include("boundarymps.jl")
 include("partitioneditensornetwork.jl")
 include("edge_sequences.jl")
+include("caches/abstractbeliefpropagationcache.jl")
+include("caches/beliefpropagationcache.jl")
 include("caches/abstractbeliefpropagationcache.jl")
 include("caches/beliefpropagationcache.jl")
 include("formnetworks/abstractformnetwork.jl")
@@ -69,8 +72,4 @@ include("exports.jl")
 include("lib/ModelHamiltonians/src/ModelHamiltonians.jl")
 include("lib/ModelNetworks/src/ModelNetworks.jl")
 
-using PackageExtensionCompat: @require_extensions
-function __init__()
-  @require_extensions
-end
 end
