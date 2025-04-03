@@ -55,7 +55,7 @@ ITensors.disable_auto_fermion()
   # Compare to `ITensors.MPO` version of `dmrg`
   H_mpo = ITensorMPS.MPO([H[v] for v in 1:nv(H)])
   psi_mps = ITensorMPS.MPS([psi[v] for v in 1:nv(psi)])
-  e2, psi2 = dmrg(H_mpo, psi_mps; nsweeps, maxdim, outputlevel=0)
+  e2, psi2 = ITensorMPS.dmrg(H_mpo, psi_mps; nsweeps, maxdim, outputlevel=0)
 
   e, psi = dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsites, updater_kwargs=(; krylovdim=3, maxiter=1)
@@ -242,9 +242,9 @@ end
     Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
     rng = StableRNG(1234)
     psiline = ITensorMPS.random_mps(rng, sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
-    e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
+    e2, psi2 = ITensorMPS.dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
-    @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
+    @test inner(psi', H, psi) ≈ ITensorMPS.inner(psi2', Hline, psi2) atol = 1e-5
 
     if !auto_fermion_enabled
       ITensors.disable_auto_fermion()
@@ -278,7 +278,7 @@ end
   Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
   rng = StableRNG(1234)
   psiline = ITensorMPS.random_mps(rng, sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
-  e_jw, psi_jw = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
+  e_jw, psi_jw = ITensorMPS.dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
   ITensors.enable_auto_fermion()
 
   # now get auto-fermion results 
@@ -298,9 +298,9 @@ end
   Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], os), sline)
   rng = StableRNG(1234)
   psiline = ITensorMPS.random_mps(rng, sline, i -> isodd(i) ? "Up" : "Dn"; linkdims=20)
-  e2, psi2 = dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
+  e2, psi2 = ITensorMPS.dmrg(Hline, psiline; nsweeps, maxdim, cutoff, outputlevel=0)
 
-  @test inner(psi', H, psi) ≈ inner(psi2', Hline, psi2) atol = 1e-5
+  @test inner(psi', H, psi) ≈ ITensorMPS.inner(psi2', Hline, psi2) atol = 1e-5
   @test e2 ≈ e_jw atol = 1e-5
   @test inner(psi2', Hline, psi2) ≈ e_jw atol = 1e-5
 

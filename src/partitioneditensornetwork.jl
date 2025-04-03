@@ -1,10 +1,9 @@
 using Graphs: dst, src
 using ITensors: commoninds
-using ITensorMPS: ITensorMPS
 using NamedGraphs.GraphsExtensions: subgraph
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, PartitionEdge
 
-function ITensorMPS.linkinds(pitn::PartitionedGraph, edge::PartitionEdge)
+function linkinds(pitn::PartitionedGraph, edge::PartitionEdge)
   src_e_itn = subgraph(pitn, src(edge))
   dst_e_itn = subgraph(pitn, dst(edge))
   return commoninds(src_e_itn, dst_e_itn)

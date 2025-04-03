@@ -28,7 +28,7 @@ end
 
 on_edge(P::ProjTTNSum) = on_edge(terms(P)[1])
 
-ITensorMPS.nsite(P::ProjTTNSum) = nsite(terms(P)[1])
+nsite(P::ProjTTNSum) = nsite(terms(P)[1])
 
 function set_nsite(Ps::ProjTTNSum, nsite)
   return ProjTTNSum(map(p -> set_nsite(p, nsite), terms(Ps)), factors(Ps))
