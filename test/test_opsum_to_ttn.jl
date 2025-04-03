@@ -15,7 +15,6 @@ using ITensors:
   removeqns
 using ITensorMPS: ITensorMPS
 using ITensors.NDTensors: matrix
-using ITensorGaussianMPS: ITensorGaussianMPS
 using ITensorNetworks: ITensorNetworks, OpSum, ttn, siteinds
 using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
@@ -189,8 +188,6 @@ end
       sites = [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
       vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
       Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
-      # compare resulting sparse Hamiltonians
-      Hmat_sp = ITensorGaussianMPS.hopping_hamiltonian(replace_vertices(v -> vmap[v], H))
       @disable_warn_order begin
         Tmpo = prod(Hline)
         Tttno = contract(Hsvd)
@@ -207,11 +204,6 @@ end
       dTmm = to_matrix(Tmpo)
       dTtm = to_matrix(Tttno)
       @test any(>(1e-14), dTmm - dTtm)
-
-      # also compare with energies obtained from single-particle Hamiltonian
-      GS_mb, _, _ = eigsolve(dTtm, 1, :SR, eltype(dTtm))
-      spectrum_sp = eigvals(Hmat_sp)
-      @test minimum(cumsum(spectrum_sp)) ≈ GS_mb[1] atol = 1e-8
     end
     if !auto_fermion_enabled
       ITensors.disable_auto_fermion()

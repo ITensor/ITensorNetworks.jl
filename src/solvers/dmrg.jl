@@ -1,10 +1,6 @@
-using ITensorMPS: ITensorMPS, dmrg
 using KrylovKit: KrylovKit
 
-"""
-Overload of `ITensors.ITensorMPS.dmrg`.
-"""
-function ITensorMPS.dmrg(
+function dmrg(
   operator,
   init_state;
   nsweeps,
@@ -24,7 +20,4 @@ function ITensorMPS.dmrg(
   return eigval, state
 end
 
-"""
-Overload of `KrylovKit.eigsolve`.
-"""
 KrylovKit.eigsolve(H, init::AbstractTTN; kwargs...) = dmrg(H, init; kwargs...)
