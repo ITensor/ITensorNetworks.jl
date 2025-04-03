@@ -2,7 +2,6 @@ using Graphs: IsDirected
 using SplitApplyCombine: group
 using LinearAlgebra: diag, dot
 using ITensors: dir
-using ITensorMPS: ITensorMPS
 using NamedGraphs.PartitionedGraphs:
   PartitionedGraphs,
   PartitionedGraph,
@@ -40,9 +39,6 @@ default_messages(ptn::PartitionedGraph) = Dictionary()
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end
 default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
-function default_partitioned_vertices(f::AbstractFormNetwork)
-  return group(v -> original_state_vertex(f, v), vertices(f))
-end
 
 partitioned_tensornetwork(bpc::AbstractBeliefPropagationCache) = not_implemented()
 messages(bpc::AbstractBeliefPropagationCache) = not_implemented()
@@ -143,7 +139,7 @@ for f in [
   :(PartitionedGraphs.partitionvertices),
   :(PartitionedGraphs.vertices),
   :(PartitionedGraphs.boundary_partitionedges),
-  :(ITensorMPS.linkinds),
+  :(linkinds),
 ]
   @eval begin
     function $f(bpc::AbstractBeliefPropagationCache, args...; kwargs...)

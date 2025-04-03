@@ -9,7 +9,6 @@ using NamedGraphs.GraphsExtensions:
 using NamedGraphs: namedgraph_a_star, steiner_tree
 using IsApprox: IsApprox, Approx
 using ITensors: ITensors, Algorithm, @Algorithm_str, directsum, hasinds, permute, plev
-using ITensorMPS: ITensorMPS, linkind, loginner, lognorm, orthogonalize
 using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
@@ -36,13 +35,7 @@ function set_ortho_region(tn::AbstractTTN, new_region)
 end
 
 function gauge(alg::Algorithm, ttn::AbstractTTN, region::Vector; kwargs...)
-  issetequal(region, ortho_region(ttn)) && return ttn
-  st = steiner_tree(ttn, union(region, ortho_region(ttn)))
-  path = post_order_dfs_edges(st, first(region))
-  path = filter(e -> !((src(e) ∈ region) && (dst(e) ∈ region)), path)
-  if !isempty(path)
-    ttn = typeof(ttn)(gauge_walk(alg, ITensorNetwork(ttn), path; kwargs...))
-  end
+  ttn = tree_gauge(alg, ttn, collect(ortho_region(ttn)), region; kwargs...)
   return set_ortho_region(ttn, region)
 end
 
@@ -50,7 +43,7 @@ function gauge(alg::Algorithm, ttn::AbstractTTN, region; kwargs...)
   return gauge(alg, ttn, [region]; kwargs...)
 end
 
-function ITensorMPS.orthogonalize(ttn::AbstractTTN, region; kwargs...)
+function orthogonalize(ttn::AbstractTTN, region; kwargs...)
   return gauge(Algorithm("orthogonalize"), ttn, region; kwargs...)
 end
 
@@ -169,7 +162,7 @@ function LinearAlgebra.rmul!(tn::AbstractTTN, α::Number)
   return _apply_to_ortho_region!(*, tn, α)
 end
 
-function ITensorMPS.lognorm(tn::AbstractTTN)
+function lognorm(tn::AbstractTTN)
   if isone(length(ortho_region(tn)))
     return log(norm(tn[only(ortho_region(tn))]))
   end
@@ -187,7 +180,7 @@ function logdot(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
 end
 
 # TODO: stick with this traversal or find optimal contraction sequence?
-function ITensorMPS.loginner(
+function loginner(
   tn1::AbstractTTN, tn2::AbstractTTN; root_vertex=GraphsExtensions.default_root_vertex(tn1)
 )
   N = nv(tn1)
@@ -276,13 +269,13 @@ end
 
 Base.:+(tn::AbstractTTN) = tn
 
-ITensorMPS.add(tns::AbstractTTN...; kwargs...) = +(tns...; kwargs...)
+add(tns::AbstractTTN...; kwargs...) = +(tns...; kwargs...)
 
 function Base.:-(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
   return +(tn1, -tn2; kwargs...)
 end
 
-function ITensorMPS.add(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
+function add(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
   return +(tn1, tn2; kwargs...)
 end
 
@@ -352,7 +345,7 @@ function ITensors.inner(
   return O[]
 end
 
-function ITensorMPS.expect(
+function expect(
   operator::String,
   state::AbstractTTN;
   vertices=vertices(state),

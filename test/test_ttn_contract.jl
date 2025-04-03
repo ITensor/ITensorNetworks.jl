@@ -17,7 +17,6 @@ using ITensorNetworks:
   siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensors: prime, replaceinds, replaceprime
-using ITensorMPS: ITensorMPS
 using LinearAlgebra: norm, normalize
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using StableRNGs: StableRNG
@@ -149,24 +148,5 @@ end
   Hpsi_guess = random_ttn(rng, t; link_space=32)
   Hpsi = contract(H, psi; alg="fit", nsites=1, nsweeps=10, init=Hpsi_guess)
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 1e-2
-end
-
-@testset "Contract TTN with dangling inds" begin
-  nbit = 3
-  sites = siteinds("Qubit", nbit)
-
-  # random_mpo does not support linkdims keyword.
-  M1 = replaceprime(
-    ITensorMPS.random_mpo(sites) + ITensorMPS.random_mpo(sites), 1 => 2, 0 => 1
-  )
-  M2 = ITensorMPS.random_mpo(sites) + ITensorMPS.random_mpo(sites)
-  M12_ref = contract(M1, M2; alg="naive")
-  t12_ref = ttn([M12_ref[v] for v in eachindex(M12_ref)])
-
-  t1 = ttn([M1[v] for v in eachindex(M1)])
-  t2 = ttn([M2[v] for v in eachindex(M2)])
-
-  # Test with good initial guess
-  @test contract(t1, t2; alg="fit", init=t12_ref, nsweeps=1) ≈ t12_ref rtol = 1e-7
 end
 end

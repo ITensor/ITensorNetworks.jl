@@ -1,10 +1,9 @@
 #using FillArrays: OneElement
 #using DataGraphs: DataGraph
 using Graphs: degree, is_tree
-using ITensorMPS: ITensorMPS, cutoff, linkdims, ops, truncate!, val
 using ITensors: flux, has_fermion_string, itensor, removeqns, space
 using ITensors.LazyApply: Prod, Sum, coefficient
-using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks
+using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks, truncate!
 using ITensors.Ops: argument, coefficient, Op, OpSum, name, params, site, terms, which_op
 using NamedGraphs.GraphsExtensions:
   GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
@@ -649,6 +648,10 @@ end
 
 function mpo(os::OpSum, external_inds::Vector; kwargs...)
   return ttn(os, path_indsnetwork(external_inds); kwargs...)
+end
+function mpo(os::OpSum, s::IndsNetwork; kwargs...)
+  # TODO: Check it is a path graph.
+  return ttn(os, s; kwargs...)
 end
 
 # Conversion from other formats

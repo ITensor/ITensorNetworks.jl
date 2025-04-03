@@ -80,3 +80,7 @@ operator_vertex(f::AbstractFormNetwork, v) = operator_vertex_map(f)(v)
 bra_vertex(f::AbstractFormNetwork, v) = bra_vertex_map(f)(v)
 ket_vertex(f::AbstractFormNetwork, v) = ket_vertex_map(f)(v)
 original_state_vertex(f::AbstractFormNetwork, v) = inv_vertex_map(f)(v)
+
+function default_partitioned_vertices(f::AbstractFormNetwork)
+  return group(v -> original_state_vertex(f, v), vertices(f))
+end
