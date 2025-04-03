@@ -14,6 +14,7 @@ using ITensors.NDTensors: vector
 using LinearAlgebra: diag
 using NamedGraphs.NamedGraphGenerators: named_grid
 using StableRNGs: StableRNG
+using TensorOperations: TensorOperations
 using Test: @test, @testset
 
 @testset "gauging" begin
