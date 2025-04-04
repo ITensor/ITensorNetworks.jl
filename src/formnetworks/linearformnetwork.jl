@@ -1,6 +1,6 @@
-using ITensors: ITensor, sim
+using ITensors: ITensor, prime
 
-default_dual_link_index_map = sim
+default_dual_link_index_map = prime
 
 struct LinearFormNetwork{
   V,TensorNetwork<:AbstractITensorNetwork{V},BraVertexSuffix,KetVertexSuffix
