@@ -30,6 +30,7 @@ using ITensors:
   itensor,
   onehot,
   order,
+  prime,
   random_itensor,
   scalartype,
   sim,
@@ -55,7 +56,7 @@ using ITensorNetworks:
   ttn
 using LinearAlgebra: factorize
 using NamedGraphs: NamedEdge
-using NamedGraphs.GraphsExtensions: incident_edges
+using NamedGraphs.GraphsExtensions: disjoint_union, incident_edges
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NDTensors: NDTensors, dim
 using Random: randn!
@@ -140,7 +141,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     g = named_grid(dims)
     s = siteinds("S=1/2", g)
     ψ = ITensorNetwork(v -> "↑", s)
-    tn = norm_sqr_network(ψ)
+    tn = disjoint_union("bra" => ψ, "ket" => prime(dag(ψ); sites=[]))
     tn_2 = contract(tn, ((1, 2), "ket") => ((1, 2), "bra"))
     @test !has_vertex(tn_2, ((1, 2), "ket"))
     @test tn_2[((1, 2), "bra")] ≈ tn[((1, 2), "ket")] * tn[((1, 2), "bra")]

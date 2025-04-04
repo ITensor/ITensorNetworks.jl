@@ -36,10 +36,6 @@ bra_vertex_suffix(lf::LinearFormNetwork) = lf.bra_vertex_suffix
 ket_vertex_suffix(lf::LinearFormNetwork) = lf.ket_vertex_suffix
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 tensornetwork(lf::LinearFormNetwork) = lf.tensornetwork
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph_type`.
-data_graph_type(::Type{<:LinearFormNetwork}) = data_graph_type(tensornetwork(lf))
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
-data_graph(lf::LinearFormNetwork) = data_graph(tensornetwork(lf))
 
 function Base.copy(lf::LinearFormNetwork)
   return LinearFormNetwork(
