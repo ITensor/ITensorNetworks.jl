@@ -43,11 +43,7 @@ function Base.copy(lf::LinearFormNetwork)
   )
 end
 
-function update(
-  lf::LinearFormNetwork,
-  original_ket_state_vertex,
-  ket_state::ITensor,
-)
+function update(lf::LinearFormNetwork, original_ket_state_vertex, ket_state::ITensor)
   lf = copy(lf)
   # TODO: Maybe add a check that it really does preserve the graph.
   setindex_preserve_graph!(
