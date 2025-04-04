@@ -26,10 +26,10 @@ function expect(
   (cache!)=nothing,
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(alg),
-  cache_construction_kwargs=default_cache_construction_kwargs(alg, inner_network(ψ, ψ)),
+  cache_construction_kwargs=default_cache_construction_kwargs(alg, QuadraticFormNetwork(ψ)),
   kwargs...,
 )
-  ψIψ = inner_network(ψ, ψ)
+  ψIψ = QuadraticFormNetwork(ψ)
   if isnothing(cache!)
     cache! = Ref(cache(alg, ψIψ; cache_construction_kwargs...))
   end
@@ -42,7 +42,7 @@ function expect(
 end
 
 function expect(alg::Algorithm"exact", ψ::AbstractITensorNetwork, ops; kwargs...)
-  ψIψ = inner_network(ψ, ψ)
+  ψIψ = QuadraticFormNetwork(ψ)
   return map(op -> expect(ψIψ, op; alg, kwargs...), ops)
 end
 
