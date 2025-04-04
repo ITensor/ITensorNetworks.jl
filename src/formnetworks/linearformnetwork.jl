@@ -45,16 +45,11 @@ end
 
 function update(
   lf::LinearFormNetwork,
-  original_bra_state_vertex,
   original_ket_state_vertex,
-  bra_state::ITensor,
   ket_state::ITensor,
 )
   lf = copy(lf)
   # TODO: Maybe add a check that it really does preserve the graph.
-  setindex_preserve_graph!(
-    tensornetwork(lf), bra_state, bra_vertex(blf, original_bra_state_vertex)
-  )
   setindex_preserve_graph!(
     tensornetwork(lf), ket_state, ket_vertex(blf, original_ket_state_vertex)
   )
