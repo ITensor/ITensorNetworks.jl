@@ -21,8 +21,8 @@ function SimilarType.similar_type(f::AbstractFormNetwork)
 end
 
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph_type`.
-function data_graph_type(G::Type{<:AbstractFormNetwork})
-  return data_graph_type(fieldtype(G, :tensornetwork))
+function data_graph_type(f::AbstractFormNetwork)
+  return data_graph_type(tensornetwork(f))
 end
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 data_graph(f::AbstractFormNetwork) = data_graph(tensornetwork(f))
