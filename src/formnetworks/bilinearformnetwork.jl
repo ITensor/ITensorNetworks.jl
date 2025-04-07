@@ -42,10 +42,6 @@ bra_vertex_suffix(blf::BilinearFormNetwork) = blf.bra_vertex_suffix
 ket_vertex_suffix(blf::BilinearFormNetwork) = blf.ket_vertex_suffix
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 tensornetwork(blf::BilinearFormNetwork) = blf.tensornetwork
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph_type`.
-data_graph_type(::Type{<:BilinearFormNetwork}) = data_graph_type(tensornetwork(blf))
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
-data_graph(blf::BilinearFormNetwork) = data_graph(tensornetwork(blf))
 
 function Base.copy(blf::BilinearFormNetwork)
   return BilinearFormNetwork(
