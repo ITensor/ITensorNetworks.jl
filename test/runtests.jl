@@ -14,11 +14,13 @@ const GROUP = uppercase(
 )
 
 "match files of the form `test_*.jl`, but exclude `*setup*.jl`"
-istestfile(fn) =
-  endswith(fn, ".jl") && startswith(basename(fn), "test_") && !contains(fn, "setup")
+function istestfile(fn)
+  return endswith(fn, ".jl") && startswith(basename(fn), "test_") && !contains(fn, "setup")
+end
 "match files of the form `*.jl`, but exclude `*_notest.jl` and `*setup*.jl`"
-isexamplefile(fn) =
-  endswith(fn, ".jl") && !endswith(fn, "_notest.jl") && !contains(fn, "setup")
+function isexamplefile(fn)
+  return endswith(fn, ".jl") && !endswith(fn, "_notest.jl") && !contains(fn, "setup")
+end
 
 @time begin
   # tests in groups based on folder structure
