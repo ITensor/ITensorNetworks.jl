@@ -341,7 +341,7 @@ using Test: @testset, @test
       H,
       -ttotal,
       state;
-      time_step=-tau,
+      time_step=(-tau),
       maxdim,
       cutoff,
       nsites,
