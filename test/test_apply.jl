@@ -39,9 +39,10 @@ using Test: @test, @testset
   envsGBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
   inner_alg = "exact"
   ngates = 5
+  truncerr_exact, truncerr_bp = Ref(Float64(0)), Ref(Float64(0))
   for i in 1:ngates
     o = op("RandomUnitary", s[v1]..., s[v2]...)
-    ψOexact = apply(o, ψ; cutoff=1e-16)
+    ψOexact = apply(o, ψ; (truncation_error!)=truncerr_exact, cutoff=nothing)
     ψOSBP = apply(
       o,
       ψ;
@@ -50,6 +51,7 @@ using Test: @test, @testset
       normalize=true,
       print_fidelity_loss=true,
       envisposdef=true,
+      (truncation_error!)=truncerr_bp,
     )
     ψOv = apply(o, ψv; maxdim=χ, normalize=true)
     ψOVidal_symm = ITensorNetwork(ψOv)
@@ -73,6 +75,8 @@ using Test: @test, @testset
     fGBP =
       inner(ψOGBP, ψOexact; alg=inner_alg) /
       sqrt(inner(ψOexact, ψOexact; alg=inner_alg) * inner(ψOGBP, ψOGBP; alg=inner_alg))
+    @test iszero(truncerr_exact[])
+    @test !iszero(truncerr_bp[])
     @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
     @test isapprox(real(fSBP * conj(fSBP)), real(fVidal * conj(fVidal)); atol=1e-3)
   end
