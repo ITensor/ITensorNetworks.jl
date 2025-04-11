@@ -11,7 +11,7 @@ using ITensorNetworks:
   random_tensornetwork,
   siteinds,
   update
-using ITensors: ITensors, inner, op
+using ITensors: ITensors, ITensor, inner, op
 using NamedGraphs.NamedGraphGenerators: named_grid
 using NamedGraphs.PartitionedGraphs: PartitionVertex
 using SplitApplyCombine: group
@@ -39,10 +39,15 @@ using Test: @test, @testset
   envsGBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
   inner_alg = "exact"
   ngates = 5
-  truncerr_exact, truncerr_bp = Ref(Float64(0)), Ref(Float64(0))
+  truncerr = 0.0
+  singular_values = ITensor()
+  function callback(; singular_values, truncation_error)
+    truncerr = truncation_error
+    singular_values = singular_values
+  end
   for i in 1:ngates
     o = op("RandomUnitary", s[v1]..., s[v2]...)
-    ψOexact = apply(o, ψ; (truncation_error!)=truncerr_exact, cutoff=nothing)
+    ψOexact = apply(o, ψ; cutoff=nothing)
     ψOSBP = apply(
       o,
       ψ;
@@ -51,7 +56,7 @@ using Test: @test, @testset
       normalize=true,
       print_fidelity_loss=true,
       envisposdef=true,
-      (truncation_error!)=truncerr_bp,
+      callback,
     )
     ψOv = apply(o, ψv; maxdim=χ, normalize=true)
     ψOVidal_symm = ITensorNetwork(ψOv)
@@ -75,8 +80,7 @@ using Test: @test, @testset
     fGBP =
       inner(ψOGBP, ψOexact; alg=inner_alg) /
       sqrt(inner(ψOexact, ψOexact; alg=inner_alg) * inner(ψOGBP, ψOGBP; alg=inner_alg))
-    @test iszero(truncerr_exact[])
-    @test !iszero(truncerr_bp[])
+    @test !iszero(truncerr)
     @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
     @test isapprox(real(fSBP * conj(fSBP)), real(fVidal * conj(fVidal)); atol=1e-3)
   end

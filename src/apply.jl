@@ -34,7 +34,7 @@ function full_update_bp(
   nfullupdatesweeps=10,
   print_fidelity_loss=false,
   envisposdef=false,
-  (singular_values!)=nothing,
+  callback=Returns(nothing),
   symmetrize=false,
   apply_kwargs...,
 )
@@ -65,7 +65,8 @@ function full_update_bp(
     apply_kwargs...,
   )
   if symmetrize
-    Rᵥ₁, Rᵥ₂ = factorize_svd(
+    singular_values! = Ref(ITensor())
+    Rᵥ₁, Rᵥ₂, spec = factorize_svd(
       Rᵥ₁ * Rᵥ₂,
       inds(Rᵥ₁);
       ortho="none",
@@ -73,15 +74,14 @@ function full_update_bp(
       singular_values!,
       apply_kwargs...,
     )
+    callback(; singular_values=singular_values![], truncation_error=spec.truncerr)
   end
   ψᵥ₁ = Qᵥ₁ * Rᵥ₁
   ψᵥ₂ = Qᵥ₂ * Rᵥ₂
   return ψᵥ₁, ψᵥ₂
 end
 
-function simple_update_bp_full(
-  o, ψ, v⃗; envs, (singular_values!)=nothing, (truncation_error!)=nothing, apply_kwargs...
-)
+function simple_update_bp_full(o, ψ, v⃗; envs, callback=Returns(nothing), apply_kwargs...)
   cutoff = 10 * eps(real(scalartype(ψ)))
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
@@ -118,12 +118,11 @@ function simple_update_bp_full(
   v1_inds = [v1_inds; siteinds(ψ, v⃗[1])]
   v2_inds = [v2_inds; siteinds(ψ, v⃗[2])]
   e = v⃗[1] => v⃗[2]
+  singular_values! = Ref(ITensor())
   ψᵥ₁, ψᵥ₂, spec = factorize_svd(
     oψ, v1_inds; ortho="none", tags=edge_tag(e), singular_values!, apply_kwargs...
   )
-  if !isnothing(truncation_error!)
-    truncation_error[] = spec.truncerr
-  end
+  callback(; singular_values=singular_values![], truncation_error=spec.truncerr)
   for inv_sqrt_env_v1 in inv_sqrt_envs_v1
     ψᵥ₁ *= dag(inv_sqrt_env_v1)
   end
@@ -134,9 +133,7 @@ function simple_update_bp_full(
 end
 
 # Reduced version
-function simple_update_bp(
-  o, ψ, v⃗; envs, (singular_values!)=nothing, (truncation_error!)=nothing, apply_kwargs...
-)
+function simple_update_bp(o, ψ, v⃗; envs, callback=Returns(nothing), apply_kwargs...)
   cutoff = 10 * eps(real(scalartype(ψ)))
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
@@ -171,6 +168,7 @@ function simple_update_bp(
   rᵥ₂ = commoninds(Qᵥ₂, Rᵥ₂)
   oR = apply(o, Rᵥ₁ * Rᵥ₂)
   e = v⃗[1] => v⃗[2]
+  singular_values! = Ref(ITensor())
   Rᵥ₁, Rᵥ₂, spec = factorize_svd(
     oR,
     unioninds(rᵥ₁, sᵥ₁);
@@ -179,9 +177,7 @@ function simple_update_bp(
     singular_values!,
     apply_kwargs...,
   )
-  if !isnothing(truncation_error!)
-    truncation_error![] = spec.truncerr
-  end
+  callback(; singular_values=singular_values![], truncation_error=spec.truncerr)
   Qᵥ₁ = contract([Qᵥ₁; dag.(inv_sqrt_envs_v1)])
   Qᵥ₂ = contract([Qᵥ₂; dag.(inv_sqrt_envs_v2)])
   ψᵥ₁ = Qᵥ₁ * Rᵥ₁
@@ -198,8 +194,7 @@ function ITensors.apply(
   nfullupdatesweeps=10,
   print_fidelity_loss=false,
   envisposdef=false,
-  (singular_values!)=nothing,
-  (truncation_error!)=nothing,
+  callback=Returns(nothing),
   variational_optimization_only=false,
   symmetrize=false,
   reduced=true,
@@ -235,19 +230,15 @@ function ITensors.apply(
         nfullupdatesweeps,
         print_fidelity_loss,
         envisposdef,
-        singular_values!,
+        callback,
         symmetrize,
         apply_kwargs...,
       )
     else
       if reduced
-        ψᵥ₁, ψᵥ₂ = simple_update_bp(
-          o, ψ, v⃗; envs, singular_values!, truncation_error!, apply_kwargs...
-        )
+        ψᵥ₁, ψᵥ₂ = simple_update_bp(o, ψ, v⃗; envs, callback, apply_kwargs...)
       else
-        ψᵥ₁, ψᵥ₂ = simple_update_bp_full(
-          o, ψ, v⃗; envs, singular_values!, truncation_error!, apply_kwargs...
-        )
+        ψᵥ₁, ψᵥ₂ = simple_update_bp_full(o, ψ, v⃗; envs, callback, apply_kwargs...)
       end
     end
     if normalize
