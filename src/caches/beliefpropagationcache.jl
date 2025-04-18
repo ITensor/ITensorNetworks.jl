@@ -107,28 +107,20 @@ function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
   return contract(ts; sequence)[]
 end
 
-function normalize_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
+function rescale_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
   bp_cache = copy(bp_cache)
   mts = messages(bp_cache)
   for pe in pes
     me, mer = only(mts[pe]), only(mts[reverse(pe)])
     me, mer = normalize(me), normalize(mer)
     n = dot(me, mer)
-    if isreal(n) && n < 0
-      set!(mts, pe, ITensor[(sgn(n) / sqrt(abs(n))) * me])
-      set!(mts, reverse(pe), ITensor[(1 / sqrt(abs(n))) * mer])
-    else
-      set!(mts, pe, ITensor[(1 / sqrt(n)) * me])
-      set!(mts, reverse(pe), ITensor[(1 / sqrt(n)) * mer])
+    if isreal(n)
+      me *= sign(n)
+      n *= sign(n)
     end
+
+    set!(mts, pe, ITensor[(1 / sqrt(n)) * me])
+    set!(mts, reverse(pe), ITensor[(1 / sqrt(n)) * mer])
   end
   return bp_cache
-end
-
-function normalize_message(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
-  return normalize_messages(bp_cache, PartitionEdge[pe])
-end
-
-function normalize_messages(bp_cache::BeliefPropagationCache)
-  return normalize_messages(bp_cache, partitionedges(partitioned_tensornetwork(bp_cache)))
 end

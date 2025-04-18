@@ -5,12 +5,15 @@ function rescale(tn::AbstractITensorNetwork; alg="exact", kwargs...)
 end
 
 function rescale(
-  alg::Algorithm"exact", tn::AbstractITensorNetwork, vs=collect(vertices(tn)); kwargs...
+  alg::Algorithm"exact",
+  tn::AbstractITensorNetwork;
+  vs_to_rescale=collect(vertices(tn)),
+  kwargs...,
 )
   logn = logscalar(alg, tn; kwargs...)
-  c = 1.0 / (exp(logn / length(vs)))
+  c = 1.0 / (exp(logn / length(vs_to_rescale)))
   tn = copy(tn)
-  for v in vs
+  for v in vs_to_rescale
     tn[v] *= c
   end
   return tn
@@ -18,12 +21,12 @@ end
 
 function rescale(
   alg::Algorithm,
-  tn::AbstractITensorNetwork,
-  vs=collect(vertices(tn));
+  tn::AbstractITensorNetwork;
+  vs_to_rescale=collect(vertices(tn)),
   (cache!)=nothing,
   cache_construction_kwargs=default_cache_construction_kwargs(alg, tn),
   update_cache=isnothing(cache!),
-  cache_update_kwargs=default_cache_update_kwargs(cache!),
+  cache_update_kwargs=default_cache_update_kwargs(alg),
 )
   if isnothing(cache!)
     cache! = Ref(cache(alg, tn; cache_construction_kwargs...))
@@ -33,29 +36,9 @@ function rescale(
     cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  tn = copy(tn)
-  cache![] = normalize_messages(cache![])
-  vertices_states = Dictionary()
-  for pv in partitionvertices(cache![])
-    pv_vs = filter(v -> v ∈ vs, vertices(cache![], pv))
+  cache![] = rescale(cache![]; vs_to_rescale)
 
-    isempty(pv_vs) && continue
-
-    vn = region_scalar(cache![], pv)
-    if isreal(vn) && vn < 0
-      tn[first(pv_vs)] *= -1
-      vn = abs(vn)
-    end
-
-    vn = vn^(1 / length(pv_vs))
-    for v in pv_vs
-      tn[v] /= vn
-      set!(vertices_states, v, tn[v])
-    end
-  end
-
-  cache![] = update_factors(cache![], vertices_states)
-  return tn
+  return tensornetwork(cache![])
 end
 
 function LinearAlgebra.normalize(tn::AbstractITensorNetwork; alg="exact", kwargs...)
@@ -65,9 +48,8 @@ end
 function LinearAlgebra.normalize(
   alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...
 )
-  norm_tn = QuadraticFormNetwork(tn)
-  vs = filter(v -> v ∉ operator_vertices(norm_tn), collect(vertices(norm_tn)))
-  return ket_network(rescale(alg, norm_tn, vs; kwargs...))
+  norm_tn = inner_network(tn, tn)
+  return ket_network(rescale(alg, norm_tn; kwargs...))
 end
 
 function LinearAlgebra.normalize(
@@ -77,15 +59,19 @@ function LinearAlgebra.normalize(
   cache_construction_function=tn ->
     cache(alg, tn; default_cache_construction_kwargs(alg, tn)...),
   update_cache=isnothing(cache!),
-  cache_update_kwargs=default_cache_update_kwargs(cache!),
+  cache_update_kwargs=default_cache_update_kwargs(alg),
+  cache_construction_kwargs=(;),
 )
-  norm_tn = QuadraticFormNetwork(tn)
+  norm_tn = inner_network(tn, tn)
   if isnothing(cache!)
-    cache! = Ref(cache_construction_function(norm_tn))
+    cache! = Ref(cache(alg, norm_tn; cache_construction_kwargs...))
   end
 
-  vs = filter(v -> v ∉ operator_vertices(norm_tn), collect(vertices(norm_tn)))
-  norm_tn = rescale(alg, norm_tn, vs; cache!, update_cache, cache_update_kwargs)
+  vs = collect(vertices(tn))
+  vs_to_rescale = vcat(
+    [ket_vertex(norm_tn, v) for v in vs], [bra_vertex(norm_tn, v) for v in vs]
+  )
+  norm_tn = rescale(alg, norm_tn; vs_to_rescale, cache!, update_cache, cache_update_kwargs)
 
   return ket_network(norm_tn)
 end

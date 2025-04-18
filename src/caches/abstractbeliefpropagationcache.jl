@@ -283,3 +283,69 @@ function update(
 )
   return update(Algorithm(alg), bpc; kwargs...)
 end
+
+function rescale_message(bp_cache::AbstractBeliefPropagationCache, partitionpair)
+  return rescale_messages(bp_cache, typeof(partitionpair)[partitionpair])
+end
+
+function rescale_messages(bp_cache::AbstractBeliefPropagationCache)
+  return rescale_messages(bp_cache, partitionpairs(bp_cache))
+end
+
+function rescale_partitions(
+  bpc::AbstractBeliefPropagationCache,
+  partitions::Vector;
+  vs_to_rescale::Vector=collect(vertices(tensornetwork(bpc))),
+)
+  tn = tensornetwork(bpc)
+  for pv in partitions
+    pv_vs = filter(v -> v ∈ vs_to_rescale, vertices(bpc, pv))
+
+    isempty(pv_vs) && continue
+
+    vn = region_scalar(bpc, pv)
+    if isreal(vn)
+      tn[first(pv_vs)] *= sign(vn)
+      vn *= sign(vn)
+    end
+
+    vn = vn^(1 / length(pv_vs))
+    for v in pv_vs
+      tn[v] /= vn
+    end
+  end
+
+  return bpc
+end
+
+function rescale_partitions(bpc::AbstractBeliefPropagationCache; kwargs...)
+  return rescale_partitions(bpc, collect(partitions(bpc)); kwargs...)
+end
+
+function rescale_partition(bpc::AbstractBeliefPropagationCache, partition; kwargs...)
+  return rescale_partitions(bpc, typeof(partition)[partition]; kwargs...)
+end
+
+function rescale(bpc::AbstractBeliefPropagationCache; kwargs...)
+  bpc = rescale_messages(bpc)
+  bpc = rescale_partitions(bpc; kwargs...)
+  return bpc
+end
+
+function logscalar(bpc::AbstractBeliefPropagationCache)
+  numerator_terms, denominator_terms = scalar_factors_quotient(bpc)
+  numerator_terms =
+    any(t -> real(t) < 0, numerator_terms) ? complex.(numerator_terms) : numerator_terms
+  denominator_terms = if any(t -> real(t) < 0, denominator_terms)
+    complex.(denominator_terms)
+  else
+    denominator_terms
+  end
+
+  any(iszero, denominator_terms) && return -Inf
+  return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
+end
+
+function ITensors.scalar(bpc::AbstractBeliefPropagationCache)
+  return exp(logscalar(bpc))
+end

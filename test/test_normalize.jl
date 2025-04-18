@@ -5,9 +5,10 @@ using ITensorNetworks:
   edge_scalars,
   norm_sqr_network,
   random_tensornetwork,
+  siteinds,
   vertex_scalars,
   rescale
-using ITensors: dag, inner, siteinds, scalar
+using ITensors: dag, inner, scalar
 using Graphs: SimpleGraph, uniform_tree
 using LinearAlgebra: normalize
 using NamedGraphs: NamedGraph
