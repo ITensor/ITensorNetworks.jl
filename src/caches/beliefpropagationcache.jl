@@ -106,3 +106,21 @@ function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
   sequence = contraction_sequence(ts; alg="optimal")
   return contract(ts; sequence)[]
 end
+
+function rescale_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
+  bp_cache = copy(bp_cache)
+  mts = messages(bp_cache)
+  for pe in pes
+    me, mer = only(mts[pe]), only(mts[reverse(pe)])
+    me, mer = normalize(me), normalize(mer)
+    n = dot(me, mer)
+    if isreal(n)
+      me *= sign(n)
+      n *= sign(n)
+    end
+
+    set!(mts, pe, ITensor[(1 / sqrt(n)) * me])
+    set!(mts, reverse(pe), ITensor[(1 / sqrt(n)) * mer])
+  end
+  return bp_cache
+end
