@@ -1,6 +1,5 @@
 [deps]
-Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 ITensorNetworks = "2919e153-833c-4bdc-8836-1ea460a35fc7"
-ITensorUnicodePlots = "73163f41-4a9e-479f-8353-73bf94dbd758"
-NamedGraphs = "678767b0-92e7-4007-89e4-4527a8725b19"
-Weave = "44d3d7a6-8a23-5bf8-98c5-b353f8df5ec9"
+
+[compat]
+ITensorNetworks = "0.13.2"

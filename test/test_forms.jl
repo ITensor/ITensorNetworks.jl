@@ -5,6 +5,7 @@ using NamedGraphs.NamedGraphGenerators: named_grid
 using ITensorNetworks:
   BeliefPropagationCache,
   BilinearFormNetwork,
+  LinearFormNetwork,
   QuadraticFormNetwork,
   bra_network,
   bra_vertex,
@@ -23,6 +24,7 @@ using ITensorNetworks:
 using ITensors: contract, dag, inds, prime, random_itensor
 using LinearAlgebra: norm
 using StableRNGs: StableRNG
+using TensorOperations: TensorOperations
 using Test: @test, @testset
 @testset "FormNetworks" begin
   g = named_grid((1, 4))
@@ -34,6 +36,10 @@ using Test: @test, @testset
   ψbra = random_tensornetwork(rng, s; link_space=χ)
   A = random_tensornetwork(rng, s_operator; link_space=D)
 
+  lf = LinearFormNetwork(ψbra, ψket)
+  @test nv(lf) == nv(ψket) + nv(ψbra)
+  @test isempty(flatten_siteinds(lf))
+
   blf = BilinearFormNetwork(A, ψbra, ψket)
   @test nv(blf) == nv(ψket) + nv(ψbra) + nv(A)
   @test isempty(flatten_siteinds(blf))
@@ -41,6 +47,9 @@ using Test: @test, @testset
   @test underlying_graph(ket_network(blf)) == underlying_graph(ψket)
   @test underlying_graph(operator_network(blf)) == underlying_graph(A)
   @test underlying_graph(bra_network(blf)) == underlying_graph(ψbra)
+
+  lf = LinearFormNetwork(blf)
+  @test underlying_graph(ket_network(lf)) == underlying_graph(ψket)
 
   qf = QuadraticFormNetwork(ψket)
   @test nv(qf) == 3 * nv(ψket)
@@ -62,7 +71,7 @@ using Test: @test, @testset
   @test underlying_graph(ket_network(qf)) == underlying_graph(ψket)
   @test underlying_graph(operator_network(qf)) == underlying_graph(A)
 
-  ∂qf_∂v = only(environment(qf, state_vertices(qf, [v])))
+  ∂qf_∂v = only(environment(qf, state_vertices(qf, [v]); alg="exact"))
   @test (∂qf_∂v) * (qf[ket_vertex(qf, v)] * qf[bra_vertex(qf, v)]) ≈ contract(qf)
 
   ∂qf_∂v_bp = environment(qf, state_vertices(qf, [v]); alg="bp", update_cache=false)

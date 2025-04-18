@@ -2,15 +2,16 @@
 using Graphs: SimpleGraph, uniform_tree
 using NamedGraphs: NamedGraph, vertices
 using NamedGraphs.NamedGraphGenerators: named_grid
-using ITensors: siteinds
 using ITensorNetworks:
   BeliefPropagationCache,
   ITensorNetwork,
   expect,
   random_tensornetwork,
+  siteinds,
   original_state_vertex
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
+using TensorOperations: TensorOperations
 using Test: @test, @testset
 @testset "Test Expect" begin
   #Test on a tree
@@ -29,11 +30,13 @@ using Test: @test, @testset
   s = siteinds("S=1/2", g)
   rng = StableRNG(1234)
   ψ = random_tensornetwork(rng, s; link_space=χ)
-  cache_construction_function =
-    f -> BeliefPropagationCache(
-      f; partitioned_vertices=group(v -> (original_state_vertex(f, v)[1]), vertices(f))
-    )
-  sz_bp = expect(ψ, "Sz"; alg="bp", cache_construction_function)
+  quadratic_form_vertices = reduce(
+    vcat, [[(v, "ket"), (v, "bra"), (v, "operator")] for v in vertices(ψ)]
+  )
+  cache_construction_kwargs = (;
+    partitioned_vertices=group(v -> first(first(v)), quadratic_form_vertices)
+  )
+  sz_bp = expect(ψ, "Sz"; alg="bp", cache_construction_kwargs)
   sz_exact = expect(ψ, "Sz"; alg="exact")
   @test sz_bp ≈ sz_exact
 

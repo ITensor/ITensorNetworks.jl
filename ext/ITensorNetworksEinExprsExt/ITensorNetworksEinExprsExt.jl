@@ -2,10 +2,15 @@ module ITensorNetworksEinExprsExt
 
 using ITensors: Index, ITensor, @Algorithm_str, inds, noncommoninds
 using ITensorNetworks:
-  ITensorNetworks, ITensorNetwork, vertextype, vertex_data, contraction_sequence
+  ITensorNetworks,
+  ITensorList,
+  ITensorNetwork,
+  vertextype,
+  vertex_data,
+  contraction_sequence
 using EinExprs: EinExprs, EinExpr, einexpr, SizedEinExpr
 
-function to_einexpr(ts::Vector{ITensor})
+function to_einexpr(ts::ITensorList)
   IndexType = Any
 
   tensor_exprs = EinExpr{IndexType}[]
@@ -21,7 +26,7 @@ function to_einexpr(ts::Vector{ITensor})
   return SizedEinExpr(sum(tensor_exprs; skip=externalinds_tn), inds_dims)
 end
 
-function tensor_inds_to_vertex(ts::Vector{ITensor})
+function tensor_inds_to_vertex(ts::ITensorList)
   IndexType = Any
   VertexType = Int
 
@@ -36,7 +41,7 @@ function tensor_inds_to_vertex(ts::Vector{ITensor})
 end
 
 function ITensorNetworks.contraction_sequence(
-  ::Algorithm"einexpr", tn::Vector{ITensor}; optimizer=EinExprs.Exhaustive()
+  ::Algorithm"einexpr", tn::ITensorList; optimizer=EinExprs.Exhaustive()
 )
   expr = to_einexpr(tn)
   path = einexpr(optimizer, expr)

@@ -1,5 +1,4 @@
 using ITensors: state
-using ITensorMPS: linkind
 using NamedGraphs.GraphsExtensions: GraphsExtensions
 
 function alternating_update(

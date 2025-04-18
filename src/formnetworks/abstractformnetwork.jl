@@ -20,6 +20,13 @@ function SimilarType.similar_type(f::AbstractFormNetwork)
   return typeof(tensornetwork(f))
 end
 
+# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph_type`.
+function data_graph_type(f::AbstractFormNetwork)
+  return data_graph_type(tensornetwork(f))
+end
+# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
+data_graph(f::AbstractFormNetwork) = data_graph(tensornetwork(f))
+
 function operator_vertices(f::AbstractFormNetwork)
   return filter(v -> last(v) == operator_vertex_suffix(f), vertices(f))
 end
@@ -80,3 +87,7 @@ operator_vertex(f::AbstractFormNetwork, v) = operator_vertex_map(f)(v)
 bra_vertex(f::AbstractFormNetwork, v) = bra_vertex_map(f)(v)
 ket_vertex(f::AbstractFormNetwork, v) = ket_vertex_map(f)(v)
 original_state_vertex(f::AbstractFormNetwork, v) = inv_vertex_map(f)(v)
+
+function default_partitioned_vertices(f::AbstractFormNetwork)
+  return group(v -> original_state_vertex(f, v), vertices(f))
+end

@@ -1,7 +1,7 @@
 using ITensors: contract
 using NamedGraphs.PartitionedGraphs: PartitionedGraph
 
-default_environment_algorithm() = "exact"
+default_environment_algorithm() = "bp"
 
 function environment(
   tn::AbstractITensorNetwork,
@@ -19,15 +19,16 @@ function environment(
 end
 
 function environment(
-  ::Algorithm"bp",
+  alg::Algorithm,
   ptn::PartitionedGraph,
   vertices::Vector;
   (cache!)=nothing,
   update_cache=isnothing(cache!),
-  cache_update_kwargs=default_cache_update_kwargs(cache!),
+  cache_construction_kwargs=default_cache_construction_kwargs(alg, ptn),
+  cache_update_kwargs=default_cache_update_kwargs(alg),
 )
   if isnothing(cache!)
-    cache! = Ref(BeliefPropagationCache(ptn))
+    cache! = Ref(cache(alg, ptn; cache_construction_kwargs...))
   end
 
   if update_cache
@@ -38,7 +39,7 @@ function environment(
 end
 
 function environment(
-  alg::Algorithm"bp",
+  alg::Algorithm,
   tn::AbstractITensorNetwork,
   vertices::Vector;
   partitioned_vertices=default_partitioned_vertices(tn),
