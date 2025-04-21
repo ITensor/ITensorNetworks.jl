@@ -1,12 +1,12 @@
 @eval module $(gensym())
-using EinExprs: Exhaustive, Greedy, HyPar
-using ITensorNetworks:
-  contraction_sequence, norm_sqr_network, random_tensornetwork, siteinds
-using ITensors: ITensors, contract
-using NamedGraphs.NamedGraphGenerators: named_grid
-using OMEinsumContractionOrders: OMEinsumContractionOrders
-using StableRNGs: StableRNG
-using TensorOperations: TensorOperations
+# using EinExprs: Exhaustive, Greedy, HyPar
+# using ITensorNetworks:
+#   contraction_sequence, norm_sqr_network, random_tensornetwork, siteinds
+# using ITensors: ITensors, contract
+# using NamedGraphs.NamedGraphGenerators: named_grid
+# using OMEinsumContractionOrders: OMEinsumContractionOrders
+# using StableRNGs: StableRNG
+# using TensorOperations: TensorOperations
 using Test: @test, @testset
 @testset "contraction_sequence" begin
   # ITensors.@disable_warn_order begin
