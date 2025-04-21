@@ -4,16 +4,12 @@ function rescale(tn::AbstractITensorNetwork; alg="exact", kwargs...)
   return rescale(Algorithm(alg), tn; kwargs...)
 end
 
-function rescale(
-  alg::Algorithm"exact",
-  tn::AbstractITensorNetwork;
-  verts_to_rescale=collect(vertices(tn)),
-  kwargs...,
-)
+function rescale(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
   logn = logscalar(alg, tn; kwargs...)
-  c = inv(exp(logn / length(verts_to_rescale)))
+  vs = collect(vertices(tn))
+  c = inv(exp(logn / length(vs)))
   tn = copy(tn)
-  for v in verts_to_rescale
+  for v in vs
     tn[v] *= c
   end
   return tn
