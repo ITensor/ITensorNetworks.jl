@@ -334,12 +334,11 @@ end
 
 function logscalar(bpc::AbstractBeliefPropagationCache)
   numerator_terms, denominator_terms = scalar_factors_quotient(bpc)
-  numerator_terms =
-    any(t -> real(t) < 0, numerator_terms) ? complex.(numerator_terms) : numerator_terms
-  denominator_terms = if any(t -> real(t) < 0, denominator_terms)
-    complex.(denominator_terms)
-  else
-    denominator_terms
+  if any(t -> real(t) < 0, numerator_terms)
+    numerator_terms = complex.(numerator_terms)
+  end
+  if any(t -> real(t) < 0, denominator_terms)
+    denominator_terms = complex.(denominator_terms)
   end
 
   any(iszero, denominator_terms) && return -Inf
