@@ -7,13 +7,13 @@ end
 function rescale(
   alg::Algorithm"exact",
   tn::AbstractITensorNetwork;
-  vs_to_rescale=collect(vertices(tn)),
+  verts_to_rescale=collect(vertices(tn)),
   kwargs...,
 )
   logn = logscalar(alg, tn; kwargs...)
-  c = inv(exp(logn / length(vs_to_rescale)))
+  c = inv(exp(logn / length(verts_to_rescale)))
   tn = copy(tn)
-  for v in vs_to_rescale
+  for v in verts_to_rescale
     tn[v] *= c
   end
   return tn
@@ -22,11 +22,11 @@ end
 function rescale(
   alg::Algorithm,
   tn::AbstractITensorNetwork;
-  vs_to_rescale=collect(vertices(tn)),
   (cache!)=nothing,
   cache_construction_kwargs=default_cache_construction_kwargs(alg, tn),
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(alg),
+  kwargs...,
 )
   if isnothing(cache!)
     cache! = Ref(cache(alg, tn; cache_construction_kwargs...))
@@ -36,7 +36,7 @@ function rescale(
     cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  cache![] = rescale(cache![]; vs_to_rescale)
+  cache![] = rescale(cache![]; kwargs...)
 
   return tensornetwork(cache![])
 end
@@ -68,10 +68,12 @@ function LinearAlgebra.normalize(
   end
 
   vs = collect(vertices(tn))
-  vs_to_rescale = vcat(
+  verts_to_rescale = vcat(
     [ket_vertex(norm_tn, v) for v in vs], [bra_vertex(norm_tn, v) for v in vs]
   )
-  norm_tn = rescale(alg, norm_tn; vs_to_rescale, cache!, update_cache, cache_update_kwargs)
+  norm_tn = rescale(
+    alg, norm_tn; verts_to_rescale, cache!, update_cache, cache_update_kwargs
+  )
 
   return ket_network(norm_tn)
 end

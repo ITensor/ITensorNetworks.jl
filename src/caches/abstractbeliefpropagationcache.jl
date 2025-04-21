@@ -295,11 +295,11 @@ end
 function rescale_partitions(
   bpc::AbstractBeliefPropagationCache,
   partitions::Vector;
-  vs_to_rescale::Vector=collect(vertices(tensornetwork(bpc))),
+  verts_to_rescale::Vector=collect(vertices(tensornetwork(bpc))),
 )
   tn = tensornetwork(bpc)
   for pv in partitions
-    pv_vs = filter(v -> v ∈ vs_to_rescale, vertices(bpc, pv))
+    pv_vs = filter(v -> v ∈ verts_to_rescale, vertices(bpc, pv))
 
     isempty(pv_vs) && continue
 
