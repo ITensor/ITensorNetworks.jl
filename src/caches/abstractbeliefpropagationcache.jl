@@ -65,9 +65,6 @@ end
 function region_scalar(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge; kwargs...)
   return not_implemented()
 end
-function message_overlap(bpc::AbstractBeliefPropagationCache, partitionedge; kwargs...)
-  return not_implemented()
-end
 partitions(bpc::AbstractBeliefPropagationCache) = not_implemented()
 PartitionedGraphs.partitionedges(bpc::AbstractBeliefPropagationCache) = not_implemented()
 

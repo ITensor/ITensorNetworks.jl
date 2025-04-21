@@ -109,11 +109,6 @@ function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
   return contract(ts; sequence)[]
 end
 
-function message_overlap(bpc::BeliefPropagationCache, partitionedge; kwargs...)
-  me, mer = only(message(bpc, partitionedge)), only(message(bpc, reverse(partitionedge)))
-  return dot(me, mer)
-end
-
 function rescale_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
   bp_cache = copy(bp_cache)
   mts = messages(bp_cache)
@@ -121,7 +116,7 @@ function rescale_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:Partit
     me, mer = normalize.(mts[pe]), normalize.(mts[reverse(pe)])
     set!(mts, pe, me)
     set!(mts, reverse(pe), mer)
-    n = message_overlap(bp_cache, pe)
+    n = region_scalar(bp_cache, pe)
     if isreal(n)
       me[1] *= sign(n)
       n *= sign(n)
