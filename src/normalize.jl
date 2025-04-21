@@ -4,12 +4,17 @@ function rescale(tn::AbstractITensorNetwork; alg="exact", kwargs...)
   return rescale(Algorithm(alg), tn; kwargs...)
 end
 
-function rescale(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
+function rescale(
+  alg::Algorithm"exact",
+  tn::AbstractITensorNetwork;
+  verts_to_rescale=collect(vertices(tn)),
+  kwargs...,
+)
   logn = logscalar(alg, tn; kwargs...)
   vs = collect(vertices(tn))
-  c = inv(exp(logn / length(vs)))
+  c = inv(exp(logn / length(verts_to_rescale)))
   tn = copy(tn)
-  for v in vs
+  for v in verts_to_rescale
     tn[v] *= c
   end
   return tn
@@ -45,7 +50,11 @@ function LinearAlgebra.normalize(
   alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...
 )
   norm_tn = inner_network(tn, tn)
-  return ket_network(rescale(alg, norm_tn; kwargs...))
+  vs = collect(vertices(tn))
+  verts_to_rescale = vcat(
+    [ket_vertex(norm_tn, v) for v in vs], [bra_vertex(norm_tn, v) for v in vs]
+  )
+  return ket_network(rescale(alg, norm_tn; verts_to_rescale, kwargs...))
 end
 
 function LinearAlgebra.normalize(
