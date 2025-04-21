@@ -65,6 +65,9 @@ end
 function region_scalar(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge; kwargs...)
   return not_implemented()
 end
+function message_overlap(bpc::AbstractBeliefPropagationCache, partitionedge; kwargs...)
+  return not_implemented()
+end
 partitions(bpc::AbstractBeliefPropagationCache) = not_implemented()
 PartitionedGraphs.partitionedges(bpc::AbstractBeliefPropagationCache) = not_implemented()
 
@@ -285,7 +288,7 @@ function update(
 end
 
 function rescale_message(bp_cache::AbstractBeliefPropagationCache, partitionedge)
-  return rescale_messages(bp_cache, typeof(partitionedge)[partitionedge])
+  return rescale_messages(bp_cache, [partitionedge])
 end
 
 function rescale_messages(bp_cache::AbstractBeliefPropagationCache)
@@ -303,15 +306,23 @@ function rescale_partitions(
 
     isempty(pv_vs) && continue
 
+    for v in pv_vs
+      t = tn[v]
+      setindex_preserve_graph!(tn, t / norm(t), v)
+    end
+
     vn = region_scalar(bpc, pv)
     if isreal(vn)
-      tn[first(pv_vs)] *= sign(vn)
+      v = first(pv_vs)
+      t = tn[v]
+      setindex_preserve_graph!(tn, t * sign(vn), v)
       vn *= sign(vn)
     end
 
     vn = vn^(1 / length(pv_vs))
     for v in pv_vs
-      tn[v] /= vn
+      t = tn[v]
+      setindex_preserve_graph!(tn, t / vn, v)
     end
   end
 
@@ -323,7 +334,7 @@ function rescale_partitions(bpc::AbstractBeliefPropagationCache; kwargs...)
 end
 
 function rescale_partition(bpc::AbstractBeliefPropagationCache, partition; kwargs...)
-  return rescale_partitions(bpc, typeof(partition)[partition]; kwargs...)
+  return rescale_partitions(bpc, [partition]; kwargs...)
 end
 
 function rescale(bpc::AbstractBeliefPropagationCache; kwargs...)

@@ -14,6 +14,7 @@ using LinearAlgebra: normalize
 using NamedGraphs: NamedGraph
 using NamedGraphs.NamedGraphGenerators: named_grid, named_comb_tree
 using StableRNGs: StableRNG
+using TensorOperations: TensorOperations
 using Test: @test, @testset
 @testset "Normalize" begin
 
