@@ -11,7 +11,7 @@ function rescale(
   kwargs...,
 )
   logn = logscalar(alg, tn; kwargs...)
-  c = 1.0 / (exp(logn / length(vs_to_rescale)))
+  c = inv(exp(logn / length(vs_to_rescale)))
   tn = copy(tn)
   for v in vs_to_rescale
     tn[v] *= c
