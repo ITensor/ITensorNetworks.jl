@@ -50,7 +50,7 @@ using Test: @test, @testset
     bpc = BeliefPropagationCache(ψψ, group(v -> first(v), vertices(ψψ)))
     bpc = update(bpc; maxiter=25, tol=eps(real(elt)))
     #Test messages are converged
-    for pe in partitionedges(partitioned_tensornetwork(bpc))
+    for pe in partitionedges(bpc)
       @test message_diff(updated_message(bpc, pe), message(bpc, pe)) < 10 * eps(real(elt))
       @test eltype(only(message(bpc, pe))) == elt
     end

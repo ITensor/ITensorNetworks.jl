@@ -80,7 +80,9 @@ function default_message_update_kwargs(
 end
 
 partitions(bpc::BeliefPropagationCache) = partitionvertices(partitioned_tensornetwork(bpc))
-partitionpairs(bpc::BeliefPropagationCache) = partitionedges(partitioned_tensornetwork(bpc))
+function PartitionedGraphs.partitionedges(bpc::BeliefPropagationCache)
+  partitionedges(partitioned_tensornetwork(bpc))
+end
 
 function set_messages(cache::BeliefPropagationCache, messages)
   return BeliefPropagationCache(partitioned_tensornetwork(cache), messages)

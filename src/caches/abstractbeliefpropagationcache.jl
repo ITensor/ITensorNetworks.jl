@@ -66,7 +66,7 @@ function region_scalar(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge; k
   return not_implemented()
 end
 partitions(bpc::AbstractBeliefPropagationCache) = not_implemented()
-partitionpairs(bpc::AbstractBeliefPropagationCache) = not_implemented()
+PartitionedGraphs.partitionedges(bpc::AbstractBeliefPropagationCache) = not_implemented()
 
 function default_edge_sequence(
   bpc::AbstractBeliefPropagationCache; alg=default_message_update_alg(bpc)
@@ -107,7 +107,7 @@ function vertex_scalars(bpc::AbstractBeliefPropagationCache, pvs=partitions(bpc)
 end
 
 function edge_scalars(
-  bpc::AbstractBeliefPropagationCache, pes=partitionpairs(bpc); kwargs...
+  bpc::AbstractBeliefPropagationCache, pes=partitionedges(bpc); kwargs...
 )
   return map(pe -> region_scalar(bpc, pe; kwargs...), pes)
 end
@@ -284,12 +284,12 @@ function update(
   return update(Algorithm(alg), bpc; kwargs...)
 end
 
-function rescale_message(bp_cache::AbstractBeliefPropagationCache, partitionpair)
-  return rescale_messages(bp_cache, typeof(partitionpair)[partitionpair])
+function rescale_message(bp_cache::AbstractBeliefPropagationCache, partitionedge)
+  return rescale_messages(bp_cache, typeof(partitionedge)[partitionedge])
 end
 
 function rescale_messages(bp_cache::AbstractBeliefPropagationCache)
-  return rescale_messages(bp_cache, partitionpairs(bp_cache))
+  return rescale_messages(bp_cache, partitionedges(bp_cache))
 end
 
 function rescale_partitions(
