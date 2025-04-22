@@ -284,7 +284,7 @@ function update(
   return update(Algorithm(alg), bpc; kwargs...)
 end
 
-function rescale_message(bp_cache::AbstractBeliefPropagationCache, partitionedge)
+function rescale_messages(bp_cache::AbstractBeliefPropagationCache, partitionedge)
   return rescale_messages(bp_cache, [partitionedge])
 end
 
