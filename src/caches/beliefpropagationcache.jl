@@ -9,7 +9,9 @@ using NamedGraphs.PartitionedGraphs:
   boundary_partitionedges,
   partitionvertices,
   partitionedges,
-  unpartitioned_graph
+  partitioned_vertices,
+  unpartitioned_graph,
+  which_partition
 using SimpleTraits: SimpleTraits, Not, @traitfn
 using NDTensors: NDTensors
 

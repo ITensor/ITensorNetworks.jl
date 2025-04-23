@@ -1,4 +1,4 @@
-using Graphs: IsDirected
+using Graphs: Graphs, IsDirected
 using SplitApplyCombine: group
 using LinearAlgebra: diag, dot
 using ITensors: dir
@@ -86,6 +86,10 @@ end
 
 function tensornetwork(bpc::AbstractBeliefPropagationCache)
   return unpartitioned_graph(partitioned_tensornetwork(bpc))
+end
+
+function setindex_preserve_graph!(bpc::AbstractBeliefPropagationCache, args...)
+  return setindex_preserve_graph!(tensornetwork(bpc), args...)
 end
 
 function factors(bpc::AbstractBeliefPropagationCache, verts::Vector)
@@ -284,6 +288,10 @@ function update(
   return update(Algorithm(alg), bpc; kwargs...)
 end
 
+function scale!(bp_cache::AbstractBeliefPropagationCache, args...)
+  return scale!(tensornetwork(bp_cache), args...)
+end
+
 function rescale_messages(
   bp_cache::AbstractBeliefPropagationCache, partitionedge::PartitionEdge
 )
@@ -297,48 +305,45 @@ end
 function rescale_partitions(
   bpc::AbstractBeliefPropagationCache,
   partitions::Vector;
-  verts_to_rescale::Vector=collect(vertices(tensornetwork(bpc))),
+  verts_to_rescale::Vector=vertices(bpc, partitions),
 )
+  bpc = copy(bpc)
   tn = tensornetwork(bpc)
+  norms = map(v -> inv(norm(tn[v])), verts_to_rescale)
+  scale!(bpc, Dictionary(verts_to_rescale, norms))
+
+  vertices_weights = Dictionary()
   for pv in partitions
     pv_vs = filter(v -> v ∈ verts_to_rescale, vertices(bpc, pv))
-
     isempty(pv_vs) && continue
 
-    for v in pv_vs
-      t = tn[v]
-      setindex_preserve_graph!(tn, t / norm(t), v)
-    end
-
     vn = region_scalar(bpc, pv)
-    if isreal(vn)
-      v = first(pv_vs)
-      t = tn[v]
-      setindex_preserve_graph!(tn, t * sign(vn), v)
-      vn *= sign(vn)
-    end
-
-    vn = vn^(1 / length(pv_vs))
-    for v in pv_vs
-      t = tn[v]
-      setindex_preserve_graph!(tn, t / vn, v)
+    s = isreal(vn) ? sign(vn) : 1.0
+    vn = s * inv(vn^(1 / length(pv_vs)))
+    set!(vertices_weights, first(pv_vs), s*vn)
+    for v in pv_vs[2:length(pv_vs)]
+      set!(vertices_weights, v, vn)
     end
   end
+
+  scale!(bpc, vertices_weights)
 
   return bpc
 end
 
-function rescale_partitions(bpc::AbstractBeliefPropagationCache; kwargs...)
-  return rescale_partitions(bpc, collect(partitions(bpc)); kwargs...)
+function rescale_partitions(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
+  return rescale_partitions(bpc, collect(partitions(bpc)), args...; kwargs...)
 end
 
-function rescale_partition(bpc::AbstractBeliefPropagationCache, partition; kwargs...)
-  return rescale_partitions(bpc, [partition]; kwargs...)
+function rescale_partition(
+  bpc::AbstractBeliefPropagationCache, partition, args...; kwargs...
+)
+  return rescale_partitions(bpc, [partition], args...; kwargs...)
 end
 
-function rescale(bpc::AbstractBeliefPropagationCache; kwargs...)
+function rescale(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
   bpc = rescale_messages(bpc)
-  bpc = rescale_partitions(bpc; kwargs...)
+  bpc = rescale_partitions(bpc, args...; kwargs...)
   return bpc
 end
 
