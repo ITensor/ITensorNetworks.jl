@@ -64,12 +64,11 @@ function BilinearFormNetwork(
   s_mapped = dual_site_index_map(s)
   operator_inds = union_all_inds(s, s_mapped)
   constructor_f =
-    v ->
-      inds -> if !isempty(inds)
-        reduce(*, [delta(s, sm) for (s, sm) in zip(s[v], s_mapped[v])])
-      else
-        ITensor(one(Bool))
-      end
+    v -> inds -> if !isempty(inds)
+      reduce(*, [delta(s, sm) for (s, sm) in zip(s[v], s_mapped[v])])
+    else
+      ITensor(one(Bool))
+    end
   O = ITensorNetwork(constructor_f, operator_inds; link_space)
   return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end
