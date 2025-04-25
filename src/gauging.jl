@@ -134,7 +134,11 @@ function VidalITensorNetwork(
   if isnothing(cache!)
     cache! = Ref(default_norm_cache(ψ))
   end
-  cache![] = update(cache![]; cache_update_kwargs...)
+
+  if update_cache
+    cache![] = update(cache![]; cache_update_kwargs...)
+  end
+
   return vidalitensornetwork_preserve_cache(ψ; cache=cache![], kwargs...)
 end
 

@@ -60,9 +60,17 @@ function BilinearFormNetwork(
 )
   @assert issetequal(flatten_siteinds(bra), flatten_siteinds(ket))
   link_space = isempty(flatten_siteinds(bra)) ? 1 : nothing
-  operator_inds = union_all_inds(siteinds(ket), dual_site_index_map(siteinds(ket)))
-  # TODO: Define and use `identity_network` here.
-  O = ITensorNetwork(Op("I"), operator_inds; link_space)
+  s = siteinds(ket)
+  s_mapped = dual_site_index_map(s)
+  operator_inds = union_all_inds(s, s_mapped)
+  constructor_f =
+    v ->
+      inds -> if !isempty(inds)
+        reduce(*, [delta(s, sm) for (s, sm) in zip(s[v], s_mapped[v])])
+      else
+        ITensor(one(Bool))
+      end
+  O = ITensorNetwork(constructor_f, operator_inds; link_space)
   return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end
 
