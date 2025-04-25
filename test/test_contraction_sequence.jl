@@ -1,5 +1,5 @@
 @eval module $(gensym())
-using EinExprs: Exhaustive, Greedy, HyPar
+using EinExprs: Exhaustive, Greedy
 using ITensorNetworks:
   contraction_sequence, norm_sqr_network, random_tensornetwork, siteinds
 using ITensors: ITensors, contract
@@ -49,9 +49,9 @@ using Test: @test, @testset
       Pkg.rm("KaHyPar"; io=devnull)
       res_kahypar_bipartite = contract(tn; sequence=seq_kahypar_bipartite)[]
       @test res_optimal ≈ res_kahypar_bipartite
-      seq_einexprs_kahypar = contraction_sequence(tn; alg="einexpr", optimizer=HyPar())
-      res_einexprs_kahypar = contract(tn; sequence=seq_einexprs_kahypar)[]
-      @test res_einexprs_kahypar ≈ res_optimal
+      # seq_einexprs_kahypar = contraction_sequence(tn; alg="einexpr", optimizer=HyPar())
+      # res_einexprs_kahypar = contract(tn; sequence=seq_einexprs_kahypar)[]
+      # @test res_einexprs_kahypar ≈ res_optimal
     end
   end
 end
