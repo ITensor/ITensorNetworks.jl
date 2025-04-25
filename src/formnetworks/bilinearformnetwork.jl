@@ -65,7 +65,7 @@ function BilinearFormNetwork(
   operator_inds = union_all_inds(s, s_mapped)
   constructor_f =
     v -> inds -> if !isempty(inds)
-      reduce(*, [delta(s, sm) for (s, sm) in zip(s[v], s_mapped[v])])
+      reduce(*, [delta(dag(s), sm) for (s, sm) in zip(s[v], s_mapped[v])])
     else
       ITensor(one(Bool))
     end
