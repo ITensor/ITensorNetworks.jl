@@ -71,7 +71,7 @@ function BilinearFormNetwork(
   operator_inds = union_all_inds(s, s_mapped)
 
   O = ITensorNetwork(operator_inds; link_space) do v
-    inds -> itensor_identity_map(s[v] .=> s_mapped[v])
+    return inds -> itensor_identity_map(s[v] .=> s_mapped[v])
   end
   return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end
