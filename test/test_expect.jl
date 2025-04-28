@@ -40,10 +40,11 @@ using Test: @test, @testset
   sz_exact = expect(ψ, "Sz"; alg="exact")
   @test sz_bp ≈ sz_exact
 
-  #Test with QNS, product state so should be immediately exact
+  #Test with Quantum Numbers, product state so BP should be exact
   L, χ = 2, 2
   g = named_grid((L, L))
   s = siteinds("S=1/2", g; conserve_qns=true)
+
   ψ = ITensorNetwork(v -> isodd(sum(v)) ? "↑" : "↓", s)
 
   sz_bp = expect(ψ, "Sz"; alg="bp")
