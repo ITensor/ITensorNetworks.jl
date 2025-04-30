@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using DataGraphs: underlying_graph
 using Graphs: nv
-using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using ITensorNetworks:
   BeliefPropagationCache,
   BilinearFormNetwork,
@@ -12,16 +12,18 @@ using ITensorNetworks:
   dual_index_map,
   environment,
   flatten_siteinds,
+  inner,
   ket_network,
   ket_vertex,
   operator_network,
   random_tensornetwork,
+  scalar,
   siteinds,
   state_vertices,
   tensornetwork,
   union_all_inds,
   update
-using ITensors: contract, dag, inds, prime, random_itensor
+using ITensors: Index, contract, dag, inds, prime, random_itensor, sim
 using LinearAlgebra: norm
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
@@ -84,5 +86,25 @@ using Test: @test, @testset
   ∂qf_∂v_bp = contract(∂qf_∂v_bp)
   ∂qf_∂v_bp /= norm(∂qf_∂v_bp)
   @test ∂qf_∂v_bp ≈ ∂qf_∂v
+
+  #Test having non-uniform number of site indices per vertex
+  g = named_comb_tree((3, 3))
+  s = siteinds("S=1/2", g)
+  s = union_all_inds(s, sim(s))
+  s[(1, 1)] = Index[]
+  s[(3, 3)] = Index[first(s[(3, 3)])]
+  χ = 2
+  rng = StableRNG(1234)
+  ψket = random_tensornetwork(rng, ComplexF64, s; link_space=χ)
+  ψbra = random_tensornetwork(rng, ComplexF64, s; link_space=χ)
+
+  blf = BilinearFormNetwork(ψbra, ψket)
+  @test scalar(blf; alg="exact") ≈ inner(ψbra, ψket; alg="exact")
+
+  lf = LinearFormNetwork(ψbra, ψket)
+  @test scalar(lf; alg="exact") ≈ inner(ψbra, ψket; alg="exact")
+
+  qf = QuadraticFormNetwork(ψket)
+  @test scalar(qf; alg="exact") ≈ inner(ψket, ψket; alg="exact")
 end
 end
