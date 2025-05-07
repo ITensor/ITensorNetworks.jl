@@ -54,7 +54,7 @@ end
 
 function itensor_identity_map(i_pairs::Vector)
   return prod(i_pairs; init=ITensor(one(Bool))) do i_pair
-    return denseblocks(delta(Bool, dag(first(i_pair)), last(i_pair)))
+    return delta(Bool, dag(first(i_pair)), last(i_pair))
   end
 end
 
