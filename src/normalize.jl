@@ -65,12 +65,8 @@ function LinearAlgebra.normalize(
   end
 
   vs = collect(vertices(tn))
-  verts_to_rescale = vcat(
-    [ket_vertex(norm_tn, v) for v in vs], [bra_vertex(norm_tn, v) for v in vs]
-  )
-  norm_tn = rescale(
-    alg, norm_tn; verts_to_rescale, cache!, update_cache, cache_update_kwargs
-  )
+  verts = vcat([ket_vertex(norm_tn, v) for v in vs], [bra_vertex(norm_tn, v) for v in vs])
+  norm_tn = rescale(alg, norm_tn; verts, cache!, update_cache, cache_update_kwargs)
 
   return ket_network(norm_tn)
 end
