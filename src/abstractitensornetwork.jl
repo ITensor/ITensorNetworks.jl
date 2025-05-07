@@ -391,19 +391,19 @@ end
 
 LinearAlgebra.adjoint(tn::Union{IndsNetwork,AbstractITensorNetwork}) = prime(tn)
 
-function map_vertex_data(f, tn::AbstractITensorNetwork)
-  tn = copy(tn)
-  for v in vertices(tn)
-    tn[v] = f(tn[v])
-  end
-  return tn
-end
-
-# TODO: Define `@preserve_graph map_vertex_data(f, tn)`
+# TODO: Define preserve graph version in DataGraphs.jl and @preserve_graph map_vertex_data(f, tn)`
 function map_vertex_data_preserve_graph(f, tn::AbstractITensorNetwork)
   tn = copy(tn)
   for v in vertices(tn)
     @preserve_graph tn[v] = f(tn[v])
+  end
+  return tn
+end
+
+# TODO: Define this and an out-of-place version in DataGraphs.jl
+function map_vertices_preserve_graph!(f, tn::AbstractITensorNetwork; vertices=vertices(tn))
+  for v in vertices
+    @preserve_graph tn[v] = f(v)
   end
   return tn
 end
@@ -941,10 +941,7 @@ function scale!(
   tn::AbstractITensorNetwork;
   vertices=collect(Graphs.vertices(tn)),
 )
-  for v in vertices
-    setindex_preserve_graph!(tn, weight_function(v) * tn[v], v)
-  end
-  return tn
+  return map_vertices_preserve_graph!(v -> weight_function(v) * tn[v], tn; vertices)
 end
 
 """ Scale each tensor of the network by a scale factor for each vertex in the keys of the dictionary"""
