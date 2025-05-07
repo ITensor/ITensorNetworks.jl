@@ -935,24 +935,29 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   return tn12
 end
 
-""" Scale each tensor of the network by a scale factor on each vertex"""
-function scale!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
-  for v in keys(vertices_weights)
-    setindex_preserve_graph!(tn, vertices_weights[v] * tn[v], v)
+""" Scale each tensor of the network via a function vertex -> Number"""
+function scale!(
+  weight_function::Function, tn::AbstractITensorNetwork; verts=collect(vertices(tn))
+)
+  for v in verts
+    setindex_preserve_graph!(tn, weight_function(v) * tn[v], v)
   end
   return tn
 end
 
-""" Scale each tensor of the network via a function (vertex, ITensor) -> Number"""
-function scale!(tn::AbstractITensorNetwork, weight_function::Function)
-  vs = collect(vertices(tn))
-  vertices_weights = Dictionary(vs, [weight_function(v, tn[v]) for v in vs])
-  return scale!(tn, vertices_weights)
+""" Scale each tensor of the network by a scale factor for each vertex in the keys of the dictionary"""
+function scale!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
+  return scale!(v -> vertices_weights[v], tn; verts=keys(vertices_weights))
 end
 
-function scale(tn, args...)
+function scale(weight_function::Function, tn; kwargs...)
   tn = copy(tn)
-  return scale!(tn, args...)
+  return scale!(weight_function, tn; kwargs...)
+end
+
+function scale(tn, vertices_weights::Dictionary; kwargs...)
+  tn = copy(tn)
+  return scale!(tn, vertices_weights; kwargs...)
 end
 
 Base.:+(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)

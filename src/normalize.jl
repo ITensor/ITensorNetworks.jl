@@ -1,4 +1,4 @@
-using LinearAlgebra
+using LinearAlgebra: normalize
 
 function rescale(tn::AbstractITensorNetwork; alg="exact", kwargs...)
   return rescale(Algorithm(alg), tn; kwargs...)
