@@ -937,9 +937,11 @@ end
 
 """ Scale each tensor of the network via a function vertex -> Number"""
 function scale!(
-  weight_function::Function, tn::AbstractITensorNetwork; verts=collect(vertices(tn))
+  weight_function::Function,
+  tn::AbstractITensorNetwork;
+  vertices=collect(Graphs.vertices(tn)),
 )
-  for v in verts
+  for v in vertices
     setindex_preserve_graph!(tn, weight_function(v) * tn[v], v)
   end
   return tn
@@ -947,7 +949,7 @@ end
 
 """ Scale each tensor of the network by a scale factor for each vertex in the keys of the dictionary"""
 function scale!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
-  return scale!(v -> vertices_weights[v], tn; verts=keys(vertices_weights))
+  return scale!(v -> vertices_weights[v], tn; vertices=keys(vertices_weights))
 end
 
 function scale(weight_function::Function, tn; kwargs...)
