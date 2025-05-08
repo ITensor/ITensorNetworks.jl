@@ -391,7 +391,15 @@ end
 
 LinearAlgebra.adjoint(tn::Union{IndsNetwork,AbstractITensorNetwork}) = prime(tn)
 
-# TODO: Define preserve graph version in DataGraphs.jl and @preserve_graph map_vertex_data(f, tn)`
+function map_vertex_data(f, tn::AbstractITensorNetwork)
+  tn = copy(tn)
+  for v in vertices(tn)
+    tn[v] = f(tn[v])
+  end
+  return tn
+end
+
+# TODO: Define @preserve_graph map_vertex_data(f, tn)`
 function map_vertex_data_preserve_graph(f, tn::AbstractITensorNetwork)
   tn = copy(tn)
   for v in vertices(tn)
@@ -400,7 +408,6 @@ function map_vertex_data_preserve_graph(f, tn::AbstractITensorNetwork)
   return tn
 end
 
-# TODO: Define this and an out-of-place version in DataGraphs.jl
 function map_vertices_preserve_graph!(f, tn::AbstractITensorNetwork; vertices=vertices(tn))
   for v in vertices
     @preserve_graph tn[v] = f(v)
