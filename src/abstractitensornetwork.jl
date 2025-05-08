@@ -954,7 +954,7 @@ function scale(weight_function::Function, tn; kwargs...)
   return scale!(weight_function, tn; kwargs...)
 end
 
-function scale(tn, vertices_weights::Dictionary; kwargs...)
+function scale(tn::AbstractITensorNetwork, vertices_weights::Dictionary; kwargs...)
   tn = copy(tn)
   return scale!(tn, vertices_weights; kwargs...)
 end
