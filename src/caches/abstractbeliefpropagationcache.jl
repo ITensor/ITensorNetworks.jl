@@ -101,7 +101,7 @@ function tensornetwork(bpc::AbstractBeliefPropagationCache)
 end
 
 function factors(bpc::AbstractBeliefPropagationCache, verts::Vector)
-  return ITensor[copy(bpc[v]) for v in verts]
+  return ITensor[bpc[v] for v in verts]
 end
 
 function factors(
