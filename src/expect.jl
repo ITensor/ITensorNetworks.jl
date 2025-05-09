@@ -26,7 +26,7 @@ function expect(
   (cache!)=nothing,
   update_cache=isnothing(cache!),
   cache_update_kwargs=default_cache_update_kwargs(alg),
-  cache_construction_kwargs=default_cache_construction_kwargs(alg, QuadraticFormNetwork(ψ)),
+  cache_construction_kwargs=(;),
   kwargs...,
 )
   ψIψ = QuadraticFormNetwork(ψ)

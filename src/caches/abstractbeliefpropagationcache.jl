@@ -1,4 +1,4 @@
-using Graphs: IsDirected
+using Graphs: Graphs, IsDirected
 using SplitApplyCombine: group
 using LinearAlgebra: diag, dot
 using ITensors: dir
@@ -66,7 +66,7 @@ function region_scalar(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge; k
   return not_implemented()
 end
 partitions(bpc::AbstractBeliefPropagationCache) = not_implemented()
-partitionpairs(bpc::AbstractBeliefPropagationCache) = not_implemented()
+PartitionedGraphs.partitionedges(bpc::AbstractBeliefPropagationCache) = not_implemented()
 
 function default_edge_sequence(
   bpc::AbstractBeliefPropagationCache; alg=default_message_update_alg(bpc)
@@ -88,6 +88,10 @@ function tensornetwork(bpc::AbstractBeliefPropagationCache)
   return unpartitioned_graph(partitioned_tensornetwork(bpc))
 end
 
+function setindex_preserve_graph!(bpc::AbstractBeliefPropagationCache, args...)
+  return setindex_preserve_graph!(tensornetwork(bpc), args...)
+end
+
 function factors(bpc::AbstractBeliefPropagationCache, verts::Vector)
   return ITensor[tensornetwork(bpc)[v] for v in verts]
 end
@@ -107,7 +111,7 @@ function vertex_scalars(bpc::AbstractBeliefPropagationCache, pvs=partitions(bpc)
 end
 
 function edge_scalars(
-  bpc::AbstractBeliefPropagationCache, pes=partitionpairs(bpc); kwargs...
+  bpc::AbstractBeliefPropagationCache, pes=partitionedges(bpc); kwargs...
 )
   return map(pe -> region_scalar(bpc, pe; kwargs...), pes)
 end
@@ -282,4 +286,80 @@ function update(
   kwargs...,
 )
   return update(Algorithm(alg), bpc; kwargs...)
+end
+
+function scale!(bp_cache::AbstractBeliefPropagationCache, args...)
+  return scale!(tensornetwork(bp_cache), args...)
+end
+
+function rescale_messages(
+  bp_cache::AbstractBeliefPropagationCache, partitionedge::PartitionEdge
+)
+  return rescale_messages(bp_cache, [partitionedge])
+end
+
+function rescale_messages(bp_cache::AbstractBeliefPropagationCache)
+  return rescale_messages(bp_cache, partitionedges(bp_cache))
+end
+
+function rescale_partitions(
+  bpc::AbstractBeliefPropagationCache,
+  partitions::Vector;
+  verts::Vector=vertices(bpc, partitions),
+)
+  bpc = copy(bpc)
+  tn = tensornetwork(bpc)
+  norms = map(v -> inv(norm(tn[v])), verts)
+  scale!(bpc, Dictionary(verts, norms))
+
+  vertices_weights = Dictionary()
+  for pv in partitions
+    pv_vs = filter(v -> v ∈ verts, vertices(bpc, pv))
+    isempty(pv_vs) && continue
+
+    vn = region_scalar(bpc, pv)
+    s = isreal(vn) ? sign(vn) : 1.0
+    vn = s * inv(vn^(1 / length(pv_vs)))
+    set!(vertices_weights, first(pv_vs), s*vn)
+    for v in pv_vs[2:length(pv_vs)]
+      set!(vertices_weights, v, vn)
+    end
+  end
+
+  scale!(bpc, vertices_weights)
+
+  return bpc
+end
+
+function rescale_partitions(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
+  return rescale_partitions(bpc, collect(partitions(bpc)), args...; kwargs...)
+end
+
+function rescale_partition(
+  bpc::AbstractBeliefPropagationCache, partition, args...; kwargs...
+)
+  return rescale_partitions(bpc, [partition], args...; kwargs...)
+end
+
+function rescale(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
+  bpc = rescale_messages(bpc)
+  bpc = rescale_partitions(bpc, args...; kwargs...)
+  return bpc
+end
+
+function logscalar(bpc::AbstractBeliefPropagationCache)
+  numerator_terms, denominator_terms = scalar_factors_quotient(bpc)
+  if any(t -> real(t) < 0, numerator_terms)
+    numerator_terms = complex.(numerator_terms)
+  end
+  if any(t -> real(t) < 0, denominator_terms)
+    denominator_terms = complex.(denominator_terms)
+  end
+
+  any(iszero, denominator_terms) && return -Inf
+  return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
+end
+
+function ITensors.scalar(bpc::AbstractBeliefPropagationCache)
+  return exp(logscalar(bpc))
 end

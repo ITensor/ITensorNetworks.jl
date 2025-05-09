@@ -63,17 +63,7 @@ function logscalar(
     cache![] = update(cache![]; cache_update_kwargs...)
   end
 
-  numerator_terms, denominator_terms = scalar_factors_quotient(cache![])
-  numerator_terms =
-    any(t -> real(t) < 0, numerator_terms) ? complex.(numerator_terms) : numerator_terms
-  denominator_terms = if any(t -> real(t) < 0, denominator_terms)
-    complex.(denominator_terms)
-  else
-    denominator_terms
-  end
-
-  any(iszero, denominator_terms) && return -Inf
-  return sum(log.(numerator_terms)) - sum(log.((denominator_terms)))
+  return logscalar(cache![])
 end
 
 function ITensors.scalar(alg::Algorithm, tn::AbstractITensorNetwork; kwargs...)

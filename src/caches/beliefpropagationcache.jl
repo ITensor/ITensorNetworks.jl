@@ -9,7 +9,9 @@ using NamedGraphs.PartitionedGraphs:
   boundary_partitionedges,
   partitionvertices,
   partitionedges,
-  unpartitioned_graph
+  partitioned_vertices,
+  unpartitioned_graph,
+  which_partition
 using SimpleTraits: SimpleTraits, Not, @traitfn
 using NDTensors: NDTensors
 
@@ -80,7 +82,9 @@ function default_message_update_kwargs(
 end
 
 partitions(bpc::BeliefPropagationCache) = partitionvertices(partitioned_tensornetwork(bpc))
-partitionpairs(bpc::BeliefPropagationCache) = partitionedges(partitioned_tensornetwork(bpc))
+function PartitionedGraphs.partitionedges(bpc::BeliefPropagationCache)
+  partitionedges(partitioned_tensornetwork(bpc))
+end
 
 function set_messages(cache::BeliefPropagationCache, messages)
   return BeliefPropagationCache(partitioned_tensornetwork(cache), messages)
@@ -105,4 +109,24 @@ function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
   ts = vcat(message(bp_cache, pe), message(bp_cache, reverse(pe)))
   sequence = contraction_sequence(ts; alg="optimal")
   return contract(ts; sequence)[]
+end
+
+function rescale_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
+  bp_cache = copy(bp_cache)
+  mts = messages(bp_cache)
+  for pe in pes
+    me, mer = normalize.(mts[pe]), normalize.(mts[reverse(pe)])
+    set!(mts, pe, me)
+    set!(mts, reverse(pe), mer)
+    n = region_scalar(bp_cache, pe)
+    if isreal(n)
+      me[1] *= sign(n)
+      n *= sign(n)
+    end
+
+    sf = (1 / sqrt(n)) ^ (1 / length(me))
+    set!(mts, pe, sf .* me)
+    set!(mts, reverse(pe), sf .* mer)
+  end
+  return bp_cache
 end

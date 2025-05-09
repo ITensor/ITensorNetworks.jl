@@ -399,11 +399,18 @@ function map_vertex_data(f, tn::AbstractITensorNetwork)
   return tn
 end
 
-# TODO: Define `@preserve_graph map_vertex_data(f, tn)`
+# TODO: Define @preserve_graph map_vertex_data(f, tn)`
 function map_vertex_data_preserve_graph(f, tn::AbstractITensorNetwork)
   tn = copy(tn)
   for v in vertices(tn)
     @preserve_graph tn[v] = f(tn[v])
+  end
+  return tn
+end
+
+function map_vertices_preserve_graph!(f, tn::AbstractITensorNetwork; vertices=vertices(tn))
+  for v in vertices
+    @preserve_graph tn[v] = f(v)
   end
   return tn
 end
@@ -933,6 +940,30 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   end
 
   return tn12
+end
+
+""" Scale each tensor of the network via a function vertex -> Number"""
+function scale!(
+  weight_function::Function,
+  tn::AbstractITensorNetwork;
+  vertices=collect(Graphs.vertices(tn)),
+)
+  return map_vertices_preserve_graph!(v -> weight_function(v) * tn[v], tn; vertices)
+end
+
+""" Scale each tensor of the network by a scale factor for each vertex in the keys of the dictionary"""
+function scale!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
+  return scale!(v -> vertices_weights[v], tn; vertices=keys(vertices_weights))
+end
+
+function scale(weight_function::Function, tn; kwargs...)
+  tn = copy(tn)
+  return scale!(weight_function, tn; kwargs...)
+end
+
+function scale(tn::AbstractITensorNetwork, vertices_weights::Dictionary; kwargs...)
+  tn = copy(tn)
+  return scale!(tn, vertices_weights; kwargs...)
 end
 
 Base.:+(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)
