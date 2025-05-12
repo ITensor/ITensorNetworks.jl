@@ -286,7 +286,7 @@ function update(
   edge_groups::Vector{<:Vector{<:PartitionEdge}};
   kwargs...,
 )
-  new_mts = Dictionary()
+  new_mts = empty(messages(bpc))
   for edges in edge_groups
     bpc_t = update(alg, bpc, edges; kwargs...)
     for e in edges
