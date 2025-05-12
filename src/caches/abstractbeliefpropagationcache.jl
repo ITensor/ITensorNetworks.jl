@@ -50,7 +50,7 @@ end
 default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
 
 function Base.setindex!(bpc::AbstractBeliefPropagationCache, factor::ITensor, vertex)
-  not_implemented()
+  return not_implemented()
 end
 partitioned_tensornetwork(bpc::AbstractBeliefPropagationCache) = not_implemented()
 messages(bpc::AbstractBeliefPropagationCache) = not_implemented()
