@@ -6,6 +6,7 @@ using ITensorNetworks:
   ITensorNetworks,
   BeliefPropagationCache,
   ⊗,
+  @preserve_graph,
   combine_linkinds,
   contract,
   contraction_sequence,
@@ -48,6 +49,19 @@ using Test: @test, @testset
     ψ = random_tensornetwork(rng, elt, s; link_space=χ)
     ψψ = ψ ⊗ prime(dag(ψ); sites=[])
     bpc = BeliefPropagationCache(ψψ, group(v -> first(v), vertices(ψψ)))
+
+    #Test updating the tensors in the cache
+    vket, vbra = ((1, 1), 1), ((1, 1), 2)
+    A = bpc[vket]
+    new_A = random_itensor(elt, inds(A))
+    new_A_dag = ITensors.replaceind(
+      dag(prime(new_A)), only(s[first(vket)])', only(s[first(vket)])
+    )
+    @preserve_graph bpc[vket] = new_A
+    @preserve_graph bpc[vbra] = new_A_dag
+    @test bpc[vket] == new_A
+    @test bpc[vbra] == new_A_dag
+
     bpc = update(bpc; maxiter=25, tol=eps(real(elt)))
     #Test messages are converged
     for pe in partitionedges(bpc)
