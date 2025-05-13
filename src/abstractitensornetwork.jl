@@ -603,7 +603,7 @@ function gauge_edge(
   # # TODO: Implement as `only(common_neighbors(tn, src(edge), dst(edge)))`
   # new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
   # return contract(tn, new_vertex => dst(edge))
-  @assert src(edge) ∈ neighbors(tn, dst(edge))
+  !has_edge(tn, edge) && throw(ArgumentError("Edge not in graph."))
   tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
   ltags = tags(tn, edge)
@@ -678,7 +678,7 @@ end
 
 # TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
 function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-  @assert src(edge) ∈ neighbors(tn, dst(edge))
+  !has_edge(tn, edge) && throw(ArgumentError("Edge not in graph."))
   tn = copy(tn)
   left_inds = uniqueinds(tn, edge)
   ltags = tags(tn, edge)
