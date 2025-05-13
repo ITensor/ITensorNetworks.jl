@@ -24,19 +24,8 @@ using ITensorNetworks:
   update,
   update_factor,
   updated_message,
-  message_diff,
-  ITensorNetwork
-using ITensors:
-  norm,
-  ITensors,
-  ITensor,
-  combiner,
-  dag,
-  inds,
-  inner,
-  op,
-  prime,
-  random_itensor
+  message_diff
+using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
 using ITensorNetworks.ModelNetworks: ModelNetworks
 using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
