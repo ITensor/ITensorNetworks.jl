@@ -11,9 +11,18 @@ using NamedGraphs.PartitionedGraphs:
   partitionedges,
   unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
+using NamedGraphs.SimilarType: SimilarType
 using NDTensors: NDTensors
 
-abstract type AbstractBeliefPropagationCache end
+abstract type AbstractBeliefPropagationCache{V,PV} <: AbstractITensorNetwork{V} end
+
+function SimilarType.similar_type(bpc::AbstractBeliefPropagationCache)
+  return typeof(tensornetwork(bpc))
+end
+function data_graph_type(bpc::AbstractBeliefPropagationCache)
+  return data_graph_type(tensornetwork(bpc))
+end
+data_graph(bpc::AbstractBeliefPropagationCache) = data_graph(tensornetwork(bpc))
 
 function default_message_update(contract_list::Vector{ITensor}; normalize=true, kwargs...)
   sequence = contraction_sequence(contract_list; alg="optimal")
@@ -40,6 +49,9 @@ default_messages(ptn::PartitionedGraph) = Dictionary()
 end
 default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
 
+function Base.setindex!(bpc::AbstractBeliefPropagationCache, factor::ITensor, vertex)
+  return not_implemented()
+end
 partitioned_tensornetwork(bpc::AbstractBeliefPropagationCache) = not_implemented()
 messages(bpc::AbstractBeliefPropagationCache) = not_implemented()
 function default_message(
@@ -88,12 +100,8 @@ function tensornetwork(bpc::AbstractBeliefPropagationCache)
   return unpartitioned_graph(partitioned_tensornetwork(bpc))
 end
 
-function setindex_preserve_graph!(bpc::AbstractBeliefPropagationCache, args...)
-  return setindex_preserve_graph!(tensornetwork(bpc), args...)
-end
-
 function factors(bpc::AbstractBeliefPropagationCache, verts::Vector)
-  return ITensor[tensornetwork(bpc)[v] for v in verts]
+  return ITensor[bpc[v] for v in verts]
 end
 
 function factors(
@@ -143,7 +151,6 @@ for f in [
   :(PartitionedGraphs.partitionvertices),
   :(PartitionedGraphs.vertices),
   :(PartitionedGraphs.boundary_partitionedges),
-  :(linkinds),
 ]
   @eval begin
     function $f(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
@@ -152,23 +159,28 @@ for f in [
   end
 end
 
+function linkinds(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge)
+  return linkinds(partitioned_tensornetwork(bpc), pe)
+end
+
 NDTensors.scalartype(bpc::AbstractBeliefPropagationCache) = scalartype(tensornetwork(bpc))
 
 """
-Update the tensornetwork inside the cache
+Update the tensornetwork inside the cache out-of-place
 """
 function update_factors(bpc::AbstractBeliefPropagationCache, factors)
   bpc = copy(bpc)
-  tn = tensornetwork(bpc)
   for vertex in eachindex(factors)
     # TODO: Add a check that this preserves the graph structure.
-    setindex_preserve_graph!(tn, factors[vertex], vertex)
+    setindex_preserve_graph!(bpc, factors[vertex], vertex)
   end
   return bpc
 end
 
 function update_factor(bpc, vertex, factor)
-  return update_factors(bpc, Dictionary([vertex], [factor]))
+  bpc = copy(bpc)
+  setindex_preserve_graph!(bpc, factor, vertex)
+  return bpc
 end
 
 function message(bpc::AbstractBeliefPropagationCache, edge::PartitionEdge; kwargs...)
@@ -178,11 +190,44 @@ end
 function messages(bpc::AbstractBeliefPropagationCache, edges; kwargs...)
   return map(edge -> message(bpc, edge; kwargs...), edges)
 end
-function set_message(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge, message)
-  bpc = copy(bpc)
+function set_messages!(bpc::AbstractBeliefPropagationCache, partitionedges_messages)
+  ms = messages(bpc)
+  for pe in eachindex(partitionedges_messages)
+    # TODO: Add a check that this preserves the graph structure.
+    set!(ms, pe, partitionedges_messages[pe])
+  end
+  return bpc
+end
+function set_message!(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge, message)
   ms = messages(bpc)
   set!(ms, pe, message)
   return bpc
+end
+
+function set_messages(bpc::AbstractBeliefPropagationCache, partitionedges_messages)
+  bpc = copy(bpc)
+  return set_messages!(bpc, partitionedges_messages)
+end
+function set_message(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge, message)
+  bpc = copy(bpc)
+  return set_message!(bpc, pe, message)
+end
+function delete_messages!(bpc::AbstractBeliefPropagationCache, pes::Vector{<:PartitionEdge})
+  ms = messages(bpc)
+  for pe in pes
+    delete!(ms, pe)
+  end
+  return bpc
+end
+function delete_message!(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge)
+  return delete_message!(bpc, [pe])
+end
+function delete_messages(bpc::AbstractBeliefPropagationCache, pes::Vector{<:PartitionEdge})
+  bpc = copy(bpc)
+  return delete_messages!(bpc, pes)
+end
+function delete_message(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge)
+  return delete_message(bpc, [pe])
 end
 
 """
@@ -241,11 +286,11 @@ function update(
   edge_groups::Vector{<:Vector{<:PartitionEdge}};
   kwargs...,
 )
-  new_mts = copy(messages(bpc))
+  new_mts = empty(messages(bpc))
   for edges in edge_groups
     bpc_t = update(alg, bpc, edges; kwargs...)
     for e in edges
-      new_mts[e] = message(bpc_t, e)
+      set!(new_mts, e, message(bpc_t, e))
     end
   end
   return set_messages(bpc, new_mts)
@@ -286,10 +331,6 @@ function update(
   kwargs...,
 )
   return update(Algorithm(alg), bpc; kwargs...)
-end
-
-function scale!(bp_cache::AbstractBeliefPropagationCache, args...)
-  return scale!(tensornetwork(bp_cache), args...)
 end
 
 function rescale_messages(

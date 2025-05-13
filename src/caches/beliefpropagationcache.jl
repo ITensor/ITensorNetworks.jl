@@ -3,6 +3,7 @@ using SplitApplyCombine: group
 using LinearAlgebra: diag, dot
 using ITensors: dir
 using NamedGraphs.PartitionedGraphs:
+  AbstractPartitionedGraph,
   PartitionedGraphs,
   PartitionedGraph,
   PartitionVertex,
@@ -23,7 +24,8 @@ function default_cache_construction_kwargs(alg::Algorithm"bp", pg::PartitionedGr
   return (;)
 end
 
-struct BeliefPropagationCache{PTN,MTS} <: AbstractBeliefPropagationCache
+struct BeliefPropagationCache{V,PV,PTN<:AbstractPartitionedGraph{V,PV},MTS} <:
+       AbstractBeliefPropagationCache{V,PV}
   partitioned_tensornetwork::PTN
   messages::MTS
 end
@@ -81,13 +83,10 @@ function default_message_update_kwargs(
   return (;)
 end
 
+Base.setindex!(bpc::BeliefPropagationCache, factor::ITensor, vertex) = not_implemented()
 partitions(bpc::BeliefPropagationCache) = partitionvertices(partitioned_tensornetwork(bpc))
 function PartitionedGraphs.partitionedges(bpc::BeliefPropagationCache)
   partitionedges(partitioned_tensornetwork(bpc))
-end
-
-function set_messages(cache::BeliefPropagationCache, messages)
-  return BeliefPropagationCache(partitioned_tensornetwork(cache), messages)
 end
 
 function environment(bpc::BeliefPropagationCache, verts::Vector; kwargs...)
