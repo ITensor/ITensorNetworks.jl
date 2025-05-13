@@ -31,7 +31,7 @@ using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
 using NamedGraphs: NamedEdge, NamedGraph
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedges, unpartitioned_graph
+using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedges
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
