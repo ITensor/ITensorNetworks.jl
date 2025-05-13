@@ -24,14 +24,27 @@ using ITensorNetworks:
   update,
   update_factor,
   updated_message,
-  message_diff
-using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
+  message_diff,
+  ITensorNetwork
+using ITensors:
+  norm,
+  ITensors,
+  ITensor,
+  @Algorithm_str,
+  Algorithm,
+  combiner,
+  dag,
+  inds,
+  inner,
+  op,
+  prime,
+  random_itensor
 using ITensorNetworks.ModelNetworks: ModelNetworks
 using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
 using NamedGraphs: NamedEdge, NamedGraph
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedges
+using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedges, unpartitioned_graph
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations

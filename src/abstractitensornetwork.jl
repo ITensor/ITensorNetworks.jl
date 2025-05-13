@@ -607,8 +607,8 @@ function gauge_edge(
   left_inds = uniqueinds(tn, edge)
   ltags = tags(tn, edge)
   X, Y = factorize(tn[src(edge)], left_inds; tags=ltags, ortho="left", kwargs...)
-  tn[src(edge)] = X
-  tn[dst(edge)] *= Y
+  @preserve_graph tn[src(edge)] = X
+  @preserve_graph tn[dst(edge)] = tn[dst(edge)]*Y
   return tn
 end
 
@@ -681,8 +681,8 @@ function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs..
   left_inds = uniqueinds(tn, edge)
   ltags = tags(tn, edge)
   U, S, V = svd(tn[src(edge)], left_inds; lefttags=ltags, kwargs...)
-  tn[src(edge)] = U
-  tn[dst(edge)] *= (S * V)
+  @preserve_graph tn[src(edge)] = U
+  @preserve_graph tn[dst(edge)] = tn[dst(edge)] * (S*V)
   return tn
 end
 
