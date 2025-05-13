@@ -30,8 +30,6 @@ using ITensors:
   norm,
   ITensors,
   ITensor,
-  @Algorithm_str,
-  Algorithm,
   combiner,
   dag,
   inds,
