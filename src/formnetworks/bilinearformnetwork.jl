@@ -1,4 +1,5 @@
 using ITensors: ITensor, Op, prime, sim
+using ITensors.NDTensors: denseblocks
 
 default_dual_site_index_map = prime
 default_dual_link_index_map = sim
@@ -54,7 +55,7 @@ end
 
 function itensor_identity_map(i_pairs::Vector)
   return prod(i_pairs; init=ITensor(one(Bool))) do i_pair
-    return delta(Bool, dag(first(i_pair)), last(i_pair))
+    return denseblocks(delta(last(i_pair), dag(first(i_pair))))
   end
 end
 
