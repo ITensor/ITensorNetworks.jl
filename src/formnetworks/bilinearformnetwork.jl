@@ -53,11 +53,13 @@ function Base.copy(blf::BilinearFormNetwork)
   )
 end
 
-function itensor_identity_map(i_pairs::Vector)
+function itensor_identity_map(elt::Type, i_pairs::Vector)
   return prod(i_pairs; init=ITensor(one(Bool))) do i_pair
-    return denseblocks(delta(last(i_pair), dag(first(i_pair))))
+    return denseblocks(delta(elt, last(i_pair), dag(first(i_pair))))
   end
 end
+
+itensor_identity_map(i_pairs::Vector) = itensor_identity_map(Float64, i_pairs)
 
 function BilinearFormNetwork(
   bra::AbstractITensorNetwork,
@@ -72,7 +74,7 @@ function BilinearFormNetwork(
   operator_inds = union_all_inds(s, s_mapped)
 
   O = ITensorNetwork(operator_inds; link_space) do v
-    return inds -> itensor_identity_map(s[v] .=> s_mapped[v])
+    return inds -> itensor_identity_map(scalartype(ket), s[v] .=> s_mapped[v])
   end
   return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end
