@@ -1,6 +1,5 @@
-import ITensors as it
-import ITensorNetworks as itn
 using NamedGraphs.GraphsExtensions: incident_edges
+using Printf: @printf
 
 function subspace_expand(
   ::Backend"densitymatrix",
@@ -16,12 +15,12 @@ function subspace_expand(
   region = current_region(region_iterator)
   psi = copy(state(problem))
 
-  prev_vertex_set = setdiff(itn.pos(operator(problem)), region)
+  prev_vertex_set = setdiff(pos(operator(problem)), region)
   (length(prev_vertex_set) != 1) && return problem, local_state
   prev_vertex = only(prev_vertex_set)
   A = psi[prev_vertex]
 
-  next_vertices = filter(v -> (it.hascommoninds(psi[v], A)), region)
+  next_vertices = filter(v -> (hascommoninds(psi[v], A)), region)
   isempty(next_vertices) && return problem, local_state
   next_vertex = only(next_vertices)
   C = psi[next_vertex]
@@ -36,10 +35,10 @@ function subspace_expand(
   expanded_maxdim <= 0 && return problem, local_state
   trunc = (; trunc..., maxdim=expanded_maxdim)
 
-  envs = itn.environments(operator(problem))
-  H = itn.operator(operator(problem))
+  envs = environments(operator(problem))
+  H = operator(operator(problem))
   sqrt_rho = A
-  for e in itn.incident_edges(operator(problem))
+  for e in incident_edges(operator(problem))
     (src(e) ∈ region || dst(e) ∈ region) && continue
     sqrt_rho *= envs[e]
   end

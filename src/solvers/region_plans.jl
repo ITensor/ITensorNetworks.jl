@@ -6,7 +6,9 @@ import NamedGraphs: GraphsExtensions
 #  return [fwd_sweep..., reverse(fwd_sweep)...]
 #end
 
-function tdvp_regions(g::AbstractGraph, time_step; nsites=1, updater_kwargs, sweep_kwargs...)
+function tdvp_regions(
+  g::AbstractGraph, time_step; nsites=1, updater_kwargs, sweep_kwargs...
+)
   @assert nsites==1
   fwd_up_args = (; time=(time_step / 2), updater_kwargs...)
   rev_up_args = (; time=(-time_step / 2), updater_kwargs...)
@@ -25,7 +27,7 @@ function tdvp_regions(g::AbstractGraph, time_step; nsites=1, updater_kwargs, swe
 end
 
 function overlap(ea::AbstractEdge, eb::AbstractEdge)
-  return intersect([src(ea),dst(ea)], [src(eb),dst(eb)])
+  return intersect([src(ea), dst(ea)], [src(eb), dst(eb)])
 end
 
 function forward_region(edges, which_edge; nsites=1, region_kwargs=(;))

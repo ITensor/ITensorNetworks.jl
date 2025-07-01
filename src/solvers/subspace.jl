@@ -1,9 +1,21 @@
-using ITensors: commonind, dag, dim, directsum, dot, hascommoninds, Index, norm, onehot, uniqueinds, random_itensor
+using ITensors:
+  commonind,
+  dag,
+  dim,
+  directsum,
+  dot,
+  hascommoninds,
+  Index,
+  norm,
+  onehot,
+  uniqueinds,
+  random_itensor
 
 # TODO: hoist num_expand default value out to a function or similar
-function subspace_expand!(problem::EigsolveProblem, local_tensor, region; prev_region, num_expand=4, kws...)
-
-  if isnothing(prev_region) || isa(region, AbstractEdge) 
+function subspace_expand!(
+  problem::EigsolveProblem, local_tensor, region; prev_region, num_expand=4, kws...
+)
+  if isnothing(prev_region) || isa(region, AbstractEdge)
     return local_tensor
   end
 
@@ -49,4 +61,4 @@ function subspace_expand!(problem::EigsolveProblem, local_tensor, region; prev_r
   local_tensor = prod(psi[v] for v in region)
 
   return local_tensor
-end 
+end

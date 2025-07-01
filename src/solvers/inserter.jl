@@ -21,13 +21,13 @@ function inserter(
     indsTe = it.inds(psi[first(region)])
     tags = it.tags(psi, e)
     U, C, _ = it.factorize(local_tensor, indsTe; tags, trunc...)
-    itn.@preserve_graph psi[first(region)] = U
+    @preserve_graph psi[first(region)] = U
   else
     error("Region of length $(length(region)) not currently supported")
   end
   v = last(region)
-  itn.@preserve_graph psi[v] = C
-  psi = set_orthogonal_region ? itn.set_ortho_region(psi, [v]) : psi
-  normalize && itn.@preserve_graph psi[v] = psi[v] / norm(psi[v])
+  @preserve_graph psi[v] = C
+  psi = set_orthogonal_region ? set_ortho_region(psi, [v]) : psi
+  normalize && @preserve_graph psi[v] = psi[v] / norm(psi[v])
   return setproperties(problem; state=psi)
 end

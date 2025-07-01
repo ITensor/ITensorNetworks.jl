@@ -1,10 +1,8 @@
-import ITensorNetworks as itn
-using ITensors
 
 function permute_indices(tn)
-  si = itn.siteinds(tn)
+  si = siteinds(tn)
   ptn = copy(tn)
-  for v in itn.vertices(tn)
+  for v in vertices(tn)
     is = inds(tn[v])
     ls = setdiff(is, si[v])
     isempty(ls) && continue

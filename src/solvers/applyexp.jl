@@ -1,5 +1,5 @@
-import ITensorNetworks as itn
-using Printf
+using Printf: @printf
+import ConstructionBase: setproperties
 
 @kwdef mutable struct ApplyExpProblem{State}
   state::State
@@ -7,7 +7,7 @@ using Printf
   current_time::Number = 0.0
 end
 
-state(tdvp::ApplyExpProblem) = tdvp.state
+ITensorNetworks.state(tdvp::ApplyExpProblem) = tdvp.state
 operator(tdvp::ApplyExpProblem) = tdvp.operator
 current_time(tdvp::ApplyExpProblem) = tdvp.current_time
 
@@ -31,11 +31,11 @@ function updater(
     curr_reg = current_region(region_iterator)
     next_reg = next_region(region_iterator)
     if !isnothing(next_reg) && next_reg != curr_reg
-      next_edge = first(itn.edge_sequence_between_regions(state(T), curr_reg, next_reg))
-      v1, v2 = itn.src(next_edge), itn.dst(next_edge)
+      next_edge = first(edge_sequence_between_regions(state(T), curr_reg, next_reg))
+      v1, v2 = src(next_edge), dst(next_edge)
       psi = copy(state(T))
       psi[v1], R = qr(local_state, uniqueinds(local_state, psi[v2]))
-      shifted_operator = itn.position(operator(T), psi, itn.NamedEdge(v1=>v2))
+      shifted_operator = position(operator(T), psi, NamedEdge(v1=>v2))
       R_t, _ = solver(x->optimal_map(shifted_operator, x), -time_step, R; kws...)
       local_state = psi[v1]*R_t
     end
@@ -53,7 +53,7 @@ function applyexp_sweep_printer(
   if outputlevel >= 1
     T = problem(region_iterator)
     @printf("  Current time = %s, ", process_time(current_time(T)))
-    @printf("maxlinkdim=%d", itn.maxlinkdim(state(T)))
+    @printf("maxlinkdim=%d", maxlinkdim(state(T)))
     println()
     flush(stdout)
   end
@@ -83,7 +83,7 @@ end
 
 function applyexp(H, init_state, exponents; kws...)
   init_prob = ApplyExpProblem(;
-    state=permute_indices(init_state), operator=itn.ProjTTN(permute_indices(H))
+    state=permute_indices(init_state), operator=ProjTTN(permute_indices(H))
   )
   return applyexp(init_prob, exponents; kws...)
 end

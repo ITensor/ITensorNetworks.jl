@@ -1,5 +1,5 @@
-import ITensorNetworks as itn
-using Printf
+using Printf: @printf
+import ConstructionBase: setproperties
 
 @kwdef mutable struct EigsolveProblem{State,Operator}
   state::State
@@ -8,7 +8,7 @@ using Printf
 end
 
 eigenvalue(E::EigsolveProblem) = E.eigenvalue
-state(E::EigsolveProblem) = E.state
+ITensorNetworks.state(E::EigsolveProblem) = E.state
 operator(E::EigsolveProblem) = E.operator
 
 function updater(
@@ -36,7 +36,7 @@ function eigsolve_sweep_printer(region_iterator; outputlevel, sweep, nsweeps, kw
     end
     E = problem(region_iterator)
     @printf("eigenvalue=%.12f ", eigenvalue(E))
-    @printf("maxlinkdim=%d", itn.maxlinkdim(state(E)))
+    @printf("maxlinkdim=%d", maxlinkdim(state(E)))
     println()
     flush(stdout)
   end
@@ -68,7 +68,7 @@ end
 
 function eigsolve(H, init_state; kws...)
   init_prob = EigsolveProblem(;
-    state=permute_indices(init_state), operator=itn.ProjTTN(permute_indices(H))
+    state=permute_indices(init_state), operator=ProjTTN(permute_indices(H))
   )
   return eigsolve(init_prob; kws...)
 end
