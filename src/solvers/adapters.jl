@@ -1,49 +1,5 @@
 
 #
-# RepeatIterator
-#
-# An "iterator of iterators", plugging in initialization
-# arguments into an `init` function each repetition
-#
-
-mutable struct RepeatIterator{Iterator}
-  iterator::Iterator
-  keyword_args::Vector{<:NamedTuple}
-end
-
-function RepeatIterator(iter, n::Integer, kwargs::NamedTuple)
-  return RepeatIterator(iter, fill(kwargs, n))
-end
-
-#
-# Version 1: output the initialized iterator each time
-#
-function Base.iterate(R::RepeatIterator)
-  inner_next = iterate(R.iterator)
-  isnothing(inner_next) && return nothing
-  (item, inner_state) = inner_next
-  return item, (1, inner_state)
-end
-function Base.iterate(R::RepeatIterator, state)
-  state = Base.iterate(keyword_args)
-  isnothing(state) && return nothing
-  (kwargs, which) = state
-  R.iterator = init(R.iterator; kwargs...)
-  return R, which
-end
-
-##
-## Version 2: output the initialized iterator each time
-##
-#function Base.iterate(R::RepeatIterator, state=1)
-#  state = Base.iterate(keyword_args)
-#  isnothing(state) && return nothing
-#  (kwargs, which) = state
-#  R.iterator = init(R.iterator; kwargs...)
-#  return R, which
-#end
-
-#
 # TupleRegionIterator
 #
 # Adapts outputs to be (region, region_kwargs) tuples

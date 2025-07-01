@@ -1,21 +1,43 @@
-
 #
-# sweep_iterator
+# SweepIterator
 #
 
-function sweep_iterator(problem, sweep_kwargs_array)
-  return [region_iterator(problem; sweep_kwargs...) for sweep_kwargs in sweep_kwargs_array]
+mutable struct SweepIterator
+  sweep_kws
+  region_iter
+  which_sweep::Int
 end
 
-function sweep_iterator(problem, nsweeps::Integer)
-  return sweep_iterator(problem, Iterators.repeated((;), nsweeps))
+problem(S::SweepIterator) = problem(S.region_iter)
+
+Base.length(S::SweepIterator) = length(S.sweep_kws)
+
+function Base.iterate(S::SweepIterator, which=nothing)
+  if isnothing(which)
+    sweep_kws_state = iterate(S.sweep_kws)
+  else
+    sweep_kws_state = iterate(S.sweep_kws, which)
+  end
+  isnothing(sweep_kws_state) && return nothing
+  current_sweep_kws, next = sweep_kws_state
+
+  if !isnothing(which)
+    S.region_iter = region_iterator(
+      problem(S.region_iter); sweep=S.which_sweep, current_sweep_kws...
+    )
+  end
+  S.which_sweep += 1
+  return S.region_iter, next
 end
 
-#
-# step_iterator
-#
+function sweep_iterator(problem, sweep_kws)
+  region_iter = region_iterator(problem; sweep=1, first(sweep_kws)...)
+  return SweepIterator(sweep_kws, region_iter, 1)
+end
 
-step_iterator(args...; kws...) = Iterators.flatten(sweep_iterator(args...; kws...))
+function sweep_iterator(problem, nsweeps::Integer; sweep_kws...)
+  return sweep_iterator(problem, Iterators.repeated(sweep_kws, nsweeps))
+end
 
 #
 # RegionIterator
@@ -24,24 +46,27 @@ step_iterator(args...; kws...) = Iterators.flatten(sweep_iterator(args...; kws..
 @kwdef mutable struct RegionIterator{Problem,RegionPlan}
   problem::Problem
   region_plan::RegionPlan
-  which_region_plan::Int = 1
-  prev_region = nothing
-  #extra_kwargs::NamedTuple = (;)
+  which_region::Int = 1
 end
 
 problem(R::RegionIterator) = R.problem
-current_region_plan(R::RegionIterator) = R.region_plan[R.which_region_plan]
-current_region(R::RegionIterator) = R.region_plan[R.which_region_plan][1]
-region_kwargs(R::RegionIterator) = R.region_plan[R.which_region_plan][2]
+current_region_plan(R::RegionIterator) = R.region_plan[R.which_region]
+current_region(R::RegionIterator) = current_region_plan(R)[1]
+region_kwargs(R::RegionIterator) = current_region_plan(R)[2]
+function previous_region(R::RegionIterator)
+  R.which_region==1 ? nothing : R.region_plan[R.which_region - 1][1]
+end
+function next_region(R::RegionIterator)
+  R.which_region==length(R.region_plan) ? nothing : R.region_plan[R.which_region + 1][1]
+end
+is_last_region(R::RegionIterator) = isnothing(next_region(R))
 
 function Base.iterate(R::RegionIterator, which=1)
-  R.which_region_plan = which
+  R.which_region = which
   region_plan_state = iterate(R.region_plan, which)
   isnothing(region_plan_state) && return nothing
   (current_region, region_kwargs), next = region_plan_state
-
-  region_iterator_action!(problem(R); region=current_region, prev_region=R.prev_region, region_kwargs...)
-  R.prev_region = current_region
+  R.problem = region_iterator_action(problem(R), R; region_kwargs...)
   return R, next
 end
 
@@ -49,22 +74,31 @@ end
 # Functions associated with RegionIterator
 #
 
-function region_iterator(problem; nsites=1, sweep_kwargs...)
-  return RegionIterator(;
-    problem, region_plan=region_plan(problem; nsites, sweep_kwargs...)
-  )
+function region_iterator(problem; sweep_kwargs...)
+  return RegionIterator(; problem, region_plan=region_plan(problem; sweep_kwargs...))
 end
 
-function region_iterator_action!(
-  problem; region, prev_region=nothing, extracter_kwargs=(;), updater_kwargs=(;), inserter_kwargs=(;), kwargs...
+function region_iterator_action(
+  problem,
+  region_iterator;
+  extracter_kwargs=(;),
+  updater_kwargs=(;),
+  inserter_kwargs=(;),
+  sweep,
+  kws...,
 )
-  local_tensor = extracter!(problem, region; extracter_kwargs..., kwargs...)
-  local_tensor = prepare_subspace!(problem, local_tensor, region; prev_region, extracter_kwargs..., kwargs...)
-  local_tensor = updater!(problem, local_tensor, region; updater_kwargs..., kwargs...)
-  inserter!(problem, local_tensor, region; inserter_kwargs..., kwargs...)
-  return
+  problem, local_state = extracter(
+    problem, region_iterator; extracter_kwargs..., sweep, kws...
+  )
+  problem, local_state = updater(
+    problem, local_state, region_iterator; updater_kwargs..., kws...
+  )
+  problem = inserter(
+    problem, local_state, region_iterator; sweep, inserter_kwargs..., kws...
+  )
+  return problem
 end
 
-function region_plan(problem; nsites, sweep_kwargs...)
-  return basic_region_plan(state(problem); nsites, sweep_kwargs...)
+function region_plan(problem; kws...)
+  return euler_sweep(state(problem); kws...)
 end
