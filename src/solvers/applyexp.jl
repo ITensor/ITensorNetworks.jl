@@ -7,16 +7,16 @@ import ConstructionBase: setproperties
   current_time::Number = 0.0
 end
 
-ITensorNetworks.state(tdvp::ApplyExpProblem) = tdvp.state
-operator(tdvp::ApplyExpProblem) = tdvp.operator
-current_time(tdvp::ApplyExpProblem) = tdvp.current_time
+ITensorNetworks.state(A::ApplyExpProblem) = A.state
+operator(A::ApplyExpProblem) = A.operator
+current_time(A::ApplyExpProblem) = A.current_time
 
 function region_plan(tdvp::ApplyExpProblem; nsites, time_step, sweep_kwargs...)
   return tdvp_regions(state(tdvp), time_step; nsites, sweep_kwargs...)
 end
 
 function updater(
-  T::ApplyExpProblem,
+  A::ApplyExpProblem,
   local_state,
   region_iterator;
   nsites,
@@ -25,26 +25,26 @@ function updater(
   outputlevel,
   kws...,
 )
-  local_state, info = solver(x->optimal_map(operator(T), x), time_step, local_state; kws...)
+  local_state, info = solver(x->optimal_map(operator(A), x), time_step, local_state; kws...)
 
   if nsites==1
     curr_reg = current_region(region_iterator)
     next_reg = next_region(region_iterator)
     if !isnothing(next_reg) && next_reg != curr_reg
-      next_edge = first(edge_sequence_between_regions(state(T), curr_reg, next_reg))
+      next_edge = first(edge_sequence_between_regions(state(A), curr_reg, next_reg))
       v1, v2 = src(next_edge), dst(next_edge)
-      psi = copy(state(T))
+      psi = copy(state(A))
       psi[v1], R = qr(local_state, uniqueinds(local_state, psi[v2]))
-      shifted_operator = position(operator(T), psi, NamedEdge(v1=>v2))
+      shifted_operator = position(operator(A), psi, NamedEdge(v1=>v2))
       R_t, _ = solver(x->optimal_map(shifted_operator, x), -time_step, R; kws...)
       local_state = psi[v1]*R_t
     end
   end
 
-  curr_time = current_time(T) + time_step
-  T = setproperties(T; current_time=curr_time)
+  curr_time = current_time(A) + time_step
+  A = setproperties(A; current_time=curr_time)
 
-  return T, local_state
+  return A, local_state
 end
 
 function applyexp_sweep_printer(
@@ -90,7 +90,7 @@ end
 
 process_real_times(z) = round(-imag(z); digits=10)
 
-function tdvp(
+function time_evolve(
   H,
   init_state,
   time_points;
