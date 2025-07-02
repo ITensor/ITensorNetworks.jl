@@ -1,4 +1,5 @@
 import ConstructionBase: setproperties
+import NamedGraphs: edgetype
 
 function inserter(
   problem,
@@ -17,10 +18,10 @@ function inserter(
   if length(region) == 1
     C = local_tensor
   elseif length(region) == 2
-    e = ng.edgetype(psi)(first(region), last(region))
-    indsTe = it.inds(psi[first(region)])
-    tags = it.tags(psi, e)
-    U, C, _ = it.factorize(local_tensor, indsTe; tags, trunc...)
+    e = edgetype(psi)(first(region), last(region))
+    indsTe = inds(psi[first(region)])
+    tags = ITensors.tags(psi, e)
+    U, C, _ = factorize(local_tensor, indsTe; tags, trunc...)
     @preserve_graph psi[first(region)] = U
   else
     error("Region of length $(length(region)) not currently supported")

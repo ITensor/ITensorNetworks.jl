@@ -1,11 +1,9 @@
-import NetworkSolvers as ns
 using Test: @test, @testset
-
 using ITensors
-import ITensorNetworks as itn
-import Graphs as gr
-import NamedGraphs as ng
-import ITensorMPS as itm
+using TensorOperations # Needed to use contraction order finding
+using ITensorNetworks: siteinds, ttn, dmrg
+import Graphs: dst, edges, src
+import ITensorMPS: OpSum
 
 include("utilities/simple_ed_methods.jl")
 include("utilities/tree_graphs.jl")
@@ -15,24 +13,24 @@ include("utilities/tree_graphs.jl")
 
   g = build_tree(; nbranch=3, nbranch_sites=3)
 
-  sites = itn.siteinds("S=1/2", g)
+  sites = siteinds("S=1/2", g)
 
   # Make Heisenberg model Hamiltonian
-  h = itm.OpSum()
-  for edge in gr.edges(sites)
-    i, j = gr.src(edge), gr.dst(edge)
+  h = OpSum()
+  for edge in edges(sites)
+    i, j = src(edge), dst(edge)
     h += "Sz", i, "Sz", j
     h += 1/2, "S+", i, "S-", j
     h += 1/2, "S-", i, "S+", j
   end
-  H = itn.ttn(h, sites)
+  H = ttn(h, sites)
 
   # Make initial product state
   state = Dict{Tuple{Int,Int},String}()
   for (j, v) in enumerate(gr.vertices(sites))
     state[v] = iseven(j) ? "Up" : "Dn"
   end
-  psi0 = itn.ttn(state, sites)
+  psi0 = ttn(state, sites)
 
   (outputlevel >= 1) && println("Computing exact ground state")
   Ex, psix = ed_ground_state(H, psi0)
@@ -48,7 +46,7 @@ include("utilities/tree_graphs.jl")
   nsites = 2
   trunc = (; cutoff, maxdim)
   inserter_kwargs = (; trunc)
-  E, psi = ns.dmrg(H, psi0; inserter_kwargs, nsites, nsweeps, outputlevel)
+  E, psi = dmrg(H, psi0; inserter_kwargs, nsites, nsweeps, outputlevel)
   (outputlevel >= 1) && println("2-site DMRG energy = ", E)
   @test abs(E-Ex) < 1E-5
 
@@ -60,9 +58,7 @@ include("utilities/tree_graphs.jl")
   trunc = (; cutoff, maxdim)
   extracter_kwargs = (; trunc, subspace_algorithm="densitymatrix")
   inserter_kwargs = (; trunc)
-  cutoff = 1E-10
-  maxdim = 200
-  E, psi = ns.dmrg(H, psi0; extracter_kwargs, inserter_kwargs, nsites, nsweeps, outputlevel)
+  E, psi = dmrg(H, psi0; extracter_kwargs, inserter_kwargs, nsites, nsweeps, outputlevel)
   (outputlevel >= 1) && println("1-site+subspace DMRG energy = ", E)
   @test abs(E-Ex) < 1E-5
 end
