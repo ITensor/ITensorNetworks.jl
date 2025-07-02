@@ -21,7 +21,7 @@ function chain_plus_ancilla(; nchain)
 end
 
 @testset "Tree TDVP on chain plus ancilla" begin
-  outputlevel = 1
+  outputlevel = 0
 
   N = 10
   g = chain_plus_ancilla(; nchain=N)

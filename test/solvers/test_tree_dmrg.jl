@@ -9,7 +9,7 @@ include("utilities/simple_ed_methods.jl")
 include("utilities/tree_graphs.jl")
 
 @testset "Tree DMRG" begin
-  outputlevel = 1
+  outputlevel = 0
 
   g = build_tree(; nbranch=3, nbranch_sites=3)
 
