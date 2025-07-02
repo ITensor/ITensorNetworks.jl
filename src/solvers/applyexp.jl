@@ -60,8 +60,9 @@ function applyexp_sweep_printer(
 end
 
 function applyexp(
-  init_prob,
-  exponents;
+  operator,
+  exponents,
+  state;
   extracter_kwargs=(;),
   updater_kwargs=(;),
   inserter_kwargs=(;),
@@ -71,6 +72,9 @@ function applyexp(
   sweep_printer=applyexp_sweep_printer,
   kws...,
 )
+  init_prob = ApplyExpProblem(;
+    state=permute_indices(init_state), operator=ProjTTN(permute_indices(operator))
+  )
   time_steps = diff([0.0, exponents...])[2:end]
   sweep_kws = (;
     outputlevel, extracter_kwargs, inserter_kwargs, nsites, tdvp_order, updater_kwargs
@@ -81,23 +85,16 @@ function applyexp(
   return state(converged_prob)
 end
 
-function applyexp(H, init_state, exponents; kws...)
-  init_prob = ApplyExpProblem(;
-    state=permute_indices(init_state), operator=ProjTTN(permute_indices(H))
-  )
-  return applyexp(init_prob, exponents; kws...)
-end
-
 process_real_times(z) = round(-imag(z); digits=10)
 
 function time_evolve(
-  H,
-  init_state,
-  time_points;
+  operator,
+  time_points,
+  init_state;
   process_time=process_real_times,
   sweep_printer=(a...; k...)->applyexp_sweep_printer(a...; process_time, k...),
   kws...,
 )
   exponents = [-im*t for t in time_points]
-  return applyexp(H, init_state, exponents; sweep_printer, kws...)
+  return applyexp(operator, exponents, init_state; sweep_printer, kws...)
 end

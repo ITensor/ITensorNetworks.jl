@@ -66,9 +66,9 @@ function eigsolve(
   return eigenvalue(prob), state(prob)
 end
 
-function eigsolve(H, init_state; kws...)
+function eigsolve(operator, init_state; kws...)
   init_prob = EigsolveProblem(;
-    state=permute_indices(init_state), operator=ProjTTN(permute_indices(H))
+    state=permute_indices(init_state), operator=ProjTTN(permute_indices(operator))
   )
   return eigsolve(init_prob; kws...)
 end

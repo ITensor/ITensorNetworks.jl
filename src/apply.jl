@@ -186,7 +186,7 @@ function simple_update_bp(o, ψ, v⃗; envs, callback=Returns(nothing), apply_kw
 end
 
 function ITensors.apply(
-  o,
+  o::Union{ITensor,NamedEdge},
   ψ::AbstractITensorNetwork;
   envs=ITensor[],
   normalize=false,
