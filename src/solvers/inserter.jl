@@ -1,5 +1,4 @@
-import ConstructionBase: setproperties
-import NamedGraphs: edgetype
+using NamedGraphs: edgetype
 
 function inserter(
   problem,
@@ -12,7 +11,6 @@ function inserter(
   kws...,
 )
   trunc = truncation_parameters(sweep; trunc...)
-
   region = current_region(region_iterator)
   psi = copy(state(problem))
   if length(region) == 1
@@ -30,5 +28,5 @@ function inserter(
   @preserve_graph psi[v] = C
   psi = set_orthogonal_region ? set_ortho_region(psi, [v]) : psi
   normalize && @preserve_graph psi[v] = psi[v] / norm(psi[v])
-  return setproperties(problem; state=psi)
+  return set_state(problem, psi)
 end

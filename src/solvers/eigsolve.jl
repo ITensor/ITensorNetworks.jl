@@ -1,9 +1,8 @@
 using Printf: @printf
-import ConstructionBase: setproperties
 
 @kwdef mutable struct EigsolveProblem{State,Operator}
-  state::State
   operator::Operator
+  state::State
   eigenvalue::Number = Inf
 end
 
@@ -11,20 +10,30 @@ eigenvalue(E::EigsolveProblem) = E.eigenvalue
 ITensorNetworks.state(E::EigsolveProblem) = E.state
 operator(E::EigsolveProblem) = E.operator
 
+function set_operator(E::EigsolveProblem, operator)
+  EigsolveProblem(operator, E.state, E.eigenvalue)
+end
+function set_eigenvalue(E::EigsolveProblem, eigenvalue)
+  EigsolveProblem(E.operator, E.state, eigenvalue)
+end
+set_state(E::EigsolveProblem, state) = EigsolveProblem(E.operator, state, E.eigenvalue)
+
 function updater(
-  E::EigsolveProblem,
+  prob::EigsolveProblem,
   local_state,
   region_iterator;
   outputlevel,
   solver=eigsolve_solver,
   kws...,
 )
-  eigval, local_state = solver(ψ->optimal_map(operator(E), ψ), local_state; kws...)
-  E = setproperties(E; eigenvalue=eigval)
+  eigval, local_state = solver(ψ->optimal_map(operator(prob), ψ), local_state; kws...)
+  prob = set_eigenvalue(prob, eigval)
   if outputlevel >= 2
-    @printf("  Region %s: energy = %.12f\n", current_region(region_iterator), eigenvalue(E))
+    @printf(
+      "  Region %s: energy = %.12f\n", current_region(region_iterator), eigenvalue(prob)
+    )
   end
-  return E, local_state
+  return prob, local_state
 end
 
 function eigsolve_sweep_printer(region_iterator; outputlevel, sweep, nsweeps, kws...)
@@ -34,9 +43,9 @@ function eigsolve_sweep_printer(region_iterator; outputlevel, sweep, nsweeps, kw
     else
       @printf("After sweep %d/%d ", sweep, nsweeps)
     end
-    E = problem(region_iterator)
-    @printf("eigenvalue=%.12f ", eigenvalue(E))
-    @printf("maxlinkdim=%d", maxlinkdim(state(E)))
+    prob = problem(region_iterator)
+    @printf("eigenvalue=%.12f ", eigenvalue(prob))
+    @printf("maxlinkdim=%d", maxlinkdim(state(prob)))
     println()
     flush(stdout)
   end

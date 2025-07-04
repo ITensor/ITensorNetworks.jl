@@ -1,8 +1,8 @@
-import Graphs: dst, edges, src, vertices
-import NamedGraphs as ng
+using Graphs: dst, edges, src, vertices
+using NamedGraphs: edgetype, vertextype
 
 function compute_adjacencies(G)
-  adj = Dict(v => Vector{ng.vertextype(G)}() for v in vertices(G))
+  adj = Dict(v => Vector{vertextype(G)}() for v in vertices(G))
   for e in edges(G)
     push!(adj[src(e)], dst(e))
     push!(adj[dst(e)], src(e))
@@ -12,8 +12,8 @@ end
 
 function euler_tour_edges(G, start_vertex)
   adj = compute_adjacencies(G)
-  etype = ng.edgetype(G)
-  vtype = ng.vertextype(G)
+  etype = edgetype(G)
+  vtype = vertextype(G)
   visited = Set{Tuple{vtype,vtype}}()
   tour = Vector{etype}()
   stack = [start_vertex]

@@ -1,6 +1,5 @@
 using NDTensors: NDTensors
 using NDTensors.BackendSelection: Backend, @Backend_str
-import ConstructionBase: setproperties
 
 default_expansion_factor() = 1.5
 default_max_expand() = typemax(Int)

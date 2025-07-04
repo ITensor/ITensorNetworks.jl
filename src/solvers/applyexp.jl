@@ -1,9 +1,8 @@
 using Printf: @printf
-import ConstructionBase: setproperties
 
 @kwdef mutable struct ApplyExpProblem{State}
-  state::State
   operator
+  state::State
   current_time::Number = 0.0
 end
 
@@ -11,12 +10,20 @@ ITensorNetworks.state(A::ApplyExpProblem) = A.state
 operator(A::ApplyExpProblem) = A.operator
 current_time(A::ApplyExpProblem) = A.current_time
 
+function set_operator(A::ApplyExpProblem, operator)
+  ApplyExpProblem(operator, A.state, A.current_time)
+end
+set_state(A::ApplyExpProblem, state) = ApplyExpProblem(A.operator, state, A.current_time)
+function set_current_time(A::ApplyExpProblem, current_time)
+  ApplyExpProblem(A.operator, A.state, current_time)
+end
+
 function region_plan(tdvp::ApplyExpProblem; nsites, time_step, sweep_kwargs...)
   return tdvp_regions(state(tdvp), time_step; nsites, sweep_kwargs...)
 end
 
 function updater(
-  A::ApplyExpProblem,
+  prob::ApplyExpProblem,
   local_state,
   region_iterator;
   nsites,
@@ -25,26 +32,27 @@ function updater(
   outputlevel,
   kws...,
 )
-  local_state, info = solver(x->optimal_map(operator(A), x), time_step, local_state; kws...)
+  local_state, info = solver(
+    x->optimal_map(operator(prob), x), time_step, local_state; kws...
+  )
 
   if nsites==1
     curr_reg = current_region(region_iterator)
     next_reg = next_region(region_iterator)
     if !isnothing(next_reg) && next_reg != curr_reg
-      next_edge = first(edge_sequence_between_regions(state(A), curr_reg, next_reg))
+      next_edge = first(edge_sequence_between_regions(state(prob), curr_reg, next_reg))
       v1, v2 = src(next_edge), dst(next_edge)
-      psi = copy(state(A))
+      psi = copy(state(prob))
       psi[v1], R = qr(local_state, uniqueinds(local_state, psi[v2]))
-      shifted_operator = position(operator(A), psi, NamedEdge(v1=>v2))
+      shifted_operator = position(operator(prob), psi, NamedEdge(v1=>v2))
       R_t, _ = solver(x->optimal_map(shifted_operator, x), -time_step, R; kws...)
       local_state = psi[v1]*R_t
     end
   end
 
-  curr_time = current_time(A) + time_step
-  A = setproperties(A; current_time=curr_time)
+  prob = set_current_time(prob, current_time(prob)+time_step)
 
-  return A, local_state
+  return prob, local_state
 end
 
 function applyexp_sweep_printer(

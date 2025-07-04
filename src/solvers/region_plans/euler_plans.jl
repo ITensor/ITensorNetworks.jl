@@ -1,5 +1,5 @@
-import Graphs: dst, src
-import NamedGraphs.GraphsExtensions: default_root_vertex
+using Graphs: dst, src
+using NamedGraphs.GraphsExtensions: default_root_vertex
 
 function euler_sweep(graph; nsites, root_vertex=default_root_vertex(graph), sweep_kwargs...)
   if nsites == 1

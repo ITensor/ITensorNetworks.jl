@@ -1,5 +1,5 @@
-import Graphs: AbstractGraph, AbstractEdge, edges, dst, src, vertices
-import NamedGraphs: GraphsExtensions
+using Graphs: AbstractGraph, AbstractEdge, edges, dst, src, vertices
+using NamedGraphs: GraphsExtensions
 
 #function basic_path_regions(g::AbstractGraph; sweep_kwargs...)
 #  fwd_sweep = [([src(e), dst(e)], sweep_kwargs) for e in edges(g)]

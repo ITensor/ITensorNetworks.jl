@@ -1,5 +1,5 @@
-import Graphs: dst, src
-import NamedGraphs.GraphsExtensions:
+using Graphs: dst, src
+using NamedGraphs.GraphsExtensions:
   default_root_vertex, post_order_dfs_edges, post_order_dfs_vertices
 
 function post_order_dfs_plan(

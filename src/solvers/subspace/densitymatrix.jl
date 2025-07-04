@@ -61,13 +61,10 @@ function subspace_expand(
   end
 
   Ax, ax = directsum(A=>a, U=>commonind(U, D))
-  #println("Old space: ", space(a))
-  #println("New space: ", space(ax))
-  #ITensors.pause()
   expander = dag(Ax) * A
   psi[prev_vertex] = Ax
   psi[next_vertex] = expander * C
   local_state = expander*local_state
 
-  return setproperties(problem; state=psi), local_state
+  return set_state(problem, psi), local_state
 end
