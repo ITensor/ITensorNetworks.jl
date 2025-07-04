@@ -1,5 +1,5 @@
 
-function permute_indices(tn)
+function align_indices(tn)
   si = siteinds(tn)
   ptn = copy(tn)
   for v in vertices(tn)

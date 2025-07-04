@@ -60,9 +60,9 @@ function applyexp_sweep_printer(
 end
 
 function applyexp(
-  operator,
+  operator::AbstractITensorNetwork,
   exponents,
-  state;
+  init_state::AbstractITensorNetwork;
   extracter_kwargs=(;),
   updater_kwargs=(;),
   inserter_kwargs=(;),
@@ -73,7 +73,7 @@ function applyexp(
   kws...,
 )
   init_prob = ApplyExpProblem(;
-    state=permute_indices(init_state), operator=ProjTTN(permute_indices(operator))
+    state=align_indices(init_state), operator=ProjTTN(align_indices(operator))
   )
   time_steps = diff([0.0, exponents...])[2:end]
   sweep_kws = (;
