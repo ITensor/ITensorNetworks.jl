@@ -71,7 +71,7 @@ function applyexp(
   sweep_printer=applyexp_sweep_printer,
   kws...,
 )
-  time_steps = diff([0.0, exponents...])[2:end]
+  time_steps = diff([zero(eltype(exponents)); exponents])[2:end]
   sweep_kws = (;
     outputlevel, extracter_kwargs, inserter_kwargs, nsites, tdvp_order, updater_kwargs
   )
