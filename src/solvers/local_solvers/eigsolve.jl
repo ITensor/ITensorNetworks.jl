@@ -1,25 +1,20 @@
-using KrylovKit: eigsolve
+using KrylovKit: KrylovKit
 
-function eigsolve_updater(
-  init;
-  state!,
-  projected_operator!,
-  outputlevel,
-  which_sweep,
-  sweep_plan,
-  which_region_update,
-  internal_kwargs,
+function eigsolve_solver(
+  operator,
+  init,
+  howmany=1;
   which_eigval=:SR,
   ishermitian=true,
-  tol=1e-14,
+  tol=1E-14,
   krylovdim=3,
   maxiter=1,
   verbosity=0,
   eager=false,
+  kws...,
 )
-  howmany = 1
-  vals, vecs, info = eigsolve(
-    projected_operator![],
+  vals, vecs, info = KrylovKit.eigsolve(
+    operator,
     init,
     howmany,
     which_eigval;
@@ -30,5 +25,5 @@ function eigsolve_updater(
     verbosity,
     eager,
   )
-  return vecs[1], (; info, eigvals=vals)
+  return vals[1], vecs[1]
 end
