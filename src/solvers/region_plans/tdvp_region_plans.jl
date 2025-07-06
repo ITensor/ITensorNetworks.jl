@@ -12,16 +12,16 @@ function tdvp_sub_time_steps(tdvp_order)
 end
 
 function first_order_sweep(
-  graph, time_step, dir=Base.Forward; updater_kwargs, nsites, kws...
+  graph, time_step, dir=Base.Forward; update_kwargs, nsites, kws...
 )
   basic_fwd_sweep = post_order_dfs_plan(graph; nsites, kws...)
-  updater_kwargs = (; nsites, time_step, updater_kwargs...)
+  update_kwargs = (; nsites, time_step, update_kwargs...)
   sweep = []
   for (j, (region, region_kws)) in enumerate(basic_fwd_sweep)
-    push!(sweep, (region, (; nsites, updater_kwargs, region_kws...)))
+    push!(sweep, (region, (; nsites, update_kwargs, region_kws...)))
     if length(region) == 2 && j < length(basic_fwd_sweep)
-      rev_kwargs = (; updater_kwargs..., time_step=(-updater_kwargs.time_step))
-      push!(sweep, ([last(region)], (; updater_kwargs=rev_kwargs, region_kws...)))
+      rev_kwargs = (; update_kwargs..., time_step=(-update_kwargs.time_step))
+      push!(sweep, ([last(region)], (; update_kwargs=rev_kwargs, region_kws...)))
     end
   end
   if dir==Base.Reverse
@@ -31,13 +31,13 @@ function first_order_sweep(
   return sweep
 end
 
-function tdvp_regions(graph, time_step; updater_kwargs, tdvp_order, nsites, kws...)
+function tdvp_regions(graph, time_step; update_kwargs, tdvp_order, nsites, kws...)
   sweep_plan = []
   for (step, weight) in enumerate(tdvp_sub_time_steps(tdvp_order))
     dir = isodd(step) ? Base.Forward : Base.Reverse
     append!(
       sweep_plan,
-      first_order_sweep(graph, weight*time_step, dir; updater_kwargs, nsites, kws...),
+      first_order_sweep(graph, weight*time_step, dir; update_kwargs, nsites, kws...),
     )
   end
   return sweep_plan

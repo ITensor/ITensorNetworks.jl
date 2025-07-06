@@ -18,7 +18,7 @@ function set_eigenvalue(E::EigsolveProblem, eigenvalue)
 end
 set_state(E::EigsolveProblem, state) = EigsolveProblem(E.operator, state, E.eigenvalue)
 
-function updater(
+function update(
   prob::EigsolveProblem,
   local_state,
   region_iterator;
@@ -56,22 +56,16 @@ function eigsolve(
   nsweeps,
   nsites=1,
   outputlevel=0,
-  extracter_kwargs=(;),
-  updater_kwargs=(;),
-  inserter_kwargs=(;),
+  extract_kwargs=(;),
+  update_kwargs=(;),
+  insert_kwargs=(;),
   kws...,
 )
   init_prob = EigsolveProblem(;
     state=align_indices(init_state), operator=ProjTTN(align_indices(operator))
   )
   sweep_iter = sweep_iterator(
-    init_prob,
-    nsweeps;
-    nsites,
-    outputlevel,
-    extracter_kwargs,
-    updater_kwargs,
-    inserter_kwargs,
+    init_prob, nsweeps; nsites, outputlevel, extract_kwargs, update_kwargs, insert_kwargs
   )
   prob = sweep_solve(sweep_iter; outputlevel, kws...)
   return eigenvalue(prob), state(prob)

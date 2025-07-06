@@ -1,6 +1,6 @@
 using NamedGraphs: edgetype
 
-function inserter(
+function insert(
   problem,
   local_tensor,
   region_iterator;

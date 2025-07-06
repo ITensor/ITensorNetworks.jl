@@ -45,8 +45,8 @@ include("utilities/tree_graphs.jl")
   #
   nsites = 2
   trunc = (; cutoff, maxdim)
-  inserter_kwargs = (; trunc)
-  E, psi = dmrg(H, psi0; inserter_kwargs, nsites, nsweeps, outputlevel)
+  insert_kwargs = (; trunc)
+  E, psi = dmrg(H, psi0; insert_kwargs, nsites, nsweeps, outputlevel)
   (outputlevel >= 1) && println("2-site DMRG energy = ", E)
   @test abs(E-Ex) < 1E-5
 
@@ -56,9 +56,9 @@ include("utilities/tree_graphs.jl")
   nsites = 1
   nsweeps = 5
   trunc = (; cutoff, maxdim)
-  extracter_kwargs = (; trunc, subspace_algorithm="densitymatrix")
-  inserter_kwargs = (; trunc)
-  E, psi = dmrg(H, psi0; extracter_kwargs, inserter_kwargs, nsites, nsweeps, outputlevel)
+  extract_kwargs = (; trunc, subspace_algorithm="densitymatrix")
+  insert_kwargs = (; trunc)
+  E, psi = dmrg(H, psi0; extract_kwargs, insert_kwargs, nsites, nsweeps, outputlevel)
   (outputlevel >= 1) && println("1-site+subspace DMRG energy = ", E)
   @test abs(E-Ex) < 1E-5
 end

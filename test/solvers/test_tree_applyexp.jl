@@ -50,20 +50,20 @@ end
 
   nsites = 2
   trunc = (; cutoff, maxdim)
-  E, gs_psi = dmrg(H, psi0; inserter_kwargs=(; trunc), nsites, nsweeps, outputlevel)
+  E, gs_psi = dmrg(H, psi0; insert_kwargs=(; trunc), nsites, nsweeps, outputlevel)
   (outputlevel >= 1) && println("2-site DMRG energy = ", E)
 
-  inserter_kwargs=(; trunc)
+  insert_kwargs=(; trunc)
   nsites = 1
   tmax = 0.10
   time_range = 0.0:0.02:tmax
-  psi1_t = time_evolve(H, time_range, gs_psi; inserter_kwargs, nsites, outputlevel)
+  psi1_t = time_evolve(H, time_range, gs_psi; insert_kwargs, nsites, outputlevel)
   (outputlevel >= 1) && println("Done with $nsites-site TDVP")
 
   @test norm(psi1_t) > 0.999
 
   nsites = 2
-  psi2_t = time_evolve(H, time_range, gs_psi; inserter_kwargs, nsites, outputlevel)
+  psi2_t = time_evolve(H, time_range, gs_psi; insert_kwargs, nsites, outputlevel)
   (outputlevel >= 1) && println("Done with $nsites-site TDVP")
   @test norm(psi2_t) > 0.999
 

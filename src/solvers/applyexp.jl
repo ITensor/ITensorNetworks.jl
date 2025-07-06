@@ -22,7 +22,7 @@ function region_plan(tdvp::ApplyExpProblem; nsites, time_step, sweep_kwargs...)
   return tdvp_regions(state(tdvp), time_step; nsites, sweep_kwargs...)
 end
 
-function updater(
+function update(
   prob::ApplyExpProblem,
   local_state,
   region_iterator;
@@ -70,9 +70,9 @@ function applyexp(
   operator::AbstractITensorNetwork,
   exponents,
   init_state::AbstractITensorNetwork;
-  extracter_kwargs=(;),
-  updater_kwargs=(;),
-  inserter_kwargs=(;),
+  extract_kwargs=(;),
+  update_kwargs=(;),
+  insert_kwargs=(;),
   outputlevel=0,
   nsites=1,
   tdvp_order=4,
@@ -83,7 +83,7 @@ function applyexp(
   )
   time_steps = diff([0.0, exponents...])[2:end]
   sweep_kws = (;
-    outputlevel, extracter_kwargs, inserter_kwargs, nsites, tdvp_order, updater_kwargs
+    outputlevel, extract_kwargs, insert_kwargs, nsites, tdvp_order, update_kwargs
   )
   kws_array = [(; sweep_kws..., time_step=t) for t in time_steps]
   sweep_iter = sweep_iterator(init_prob, kws_array)

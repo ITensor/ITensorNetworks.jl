@@ -81,21 +81,17 @@ end
 function region_step(
   problem,
   region_iterator;
-  extracter_kwargs=(;),
-  updater_kwargs=(;),
-  inserter_kwargs=(;),
+  extract_kwargs=(;),
+  update_kwargs=(;),
+  insert_kwargs=(;),
   sweep,
   kws...,
 )
-  problem, local_state = extracter(
-    problem, region_iterator; extracter_kwargs..., sweep, kws...
+  problem, local_state = extract(problem, region_iterator; extract_kwargs..., sweep, kws...)
+  problem, local_state = update(
+    problem, local_state, region_iterator; update_kwargs..., kws...
   )
-  problem, local_state = updater(
-    problem, local_state, region_iterator; updater_kwargs..., kws...
-  )
-  problem = inserter(
-    problem, local_state, region_iterator; sweep, inserter_kwargs..., kws...
-  )
+  problem = insert(problem, local_state, region_iterator; sweep, insert_kwargs..., kws...)
   return problem
 end
 

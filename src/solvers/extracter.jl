@@ -1,4 +1,4 @@
-function extracter(problem, region_iterator; sweep, trunc=(;), kws...)
+function extract(problem, region_iterator; sweep, trunc=(;), kws...)
   trunc = truncation_parameters(sweep; trunc...)
   region = current_region(region_iterator)
   psi = orthogonalize(state(problem), region)

@@ -39,7 +39,7 @@ function compute_expansion(
 
   # Restrict expand_maxdim below theoretical upper limit
   expand_maxdim = min(basis_size-current_dim, expand_maxdim)
-  # Enforce total maxdim setting (e.g. used in inserter step)
+  # Enforce total maxdim setting (e.g. used in insert step)
   expand_maxdim = min(maxdim-current_dim, expand_maxdim)
   # Ensure expand_maxdim is non-negative
   expand_maxdim = max(0, expand_maxdim)
