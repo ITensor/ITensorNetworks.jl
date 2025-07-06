@@ -1,9 +1,9 @@
 using Test: @test, @testset
 using ITensors
-using TensorOperations # Needed to use contraction order finding
 using ITensorNetworks: siteinds, ttn, dmrg
-import Graphs: dst, edges, src
-import ITensorMPS: OpSum
+using Graphs: dst, edges, src, vertices
+using ITensorMPS: OpSum
+using TensorOperations: TensorOperations #For contraction order finding
 
 include("utilities/simple_ed_methods.jl")
 include("utilities/tree_graphs.jl")
@@ -27,7 +27,7 @@ include("utilities/tree_graphs.jl")
 
   # Make initial product state
   state = Dict{Tuple{Int,Int},String}()
-  for (j, v) in enumerate(gr.vertices(sites))
+  for (j, v) in enumerate(vertices(sites))
     state[v] = iseven(j) ? "Up" : "Dn"
   end
   psi0 = ttn(state, sites)

@@ -1,4 +1,4 @@
-import ITensorNetworks: AbstractITensorNetwork
+using ITensorNetworks: AbstractITensorNetwork
 
 function ed_ground_state(H, psi0)
   ITensors.disable_warn_order()

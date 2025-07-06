@@ -1,10 +1,10 @@
 using Test: @test, @testset
 using ITensors
-using TensorOperations # Needed to use contraction order finding
-import ITensorNetworks: dmrg, maxlinkdim, siteinds, time_evolve, ttn
-import Graphs: add_vertex!, add_edge!, vertices
-import NamedGraphs: NamedGraph
-import ITensorMPS: OpSum
+using ITensorNetworks: dmrg, maxlinkdim, siteinds, time_evolve, ttn
+using Graphs: add_vertex!, add_edge!, vertices
+using NamedGraphs: NamedGraph
+using ITensorMPS: OpSum
+using TensorOperations: TensorOperations #For contraction order finding
 
 function chain_plus_ancilla(; nchain)
   g = NamedGraph()
