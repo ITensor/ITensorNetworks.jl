@@ -23,6 +23,7 @@ function sweep_solve(
         problem(region_iter);
         nsweeps=length(sweep_iterator),
         outputlevel,
+        region_iterator=region_iter,
         region,
         region_kwargs,
         sweep,
@@ -30,10 +31,20 @@ function sweep_solve(
       )
     end
     sweep_callback(
-      region_iter; nsweeps=length(sweep_iterator), outputlevel, sweep, kwargs...
+      problem(region_iter);
+      nsweeps=length(sweep_iterator),
+      outputlevel,
+      region_iterator=region_iter,
+      sweep,
+      kwargs...,
     )
     sweep_printer(
-      region_iter; nsweeps=length(sweep_iterator), outputlevel, sweep, kwargs...
+      problem(region_iter);
+      nsweeps=length(sweep_iterator),
+      outputlevel,
+      region_iterator=region_iter,
+      sweep,
+      kwargs...,
     )
   end
   return problem(sweep_iterator)
