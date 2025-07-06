@@ -98,7 +98,7 @@ function time_evolve(
   time_points,
   init_state;
   process_time=process_real_times,
-  sweep_printer=(a...; k...)->applyexp_sweep_printer(a...; process_time, k...),
+  sweep_printer=(a...; k...)->sweep_printer(a...; process_time, k...),
   kws...,
 )
   exponents = [-im*t for t in time_points]

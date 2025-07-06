@@ -20,7 +20,7 @@ function chain_plus_ancilla(; nchain)
   return g
 end
 
-@testset "Tree TDVP on chain plus ancilla" begin
+@testset "Test Applyexp" begin
   outputlevel = 0
 
   N = 10
