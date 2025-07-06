@@ -81,7 +81,7 @@ function applyexp(
   init_prob = ApplyExpProblem(;
     state=align_indices(init_state), operator=ProjTTN(align_indices(operator))
   )
-  time_steps = diff([0.0, exponents...])[2:end]
+  time_steps = diff([zero(eltype(exponents)); exponents])[2:end]
   sweep_kws = (;
     outputlevel, extract_kwargs, insert_kwargs, nsites, tdvp_order, update_kwargs
   )
