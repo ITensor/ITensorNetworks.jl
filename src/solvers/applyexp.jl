@@ -55,13 +55,12 @@ function updater(
   return prob, local_state
 end
 
-function applyexp_sweep_printer(
-  region_iterator; outputlevel, sweep, nsweeps, process_time=identity, kws...
+function sweep_printer(
+  problem::ApplyExpProblem; outputlevel, sweep, nsweeps, process_time=identity, kws...
 )
   if outputlevel >= 1
-    T = problem(region_iterator)
-    @printf("  Current time = %s, ", process_time(current_time(T)))
-    @printf("maxlinkdim=%d", maxlinkdim(state(T)))
+    @printf("  Current time = %s, ", process_time(current_time(problem)))
+    @printf("maxlinkdim=%d", maxlinkdim(state(problem)))
     println()
     flush(stdout)
   end
@@ -77,7 +76,6 @@ function applyexp(
   outputlevel=0,
   nsites=1,
   tdvp_order=4,
-  sweep_printer=applyexp_sweep_printer,
   kws...,
 )
   init_prob = ApplyExpProblem(;
@@ -89,7 +87,7 @@ function applyexp(
   )
   kws_array = [(; sweep_kws..., time_step=t) for t in time_steps]
   sweep_iter = sweep_iterator(init_prob, kws_array)
-  converged_prob = sweep_solve(sweep_iter; outputlevel, sweep_printer, kws...)
+  converged_prob = sweep_solve(sweep_iter; outputlevel, kws...)
   return state(converged_prob)
 end
 

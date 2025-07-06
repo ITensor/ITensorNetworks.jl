@@ -1,9 +1,9 @@
 
-default_region_callback(problem; kws...) = nothing
+region_callback(problem; kws...) = nothing
 
-default_sweep_callback(problem; kws...) = nothing
+sweep_callback(problem; kws...) = nothing
 
-function default_sweep_printer(problem; outputlevel, sweep, nsweeps, kws...)
+function sweep_printer(problem; outputlevel, sweep, nsweeps, kws...)
   if outputlevel >= 1
     println("Done with sweep $sweep/$nsweeps")
   end
@@ -12,9 +12,9 @@ end
 function sweep_solve(
   sweep_iterator;
   outputlevel=0,
-  region_callback=default_region_callback,
-  sweep_callback=default_sweep_callback,
-  sweep_printer=default_sweep_printer,
+  region_callback=region_callback,
+  sweep_callback=sweep_callback,
+  sweep_printer=sweep_printer,
   kwargs...,
 )
   for (sweep, region_iter) in enumerate(sweep_iterator)
