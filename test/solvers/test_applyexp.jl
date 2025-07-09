@@ -1,8 +1,9 @@
 using Test: @test, @testset
 using ITensors
-using ITensorNetworks: dmrg, maxlinkdim, siteinds, time_evolve, ttn
+using ITensorNetworks: ITensorNetworks, applyexp, dmrg, maxlinkdim, siteinds, time_evolve, ttn
 using Graphs: add_vertex!, add_edge!, vertices
 using NamedGraphs: NamedGraph
+using NamedGraphs.NamedGraphGenerators: named_path_graph
 using ITensorMPS: OpSum
 using TensorOperations: TensorOperations #For contraction order finding
 
@@ -20,7 +21,7 @@ function chain_plus_ancilla(; nchain)
   return g
 end
 
-@testset "Test Applyexp" begin
+@testset "Test Tree Time Evolution" begin
   outputlevel = 0
 
   N = 10
@@ -74,3 +75,48 @@ end
   z = inner(psi1_t, gs_psi)
   @test abs(atan(imag(z)/real(z)) - E*tmax) < 1E-4
 end
+
+@testset "Applyexp Time Point Handling" begin
+  N = 10
+  g = named_path_graph(N)
+  sites = siteinds("S=1/2", g)
+
+  # Make Heisenberg model Hamiltonian
+  h = OpSum()
+  for j in 1:(N - 1)
+    h += "Sz", j, "Sz", j+1
+    h += 1/2, "S+", j, "S-", j+1
+    h += 1/2, "S-", j, "S+", j+1
+  end
+  H = ttn(h, sites)
+
+  # Initial product state
+  state = Dict{Int,String}()
+  for (j, v) in enumerate(vertices(sites))
+    state[v] = iseven(j) ? "Up" : "Dn"
+  end
+  psi0 = ttn(state, sites)
+
+  nsites = 2
+  trunc = (; cutoff=1E-8, maxdim=100)
+  insert_kwargs=(; trunc)
+
+  # Test that all time points are reached and reported correctly
+  time_points = [0.0,0.1,0.25,0.32,0.4]
+  times = Real[]
+  function collect_times(problem; kws...)
+    push!(times, ITensorNetworks.current_time(problem))
+  end
+  time_evolve(H, time_points, psi0; insert_kwargs, nsites, sweep_callback=collect_times,outputlevel=1)
+  @test norm(times - time_points) < 10*eps(Float64)
+
+  # Test that all exponents are reached and reported correctly
+  exponent_points = [-0.0,-0.1,-0.25,-0.32,-0.4]
+  exponents = Real[]
+  function collect_exponents(problem; kws...)
+    push!(exponents, ITensorNetworks.current_exponent(problem))
+  end
+  applyexp(H, exponent_points, psi0; insert_kwargs, nsites, sweep_callback=collect_exponents,outputlevel=1)
+  @test norm(exponents - exponent_points) < 10*eps(Float64)
+end
+
