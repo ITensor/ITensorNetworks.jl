@@ -27,7 +27,7 @@ using LinearAlgebra: eigen, norm, svd
 using NamedGraphs: NamedEdge, has_edge
 
 function full_update_bp(
-  o,
+  o::Union{NamedEdge,ITensor},
   ψ,
   v⃗;
   envs,
@@ -81,7 +81,9 @@ function full_update_bp(
   return ψᵥ₁, ψᵥ₂
 end
 
-function simple_update_bp_full(o, ψ, v⃗; envs, callback=Returns(nothing), apply_kwargs...)
+function simple_update_bp_full(
+  o::Union{NamedEdge,ITensor}, ψ, v⃗; envs, callback=Returns(nothing), apply_kwargs...
+)
   cutoff = 10 * eps(real(scalartype(ψ)))
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
@@ -133,7 +135,9 @@ function simple_update_bp_full(o, ψ, v⃗; envs, callback=Returns(nothing), app
 end
 
 # Reduced version
-function simple_update_bp(o, ψ, v⃗; envs, callback=Returns(nothing), apply_kwargs...)
+function simple_update_bp(
+  o::Union{NamedEdge,ITensor}, ψ, v⃗; envs, callback=Returns(nothing), apply_kwargs...
+)
   cutoff = 10 * eps(real(scalartype(ψ)))
   envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
   envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
@@ -186,7 +190,7 @@ function simple_update_bp(o, ψ, v⃗; envs, callback=Returns(nothing), apply_kw
 end
 
 function ITensors.apply(
-  o::Union{ITensor,NamedEdge},
+  o::Union{NamedEdge,ITensor},
   ψ::AbstractITensorNetwork;
   envs=ITensor[],
   normalize=false,
@@ -256,7 +260,7 @@ function ITensors.apply(
 end
 
 function ITensors.apply(
-  o⃗::Vector{ITensor},
+  o⃗::Union{Vector{NamedEdge},Vector{ITensor}},
   ψ::AbstractITensorNetwork;
   normalize=false,
   ortho=false,
@@ -319,7 +323,9 @@ end
 #In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
 """Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
 Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site"""
-function ITensors.apply(o, ψ::VidalITensorNetwork; normalize=false, apply_kwargs...)
+function ITensors.apply(
+  o::Union{NamedEdge,ITensor}, ψ::VidalITensorNetwork; normalize=false, apply_kwargs...
+)
   updated_ψ = copy(site_tensors(ψ))
   updated_bond_tensors = copy(bond_tensors(ψ))
   v⃗ = _gate_vertices(o, ψ)
