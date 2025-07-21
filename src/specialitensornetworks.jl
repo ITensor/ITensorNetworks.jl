@@ -29,8 +29,10 @@ end
 """
 Build an ITensor network on a graph specified by the inds network s. Bond_dim is given by link_space and entries are randomised (normal distribution, mean 0 std 1)
 """
-function random_tensornetwork(rng::AbstractRNG, eltype::Type, s::IndsNetwork; kwargs...)
-  return ITensorNetwork(s; kwargs...) do v
+function random_tensornetwork(
+  rng::AbstractRNG, eltype::Type, s::IndsNetwork; link_space=1, kwargs...
+)
+  return ITensorNetwork(s; link_space, kwargs...) do v
     return inds -> itensor(randn(rng, eltype, dim.(inds)...), inds)
   end
 end
