@@ -1,14 +1,9 @@
-using KrylovKit: exponentiate
+using KrylovKit: KrylovKit
 
-function exponentiate_updater(
+function exponentiate_solver(
+  operator,
+  time,
   init;
-  state!,
-  projected_operator!,
-  outputlevel,
-  which_sweep,
-  sweep_plan,
-  which_region_update,
-  internal_kwargs,
   krylovdim=30,
   maxiter=100,
   verbosity=0,
@@ -16,11 +11,11 @@ function exponentiate_updater(
   ishermitian=true,
   issymmetric=true,
   eager=true,
+  kws...,
 )
-  (; time_step) = internal_kwargs
-  result, exp_info = exponentiate(
-    projected_operator![],
-    time_step,
+  result, exp_info = KrylovKit.exponentiate(
+    operator,
+    time,
     init;
     eager,
     krylovdim,
@@ -30,5 +25,5 @@ function exponentiate_updater(
     ishermitian,
     issymmetric,
   )
-  return result, (; info=exp_info)
+  return result, exp_info
 end
