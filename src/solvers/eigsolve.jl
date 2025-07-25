@@ -7,7 +7,7 @@ using Printf: @printf
 end
 
 eigenvalue(E::EigsolveProblem) = E.eigenvalue
-ITensorNetworks.state(E::EigsolveProblem) = E.state
+state(E::EigsolveProblem) = E.state
 operator(E::EigsolveProblem) = E.operator
 
 function set_operator(E::EigsolveProblem, operator)

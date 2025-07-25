@@ -11,9 +11,9 @@ using ConstructionBase: setproperties
   gauge_region
 end
 
-overlap(F::FittingProblem) = F.overlap
-ITensorNetworks.state(F::FittingProblem) = F.state
+state(F::FittingProblem) = F.state
 ket_graph(F::FittingProblem) = F.ket_graph
+overlap(F::FittingProblem) = F.overlap
 gauge_region(F::FittingProblem) = F.gauge_region
 
 function set_state(F::FittingProblem, state)

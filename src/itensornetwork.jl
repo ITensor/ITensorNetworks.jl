@@ -1,6 +1,6 @@
 using DataGraphs: DataGraphs, DataGraph
 using Dictionaries: Indices, dictionary
-using ITensors: ITensors, ITensor, op, state
+using ITensors: ITensors, ITensor, op
 using .ITensorsExtensions: trivial_space
 using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
 
@@ -180,7 +180,7 @@ function generic_state(x::Op, inds::NamedTuple)
 end
 function generic_state(s::AbstractString, inds::NamedTuple)
   # TODO: Figure out what to do if there is more than one site.
-  site_tensors = [state(s, only(inds.siteinds))]
+  site_tensors = [ITensors.state(s, only(inds.siteinds))]
   link_tensors = [[onehot(i => 1) for i in inds.linkinds[e]] for e in keys(inds.linkinds)]
   return contract(reduce(vcat, link_tensors; init=site_tensors))
 end

@@ -6,8 +6,8 @@ using Printf: @printf
   current_exponent::Number = 0.0
 end
 
-ITensorNetworks.state(A::ApplyExpProblem) = A.state
 operator(A::ApplyExpProblem) = A.operator
+state(A::ApplyExpProblem) = A.state
 current_exponent(A::ApplyExpProblem) = A.current_exponent
 function current_time(A::ApplyExpProblem)
   t = im*A.current_exponent
