@@ -4,17 +4,22 @@ using ITensors:
   ITensor,
   Index,
   QN,
+  apply,
   dag,
   delta,
   inds,
+  mapprime,
   noprime,
+  norm,
   op,
+  permute,
   prime,
   random_itensor,
   replaceind,
   replaceinds,
-  sim
-using ITensorNetworks.ITensorsExtensions: map_eigvals
+  sim,
+  swapprime
+using ITensorNetworks.ITensorsExtensions: eigendecomp, map_eigvals
 using StableRNGs: StableRNG
 using Test: @test, @testset
 @testset "ITensorsExtensions" begin
@@ -71,6 +76,55 @@ using Test: @test, @testset
     inv_sqrtP = replaceind(inv_sqrtP, i', new_ind)
     I = replaceind(inv_sqrtP * sqrtP, new_ind, i)
     @test I ≈ op("I", i)
+  end
+
+  @testset "Fermionic eigendecomp" begin
+    s1 = Index([QN("Nf", 0, -1)=>2, QN("Nf", 1, -1)=>2], "Site,Fermion,n=1")
+    s2 = Index([QN("Nf", 0, -1)=>2, QN("Nf", 1, -1)=>2], "Site,Fermion,n=2")
+
+    # Make a random Hermitian matrix-like 4th order ITensor
+    T = random_itensor(s1', s2', dag(s2), dag(s1))
+    T = apply(T, swapprime(dag(T), 0=>1))
+    @test T ≈ swapprime(dag(T), 0=>1) # check Hermitian
+
+    Ul, D, Ur = eigendecomp(T, [s1', s2'], [dag(s1), dag(s2)]; ishermitian=true)
+
+    @test Ul*D*Ur ≈ T
+  end
+
+  @testset "Fermionic map eigvals tests" begin
+    s1 = Index([QN("Nf", 0, -1)=>2, QN("Nf", 1, -1)=>2], "Site,Fermion,n=1")
+    s2 = Index([QN("Nf", 0, -1)=>2, QN("Nf", 1, -1)=>2], "Site,Fermion,n=2")
+
+    # Make a random Hermitian matrix ITensor
+    M = random_itensor(s1', dag(s1))
+    #M = mapprime(prime(M)*swapprime(dag(M),0=>1),2=>1)
+    M = apply(M, swapprime(dag(M), 0=>1))
+
+    # Make a random Hermitian matrix-like 4th order ITensor
+    T = random_itensor(s1', s2', dag(s2), dag(s1))
+    T = apply(T, swapprime(dag(T), 0=>1))
+
+    # Matrix test
+    sqrtM = map_eigvals(sqrt, M, s1', dag(s1); ishermitian=true)
+    @test M ≈ apply(sqrtM, sqrtM)
+
+    ## Tensor test
+    sqrtT = map_eigvals(sqrt, T, [s1', s2'], [dag(s1), dag(s2)]; ishermitian=true)
+    @test T ≈ apply(sqrtT, sqrtT)
+
+    # Permute and test again
+    T = permute(T, dag(s2), s2', dag(s1), s1')
+    sqrtT = map_eigvals(sqrt, T, [s1', s2'], [dag(s1), dag(s2)]; ishermitian=true)
+    @test T ≈ apply(sqrtT, sqrtT)
+
+    ## Explicitly passing indices in different, valid orders
+    sqrtT = map_eigvals(sqrt, T, [s2', s1'], [dag(s2), dag(s1)]; ishermitian=true)
+    @test T ≈ apply(sqrtT, sqrtT)
+    sqrtT = map_eigvals(sqrt, T, [dag(s2), dag(s1)], [s2', s1'], ; ishermitian=true)
+    @test T ≈ apply(sqrtT, sqrtT)
+    sqrtT = map_eigvals(sqrt, T, [dag(s1), dag(s2)], [s1', s2'], ; ishermitian=true)
+    @test T ≈ apply(sqrtT, sqrtT)
   end
 end
 end
