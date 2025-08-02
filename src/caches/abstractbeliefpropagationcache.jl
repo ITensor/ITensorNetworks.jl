@@ -212,7 +212,9 @@ function set_message(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge, mes
   bpc = copy(bpc)
   return set_message!(bpc, pe, message)
 end
-function delete_messages!(bpc::AbstractBeliefPropagationCache, pes::Vector{<:PartitionEdge})
+function delete_messages!(
+  bpc::AbstractBeliefPropagationCache, pes::Vector{<:PartitionEdge}=keys(messages(bpc))
+)
   ms = messages(bpc)
   for pe in pes
     delete!(ms, pe)
@@ -220,14 +222,16 @@ function delete_messages!(bpc::AbstractBeliefPropagationCache, pes::Vector{<:Par
   return bpc
 end
 function delete_message!(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge)
-  return delete_message!(bpc, [pe])
+  return delete_messages!(bpc, [pe])
 end
-function delete_messages(bpc::AbstractBeliefPropagationCache, pes::Vector{<:PartitionEdge})
+function delete_messages(
+  bpc::AbstractBeliefPropagationCache, pes::Vector{<:PartitionEdge}=keys(messages(bpc))
+)
   bpc = copy(bpc)
   return delete_messages!(bpc, pes)
 end
 function delete_message(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge)
-  return delete_message(bpc, [pe])
+  return delete_messages(bpc, [pe])
 end
 
 """
