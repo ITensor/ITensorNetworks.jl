@@ -79,6 +79,7 @@ using Test: @test, @testset
   end
 
   @testset "Fermionic eigendecomp" begin
+    ITensors.enable_auto_fermion()
     s1 = Index([QN("Nf", 0, -1)=>2, QN("Nf", 1, -1)=>2], "Site,Fermion,n=1")
     s2 = Index([QN("Nf", 0, -1)=>2, QN("Nf", 1, -1)=>2], "Site,Fermion,n=2")
 
@@ -90,9 +91,11 @@ using Test: @test, @testset
     Ul, D, Ur = eigendecomp(T, [s1', s2'], [dag(s1), dag(s2)]; ishermitian=true)
 
     @test Ul*D*Ur ≈ T
+    ITensors.disable_auto_fermion()
   end
 
   @testset "Fermionic map eigvals tests" begin
+    ITensors.enable_auto_fermion()
     s1 = Index([QN("Nf", 0, -1)=>2, QN("Nf", 1, -1)=>2], "Site,Fermion,n=1")
     s2 = Index([QN("Nf", 0, -1)=>2, QN("Nf", 1, -1)=>2], "Site,Fermion,n=2")
 
@@ -125,6 +128,15 @@ using Test: @test, @testset
     @test T ≈ apply(sqrtT, sqrtT)
     sqrtT = map_eigvals(sqrt, T, [dag(s1), dag(s2)], [s1', s2'], ; ishermitian=true)
     @test T ≈ apply(sqrtT, sqrtT)
+
+    # Test bosonic index case while fermion system is enabled
+    b = Index([QN("Nb", 0)=>2, QN("Nb", 1)=>2])
+    T = random_itensor(b', dag(b))
+    T = apply(T, swapprime(dag(T), 0=>1))
+    sqrtT = map_eigvals(sqrt, T, b', dag(b); ishermitian=true)
+    @test T ≈ apply(sqrtT, sqrtT)
+
+    ITensors.disable_auto_fermion()
   end
 end
 end
