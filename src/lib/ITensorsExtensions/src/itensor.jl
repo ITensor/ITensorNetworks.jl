@@ -64,32 +64,41 @@ function eigendecomp(A::ITensor, linds, rinds; ishermitian=false, kwargs...)
   return Ul, D, dag(U)
 end
 
+function make_bosonic(A::ITensor, Linds, Rinds)
+  # Bring indices into i',j',..,dag(j),dag(i)
+  # ordering with Out indices coming before In indices
+  # Resulting tensor acts like a normal matrix (no extra signs
+  # when taking powers A^n)
+  if all(j->dir(j)==ITensors.Out, Linds) && all(j->dir(j)==ITensors.In, Rinds)
+    ordered_inds = [Linds..., reverse(Rinds)...]
+  elseif all(j->dir(j)==ITensors.Out, Rinds) && all(j->dir(j)==ITensors.In, Linds)
+    ordered_inds = [Rinds..., reverse(Linds)...]
+  else
+    error(
+      "For fermionic exp, Linds and Rinds must have same directions within each set. Got dir.(Linds)=",
+      dir.(Linds),
+      ", dir.(Rinds)=",
+      dir.(Rinds),
+    )
+  end
+  # permuted A^n will be sign free, ok to temporarily disable fermion system
+  return permute(A, ordered_inds)
+end
+
+function check_input(::typeof(map_eigvals), f, A, Linds, Rinds)
+  all(x -> x isa Index, Linds) || error("Left indices must be a collection of Index")
+  all(x -> x isa Index, Rinds) || error("Right indices must be a collection of Index")
+end
+
 function map_eigvals(f::Function, A::ITensor, Linds, Rinds; kws...)
-  Linds = isa(Linds, Index) ? [Linds] : collect(Linds)
-  Rinds = isa(Rinds, Index) ? [Rinds] : collect(Rinds)
+  check_input(map_eigvals, f, A, Linds, Rinds)
 
   # <fermions>
   fermionic_itensor =
     ITensors.using_auto_fermion() && ITensors.has_fermionic_subspaces(inds(A))
   if fermionic_itensor
-    # If fermionic, bring indices into i',j',..,dag(j),dag(i)
-    # ordering with Out indices coming before In indices
-    # Resulting tensor acts like a normal matrix (no extra signs
-    # when taking powers A^n)
-    if all(j->dir(j)==ITensors.Out, Linds) && all(j->dir(j)==ITensors.In, Rinds)
-      ordered_inds = [Linds..., reverse(Rinds)...]
-    elseif all(j->dir(j)==ITensors.Out, Rinds) && all(j->dir(j)==ITensors.In, Linds)
-      ordered_inds = [Rinds..., reverse(Linds)...]
-    else
-      error(
-        "For fermionic exp, Linds and Rinds must have same directions within each set. Got dir.(Linds)=",
-        dir.(Linds),
-        ", dir.(Rinds)=",
-        dir.(Rinds),
-      )
-    end
-    A = permute(A, ordered_inds)
-    # A^n now sign free, ok to temporarily disable fermion system
+    A = make_bosonic(A::ITensor, Linds, Rinds)
+    ordered_inds = inds(A)
     ITensors.disable_auto_fermion()
   end
 
@@ -102,7 +111,7 @@ function map_eigvals(f::Function, A::ITensor, Linds, Rinds; kws...)
 
   # <fermions>
   if fermionic_itensor
-    # Ensure expA indices in "matrix" form before re-enabling fermion system
+    # Ensure indices in "matrix" form before re-enabling fermion system
     mapped_A = permute(mapped_A, ordered_inds)
     ITensors.enable_auto_fermion()
   end
