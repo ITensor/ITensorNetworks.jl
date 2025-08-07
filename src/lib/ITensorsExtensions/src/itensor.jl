@@ -7,6 +7,7 @@ using ITensors:
   dag,
   dir,
   hasqns,
+  indices,
   inds,
   isdiag,
   itensor,
@@ -69,6 +70,8 @@ function make_bosonic(A::ITensor, Linds, Rinds)
   # ordering with Out indices coming before In indices
   # Resulting tensor acts like a normal matrix (no extra signs
   # when taking powers A^n)
+  Linds = indices(Linds)
+  Rinds = indices(Rinds)
   if all(j->dir(j)==ITensors.Out, Linds) && all(j->dir(j)==ITensors.In, Rinds)
     ordered_inds = [Linds..., reverse(Rinds)...]
   elseif all(j->dir(j)==ITensors.Out, Rinds) && all(j->dir(j)==ITensors.In, Linds)
@@ -86,8 +89,6 @@ function make_bosonic(A::ITensor, Linds, Rinds)
 end
 
 function map_eigvals(f::Function, A::ITensor, Linds, Rinds; kws...)
-  check_input(map_eigvals, f, A, Linds, Rinds)
-
   # <fermions>
   fermionic_itensor =
     ITensors.using_auto_fermion() && ITensors.has_fermionic_subspaces(inds(A))
@@ -112,11 +113,6 @@ function map_eigvals(f::Function, A::ITensor, Linds, Rinds; kws...)
   end
 
   return mapped_A
-end
-
-function check_input(::typeof(map_eigvals), f, A, Linds, Rinds)
-  all(x -> x isa Index, Linds) || error("Left indices must be a collection of Index")
-  all(x -> x isa Index, Rinds) || error("Right indices must be a collection of Index")
 end
 
 # Analagous to `denseblocks`.
