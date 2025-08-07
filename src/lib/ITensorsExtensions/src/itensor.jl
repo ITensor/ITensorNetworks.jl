@@ -85,11 +85,6 @@ function make_bosonic(A::ITensor, Linds, Rinds)
   return permute(A, ordered_inds)
 end
 
-function check_input(::typeof(map_eigvals), f, A, Linds, Rinds)
-  all(x -> x isa Index, Linds) || error("Left indices must be a collection of Index")
-  all(x -> x isa Index, Rinds) || error("Right indices must be a collection of Index")
-end
-
 function map_eigvals(f::Function, A::ITensor, Linds, Rinds; kws...)
   check_input(map_eigvals, f, A, Linds, Rinds)
 
@@ -117,6 +112,11 @@ function map_eigvals(f::Function, A::ITensor, Linds, Rinds; kws...)
   end
 
   return mapped_A
+end
+
+function check_input(::typeof(map_eigvals), f, A, Linds, Rinds)
+  all(x -> x isa Index, Linds) || error("Left indices must be a collection of Index")
+  all(x -> x isa Index, Rinds) || error("Right indices must be a collection of Index")
 end
 
 # Analagous to `denseblocks`.
