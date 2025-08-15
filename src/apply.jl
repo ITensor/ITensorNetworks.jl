@@ -260,7 +260,7 @@ function ITensors.apply(
 end
 
 function ITensors.apply(
-  o⃗::Union{Vector{ITensor},Vector{NamedEdge}},
+  o⃗::Union{Vector{NamedEdge},Vector{ITensor}},
   ψ::AbstractITensorNetwork;
   normalize=false,
   ortho=false,
