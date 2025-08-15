@@ -25,8 +25,12 @@ function data_graph_type(bpc::AbstractBeliefPropagationCache)
 end
 data_graph(bpc::AbstractBeliefPropagationCache) = data_graph(tensornetwork(bpc))
 
-function message_update_function(alg::Algorithm"contract", contract_list::Vector{ITensor}; normalize = alg.kwargs.normalize,
-  sequence_alg = alg.kwargs.sequence_alg)
+function message_update_function(
+  alg::Algorithm"contract",
+  contract_list::Vector{ITensor};
+  normalize=alg.kwargs.normalize,
+  sequence_alg=alg.kwargs.sequence_alg,
+)
   sequence = contraction_sequence(contract_list; alg=alg.kwargs.sequence_alg)
   updated_messages = contract(contract_list; sequence)
   message_norm = norm(updated_messages)
@@ -36,10 +40,17 @@ function message_update_function(alg::Algorithm"contract", contract_list::Vector
   return ITensor[updated_messages]
 end
 
-function message_update_function(alg::Algorithm"contract_custom_device", contract_list::Vector{ITensor}; normalize = alg.kwargs.normalize,
-  sequence_alg = alg.kwargs.sequence_alg, adapt = alg.kwargs.adapt)
+function message_update_function(
+  alg::Algorithm"contract_custom_device",
+  contract_list::Vector{ITensor};
+  normalize=alg.kwargs.normalize,
+  sequence_alg=alg.kwargs.sequence_alg,
+  adapt=alg.kwargs.adapt,
+)
   adapted_contract_list = adapt.(contract_list)
-  updated_messages = message_update_function(Algorithm("contract"), adapted_contract_list; normalize, sequence_alg)
+  updated_messages = message_update_function(
+    Algorithm("contract"), adapted_contract_list; normalize, sequence_alg
+  )
   return ITensor[adapt(datatype(first(contract_list)), updated_messages)]
 end
 
@@ -50,7 +61,9 @@ function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   return 1 - f
 end
 
-default_message(datatype, elt, inds_e) = ITensor[adapt(datatype, denseblocks(delta(elt, i))) for i in inds_e]
+function default_message(datatype, elt, inds_e)
+  ITensor[adapt(datatype, denseblocks(delta(elt, i))) for i in inds_e]
+end
 default_messages(ptn::PartitionedGraph) = Dictionary()
 @traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
 @traitfn function default_bp_maxiter(g::::IsDirected)
@@ -256,16 +269,14 @@ Compute message tensor as product of incoming mts and local state
 function updated_message(
   bpc::AbstractBeliefPropagationCache,
   edge::PartitionEdge;
-  message_update_alg = default_message_update_alg(bpc),
-  kwargs...
+  message_update_alg=default_message_update_alg(bpc),
+  kwargs...,
 )
   vertex = src(edge)
   incoming_ms = incoming_messages(bpc, vertex; ignore_edges=PartitionEdge[reverse(edge)])
   state = factors(bpc, vertex)
 
-  return message_update_function(message_update_alg,
-    ITensor[incoming_ms; state]; kwargs...
-  )
+  return message_update_function(message_update_alg, ITensor[incoming_ms; state]; kwargs...)
 end
 
 function update(
@@ -322,11 +333,11 @@ More generic interface for update, with default params
 function update(
   alg::Algorithm,
   bpc::AbstractBeliefPropagationCache;
-  edges = alg.kwargs.edge_sequence,
-  tol = alg.kwargs.tol,
-  maxiter = alg.kwargs.maxiter,
-  verbose = alg.kwargs.verbose,
-  kwargs...
+  edges=alg.kwargs.edge_sequence,
+  tol=alg.kwargs.tol,
+  maxiter=alg.kwargs.maxiter,
+  verbose=alg.kwargs.verbose,
+  kwargs...,
 )
   compute_error = !isnothing(tol)
   if isnothing(maxiter)
@@ -345,11 +356,7 @@ function update(
   return bpc
 end
 
-function update(
-  bpc::AbstractBeliefPropagationCache;
-  alg=default_update_alg(bpc),
-  kwargs...,
-)
+function update(bpc::AbstractBeliefPropagationCache; alg=default_update_alg(bpc), kwargs...)
   return update(Algorithm(alg), bpc; kwargs...)
 end
 
