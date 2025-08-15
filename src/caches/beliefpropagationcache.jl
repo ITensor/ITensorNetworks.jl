@@ -60,7 +60,7 @@ end
 messages(bp_cache::BeliefPropagationCache) = bp_cache.messages
 
 function default_message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
-  return default_message(scalartype(bp_cache), linkinds(bp_cache, edge))
+  return default_message(datatype(bp_cache), scalartype(bp_cache), linkinds(bp_cache, edge))
 end
 
 function Base.copy(bp_cache::BeliefPropagationCache)
@@ -69,18 +69,14 @@ function Base.copy(bp_cache::BeliefPropagationCache)
   )
 end
 
-default_message_update_alg(bp_cache::BeliefPropagationCache) = "bp"
+default_update_alg(bp_cache::BeliefPropagationCache) = "bp"
+default_message_update_alg(bp_cache::BeliefPropagationCache) = Algorithm("contract"; normalize = true, sequence = "optimal")
 
 function default_bp_maxiter(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
   return default_bp_maxiter(partitioned_graph(bp_cache))
 end
 function default_edge_sequence(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
   return default_edge_sequence(partitioned_tensornetwork(bp_cache))
-end
-function default_message_update_kwargs(
-  alg::Algorithm"bp", bpc::AbstractBeliefPropagationCache
-)
-  return (;)
 end
 
 Base.setindex!(bpc::BeliefPropagationCache, factor::ITensor, vertex) = not_implemented()
