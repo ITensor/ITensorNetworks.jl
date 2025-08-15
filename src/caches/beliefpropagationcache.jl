@@ -69,13 +69,13 @@ function Base.copy(bp_cache::BeliefPropagationCache)
   )
 end
 
-default_update_alg(bp_cache::BeliefPropagationCache) = "bp"
-default_message_update_alg(bp_cache::BeliefPropagationCache) = Algorithm("contract"; normalize = true, sequence = "optimal")
+default_update_alg(bp_cache::BeliefPropagationCache) = Algorithm("bp"; tol = nothing, verbose = false, maxiter = default_bp_maxiter(bp_cache), edge_sequence = default_bp_edge_sequence(bp_cache))
+default_message_update_alg(bp_cache::BeliefPropagationCache) = Algorithm("contract"; normalize = true, sequence_alg = "optimal")
 
-function default_bp_maxiter(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
+function default_bp_maxiter(bp_cache::BeliefPropagationCache)
   return default_bp_maxiter(partitioned_graph(bp_cache))
 end
-function default_edge_sequence(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
+function default_bp_edge_sequence(bp_cache::BeliefPropagationCache)
   return default_edge_sequence(partitioned_tensornetwork(bp_cache))
 end
 

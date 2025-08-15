@@ -25,24 +25,21 @@ function data_graph_type(bpc::AbstractBeliefPropagationCache)
 end
 data_graph(bpc::AbstractBeliefPropagationCache) = data_graph(tensornetwork(bpc))
 
-function message_update_function(alg::Algorithm"contract", contract_list::Vector{ITensor})
-  sequence = contraction_sequence(contract_list; alg=alg.kwargs.sequence)
+function message_update_function(alg::Algorithm"contract", contract_list::Vector{ITensor}; normalize = alg.kwargs.normalize,
+  sequence_alg = alg.kwargs.sequence_alg)
+  sequence = contraction_sequence(contract_list; alg=alg.kwargs.sequence_alg)
   updated_messages = contract(contract_list; sequence)
   message_norm = norm(updated_messages)
-  if alg.kwargs.normalize && !iszero(message_norm)
+  if normalize && !iszero(message_norm)
     updated_messages /= message_norm
   end
   return ITensor[updated_messages]
 end
 
-function message_update_function(alg::Algorithm"contract_custom_device", contract_list::Vector{ITensor})
-  sequence = contraction_sequence(contract_list; alg=alg.kwargs.sequence)
-  adapted_contract_list = alg.kwargs.adapt.(contract_list)
-  updated_messages = contract(adapted_contract_list; sequence)
-  message_norm = norm(updated_messages)
-  if alg.kwargs.normalize && !iszero(message_norm)
-    updated_messages /= message_norm
-  end
+function message_update_function(alg::Algorithm"contract_custom_device", contract_list::Vector{ITensor}; normalize = alg.kwargs.normalize,
+  sequence_alg = alg.kwargs.sequence_alg, adapt = alg.kwargs.adapt)
+  adapted_contract_list = adapt.(contract_list)
+  updated_messages = message_update_function(Algorithm("contract"), adapted_contract_list; normalize, sequence_alg)
   return ITensor[adapt(datatype(first(contract_list)), updated_messages)]
 end
 
@@ -90,21 +87,8 @@ end
 partitions(bpc::AbstractBeliefPropagationCache) = not_implemented()
 PartitionedGraphs.partitionedges(bpc::AbstractBeliefPropagationCache) = not_implemented()
 
-function default_edge_sequence(
-  bpc::AbstractBeliefPropagationCache; alg=default_message_update_alg(bpc)
-)
-  return default_edge_sequence(Algorithm(alg), bpc)
-end
-function default_bp_maxiter(
-  bpc::AbstractBeliefPropagationCache; alg=default_message_update_alg(bpc)
-)
-  return default_bp_maxiter(Algorithm(alg), bpc)
-end
-function default_message_update_kwargs(
-  bpc::AbstractBeliefPropagationCache; alg=default_message_update_alg(bpc)
-)
-  return default_message_update_kwargs(Algorithm(alg), bpc)
-end
+default_bp_edge_sequence(bpc::AbstractBeliefPropagationCache) = not_implemented()
+default_bp_maxiter(bpc::AbstractBeliefPropagationCache) = not_implemented()
 
 function tensornetwork(bpc::AbstractBeliefPropagationCache)
   return unpartitioned_graph(partitioned_tensornetwork(bpc))
@@ -338,10 +322,10 @@ More generic interface for update, with default params
 function update(
   alg::Algorithm,
   bpc::AbstractBeliefPropagationCache;
-  edges=default_edge_sequence(alg, bpc),
-  maxiter=default_bp_maxiter(alg, bpc),
-  tol=nothing,
-  verbose=false,
+  edges = alg.kwargs.edge_sequence,
+  tol = alg.kwargs.tol,
+  maxiter = alg.kwargs.maxiter,
+  verbose = alg.kwargs.verbose,
   kwargs...
 )
   compute_error = !isnothing(tol)
@@ -363,7 +347,7 @@ end
 
 function update(
   bpc::AbstractBeliefPropagationCache;
-  alg::String=default_update_alg(bpc),
+  alg=default_update_alg(bpc),
   kwargs...,
 )
   return update(Algorithm(alg), bpc; kwargs...)
