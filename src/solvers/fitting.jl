@@ -4,7 +4,8 @@ using NamedGraphs.PartitionedGraphs: partitionedges
 using Printf: @printf
 using ConstructionBase: setproperties
 
-@kwdef mutable struct FittingProblem{State<:AbstractBeliefPropagationCache}
+@kwdef mutable struct FittingProblem{State<:AbstractBeliefPropagationCache} <:
+                      AbstractProblem
   state::State
   ket_graph::AbstractNamedGraph
   overlap::Number = 0

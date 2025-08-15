@@ -1,6 +1,6 @@
 using Printf: @printf
 
-@kwdef mutable struct ApplyExpProblem{State}
+@kwdef mutable struct ApplyExpProblem{State} <: AbstractProblem
   operator
   state::State
   current_exponent::Number = 0.0

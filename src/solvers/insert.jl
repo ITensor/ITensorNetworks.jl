@@ -8,6 +8,7 @@ function insert(
   set_orthogonal_region=true,
   sweep,
   trunc=(;),
+  outputlevel=0,
   kws...,
 )
   trunc = truncation_parameters(sweep; trunc...)
@@ -19,8 +20,9 @@ function insert(
     e = edgetype(psi)(first(region), last(region))
     indsTe = inds(psi[first(region)])
     tags = ITensors.tags(psi, e)
-    U, C, _ = factorize(local_tensor, indsTe; tags, trunc...)
+    U, C, spectrum = factorize(local_tensor, indsTe; tags, trunc...)
     @preserve_graph psi[first(region)] = U
+    problem = set_truncation_info(problem; spectrum)
   else
     error("Region of length $(length(region)) not currently supported")
   end
@@ -28,5 +30,6 @@ function insert(
   @preserve_graph psi[v] = C
   psi = set_orthogonal_region ? set_ortho_region(psi, [v]) : psi
   normalize && @preserve_graph psi[v] = psi[v] / norm(psi[v])
-  return set_state(problem, psi)
+  problem = set_state(problem, psi)
+  return problem
 end

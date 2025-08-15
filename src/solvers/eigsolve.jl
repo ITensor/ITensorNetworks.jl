@@ -1,22 +1,37 @@
 using Printf: @printf
+using ITensors: truncerror
 
-@kwdef mutable struct EigsolveProblem{State,Operator}
+@kwdef mutable struct EigsolveProblem{State,Operator} <: AbstractProblem
   operator::Operator
   state::State
   eigenvalue::Number = Inf
+  max_truncerr::Real = 0.0
 end
 
 eigenvalue(E::EigsolveProblem) = E.eigenvalue
 state(E::EigsolveProblem) = E.state
 operator(E::EigsolveProblem) = E.operator
+max_truncerr(E::EigsolveProblem) = E.max_truncerr
 
 function set_operator(E::EigsolveProblem, operator)
-  EigsolveProblem(operator, E.state, E.eigenvalue)
+  EigsolveProblem(operator, E.state, E.eigenvalue, E.max_truncerr)
 end
 function set_eigenvalue(E::EigsolveProblem, eigenvalue)
-  EigsolveProblem(E.operator, E.state, eigenvalue)
+  EigsolveProblem(E.operator, E.state, eigenvalue, E.max_truncerr)
 end
-set_state(E::EigsolveProblem, state) = EigsolveProblem(E.operator, state, E.eigenvalue)
+function set_state(E::EigsolveProblem, state)
+  EigsolveProblem(E.operator, state, E.eigenvalue, E.max_truncerr)
+end
+function set_max_truncerr(E::EigsolveProblem, truncerr)
+  EigsolveProblem(E.operator, E.state, E.eigenvalue, truncerr)
+end
+
+function set_truncation_info(E::EigsolveProblem; spectrum=nothing)
+  if !isnothing(spectrum)
+    E = set_max_truncerr(E, max(max_truncerr(E), truncerror(spectrum)))
+  end
+  return E
+end
 
 function update(
   prob::EigsolveProblem,
@@ -43,8 +58,9 @@ function sweep_printer(problem::EigsolveProblem; outputlevel, sweep, nsweeps, kw
     else
       @printf("After sweep %d/%d ", sweep, nsweeps)
     end
-    @printf("eigenvalue=%.12f ", eigenvalue(problem))
-    @printf("maxlinkdim=%d", maxlinkdim(state(problem)))
+    @printf("eigenvalue=%.12f", eigenvalue(problem))
+    @printf(" maxlinkdim=%d", maxlinkdim(state(problem)))
+    @printf(" max truncerr=%d", max_truncerr(problem))
     println()
     flush(stdout)
   end
