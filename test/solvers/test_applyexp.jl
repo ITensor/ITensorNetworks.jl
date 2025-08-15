@@ -119,4 +119,3 @@ end
   applyexp(H, exponent_points, psi0; insert_kwargs, nsites, sweep_callback=collect_exponents,outputlevel=1)
   @test norm(exponents - exponent_points) < 10*eps(Float64)
 end
-
