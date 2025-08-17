@@ -94,7 +94,9 @@ function applyexp(
   kws...,
 )
   init_prob = ApplyExpProblem(;
-    state=align_indices(init_state), operator=ProjTTN(align_indices(operator))
+    state=align_indices(init_state),
+    operator=ProjTTN(align_indices(operator)),
+    current_exponent=first(exponents),
   )
   exponent_steps = diff([zero(eltype(exponents)); exponents])
   sweep_kws = (; outputlevel, extract_kwargs, insert_kwargs, nsites, order, update_kwargs)
