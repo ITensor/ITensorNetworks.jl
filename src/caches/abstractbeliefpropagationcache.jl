@@ -31,7 +31,7 @@ function message_update_function(
   normalize=alg.kwargs.normalize,
   sequence_alg=alg.kwargs.sequence_alg,
 )
-  sequence = contraction_sequence(contract_list; alg=alg.kwargs.sequence_alg)
+  sequence = contraction_sequence(contract_list; alg=sequence_alg)
   updated_messages = contract(contract_list; sequence)
   message_norm = norm(updated_messages)
   if normalize && !iszero(message_norm)
@@ -45,13 +45,14 @@ function message_update_function(
   contract_list::Vector{ITensor};
   normalize=alg.kwargs.normalize,
   sequence_alg=alg.kwargs.sequence_alg,
-  adapt=alg.kwargs.adapt,
+  custom_device_adapt=alg.kwargs.adapt,
 )
-  adapted_contract_list = adapt.(contract_list)
+  adapted_contract_list = custom_device_adapt.(contract_list)
   updated_messages = message_update_function(
     Algorithm("contract"), adapted_contract_list; normalize, sequence_alg
   )
-  return ITensor[adapt(datatype(first(contract_list)), updated_messages)]
+  dtype = datatype(first(contract_list))
+  return ITensor[adapt(dtype, updated_message) for updated_message in updated_messages]
 end
 
 #TODO: Take `dot` without precontracting the messages to allow scaling to more complex messages
@@ -65,7 +66,7 @@ function default_message(datatype, elt, inds_e)
   ITensor[adapt(datatype, denseblocks(delta(elt, i))) for i in inds_e]
 end
 default_messages(ptn::PartitionedGraph) = Dictionary()
-@traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
+@traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : 30
 @traitfn function default_bp_maxiter(g::::IsDirected)
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end

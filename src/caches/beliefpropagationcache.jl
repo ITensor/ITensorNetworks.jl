@@ -51,7 +51,6 @@ end
 function cache(alg::Algorithm"bp", tn; kwargs...)
   return BeliefPropagationCache(tn; kwargs...)
 end
-default_cache_update_kwargs(alg::Algorithm"bp") = (; maxiter=25, tol=1e-8)
 
 function partitioned_tensornetwork(bp_cache::BeliefPropagationCache)
   return bp_cache.partitioned_tensornetwork
@@ -72,7 +71,7 @@ end
 function default_update_alg(bp_cache::BeliefPropagationCache)
   Algorithm(
     "bp";
-    tol=nothing,
+    tol=1e-12,
     verbose=false,
     maxiter=default_bp_maxiter(bp_cache),
     edge_sequence=default_bp_edge_sequence(bp_cache),
