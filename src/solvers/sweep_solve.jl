@@ -1,9 +1,7 @@
 
 region_callback(problem; kws...) = nothing
 
-sweep_callback(problem; kws...) = nothing
-
-function sweep_printer(problem; outputlevel, sweep, nsweeps, kws...)
+function sweep_callback(problem; outputlevel, sweep, nsweeps, kws...)
   if outputlevel >= 1
     println("Done with sweep $sweep/$nsweeps")
   end
@@ -14,7 +12,6 @@ function sweep_solve(
   outputlevel=0,
   region_callback=region_callback,
   sweep_callback=sweep_callback,
-  sweep_printer=sweep_printer,
   kwargs...,
 )
   for (sweep, region_iter) in enumerate(sweep_iterator)
@@ -31,14 +28,6 @@ function sweep_solve(
       )
     end
     sweep_callback(
-      problem(region_iter);
-      nsweeps=length(sweep_iterator),
-      outputlevel,
-      region_iterator=region_iter,
-      sweep,
-      kwargs...,
-    )
-    sweep_printer(
       problem(region_iter);
       nsweeps=length(sweep_iterator),
       outputlevel,

@@ -57,7 +57,7 @@ function update(
   return prob, local_state
 end
 
-function sweep_printer(
+function sweep_callback(
   problem::ApplyExpProblem;
   exponent_description="exponent",
   outputlevel,
@@ -111,11 +111,11 @@ function time_evolve(
   time_points,
   init_state;
   process_time=process_real_times,
-  sweep_printer=(
+  sweep_callback=(
     a...; k...
-  )->sweep_printer(a...; exponent_description="time", process_time, k...),
+  )->sweep_callback(a...; exponent_description="time", process_time, k...),
   kws...,
 )
   exponents = [-im*t for t in time_points]
-  return applyexp(operator, exponents, init_state; sweep_printer, kws...)
+  return applyexp(operator, exponents, init_state; sweep_callback, kws...)
 end

@@ -44,7 +44,7 @@ function update(
   return prob, local_state
 end
 
-function sweep_printer(problem::EigsolveProblem; outputlevel, sweep, nsweeps, kws...)
+function sweep_callback(problem::EigsolveProblem; outputlevel, sweep, nsweeps, kws...)
   if outputlevel >= 1
     if nsweeps >= 10
       @printf("After sweep %02d/%d ", sweep, nsweeps)
