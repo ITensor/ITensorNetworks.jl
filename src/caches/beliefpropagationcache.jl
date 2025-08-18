@@ -71,14 +71,29 @@ end
 function default_update_alg(bp_cache::BeliefPropagationCache)
   Algorithm(
     "bp";
-    tol=1e-12,
     verbose=false,
     maxiter=default_bp_maxiter(bp_cache),
     edge_sequence=default_bp_edge_sequence(bp_cache),
+    tol=nothing,
   )
 end
 function default_message_update_alg(bp_cache::BeliefPropagationCache)
   Algorithm("contract"; normalize=true, sequence_alg="optimal")
+end
+function set_kwargs(alg::Algorithm"contract")
+  normalize = get(alg.kwargs, :normalize, true)
+  sequence_alg = get(alg.kwargs, :sequence_alg, "optimal")
+  return Algorithm("contract"; normalize, sequence_alg)
+end
+function set_kwargs(alg::Algorithm"adapt_update")
+  return Algorithm("adapt_update"; adapt=alg.kwargs.adapt, alg=set_kwargs(alg.kwargs.alg))
+end
+function set_kwargs(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
+  verbose = get(alg.kwargs, :verbose, false)
+  maxiter = get(alg.kwargs, :maxiter, default_bp_maxiter(bp_cache))
+  edge_sequence = get(alg.kwargs, :edge_sequence, default_bp_edge_sequence(bp_cache))
+  tol = get(alg.kwargs, :tol, nothing)
+  return Algorithm("bp"; verbose, maxiter, edge_sequence, tol)
 end
 
 function default_bp_maxiter(bp_cache::BeliefPropagationCache)

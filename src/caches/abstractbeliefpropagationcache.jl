@@ -25,7 +25,7 @@ function data_graph_type(bpc::AbstractBeliefPropagationCache)
 end
 data_graph(bpc::AbstractBeliefPropagationCache) = data_graph(tensornetwork(bpc))
 
-function message_update(alg::Algorithm"contract", contract_list::Vector{ITensor};)
+function message_update(alg::Algorithm"contract", contract_list::Vector{ITensor})
   sequence = contraction_sequence(contract_list; alg=alg.kwargs.sequence_alg)
   updated_messages = contract(contract_list; sequence)
   message_norm = norm(updated_messages)
@@ -35,10 +35,10 @@ function message_update(alg::Algorithm"contract", contract_list::Vector{ITensor}
   return ITensor[updated_messages]
 end
 
-function message_update(alg::Algorithm"adapt_update", contract_list::Vector{ITensor};)
+function message_update(alg::Algorithm"adapt_update", contract_list::Vector{ITensor})
   adapted_contract_list = alg.kwargs.adapt.(contract_list)
   updated_messages = message_update(alg.kwargs.alg, adapted_contract_list)
-  dtype = datatype(first(contract_list))
+  dtype = mapreduce(datatype, promote_type, contract_list)
   return map(adapt(dtype), updated_messages)
 end
 
@@ -327,21 +327,25 @@ More generic interface for update, with default params
 function update(
   alg::Algorithm,
   bpc::AbstractBeliefPropagationCache;
-  edges=alg.kwargs.edge_sequence,
-  tol=alg.kwargs.tol,
-  maxiter=alg.kwargs.maxiter,
-  verbose=alg.kwargs.verbose,
+  message_update_alg=default_message_update_alg(bpc),
   kwargs...,
 )
-  compute_error = !isnothing(tol)
-  if isnothing(maxiter)
+  compute_error = !isnothing(alg.kwargs.tol)
+  if isnothing(alg.kwargs.maxiter)
     error("You need to specify a number of iterations for BP!")
   end
-  for i in 1:maxiter
+  for i in 1:alg.kwargs.maxiter
     diff = compute_error ? Ref(0.0) : nothing
-    bpc = update(alg, bpc, edges; (update_diff!)=diff, kwargs...)
-    if compute_error && (diff.x / length(edges)) <= tol
-      if verbose
+    bpc = update(
+      alg,
+      bpc,
+      alg.kwargs.edge_sequence;
+      (update_diff!)=diff,
+      message_update_alg=set_kwargs(message_update_alg),
+      kwargs...,
+    )
+    if compute_error && (diff.x / length(edges)) <= alg.kwargs.tol
+      if alg.kwargs.verbose
         println("BP converged to desired precision after $i iterations.")
       end
       break
@@ -351,7 +355,7 @@ function update(
 end
 
 function update(bpc::AbstractBeliefPropagationCache; alg=default_update_alg(bpc), kwargs...)
-  return update(Algorithm(alg), bpc; kwargs...)
+  return update(set_kwargs(alg, bpc), bpc; kwargs...)
 end
 
 function rescale_messages(
