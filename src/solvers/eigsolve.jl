@@ -1,3 +1,4 @@
+using Accessors: @set
 using Printf: @printf
 using ITensors: truncerror
 
@@ -5,30 +6,22 @@ using ITensors: truncerror
   operator::Operator
   state::State
   eigenvalue::Number = Inf
-  max_truncerr::Real = 0.0
+  max_truncerror::Real = 0.0
 end
 
 eigenvalue(E::EigsolveProblem) = E.eigenvalue
 state(E::EigsolveProblem) = E.state
 operator(E::EigsolveProblem) = E.operator
-max_truncerr(E::EigsolveProblem) = E.max_truncerr
+max_truncerror(E::EigsolveProblem) = E.max_truncerror
 
-function set_operator(E::EigsolveProblem, operator)
-  EigsolveProblem(operator, E.state, E.eigenvalue, E.max_truncerr)
-end
-function set_eigenvalue(E::EigsolveProblem, eigenvalue)
-  EigsolveProblem(E.operator, E.state, eigenvalue, E.max_truncerr)
-end
-function set_state(E::EigsolveProblem, state)
-  EigsolveProblem(E.operator, state, E.eigenvalue, E.max_truncerr)
-end
-function set_max_truncerr(E::EigsolveProblem, truncerr)
-  EigsolveProblem(E.operator, E.state, E.eigenvalue, truncerr)
-end
+set_operator(E::EigsolveProblem, operator) = (@set E.operator = operator)
+set_eigenvalue(E::EigsolveProblem, eigenvalue) = (@set E.eigenvalue = eigenvalue)
+set_state(E::EigsolveProblem, state) = (@set E.state = state)
+set_max_truncerror(E::EigsolveProblem, truncerror) = (@set E.max_truncerror = truncerror)
 
 function set_truncation_info(E::EigsolveProblem; spectrum=nothing)
   if !isnothing(spectrum)
-    E = set_max_truncerr(E, max(max_truncerr(E), truncerror(spectrum)))
+    E = set_max_truncerror(E, max(max_truncerror(E), truncerror(spectrum)))
   end
   return E
 end
@@ -60,7 +53,7 @@ function sweep_printer(problem::EigsolveProblem; outputlevel, sweep, nsweeps, kw
     end
     @printf("eigenvalue=%.12f", eigenvalue(problem))
     @printf(" maxlinkdim=%d", maxlinkdim(state(problem)))
-    @printf(" max truncerr=%d", max_truncerr(problem))
+    @printf(" max truncerror=%d", max_truncerror(problem))
     println()
     flush(stdout)
   end
