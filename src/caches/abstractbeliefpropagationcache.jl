@@ -25,34 +25,21 @@ function data_graph_type(bpc::AbstractBeliefPropagationCache)
 end
 data_graph(bpc::AbstractBeliefPropagationCache) = data_graph(tensornetwork(bpc))
 
-function message_update_function(
-  alg::Algorithm"contract",
-  contract_list::Vector{ITensor};
-  normalize=alg.kwargs.normalize,
-  sequence_alg=alg.kwargs.sequence_alg,
-)
-  sequence = contraction_sequence(contract_list; alg=sequence_alg)
+function message_update(alg::Algorithm"contract", contract_list::Vector{ITensor};)
+  sequence = contraction_sequence(contract_list; alg=alg.kwargs.sequence_alg)
   updated_messages = contract(contract_list; sequence)
   message_norm = norm(updated_messages)
-  if normalize && !iszero(message_norm)
+  if alg.kwargs.normalize && !iszero(message_norm)
     updated_messages /= message_norm
   end
   return ITensor[updated_messages]
 end
 
-function message_update_function(
-  alg::Algorithm"contract_custom_device",
-  contract_list::Vector{ITensor};
-  normalize=alg.kwargs.normalize,
-  sequence_alg=alg.kwargs.sequence_alg,
-  custom_device_adapt=alg.kwargs.adapt,
-)
-  adapted_contract_list = custom_device_adapt.(contract_list)
-  updated_messages = message_update_function(
-    Algorithm("contract"), adapted_contract_list; normalize, sequence_alg
-  )
+function message_update(alg::Algorithm"adapt_update", contract_list::Vector{ITensor};)
+  adapted_contract_list = alg.kwargs.adapt.(contract_list)
+  updated_messages = message_update(alg.kwargs.alg, adapted_contract_list)
   dtype = datatype(first(contract_list))
-  return ITensor[adapt(dtype, updated_message) for updated_message in updated_messages]
+  return map(adapt(dtype), updated_messages)
 end
 
 #TODO: Take `dot` without precontracting the messages to allow scaling to more complex messages
@@ -62,8 +49,12 @@ function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   return 1 - f
 end
 
-function default_message(datatype, elt, inds_e)
-  ITensor[adapt(datatype, denseblocks(delta(elt, i))) for i in inds_e]
+function default_message(datatype::Type{<:AbstractArray}, inds_e)
+  return [adapt(datatype, denseblocks(delta(i))) for i in inds_e]
+end
+
+function default_message(elt::Type{<:Number}, inds_e)
+  return default_message(Vector{elt}, inds_e)
 end
 default_messages(ptn::PartitionedGraph) = Dictionary()
 @traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : 30
@@ -153,20 +144,22 @@ function incoming_messages(
 end
 
 #Adapt interface for changing device
-function adapt_messages(to, bpc::AbstractBeliefPropagationCache)
+function map_messages(map, bpc::AbstractBeliefPropagationCache)
   bpc = copy(bpc)
   for pe in keys(messages(bpc))
-    set_message!(bpc, pe, adapt(to).(message(bpc, pe)))
+    set_message!(bpc, pe, map.(message(bpc, pe)))
   end
   return bpc
 end
-function adapt_factors(to, bpc::AbstractBeliefPropagationCache)
+function map_factors(to, bpc::AbstractBeliefPropagationCache)
   bpc = copy(bpc)
   for v in vertices(bpc)
-    @preserve_graph bpc[v] = adapt(to).(bpc[v])
+    @preserve_graph bpc[v] = map(bpc[v])
   end
   return bpc
 end
+adapt_messages(to, bpc::AbstractBeliefPropagationCache) = map_messages(adapt(to), bpc)
+adapt_factors(to, bpc::AbstractBeliefPropagationCache) = map_factors(adapt(to), bpc)
 
 function Adapt.adapt_structure(to, bpc::AbstractBeliefPropagationCache)
   bpc = adapt_messages(to, bpc)
@@ -277,7 +270,7 @@ function updated_message(
   incoming_ms = incoming_messages(bpc, vertex; ignore_edges=PartitionEdge[reverse(edge)])
   state = factors(bpc, vertex)
 
-  return message_update_function(message_update_alg, ITensor[incoming_ms; state]; kwargs...)
+  return message_update(message_update_alg, ITensor[incoming_ms; state]; kwargs...)
 end
 
 function update(
