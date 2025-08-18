@@ -151,7 +151,7 @@ function map_messages(map, bpc::AbstractBeliefPropagationCache)
   end
   return bpc
 end
-function map_factors(to, bpc::AbstractBeliefPropagationCache)
+function map_factors(map, bpc::AbstractBeliefPropagationCache)
   bpc = copy(bpc)
   for v in vertices(bpc)
     @preserve_graph bpc[v] = map(bpc[v])
