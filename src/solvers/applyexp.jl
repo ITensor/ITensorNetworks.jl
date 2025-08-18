@@ -82,9 +82,8 @@ function sweep_printer(
 end
 
 function applyexp(
-  operator::AbstractITensorNetwork,
-  exponents,
-  init_state::AbstractITensorNetwork;
+  init_prob::AbstractProblem,
+  exponents;
   extract_kwargs=(;),
   update_kwargs=(;),
   insert_kwargs=(;),
@@ -93,17 +92,21 @@ function applyexp(
   order=4,
   kws...,
 )
-  init_prob = ApplyExpProblem(;
-    state=align_indices(init_state),
-    operator=ProjTTN(align_indices(operator)),
-    current_exponent=first(exponents),
-  )
   exponent_steps = diff([zero(eltype(exponents)); exponents])
   sweep_kws = (; outputlevel, extract_kwargs, insert_kwargs, nsites, order, update_kwargs)
   kws_array = [(; sweep_kws..., time_step=t) for t in exponent_steps]
   sweep_iter = sweep_iterator(init_prob, kws_array)
   converged_prob = sweep_solve(sweep_iter; outputlevel, kws...)
   return state(converged_prob)
+end
+
+function applyexp(operator, exponents, init_state; kws...)
+  init_prob = ApplyExpProblem(;
+    state=align_indices(init_state),
+    operator=ProjTTN(align_indices(operator)),
+    current_exponent=first(exponents),
+  )
+  return applyexp(init_prob, exponents; kws...)
 end
 
 process_real_times(z) = iszero(abs(z)) ? 0.0 : round(-imag(z); digits=10)
