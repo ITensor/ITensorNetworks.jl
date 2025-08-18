@@ -78,7 +78,7 @@ function default_update_alg(bp_cache::BeliefPropagationCache)
   )
 end
 function default_message_update_alg(bp_cache::BeliefPropagationCache)
-  Algorithm("contract"; normalize=true, sequence_alg="optimal")
+  return Algorithm("contract"; normalize=true, sequence_alg="optimal")
 end
 function set_kwargs(alg::Algorithm"contract")
   normalize = get(alg.kwargs, :normalize, true)

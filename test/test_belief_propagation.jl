@@ -62,7 +62,7 @@ using Test: @test, @testset
     @test bpc[vket] == new_A
     @test bpc[vbra] == new_A_dag
 
-    bpc = update(bpc; maxiter=25, tol=eps(real(elt)))
+    bpc = update(bpc; alg=Algorithm("bp"; maxiter=25, tol=eps(real(elt))))
     #Test messages are converged
     for pe in partitionedges(bpc)
       @test message_diff(updated_message(bpc, pe), message(bpc, pe)) < 10 * eps(real(elt))
