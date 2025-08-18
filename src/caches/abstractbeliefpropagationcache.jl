@@ -57,7 +57,7 @@ function default_message(elt::Type{<:Number}, inds_e)
   return default_message(Vector{elt}, inds_e)
 end
 default_messages(ptn::PartitionedGraph) = Dictionary()
-@traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : 30
+@traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
 @traitfn function default_bp_maxiter(g::::IsDirected)
   return default_bp_maxiter(undirected_graph(underlying_graph(g)))
 end
