@@ -24,8 +24,8 @@ function set_current_exponent(A::ApplyExpProblem, current_exponent)
   ApplyExpProblem(A.operator, A.state, current_exponent)
 end
 
-function region_plan(tdvp::ApplyExpProblem; nsites, time_step, sweep_kwargs...)
-  return applyexp_regions(state(tdvp), time_step; nsites, sweep_kwargs...)
+function region_plan(A::ApplyExpProblem; nsites, time_step, sweep_kwargs...)
+  return applyexp_regions(state(A), time_step; nsites, sweep_kwargs...)
 end
 
 function update(
