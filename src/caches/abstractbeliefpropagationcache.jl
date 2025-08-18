@@ -144,17 +144,17 @@ function incoming_messages(
 end
 
 #Adapt interface for changing device
-function map_messages(map, bpc::AbstractBeliefPropagationCache)
+function map_messages(f, bpc::AbstractBeliefPropagationCache)
   bpc = copy(bpc)
   for pe in keys(messages(bpc))
-    set_message!(bpc, pe, map.(message(bpc, pe)))
+    set_message!(bpc, pe, f.(message(bpc, pe)))
   end
   return bpc
 end
-function map_factors(map, bpc::AbstractBeliefPropagationCache)
+function map_factors(f, bpc::AbstractBeliefPropagationCache)
   bpc = copy(bpc)
   for v in vertices(bpc)
-    @preserve_graph bpc[v] = map(bpc[v])
+    @preserve_graph bpc[v] = f(bpc[v])
   end
   return bpc
 end
