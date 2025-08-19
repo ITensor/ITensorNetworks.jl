@@ -275,6 +275,15 @@ function updated_message(
   return map(adapt(dtype), updated_messages)
 end
 
+function updated_message(
+  bpc::AbstractBeliefPropagationCache,
+  edge::PartitionEdge;
+  alg=default_message_update_alg(bpc),
+  kwargs...,
+)
+  return updated_message(set_default_kwargs(Algorithm(alg; kwargs...)), bpc, edge)
+end
+
 function update_message(
   message_update_alg::Algorithm,
   bpc::AbstractBeliefPropagationCache,
