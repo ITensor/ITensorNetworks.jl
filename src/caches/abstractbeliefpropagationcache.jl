@@ -293,7 +293,7 @@ end
 """
 Do a sequential update of the message tensors on `edges`
 """
-function update_one_iteration(
+function update_iteration(
   alg::Algorithm"bp",
   bpc::AbstractBeliefPropagationCache,
   edges::Vector;
@@ -315,14 +315,14 @@ Do parallel updates between groups of edges of all message tensors
 Currently we send the full message tensor data struct to update for each edge_group. But really we only need the
 mts relevant to that group.
 """
-function update_one_iteration(
+function update_iteration(
   alg::Algorithm,
   bpc::AbstractBeliefPropagationCache,
   edge_groups::Vector{<:Vector{<:PartitionEdge}};
 )
   new_mts = empty(messages(bpc))
   for edges in edge_groups
-    bpc_t = update_one_iteration(alg.kwargs.message_update_alg, bpc, edges)
+    bpc_t = update_iteration(alg.kwargs.message_update_alg, bpc, edges)
     for e in edges
       set!(new_mts, e, message(bpc_t, e))
     end
@@ -340,7 +340,7 @@ function update(alg::Algorithm, bpc::AbstractBeliefPropagationCache)
   end
   for i in 1:alg.kwargs.maxiter
     diff = compute_error ? Ref(0.0) : nothing
-    bpc = update_one_iteration(alg, bpc, alg.kwargs.edge_sequence; (update_diff!)=diff)
+    bpc = update_iteration(alg, bpc, alg.kwargs.edge_sequence; (update_diff!)=diff)
     if compute_error && (diff.x / length(alg.kwargs.edge_sequence)) <= alg.kwargs.tol
       if alg.kwargs.verbose
         println("BP converged to desired precision after $i iterations.")
