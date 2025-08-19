@@ -14,7 +14,7 @@ using NamedGraphs.PartitionedGraphs:
   unpartitioned_graph,
   which_partition
 using SimpleTraits: SimpleTraits, Not, @traitfn
-using NDTensors: NDTensors
+using NDTensors: NDTensors, Algorithm
 
 function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
   return (; partitioned_vertices=default_partitioned_vertices(ψ))
@@ -80,19 +80,25 @@ end
 function default_message_update_alg(bp_cache::BeliefPropagationCache)
   return Algorithm("contract"; normalize=true, sequence_alg="optimal")
 end
-function set_kwargs(alg::Algorithm"contract")
-  normalize = get(alg.kwargs, :normalize, true)
-  sequence_alg = get(alg.kwargs, :sequence_alg, "optimal")
+default_normalize(::Algorithm"contract") = true
+default_sequence_alg(::Algorithm"contract") = "optimal"
+function set_default_kwargs(alg::Algorithm"contract")
+  normalize = get(alg.kwargs, :normalize, default_normalize(alg))
+  sequence_alg = get(alg.kwargs, :sequence_alg, default_sequence_alg(alg))
   return Algorithm("contract"; normalize, sequence_alg)
 end
-function set_kwargs(alg::Algorithm"adapt_update")
-  return Algorithm("adapt_update"; adapt=alg.kwargs.adapt, alg=set_kwargs(alg.kwargs.alg))
+function set_default_kwargs(alg::Algorithm"adapt_update")
+  return Algorithm(
+    "adapt_update"; adapt=alg.kwargs.adapt, alg=set_default_kwargs(alg.kwargs.alg)
+  )
 end
-function set_kwargs(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
-  verbose = get(alg.kwargs, :verbose, false)
+default_verbose(::Algorithm"bp") = false
+default_tol(::Algorithm"bp") = nothing
+function set_default_kwargs(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
+  verbose = get(alg.kwargs, :verbose, default_verbose(alg))
   maxiter = get(alg.kwargs, :maxiter, default_bp_maxiter(bp_cache))
   edge_sequence = get(alg.kwargs, :edge_sequence, default_bp_edge_sequence(bp_cache))
-  tol = get(alg.kwargs, :tol, nothing)
+  tol = get(alg.kwargs, :tol, default_tol(alg))
   return Algorithm("bp"; verbose, maxiter, edge_sequence, tol)
 end
 

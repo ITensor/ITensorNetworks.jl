@@ -341,7 +341,7 @@ function update(
       bpc,
       alg.kwargs.edge_sequence;
       (update_diff!)=diff,
-      message_update_alg=set_kwargs(message_update_alg),
+      message_update_alg=set_default_kwargs(message_update_alg),
       kwargs...,
     )
     if compute_error && (diff.x / length(edges)) <= alg.kwargs.tol
@@ -355,7 +355,7 @@ function update(
 end
 
 function update(bpc::AbstractBeliefPropagationCache; alg=default_update_alg(bpc), kwargs...)
-  return update(set_kwargs(alg, bpc), bpc; kwargs...)
+  return update(set_default_kwargs(alg, bpc), bpc; kwargs...)
 end
 
 function rescale_messages(

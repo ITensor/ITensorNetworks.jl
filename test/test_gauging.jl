@@ -10,7 +10,7 @@ using ITensorNetworks:
   siteinds,
   update
 using ITensors: diag_itensor, inds, inner
-using ITensors.NDTensors: vector
+using ITensors.NDTensors: Algorithm, vector
 using LinearAlgebra: diag
 using NamedGraphs.NamedGraphGenerators: named_grid
 using StableRNGs: StableRNG
