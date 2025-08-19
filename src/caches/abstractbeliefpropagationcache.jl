@@ -285,9 +285,7 @@ function updated_message(
 end
 
 function update_message(
-  message_update_alg::Algorithm,
-  bpc::AbstractBeliefPropagationCache,
-  edge::PartitionEdge;
+  message_update_alg::Algorithm, bpc::AbstractBeliefPropagationCache, edge::PartitionEdge;
 )
   return set_message(bpc, edge, updated_message(message_update_alg, bpc, edge))
 end
@@ -342,9 +340,7 @@ function update(alg::Algorithm, bpc::AbstractBeliefPropagationCache)
   end
   for i in 1:alg.kwargs.maxiter
     diff = compute_error ? Ref(0.0) : nothing
-    bpc = update_one_iteration(
-      alg, bpc, alg.kwargs.edge_sequence; (update_diff!)=diff
-    )
+    bpc = update_one_iteration(alg, bpc, alg.kwargs.edge_sequence; (update_diff!)=diff)
     if compute_error && (diff.x / length(alg.kwargs.edge_sequence)) <= alg.kwargs.tol
       if alg.kwargs.verbose
         println("BP converged to desired precision after $i iterations.")
