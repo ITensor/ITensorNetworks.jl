@@ -288,9 +288,8 @@ function update_message(
   message_update_alg::Algorithm,
   bpc::AbstractBeliefPropagationCache,
   edge::PartitionEdge;
-  kwargs...,
 )
-  return set_message(bpc, edge, updated_message(message_update_alg, bpc, edge; kwargs...))
+  return set_message(bpc, edge, updated_message(message_update_alg, bpc, edge))
 end
 
 """
@@ -301,12 +300,11 @@ function update_one_iteration(
   bpc::AbstractBeliefPropagationCache,
   edges::Vector;
   (update_diff!)=nothing,
-  kwargs...,
 )
   bpc = copy(bpc)
   for e in edges
     prev_message = !isnothing(update_diff!) ? message(bpc, e) : nothing
-    bpc = update_message(alg.kwargs.message_update_alg, bpc, e; kwargs...)
+    bpc = update_message(alg.kwargs.message_update_alg, bpc, e)
     if !isnothing(update_diff!)
       update_diff![] += message_diff(message(bpc, e), prev_message)
     end
@@ -323,11 +321,10 @@ function update_one_iteration(
   alg::Algorithm,
   bpc::AbstractBeliefPropagationCache,
   edge_groups::Vector{<:Vector{<:PartitionEdge}};
-  kwargs...,
 )
   new_mts = empty(messages(bpc))
   for edges in edge_groups
-    bpc_t = update_one_iteration(alg.kwargs.message_update_alg, bpc, edges; kwargs...)
+    bpc_t = update_one_iteration(alg.kwargs.message_update_alg, bpc, edges)
     for e in edges
       set!(new_mts, e, message(bpc_t, e))
     end
@@ -338,7 +335,7 @@ end
 """
 More generic interface for update, with default params
 """
-function update(alg::Algorithm, bpc::AbstractBeliefPropagationCache; kwargs...)
+function update(alg::Algorithm, bpc::AbstractBeliefPropagationCache)
   compute_error = !isnothing(alg.kwargs.tol)
   if isnothing(alg.kwargs.maxiter)
     error("You need to specify a number of iterations for BP!")
@@ -346,7 +343,7 @@ function update(alg::Algorithm, bpc::AbstractBeliefPropagationCache; kwargs...)
   for i in 1:alg.kwargs.maxiter
     diff = compute_error ? Ref(0.0) : nothing
     bpc = update_one_iteration(
-      alg, bpc, alg.kwargs.edge_sequence; (update_diff!)=diff, kwargs...
+      alg, bpc, alg.kwargs.edge_sequence; (update_diff!)=diff
     )
     if compute_error && (diff.x / length(alg.kwargs.edge_sequence)) <= alg.kwargs.tol
       if alg.kwargs.verbose
