@@ -36,7 +36,9 @@ using Test: @test, @testset
   cache_construction_kwargs = (;
     partitioned_vertices=group(v -> first(first(v)), quadratic_form_vertices)
   )
-  sz_bp = expect(ψ, "Sz"; alg="bp", cache_construction_kwargs)
+  sz_bp = expect(
+    ψ, "Sz"; alg="bp", cache_construction_kwargs, cache_update_kwargs=(; maxiter=20)
+  )
   sz_exact = expect(ψ, "Sz"; alg="exact")
   @test sz_bp ≈ sz_exact
 
@@ -47,7 +49,7 @@ using Test: @test, @testset
 
   ψ = ITensorNetwork(v -> isodd(sum(v)) ? "↑" : "↓", s)
 
-  sz_bp = expect(ψ, "Sz"; alg="bp")
+  sz_bp = expect(ψ, "Sz"; alg="bp", cache_update_kwargs=(; maxiter=20))
   sz_exact = expect(ψ, "Sz"; alg="exact")
   @test sz_bp ≈ sz_exact
 end

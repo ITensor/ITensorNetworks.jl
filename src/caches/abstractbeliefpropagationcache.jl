@@ -25,23 +25,6 @@ function data_graph_type(bpc::AbstractBeliefPropagationCache)
 end
 data_graph(bpc::AbstractBeliefPropagationCache) = data_graph(tensornetwork(bpc))
 
-function message_update(alg::Algorithm"contract", contract_list::Vector{ITensor})
-  sequence = contraction_sequence(contract_list; alg=alg.kwargs.sequence_alg)
-  updated_messages = contract(contract_list; sequence)
-  message_norm = norm(updated_messages)
-  if alg.kwargs.normalize && !iszero(message_norm)
-    updated_messages /= message_norm
-  end
-  return ITensor[updated_messages]
-end
-
-function message_update(alg::Algorithm"adapt_update", contract_list::Vector{ITensor})
-  adapted_contract_list = alg.kwargs.adapt.(contract_list)
-  updated_messages = message_update(alg.kwargs.alg, adapted_contract_list)
-  dtype = mapreduce(datatype, promote_type, contract_list)
-  return map(adapt(dtype), updated_messages)
-end
-
 #TODO: Take `dot` without precontracting the messages to allow scaling to more complex messages
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
   lhs, rhs = contract(message_a), contract(message_b)
@@ -144,22 +127,28 @@ function incoming_messages(
 end
 
 #Adapt interface for changing device
-function map_messages(f, bpc::AbstractBeliefPropagationCache)
+function map_messages(
+  f, bpc::AbstractBeliefPropagationCache, pes=collect(keys(messages(bpc)))
+)
   bpc = copy(bpc)
-  for pe in keys(messages(bpc))
+  for pe in pes
     set_message!(bpc, pe, f.(message(bpc, pe)))
   end
   return bpc
 end
-function map_factors(f, bpc::AbstractBeliefPropagationCache)
+function map_factors(f, bpc::AbstractBeliefPropagationCache, vs=vertices(bpc))
   bpc = copy(bpc)
-  for v in vertices(bpc)
+  for v in vs
     @preserve_graph bpc[v] = f(bpc[v])
   end
   return bpc
 end
-adapt_messages(to, bpc::AbstractBeliefPropagationCache) = map_messages(adapt(to), bpc)
-adapt_factors(to, bpc::AbstractBeliefPropagationCache) = map_factors(adapt(to), bpc)
+function adapt_messages(to, bpc::AbstractBeliefPropagationCache, args...)
+  map_messages(adapt(to), bpc, args...)
+end
+function adapt_factors(to, bpc::AbstractBeliefPropagationCache, args...)
+  map_factors(adapt(to), bpc, args...)
+end
 
 function Adapt.adapt_structure(to, bpc::AbstractBeliefPropagationCache)
   bpc = adapt_messages(to, bpc)
@@ -257,33 +246,49 @@ function delete_message(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge)
   return delete_messages(bpc, [pe])
 end
 
-"""
-Compute message tensor as product of incoming mts and local state
-"""
 function updated_message(
-  bpc::AbstractBeliefPropagationCache,
-  edge::PartitionEdge;
-  message_update_alg=default_message_update_alg(bpc),
-  kwargs...,
+  alg::Algorithm"contract", bpc::AbstractBeliefPropagationCache, edge::PartitionEdge
 )
   vertex = src(edge)
   incoming_ms = incoming_messages(bpc, vertex; ignore_edges=PartitionEdge[reverse(edge)])
   state = factors(bpc, vertex)
-
-  return message_update(message_update_alg, ITensor[incoming_ms; state]; kwargs...)
+  contract_list = ITensor[incoming_ms; state]
+  sequence = contraction_sequence(contract_list; alg=alg.kwargs.sequence_alg)
+  updated_messages = contract(contract_list; sequence)
+  message_norm = norm(updated_messages)
+  if alg.kwargs.normalize && !iszero(message_norm)
+    updated_messages /= message_norm
+  end
+  return ITensor[updated_messages]
 end
 
-function update(
-  alg::Algorithm"bp", bpc::AbstractBeliefPropagationCache, edge::PartitionEdge; kwargs...
+function updated_message(
+  alg::Algorithm"adapt_update", bpc::AbstractBeliefPropagationCache, edge::PartitionEdge
 )
-  return set_message(bpc, edge, updated_message(bpc, edge; kwargs...))
+  incoming_pes = setdiff(
+    boundary_partitionedges(bpc, [src(edge)]; dir=:in), [reverse(edge)]
+  )
+  adapted_bpc = adapt_messages(alg.kwargs.adapt, bpc, incoming_pes)
+  adapted_bpc = adapt_factors(alg.kwargs.adapt, bpc, vertices(bpc, src(edge)))
+  updated_messages = updated_message(alg.kwargs.alg, adapted_bpc, edge)
+  dtype = mapreduce(datatype, promote_type, message(bpc, edge))
+  return map(adapt(dtype), updated_messages)
+end
+
+function update_message(
+  message_update_alg::Algorithm,
+  bpc::AbstractBeliefPropagationCache,
+  edge::PartitionEdge;
+  kwargs...,
+)
+  return set_message(bpc, edge, updated_message(message_update_alg, bpc, edge; kwargs...))
 end
 
 """
 Do a sequential update of the message tensors on `edges`
 """
-function update(
-  alg::Algorithm,
+function update_one_iteration(
+  alg::Algorithm"bp",
   bpc::AbstractBeliefPropagationCache,
   edges::Vector;
   (update_diff!)=nothing,
@@ -292,7 +297,7 @@ function update(
   bpc = copy(bpc)
   for e in edges
     prev_message = !isnothing(update_diff!) ? message(bpc, e) : nothing
-    bpc = update(alg, bpc, e; kwargs...)
+    bpc = update_message(alg.kwargs.message_update_alg, bpc, e; kwargs...)
     if !isnothing(update_diff!)
       update_diff![] += message_diff(message(bpc, e), prev_message)
     end
@@ -305,7 +310,7 @@ Do parallel updates between groups of edges of all message tensors
 Currently we send the full message tensor data struct to update for each edge_group. But really we only need the
 mts relevant to that group.
 """
-function update(
+function update_one_iteration(
   alg::Algorithm,
   bpc::AbstractBeliefPropagationCache,
   edge_groups::Vector{<:Vector{<:PartitionEdge}};
@@ -313,7 +318,7 @@ function update(
 )
   new_mts = empty(messages(bpc))
   for edges in edge_groups
-    bpc_t = update(alg, bpc, edges; kwargs...)
+    bpc_t = update_one_iteration(alg.kwargs.message_update_alg, bpc, edges; kwargs...)
     for e in edges
       set!(new_mts, e, message(bpc_t, e))
     end
@@ -324,27 +329,17 @@ end
 """
 More generic interface for update, with default params
 """
-function update(
-  alg::Algorithm,
-  bpc::AbstractBeliefPropagationCache;
-  message_update_alg=default_message_update_alg(bpc),
-  kwargs...,
-)
+function update(alg::Algorithm, bpc::AbstractBeliefPropagationCache; kwargs...)
   compute_error = !isnothing(alg.kwargs.tol)
   if isnothing(alg.kwargs.maxiter)
     error("You need to specify a number of iterations for BP!")
   end
   for i in 1:alg.kwargs.maxiter
     diff = compute_error ? Ref(0.0) : nothing
-    bpc = update(
-      alg,
-      bpc,
-      alg.kwargs.edge_sequence;
-      (update_diff!)=diff,
-      message_update_alg=set_default_kwargs(message_update_alg),
-      kwargs...,
+    bpc = update_one_iteration(
+      alg, bpc, alg.kwargs.edge_sequence; (update_diff!)=diff, kwargs...
     )
-    if compute_error && (diff.x / length(edges)) <= alg.kwargs.tol
+    if compute_error && (diff.x / length(alg.kwargs.edge_sequence)) <= alg.kwargs.tol
       if alg.kwargs.verbose
         println("BP converged to desired precision after $i iterations.")
       end
@@ -355,7 +350,7 @@ function update(
 end
 
 function update(bpc::AbstractBeliefPropagationCache; alg=default_update_alg(bpc), kwargs...)
-  return update(set_default_kwargs(alg, bpc), bpc; kwargs...)
+  return update(set_default_kwargs(Algorithm(alg; kwargs...), bpc), bpc)
 end
 
 function rescale_messages(

@@ -68,18 +68,8 @@ function Base.copy(bp_cache::BeliefPropagationCache)
   )
 end
 
-function default_update_alg(bp_cache::BeliefPropagationCache)
-  Algorithm(
-    "bp";
-    verbose=false,
-    maxiter=default_bp_maxiter(bp_cache),
-    edge_sequence=default_bp_edge_sequence(bp_cache),
-    tol=nothing,
-  )
-end
-function default_message_update_alg(bp_cache::BeliefPropagationCache)
-  return Algorithm("contract"; normalize=true, sequence_alg="optimal")
-end
+default_update_alg(bp_cache::BeliefPropagationCache) = "bp"
+default_message_update_alg(bp_cache::BeliefPropagationCache) = "contract"
 default_normalize(::Algorithm"contract") = true
 default_sequence_alg(::Algorithm"contract") = "optimal"
 function set_default_kwargs(alg::Algorithm"contract")
@@ -88,9 +78,8 @@ function set_default_kwargs(alg::Algorithm"contract")
   return Algorithm("contract"; normalize, sequence_alg)
 end
 function set_default_kwargs(alg::Algorithm"adapt_update")
-  return Algorithm(
-    "adapt_update"; adapt=alg.kwargs.adapt, alg=set_default_kwargs(alg.kwargs.alg)
-  )
+  _alg = set_default_kwargs(get(alg.kwargs, :alg, Algorithm("contract")))
+  return Algorithm("adapt_update"; adapt=alg.kwargs.adapt, alg=_alg)
 end
 default_verbose(::Algorithm"bp") = false
 default_tol(::Algorithm"bp") = nothing
@@ -99,7 +88,10 @@ function set_default_kwargs(alg::Algorithm"bp", bp_cache::BeliefPropagationCache
   maxiter = get(alg.kwargs, :maxiter, default_bp_maxiter(bp_cache))
   edge_sequence = get(alg.kwargs, :edge_sequence, default_bp_edge_sequence(bp_cache))
   tol = get(alg.kwargs, :tol, default_tol(alg))
-  return Algorithm("bp"; verbose, maxiter, edge_sequence, tol)
+  message_update_alg = set_default_kwargs(
+    get(alg.kwargs, :message_update_alg, Algorithm(default_message_update_alg(bp_cache)))
+  )
+  return Algorithm("bp"; verbose, maxiter, edge_sequence, tol, message_update_alg)
 end
 
 function default_bp_maxiter(bp_cache::BeliefPropagationCache)

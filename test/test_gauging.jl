@@ -29,7 +29,7 @@ using Test: @test, @testset
 
   # Move directly to vidal gauge
   ψ_vidal = VidalITensorNetwork(
-    ψ; cache_update_kwargs=(; alg=Algorithm("bp"; maxiter=30, verbose=true))
+    ψ; cache_update_kwargs=(; alg="bp", maxiter=30, verbose=true)
   )
   @test gauge_error(ψ_vidal) < 1e-8
 
@@ -39,10 +39,12 @@ using Test: @test, @testset
   bp_cache = cache_ref[]
 
   # Test we just did a gauge transform and didn't change the overall network
-  @test inner(ψ_symm, ψ) / sqrt(inner(ψ_symm, ψ_symm) * inner(ψ, ψ)) ≈ 1.0 atol = 1e-8
+  @test inner(ψ_symm, ψ; alg="exact") /
+        sqrt(inner(ψ_symm, ψ_symm; alg="exact") * inner(ψ, ψ; alg="exact")) ≈ 1.0 atol =
+    1e-8
 
   #Test all message tensors are approximately diagonal even when we keep running BP
-  bp_cache = update(bp_cache; alg=Algorithm("bp"; maxiter=10))
+  bp_cache = update(bp_cache; maxiter=10)
   for m_e in values(messages(bp_cache))
     @test diag_itensor(vector(diag(only(m_e))), inds(only(m_e))) ≈ only(m_e) atol = 1e-8
   end
