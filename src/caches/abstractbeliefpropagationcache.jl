@@ -147,7 +147,7 @@ function adapt_messages(to, bpc::AbstractBeliefPropagationCache, args...)
   return map_messages(adapt(to), bpc, args...)
 end
 function adapt_factors(to, bpc::AbstractBeliefPropagationCache, args...)
-  map_factors(adapt(to), bpc, args...)
+  return map_factors(adapt(to), bpc, args...)
 end
 
 function Adapt.adapt_structure(to, bpc::AbstractBeliefPropagationCache)
