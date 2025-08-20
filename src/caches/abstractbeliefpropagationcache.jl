@@ -285,7 +285,7 @@ function updated_message(
 end
 
 function update_message(
-  message_update_alg::Algorithm, bpc::AbstractBeliefPropagationCache, edge::PartitionEdge;
+  message_update_alg::Algorithm, bpc::AbstractBeliefPropagationCache, edge::PartitionEdge
 )
   return set_message(bpc, edge, updated_message(message_update_alg, bpc, edge))
 end
