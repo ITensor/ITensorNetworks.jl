@@ -316,13 +316,14 @@ Currently we send the full message tensor data struct to update for each edge_gr
 mts relevant to that group.
 """
 function update_iteration(
-  alg::Algorithm,
+  alg::Algorithm"bp",
   bpc::AbstractBeliefPropagationCache,
   edge_groups::Vector{<:Vector{<:PartitionEdge}};
+  (update_diff!)=nothing,
 )
   new_mts = empty(messages(bpc))
   for edges in edge_groups
-    bpc_t = update_iteration(alg.kwargs.message_update_alg, bpc, edges)
+    bpc_t = update_iteration(alg.kwargs.message_update_alg, bpc, edges; (update_diff!))
     for e in edges
       set!(new_mts, e, message(bpc_t, e))
     end
@@ -333,7 +334,7 @@ end
 """
 More generic interface for update, with default params
 """
-function update(alg::Algorithm, bpc::AbstractBeliefPropagationCache)
+function update(alg::Algorithm"bp", bpc::AbstractBeliefPropagationCache)
   compute_error = !isnothing(alg.kwargs.tol)
   if isnothing(alg.kwargs.maxiter)
     error("You need to specify a number of iterations for BP!")
