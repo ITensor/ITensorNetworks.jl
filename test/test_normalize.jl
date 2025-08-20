@@ -29,7 +29,7 @@ using Test: @test, @testset
   tn_r = rescale(tn; alg="exact")
   @test scalar(tn_r; alg="exact") ≈ 1.0
 
-  tn_r = rescale(tn; alg="bp")
+  tn_r = rescale(tn; alg="bp", cache_update_kwargs=(; maxiter=20))
   @test scalar(tn_r; alg="exact") ≈ 1.0
 
   #Now a state on a loopy graph
@@ -45,10 +45,12 @@ using Test: @test, @testset
   @test scalar(norm_sqr_network(ψ); alg="exact") ≈ 1.0
 
   ψIψ_bpc = Ref(BeliefPropagationCache(QuadraticFormNetwork(x)))
-  ψ = normalize(x; alg="bp", (cache!)=ψIψ_bpc, update_cache=true)
+  ψ = normalize(
+    x; alg="bp", (cache!)=ψIψ_bpc, update_cache=true, cache_update_kwargs=(; maxiter=20)
+  )
   ψIψ_bpc = ψIψ_bpc[]
   @test all(x -> x ≈ 1.0, edge_scalars(ψIψ_bpc))
   @test all(x -> x ≈ 1.0, vertex_scalars(ψIψ_bpc))
-  @test scalar(QuadraticFormNetwork(ψ); alg="bp") ≈ 1.0
+  @test scalar(QuadraticFormNetwork(ψ); alg="bp", cache_update_kwargs=(; maxiter=20)) ≈ 1.0
 end
 end

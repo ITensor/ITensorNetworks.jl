@@ -11,7 +11,7 @@ using ITensorNetworks:
   random_tensornetwork,
   siteinds,
   update
-using ITensors: ITensors, ITensor, inner, op
+using ITensors: ITensors, ITensor, Algorithm, inner, op
 using NamedGraphs.NamedGraphGenerators: named_grid
 using NamedGraphs.PartitionedGraphs: PartitionVertex
 using SplitApplyCombine: group
@@ -32,7 +32,7 @@ using Test: @test, @testset
   bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
   bp_cache = update(bp_cache; maxiter=20)
   envsSBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
-  ψv = VidalITensorNetwork(ψ)
+  ψv = VidalITensorNetwork(ψ; cache_update_kwargs=(; maxiter=20))
   #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
   bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
   bp_cache = update(bp_cache; maxiter=20)
