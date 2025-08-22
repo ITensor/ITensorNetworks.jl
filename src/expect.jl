@@ -25,7 +25,7 @@ function expect(
   ops;
   (cache!)=nothing,
   update_cache=isnothing(cache!),
-  cache_update_kwargs=default_cache_update_kwargs(alg),
+  cache_update_kwargs=(;),
   cache_construction_kwargs=(;),
   kwargs...,
 )

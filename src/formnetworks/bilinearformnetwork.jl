@@ -1,5 +1,6 @@
+using Adapt: adapt
 using ITensors: ITensor, Op, prime, sim
-using ITensors.NDTensors: denseblocks
+using ITensors.NDTensors: datatype, denseblocks
 
 default_dual_site_index_map = prime
 default_dual_link_index_map = sim
@@ -76,6 +77,7 @@ function BilinearFormNetwork(
   O = ITensorNetwork(operator_inds; link_space) do v
     return inds -> itensor_identity_map(scalartype(ket), s[v] .=> s_mapped[v])
   end
+  O = adapt(promote_type(datatype(bra), datatype(ket)), O)
   return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end
 

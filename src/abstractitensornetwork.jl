@@ -1,3 +1,4 @@
+using Adapt: Adapt, adapt, adapt_structure
 using DataGraphs:
   DataGraphs, edge_data, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
@@ -86,6 +87,10 @@ function DataGraphs.underlying_graph_type(G::Type{<:AbstractITensorNetwork})
   return underlying_graph_type(data_graph_type(G))
 end
 
+function ITensors.datatype(tn::AbstractITensorNetwork)
+  return mapreduce(v -> datatype(tn[v]), promote_type, vertices(tn))
+end
+
 # AbstractDataGraphs overloads
 function DataGraphs.vertex_data(graph::AbstractITensorNetwork, args...)
   return vertex_data(data_graph(graph), args...)
@@ -100,6 +105,17 @@ function NamedGraphs.vertex_positions(tn::AbstractITensorNetwork)
 end
 function NamedGraphs.ordered_vertices(tn::AbstractITensorNetwork)
   return NamedGraphs.ordered_vertices(underlying_graph(tn))
+end
+
+function Adapt.adapt_structure(to, tn::AbstractITensorNetwork)
+  # TODO: Define and use:
+  #
+  # @preserve_graph map_vertex_data(adapt(to), tn)
+  #
+  # or just:
+  #
+  # @preserve_graph map(adapt(to), tn)
+  return map_vertex_data_preserve_graph(adapt(to), tn)
 end
 
 #

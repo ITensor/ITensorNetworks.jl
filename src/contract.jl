@@ -53,7 +53,7 @@ function logscalar(
   (cache!)=nothing,
   cache_construction_kwargs=default_cache_construction_kwargs(alg, tn),
   update_cache=isnothing(cache!),
-  cache_update_kwargs=default_cache_update_kwargs(alg),
+  cache_update_kwargs=(;),
 )
   if isnothing(cache!)
     cache! = Ref(cache(alg, tn; cache_construction_kwargs...))
