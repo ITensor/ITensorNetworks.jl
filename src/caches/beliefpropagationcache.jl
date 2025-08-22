@@ -141,7 +141,7 @@ function rescale_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:Partit
       n *= sign(n)
     end
 
-    sf = (1 / sqrt(n)) ^ (1 / length(me))
+    sf = (1 / sqrt(n)) ^ (typeof(n)((1 / length(me))))
     set!(mts, pe, sf .* me)
     set!(mts, reverse(pe), sf .* mer)
   end
