@@ -382,8 +382,8 @@ function rescale_partitions(
     isempty(pv_vs) && continue
 
     vn = region_scalar(bpc, pv)
-    s = isreal(vn) ? sign(vn) : 1.0
-    vn = s * inv(vn^(1 / length(pv_vs)))
+    s = isreal(vn) ? sign(vn) : one(vn)
+    vn = s * vn^(-inv(oftype(vn, length(pv_vs))))
     set!(vertices_weights, first(pv_vs), s*vn)
     for v in pv_vs[2:length(pv_vs)]
       set!(vertices_weights, v, vn)
