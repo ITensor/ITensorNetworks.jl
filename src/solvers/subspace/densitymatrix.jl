@@ -6,9 +6,9 @@ function subspace_expand(
   problem,
   local_state::ITensor,
   region_iterator;
+  expansion_factor,
+  max_expand,
   north_pass=1,
-  expansion_factor=default_expansion_factor(),
-  max_expand=default_max_expand(),
   trunc,
   kws...,
 )
