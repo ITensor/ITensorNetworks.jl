@@ -20,8 +20,8 @@ include("utilities/tree_graphs.jl")
   for edge in edges(sites)
     i, j = src(edge), dst(edge)
     h += "Sz", i, "Sz", j
-    h += 1/2, "S+", i, "S-", j
-    h += 1/2, "S-", i, "S+", j
+    h += 1 / 2, "S+", i, "S-", j
+    h += 1 / 2, "S-", i, "S+", j
   end
   H = ttn(h, sites)
 
@@ -48,7 +48,7 @@ include("utilities/tree_graphs.jl")
   insert_kwargs = (; trunc)
   E, psi = dmrg(H, psi0; insert_kwargs, nsites, nsweeps, outputlevel)
   (outputlevel >= 1) && println("2-site DMRG energy = ", E)
-  @test abs(E-Ex) < 1E-5
+  @test E ≈ Ex atol = 1E-5
 
   #
   # Test 1-site DMRG with subspace expansion
@@ -60,5 +60,5 @@ include("utilities/tree_graphs.jl")
   insert_kwargs = (; trunc)
   E, psi = dmrg(H, psi0; extract_kwargs, insert_kwargs, nsites, nsweeps, outputlevel)
   (outputlevel >= 1) && println("1-site+subspace DMRG energy = ", E)
-  @test abs(E-Ex) < 1E-5
+  @test E ≈ Ex atol = 1E-5
 end

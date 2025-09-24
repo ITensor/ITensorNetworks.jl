@@ -12,12 +12,12 @@ function chain_plus_ancilla(; nchain)
   for j in 1:nchain
     add_vertex!(g, j)
   end
-  for j in 1:(nchain - 1)
-    add_edge!(g, j=>j+1)
+  for j in 1:(nchain-1)
+    add_edge!(g, j => j + 1)
   end
   # Add ancilla vertex near middle of chain
   add_vertex!(g, 0)
-  add_edge!(g, 0=>nchain÷2)
+  add_edge!(g, 0 => nchain ÷ 2)
   return g
 end
 
@@ -31,10 +31,10 @@ end
 
   # Make Heisenberg model Hamiltonian
   h = OpSum()
-  for j in 1:(N - 1)
-    h += "Sz", j, "Sz", j+1
-    h += 1/2, "S+", j, "S-", j+1
-    h += 1/2, "S-", j, "S+", j+1
+  for j in 1:(N-1)
+    h += "Sz", j, "Sz", j + 1
+    h += 1 / 2, "S+", j, "S-", j + 1
+    h += 1 / 2, "S-", j, "S+", j + 1
   end
   H = ttn(h, sites)
 
@@ -54,7 +54,7 @@ end
   E, gs_psi = dmrg(H, psi0; insert_kwargs=(; trunc), nsites, nsweeps, outputlevel)
   (outputlevel >= 1) && println("2-site DMRG energy = ", E)
 
-  insert_kwargs=(; trunc)
+  insert_kwargs = (; trunc)
   nsites = 1
   tmax = 0.10
   time_range = 0.0:0.02:tmax
@@ -73,7 +73,7 @@ end
 
   # Test that accumulated phase angle is E*tmax
   z = inner(psi1_t, gs_psi)
-  @test abs(atan(imag(z)/real(z)) - E*tmax) < 1E-4
+  @test atan(imag(z) / real(z)) ≈ E * tmax atol = 1E-4
 end
 
 @testset "Applyexp Time Point Handling" begin
@@ -83,10 +83,10 @@ end
 
   # Make Heisenberg model Hamiltonian
   h = OpSum()
-  for j in 1:(N - 1)
-    h += "Sz", j, "Sz", j+1
-    h += 1/2, "S+", j, "S-", j+1
-    h += 1/2, "S-", j, "S+", j+1
+  for j in 1:(N-1)
+    h += "Sz", j, "Sz", j + 1
+    h += 1 / 2, "S+", j, "S-", j + 1
+    h += 1 / 2, "S-", j, "S+", j + 1
   end
   H = ttn(h, sites)
 
@@ -99,23 +99,23 @@ end
 
   nsites = 2
   trunc = (; cutoff=1E-8, maxdim=100)
-  insert_kwargs=(; trunc)
+  insert_kwargs = (; trunc)
 
   # Test that all time points are reached and reported correctly
-  time_points = [0.0,0.1,0.25,0.32,0.4]
+  time_points = [0.0, 0.1, 0.25, 0.32, 0.4]
   times = Real[]
   function collect_times(problem; kws...)
     push!(times, ITensorNetworks.current_time(problem))
   end
-  time_evolve(H, time_points, psi0; insert_kwargs, nsites, sweep_callback=collect_times,outputlevel=1)
-  @test norm(times - time_points) < 10*eps(Float64)
+  time_evolve(H, time_points, psi0; insert_kwargs, nsites, sweep_callback=collect_times, outputlevel=1)
+  @test times ≈ time_points atol = 10 * eps(Float64)
 
   # Test that all exponents are reached and reported correctly
-  exponent_points = [-0.0,-0.1,-0.25,-0.32,-0.4]
+  exponent_points = [-0.0, -0.1, -0.25, -0.32, -0.4]
   exponents = Real[]
   function collect_exponents(problem; kws...)
     push!(exponents, ITensorNetworks.current_exponent(problem))
   end
-  applyexp(H, exponent_points, psi0; insert_kwargs, nsites, sweep_callback=collect_exponents,outputlevel=1)
-  @test norm(exponents - exponent_points) < 10*eps(Float64)
+  applyexp(H, exponent_points, psi0; insert_kwargs, nsites, sweep_callback=collect_exponents, outputlevel=1)
+  @test exponents ≈ exponent_points atol = 10 * eps(Float64)
 end
