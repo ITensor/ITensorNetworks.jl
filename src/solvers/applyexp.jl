@@ -11,7 +11,7 @@ operator(A::ApplyExpProblem) = A.operator
 state(A::ApplyExpProblem) = A.state
 current_exponent(A::ApplyExpProblem) = A.current_exponent
 function current_time(A::ApplyExpProblem)
-  t = im*A.current_exponent
+  t = im * A.current_exponent
   return iszero(imag(t)) ? real(t) : t
 end
 
@@ -36,9 +36,9 @@ function update(
   iszero(abs(exponent_step)) && return prob, local_state
 
   local_state, info = solver(
-    x->optimal_map(operator(prob), x), exponent_step, local_state; kws...
+    x -> optimal_map(operator(prob), x), exponent_step, local_state; kws...
   )
-  if nsites==1
+  if nsites == 1
     curr_reg = current_region(region_iterator)
     next_reg = next_region(region_iterator)
     if !isnothing(next_reg) && next_reg != curr_reg
@@ -46,31 +46,32 @@ function update(
       v1, v2 = src(next_edge), dst(next_edge)
       psi = copy(state(prob))
       psi[v1], R = qr(local_state, uniqueinds(local_state, psi[v2]))
-      shifted_operator = position(operator(prob), psi, NamedEdge(v1=>v2))
-      R_t, _ = solver(x->optimal_map(shifted_operator, x), -exponent_step, R; kws...)
-      local_state = psi[v1]*R_t
+      shifted_operator = position(operator(prob), psi, NamedEdge(v1 => v2))
+      R_t, _ = solver(x -> optimal_map(shifted_operator, x), -exponent_step, R; kws...)
+      local_state = psi[v1] * R_t
     end
   end
 
-  prob = set_current_exponent(prob, current_exponent(prob)+exponent_step)
+  prob = set_current_exponent(prob, current_exponent(prob) + exponent_step)
 
   return prob, local_state
 end
 
-function sweep_callback(
-  problem::ApplyExpProblem;
+function default_sweep_callback(
+  sweep_iterator::SweepIterator{<:ApplyExpProblem};
   exponent_description="exponent",
   outputlevel,
-  sweep,
-  nsweeps,
   process_time=identity,
-  kws...,
+  kwargs...,
 )
   if outputlevel >= 1
+    the_problem = problem(sweep_iterator)
     @printf(
-      "  Current %s = %s, ", exponent_description, process_time(current_exponent(problem))
+      "  Current %s = %s, ",
+      exponent_description,
+      process_time(current_exponent(the_problem))
     )
-    @printf("maxlinkdim=%d", maxlinkdim(state(problem)))
+    @printf("maxlinkdim=%d", maxlinkdim(state(the_problem)))
     println()
     flush(stdout)
   end
@@ -88,9 +89,10 @@ function applyexp(
   kws...,
 )
   exponent_steps = diff([zero(eltype(exponents)); exponents])
+  # exponent_steps = diff(exponents)
   sweep_kws = (; outputlevel, extract_kwargs, insert_kwargs, nsites, order, update_kwargs)
   kws_array = [(; sweep_kws..., time_step=t) for t in exponent_steps]
-  sweep_iter = sweep_iterator(init_prob, kws_array)
+  sweep_iter = SweepIterator(init_prob, kws_array)
   converged_prob = sweep_solve(sweep_iter; outputlevel, kws...)
   return state(converged_prob)
 end
@@ -111,11 +113,10 @@ function time_evolve(
   time_points,
   init_state;
   process_time=process_real_times,
-  sweep_callback=(
-    a...; k...
-  )->sweep_callback(a...; exponent_description="time", process_time, k...),
+  sweep_callback=(a...; k...) ->
+    default_sweep_callback(a...; exponent_description="time", process_time, k...),
   kws...,
 )
-  exponents = [-im*t for t in time_points]
+  exponents = [-im * t for t in time_points]
   return applyexp(operator, exponents, init_state; sweep_callback, kws...)
 end

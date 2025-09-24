@@ -79,7 +79,7 @@ function fit_tensornetwork(
   insert_kwargs = (; insert_kwargs..., normalize, set_orthogonal_region=false)
   common_sweep_kwargs = (; nsites, outputlevel, update_kwargs, insert_kwargs)
   kwargs_array = [(; common_sweep_kwargs..., sweep=s) for s in 1:nsweeps]
-  sweep_iter = sweep_iterator(init_prob, kwargs_array)
+  sweep_iter = SweepIterator(init_prob, kwargs_array)
   converged_prob = sweep_solve(sweep_iter; outputlevel, kws...)
   return rename_vertices(inv_vertex_map(overlap_network), ket(converged_prob))
 end

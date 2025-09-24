@@ -104,8 +104,8 @@ end
   # Test that all time points are reached and reported correctly
   time_points = [0.0, 0.1, 0.25, 0.32, 0.4]
   times = Real[]
-  function collect_times(problem; kws...)
-    push!(times, ITensorNetworks.current_time(problem))
+  function collect_times(sweep_iterator; kws...)
+    push!(times, ITensorNetworks.current_time(ITensorNetworks.problem(sweep_iterator)))
   end
   time_evolve(H, time_points, psi0; insert_kwargs, nsites, sweep_callback=collect_times, outputlevel=1)
   @test times ≈ time_points atol = 10 * eps(Float64)
@@ -113,8 +113,8 @@ end
   # Test that all exponents are reached and reported correctly
   exponent_points = [-0.0, -0.1, -0.25, -0.32, -0.4]
   exponents = Real[]
-  function collect_exponents(problem; kws...)
-    push!(exponents, ITensorNetworks.current_exponent(problem))
+  function collect_exponents(sweep_iterator; kws...)
+    push!(exponents, ITensorNetworks.current_exponent(ITensorNetworks.problem(sweep_iterator)))
   end
   applyexp(H, exponent_points, psi0; insert_kwargs, nsites, sweep_callback=collect_exponents, outputlevel=1)
   @test exponents ≈ exponent_points atol = 10 * eps(Float64)

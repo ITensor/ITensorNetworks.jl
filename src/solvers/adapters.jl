@@ -30,3 +30,21 @@ iterator which outputs a tuple of the form (current_region, current_region_kwarg
 at each step.
 """
 region_tuples(R::RegionIterator) = TupleRegionIterator(R)
+
+"""
+  struct PauseAfterIncrement{S<:AbstractNetworkIterator}
+
+Iterator wrapper whos `compute!` function simply returns itself, doing nothing in the 
+process. This allows one to manually call a custom `compute!` or insert their own code it in
+the loop body in place of `compute!`.
+"""
+struct PauseAfterIncrement{S<:AbstractNetworkIterator} <: AbstractNetworkIterator
+  parent::S
+end
+
+done(NC::PauseAfterIncrement) = done(NC.parent)
+state(NC::PauseAfterIncrement) = state(NC.parent)
+increment!(NC::PauseAfterIncrement) = increment!(NC.parent)
+compute!(NC::PauseAfterIncrement) = NC
+
+PauseAfterIncrement(NC::PauseAfterIncrement) = NC

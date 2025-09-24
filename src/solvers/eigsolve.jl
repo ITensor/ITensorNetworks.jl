@@ -34,7 +34,7 @@ function update(
   solver=eigsolve_solver,
   kws...,
 )
-  eigval, local_state = solver(ψ->optimal_map(operator(prob), ψ), local_state; kws...)
+  eigval, local_state = solver(ψ -> optimal_map(operator(prob), ψ), local_state; kws...)
   prob = set_eigenvalue(prob, eigval)
   if outputlevel >= 2
     @printf(
@@ -44,12 +44,16 @@ function update(
   return prob, local_state
 end
 
-function sweep_callback(problem::EigsolveProblem; outputlevel, sweep, nsweeps, kws...)
+function default_sweep_callback(
+  sweep_iterator::SweepIterator{<:EigsolveProblem}; outputlevel
+)
   if outputlevel >= 1
-    if nsweeps >= 10
-      @printf("After sweep %02d/%d ", sweep, nsweeps)
+    nsweeps = length(sweep_iterator)
+    current_sweep = sweep_iterator.which_sweep
+    if length(sweep_iterator) >= 10
+      @printf("After sweep %02d/%d ", current_sweep, nsweeps)
     else
-      @printf("After sweep %d/%d ", sweep, nsweeps)
+      @printf("After sweep %d/%d ", current_sweep, nsweeps)
     end
     @printf("eigenvalue=%.12f", eigenvalue(problem))
     @printf(" maxlinkdim=%d", maxlinkdim(state(problem)))
@@ -73,7 +77,7 @@ function eigsolve(
   init_prob = EigsolveProblem(;
     state=align_indices(init_state), operator=ProjTTN(align_indices(operator))
   )
-  sweep_iter = sweep_iterator(
+  sweep_iter = SweepIterator(
     init_prob, nsweeps; nsites, outputlevel, extract_kwargs, update_kwargs, insert_kwargs
   )
   prob = sweep_solve(sweep_iter; outputlevel, kws...)
