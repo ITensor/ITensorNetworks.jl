@@ -158,9 +158,9 @@ end
 
 #Forward from partitioned graph
 for f in [
-  :(PartitionedGraphs.partitioned_graph),
   :(PartitionedGraphs.partitionedge),
   :(PartitionedGraphs.partitionvertices),
+  :(PartitionedGraphs.partitions_graph),
   :(PartitionedGraphs.vertices),
   :(PartitionedGraphs.boundary_partitionedges),
 ]
