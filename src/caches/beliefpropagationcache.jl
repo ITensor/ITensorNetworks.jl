@@ -95,7 +95,7 @@ function set_default_kwargs(alg::Algorithm"bp", bp_cache::BeliefPropagationCache
 end
 
 function default_bp_maxiter(bp_cache::BeliefPropagationCache)
-  return default_bp_maxiter(partitioned_graph(bp_cache))
+  return default_bp_maxiter(partitions_graph(bp_cache))
 end
 function default_bp_edge_sequence(bp_cache::BeliefPropagationCache)
   return default_edge_sequence(partitioned_tensornetwork(bp_cache))
