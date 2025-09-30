@@ -1,5 +1,5 @@
 using Test: @test, @testset
-using ITensorNetworks: done, state, increment!, compute!
+using ITensorNetworks: laststep, state, increment!, compute!
 
 module TestIteratorUtils
 
@@ -40,11 +40,11 @@ end
   @testset "`AbstractNetworkIterator` Interface" begin
     TI = TestIterator(1, 4, [])
 
-    @test !done(TI)
+    @test !laststep((TI))
 
     # First iterator should compute only
     rv, st = iterate(TI)
-    @test !done(TI)
+    @test !laststep((TI))
     @test !st
     @test rv === TI
     @test length(TI.output) == 1
@@ -53,27 +53,27 @@ end
     @test !st
 
     rv, st = iterate(TI, st)
-    @test !done(TI)
+    @test !laststep((TI))
     @test !st
     @test length(TI.output) == 2
     @test state(TI) == 2
     @test TI.output == [1, 2]
 
     increment!(TI)
-    @test !done(TI)
+    @test !laststep((TI))
     @test state(TI) == 3
     @test length(TI.output) == 2
     @test TI.output == [1, 2]
 
     compute!(TI)
-    @test !done(TI)
+    @test !laststep((TI))
     @test state(TI) == 3
     @test length(TI.output) == 3
     @test TI.output == [1, 2, 3]
 
     # Final Step
     iterate(TI, false)
-    @test done(TI)
+    @test laststep((TI))
     @test state(TI) == 4
     @test length(TI.output) == 4
     @test TI.output == [1, 2, 3, 4]
@@ -91,7 +91,7 @@ end
       @test cb == TI.output
     end
 
-    @test done(TI)
+    @test laststep((TI))
     @test length(TI.output) == 5
     @test length(cb) == 5
     @test cb == TI.output
@@ -112,7 +112,7 @@ end
       @test state(SA) == i
     end
 
-    @test done(SA)
+    @test laststep((SA))
 
     TI = TestIterator(1, 5, [])
     SA = SquareAdapter(TI)

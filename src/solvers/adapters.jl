@@ -9,7 +9,7 @@ struct PauseAfterIncrement{S<:AbstractNetworkIterator} <: AbstractNetworkIterato
   parent::S
 end
 
-done(NC::PauseAfterIncrement) = done(NC.parent)
+laststep(NC::PauseAfterIncrement) = laststep(NC.parent)
 state(NC::PauseAfterIncrement) = state(NC.parent)
 increment!(NC::PauseAfterIncrement) = increment!(NC.parent)
 compute!(NC::PauseAfterIncrement) = NC
