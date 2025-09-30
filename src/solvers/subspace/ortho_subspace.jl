@@ -28,7 +28,7 @@ function subspace_expand!(
   max_expand=default_max_expand(),
   kws...,
 )
-  prev_region = previous_region(region_iterator)
+  prev_region = prev_region(region_iterator)
   region = current_region(region_iterator)
   if isnothing(prev_region) || isa(region, AbstractEdge)
     return local_tensor

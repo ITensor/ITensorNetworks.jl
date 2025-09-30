@@ -65,7 +65,7 @@ function current_region_kwargs(R::RegionIterator)
   return kwargs
 end
 
-function previous_region(R::RegionIterator)
+function prev_region(R::RegionIterator)
   state(R) <= 1 && return nothing
   prev, _ = R.region_plan[R.which_region - 1]
   return prev
