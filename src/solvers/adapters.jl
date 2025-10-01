@@ -5,16 +5,16 @@ Iterator wrapper whos `compute!` function simply returns itself, doing nothing i
 process. This allows one to manually call a custom `compute!` or insert their own code it in
 the loop body in place of `compute!`.
 """
-struct PauseAfterIncrement{S<:AbstractNetworkIterator} <: AbstractNetworkIterator
+struct NoComputeStep{S<:AbstractNetworkIterator} <: AbstractNetworkIterator
   parent::S
 end
 
-laststep(NC::PauseAfterIncrement) = laststep(NC.parent)
-state(NC::PauseAfterIncrement) = state(NC.parent)
-increment!(NC::PauseAfterIncrement) = increment!(NC.parent)
-compute!(NC::PauseAfterIncrement) = NC
+laststep(adapter::NoComputeStep) = laststep(adapter.parent)
+state(adapter::NoComputeStep) = state(adapter.parent)
+increment!(adapter::NoComputeStep) = increment!(adapter.parent)
+compute!(adapter::NoComputeStep) = adapter
 
-PauseAfterIncrement(NC::PauseAfterIncrement) = NC
+NoComputeStep(adapter::NoComputeStep) = adapter
 
 """
   struct EachRegion{RegionIterator} <: AbstractNetworkIterator
@@ -27,13 +27,13 @@ struct EachRegion{R<:RegionIterator} <: AbstractNetworkIterator
 end
 
 # Essential definitions
-Base.length(ER::EachRegion) = length(ER.parent)
-state(ER::EachRegion) = state(ER.parent)
-increment!(ER::EachRegion) = state(ER.parent)
+Base.length(adapter::EachRegion) = length(adapter.parent)
+state(adapter::EachRegion) = state(adapter.parent)
+increment!(adapter::EachRegion) = state(adapter.parent)
 
-function compute!(ER::EachRegion)
+function compute!(adapter::EachRegion)
   # Do the usual compute! for RegionIterator
-  compute!(ER.parent)
+  compute!(adapter.parent)
   # But now lets return something useful
-  return current_region_plan(ER)
+  return current_region_plan(adapter)
 end

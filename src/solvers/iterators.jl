@@ -9,27 +9,27 @@ this call is implict. Termination of the iterator is controlled by the function 
 abstract type AbstractNetworkIterator end
 
 # We use greater than or equals here as we increment the state at the start of the iteration
-laststep(NI::AbstractNetworkIterator) = state(NI) >= length(NI)
+laststep(iterator::AbstractNetworkIterator) = state(iterator) >= length(iterator)
 
-function Base.iterate(NI::AbstractNetworkIterator, init=true)
-  laststep(NI) && return nothing
+function Base.iterate(iterator::AbstractNetworkIterator, init=true)
+  laststep(iterator) && return nothing
   # We seperate increment! from step! and demand that any AbstractNetworkIterator *must*
   # define a method for increment! This way we avoid cases where one may wish to nest
   # calls to different step! methods accidentaly incrementing multiple times.
-  init || increment!(NI)
-  rv = compute!(NI)
+  init || increment!(iterator)
+  rv = compute!(iterator)
   return rv, false
 end
 
 function increment! end
-compute!(NI::AbstractNetworkIterator) = NI
+compute!(iterator::AbstractNetworkIterator) = iterator
 
-step!(NI::AbstractNetworkIterator) = step!(identity, NI)
-function step!(f, NI::AbstractNetworkIterator)
-  compute!(NI)
-  f(NI)
-  increment!(NI)
-  return NI
+step!(iterator::AbstractNetworkIterator) = step!(identity, iterator)
+function step!(f, iterator::AbstractNetworkIterator)
+  compute!(iterator)
+  f(iterator)
+  increment!(iterator)
+  return iterator
 end
 
 #
@@ -48,48 +48,50 @@ mutable struct RegionIterator{Problem,RegionPlan} <: AbstractNetworkIterator
   end
 end
 
-state(R::RegionIterator) = R.which_region
-Base.length(R::RegionIterator) = length(R.region_plan)
+state(region_iter::RegionIterator) = region_iter.which_region
+Base.length(region_iter::RegionIterator) = length(region_iter.region_plan)
 
-problem(R::RegionIterator) = R.problem
+problem(region_iter::RegionIterator) = region_iter.problem
 
-current_region_plan(R::RegionIterator) = R.region_plan[R.which_region]
+function current_region_plan(region_iter::RegionIterator)
+  return region_iter.region_plan[region_iter.which_region]
+end
 
-function current_region(R::RegionIterator)
-  region, _ = current_region_plan(R)
+function current_region(region_iter::RegionIterator)
+  region, _ = current_region_plan(region_iter)
   return region
 end
 
-function current_region_kwargs(R::RegionIterator)
-  _, kwargs = current_region_plan(R)
+function current_region_kwargs(region_iter::RegionIterator)
+  _, kwargs = current_region_plan(region_iter)
   return kwargs
 end
 
-function prev_region(R::RegionIterator)
-  state(R) <= 1 && return nothing
-  prev, _ = R.region_plan[R.which_region - 1]
+function prev_region(region_iter::RegionIterator)
+  state(region_iter) <= 1 && return nothing
+  prev, _ = region_iter.region_plan[region_iter.which_region - 1]
   return prev
 end
 
-function next_region(R::RegionIterator)
-  is_last_region(R) && return nothing
-  next, _ = R.region_plan[R.which_region + 1]
+function next_region(region_iter::RegionIterator)
+  is_last_region(region_iter) && return nothing
+  next, _ = region_iter.region_plan[region_iter.which_region + 1]
   return next
 end
-is_last_region(R::RegionIterator) = length(R) === state(R)
+is_last_region(region_iter::RegionIterator) = length(region_iter) === state(region_iter)
 
 #
 # Functions associated with RegionIterator
 #
 
-function compute!(R::RegionIterator)
-  region_kwargs = current_region_kwargs(R)
-  R.problem = region_step(R; region_kwargs...)
-  return R
+function compute!(region_iter::RegionIterator)
+  region_kwargs = current_region_kwargs(region_iter)
+  region_iter.problem = region_step(region_iter; region_kwargs...)
+  return region_iter
 end
-function increment!(R::RegionIterator)
-  R.which_region += 1
-  return R
+function increment!(region_iter::RegionIterator)
+  region_iter.which_region += 1
+  return region_iter
 end
 
 function RegionIterator(problem; sweep, sweep_kwargs...)
@@ -130,22 +132,24 @@ mutable struct SweepIterator{Problem} <: AbstractNetworkIterator
   end
 end
 
-laststep(SR::SweepIterator) = isnothing(peek(SR.sweep_kws))
+laststep(sweep_iter::SweepIterator) = isnothing(peek(sweep_iter.sweep_kws))
 
-region_iterator(S::SweepIterator) = S.region_iter
-problem(S::SweepIterator) = problem(region_iterator(S))
+region_iterator(sweep_iter::SweepIterator) = sweep_iter.region_iter
+problem(sweep_iter::SweepIterator) = problem(region_iterator(sweep_iter))
 
-state(SR::SweepIterator) = SR.which_sweep
-Base.length(S::SweepIterator) = length(S.sweep_kws)
-function increment!(SR::SweepIterator)
-  SR.which_sweep += 1
-  sweep_kwargs, _ = Iterators.peel(SR.sweep_kws)
-  SR.region_iter = RegionIterator(problem(SR); sweep=state(SR), sweep_kwargs...)
-  return SR
+state(sweep_iter::SweepIterator) = sweep_iter.which_sweep
+Base.length(sweep_iter::SweepIterator) = length(sweep_iter.sweep_kws)
+function increment!(sweep_iter::SweepIterator)
+  sweep_iter.which_sweep += 1
+  sweep_kwargs, _ = Iterators.peel(sweep_iter.sweep_kws)
+  sweep_iter.region_iter = RegionIterator(
+    problem(sweep_iter); sweep=state(sweep_iter), sweep_kwargs...
+  )
+  return sweep_iter
 end
 
-function compute!(SR::SweepIterator)
-  for _ in SR.region_iter
+function compute!(sweep_iter::SweepIterator)
+  for _ in sweep_iter.region_iter
     # TODO: Is it sensible to execute the default region callback function?
   end
 end
