@@ -19,9 +19,9 @@ set_eigenvalue(E::EigsolveProblem, eigenvalue) = (@set E.eigenvalue = eigenvalue
 set_state(E::EigsolveProblem, state) = (@set E.state = state)
 set_max_truncerror(E::EigsolveProblem, truncerror) = (@set E.max_truncerror = truncerror)
 
-function set_truncation_info(E::EigsolveProblem; spectrum=nothing)
+function set_truncation_info!(E::EigsolveProblem; spectrum=nothing)
   if !isnothing(spectrum)
-    E = set_max_truncerror(E, max(max_truncerror(E), truncerror(spectrum)))
+    E.max_truncerror = max(max_truncerror(E), truncerror(spectrum))
   end
   return E
 end
