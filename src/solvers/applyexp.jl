@@ -23,17 +23,18 @@ function region_plan(A::ApplyExpProblem; nsites, time_step, sweep_kwargs...)
   return applyexp_regions(state(A), time_step; nsites, sweep_kwargs...)
 end
 
-function update(
-  prob::ApplyExpProblem,
+function update!(
   local_state,
-  region_iterator;
+  region_iterator::RegionIterator{<:ApplyExpProblem};
   nsites,
   exponent_step,
   solver=runge_kutta_solver,
   outputlevel,
   kws...,
 )
-  iszero(abs(exponent_step)) && return prob, local_state
+  prob = problem(region_iterator)
+
+  iszero(abs(exponent_step)) && return local_state
 
   local_state, info = solver(
     x -> optimal_map(operator(prob), x), exponent_step, local_state; kws...
@@ -52,9 +53,9 @@ function update(
     end
   end
 
-  prob = set_current_exponent(prob, current_exponent(prob) + exponent_step)
+  prob.current_exponent += exponent_step
 
-  return prob, local_state
+  return local_state
 end
 
 function default_sweep_callback(

@@ -26,22 +26,24 @@ function set_truncation_info(E::EigsolveProblem; spectrum=nothing)
   return E
 end
 
-function update(
-  prob::EigsolveProblem,
+function update!(
   local_state,
-  region_iterator;
+  region_iterator::RegionIterator{<:EigsolveProblem};
   outputlevel,
   solver=eigsolve_solver,
   kws...,
 )
+  prob = problem(region_iterator)
+
   eigval, local_state = solver(ψ -> optimal_map(operator(prob), ψ), local_state; kws...)
-  prob = set_eigenvalue(prob, eigval)
+  prob.eigenvalue = eigval
+
   if outputlevel >= 2
     @printf(
       "  Region %s: energy = %.12f\n", current_region(region_iterator), eigenvalue(prob)
     )
   end
-  return prob, local_state
+  return local_state
 end
 
 function default_sweep_callback(
