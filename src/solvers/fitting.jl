@@ -26,11 +26,13 @@ function ket(F::FittingProblem)
   return first(induced_subgraph(tensornetwork(state(F)), ket_vertices))
 end
 
-function extract(problem::FittingProblem, region_iterator; sweep, kws...)
-  region = current_region(region_iterator)
-  prev_region = gauge_region(problem)
-  tn = state(problem)
-  path = edge_sequence_between_regions(ket_graph(problem), prev_region, region)
+function extract!(region_iter::RegionIterator{<:FittingProblem}; sweep, kws...)
+  prob = problem(region_iter)
+
+  region = current_region(region_iter)
+  prev_region = gauge_region(prob)
+  tn = state(prob)
+  path = edge_sequence_between_regions(ket_graph(prob), prev_region, region)
   tn = gauge_walk(Algorithm("orthogonalize"), tn, path)
   pe_path = partitionedges(partitioned_tensornetwork(tn), path)
   tn = update(
@@ -40,8 +42,27 @@ function extract(problem::FittingProblem, region_iterator; sweep, kws...)
   sequence = contraction_sequence(local_tensor; alg="optimal")
   local_tensor = dag(contract(local_tensor; sequence))
   #problem, local_tensor = subspace_expand(problem, local_tensor, region; sweep, kws...)
-  return setproperties(problem; state=tn, gauge_region=region), local_tensor
+
+  prob.state = tn
+  prob.gauge_region = region
+
+  return local_tensor
 end
+
+# function update(
+#   region_iter::RegionIterator{FittingProblem}, local_tensor, region; outputlevel, kws...
+# )
+#   F = problem(region_iter)
+#
+#   region = current_region(F)
+#
+#   n = (local_tensor * dag(local_tensor))[]
+#   F.overlap = n / sqrt(n)
+#   if outputlevel >= 2
+#     @printf("  Region %s: squared overlap = %.12f\n", region, overlap(F))
+#   end
+#   return F, local_tensor
+# end
 
 function update(F::FittingProblem, local_tensor, region; outputlevel, kws...)
   n = (local_tensor * dag(local_tensor))[]

@@ -1,12 +1,18 @@
-function extract(problem, region_iterator; sweep, trunc=(;), kws...)
+function extract!(region_iterator; sweep, trunc=(;), kws...)
+  prob = problem(region_iterator)
+
   trunc = truncation_parameters(sweep; trunc...)
   region = current_region(region_iterator)
-  psi = orthogonalize(state(problem), region)
+  psi = orthogonalize(state(prob), region)
   local_state = prod(psi[v] for v in region)
-  problem = set_state(problem, psi)
-  problem, local_state = subspace_expand(
-    problem, local_state, region_iterator; sweep, trunc, kws...
-  )
-  shifted_operator = position(operator(problem), state(problem), region)
-  return set_operator(problem, shifted_operator), local_state
+
+  prob.state = psi
+
+  local_state = subspace_expand!(local_state, region_iterator; sweep, trunc, kws...)
+
+  shifted_operator = position(operator(prob), state(prob), region)
+
+  prob.operator = shifted_operator
+
+  return local_state
 end

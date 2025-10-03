@@ -106,7 +106,7 @@ function region_step(
 
   sweep = region_iterator.sweep
 
-  prob, local_state = extract(prob, region_iterator; extract_kwargs..., sweep, kws...)
+  local_state = extract!(region_iterator; extract_kwargs..., sweep, kws...)
   prob, local_state = update(prob, local_state, region_iterator; update_kwargs..., kws...)
   prob = insert(prob, local_state, region_iterator; sweep, insert_kwargs..., kws...)
   return prob

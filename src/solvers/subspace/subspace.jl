@@ -4,8 +4,7 @@ using NDTensors.BackendSelection: Backend, @Backend_str
 default_expansion_factor() = 1.5
 default_max_expand() = typemax(Int)
 
-function subspace_expand(
-  problem,
+function subspace_expand!(
   local_state,
   region_iterator;
   expansion_factor=default_expansion_factor(),
@@ -17,9 +16,8 @@ function subspace_expand(
 )
   expansion_factor = get_or_last(expansion_factor, sweep)
   max_expand = get_or_last(max_expand, sweep)
-  return subspace_expand(
+  local_state = subspace_expand!(
     Backend(subspace_algorithm),
-    problem,
     local_state,
     region_iterator;
     expansion_factor,
@@ -27,18 +25,17 @@ function subspace_expand(
     trunc,
     kws...,
   )
+  return local_state
 end
 
-function subspace_expand(backend, problem, local_state, region_iterator; kws...)
-  error(
+function subspace_expand!(backend, local_state, region_iterator; kws...)
+  return error(
     "Subspace expansion (subspace_expand!) not defined for requested combination of subspace_algorithm and problem types",
   )
 end
 
-function subspace_expand(
-  backend::Backend{:nothing}, problem, local_state, region_iterator; kws...
-)
-  problem, local_state
+function subspace_expand!(backend::Backend{:nothing}, local_state, region_iterator; kws...)
+  return local_state
 end
 
 function compute_expansion(
@@ -55,9 +52,9 @@ function compute_expansion(
   expand_maxdim = min(max_expand, expand_maxdim)
 
   # Restrict expand_maxdim below theoretical upper limit
-  expand_maxdim = min(basis_size-current_dim, expand_maxdim)
+  expand_maxdim = min(basis_size - current_dim, expand_maxdim)
   # Enforce total maxdim setting (e.g. used in insert step)
-  expand_maxdim = min(maxdim-current_dim, expand_maxdim)
+  expand_maxdim = min(maxdim - current_dim, expand_maxdim)
   # Ensure expand_maxdim is non-negative
   expand_maxdim = max(0, expand_maxdim)
   return expand_maxdim
