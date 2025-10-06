@@ -83,33 +83,22 @@ is_last_region(region_iter::RegionIterator) = length(region_iter) === state(regi
 #
 # Functions associated with RegionIterator
 #
-
-function compute!(region_iter::RegionIterator)
-  region_kwargs = current_region_kwargs(region_iter)
-  region_iter.problem = region_step(region_iter; region_kwargs...)
-  return region_iter
-end
 function increment!(region_iter::RegionIterator)
   region_iter.which_region += 1
   return region_iter
 end
 
+function compute!(iter::RegionIterator)
+  local_state = extract!(iter; default_kwargs(extract!, iter)...)
+  local_state = update!(local_state, iter; default_kwargs(update!, iter)...)
+  insert!(local_state, iter; default_kwargs(insert!, iter)...)
+
+  return iter
+end
+
 function RegionIterator(problem; sweep, sweep_kwargs...)
   plan = region_plan(problem; sweep, sweep_kwargs...)
   return RegionIterator(problem, plan, sweep)
-end
-
-function region_step(
-  region_iterator; extract_kwargs=(;), update_kwargs=(;), insert_kwargs=(;), kws...
-)
-  prob = problem(region_iterator)
-
-  sweep = region_iterator.sweep
-
-  local_state = extract!(region_iterator; extract_kwargs..., sweep, kws...)
-  local_state = update!(local_state, region_iterator; update_kwargs..., kws...)
-  prob = insert!(local_state, region_iterator; sweep, insert_kwargs..., kws...)
-  return prob
 end
 
 function region_plan(problem; kws...)
