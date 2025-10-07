@@ -3,14 +3,14 @@ using NamedGraphs.GraphsExtensions:
   default_root_vertex, post_order_dfs_edges, post_order_dfs_vertices
 
 function post_order_dfs_plan(
-  graph; nsites, root_vertex=default_root_vertex(graph), sweep_kwargs...
+  graph, sweep_kwargs; nsites, root_vertex=default_root_vertex(graph)
 )
   if nsites == 1
     vertices = post_order_dfs_vertices(graph, root_vertex)
-    fwd_sweep = [([v], sweep_kwargs) for v in vertices]
+    fwd_sweep = [[v] => sweep_kwargs for v in vertices]
   elseif nsites == 2
     edges = post_order_dfs_edges(graph, root_vertex)
-    fwd_sweep = [([src(e), dst(e)], sweep_kwargs) for e in edges]
+    fwd_sweep = [[src(e), dst(e)] => sweep_kwargs for e in edges]
   end
   return fwd_sweep
 end
