@@ -21,7 +21,7 @@ function ket(F::FittingProblem)
   return first(induced_subgraph(tensornetwork(state(F)), ket_vertices))
 end
 
-function extract!(region_iter::RegionIterator{<:FittingProblem}; sweep, kws...)
+function extract!(region_iter::RegionIterator{<:FittingProblem})
   prob = problem(region_iter)
 
   region = current_region(region_iter)
@@ -44,9 +44,7 @@ function extract!(region_iter::RegionIterator{<:FittingProblem}; sweep, kws...)
   return local_tensor
 end
 
-function update!(
-  local_tensor, region_iter::RegionIterator{<:FittingProblem}; outputlevel, kws...
-)
+function update!(local_tensor, region_iter::RegionIterator{<:FittingProblem}; outputlevel)
   F = problem(region_iter)
 
   region = current_region(region_iter)
@@ -71,11 +69,10 @@ function fit_tensornetwork(
   nsweeps=25,
   nsites=1,
   outputlevel=0,
-  extract_kwargs=(;),
-  update_kwargs=(;),
-  insert_kwargs=(;),
   normalize=true,
-  kws...,
+  maxdim=default_kwargs(factorize).maxdim,
+  cutoff=default_kwargs(factorize).cutoff,
+  extra_sweep_kwargs...,
 )
   bpc = BeliefPropagationCache(overlap_network, args...)
   ket_graph = first(
@@ -85,11 +82,16 @@ function fit_tensornetwork(
     ket_graph, state=bpc, gauge_region=collect(vertices(ket_graph))
   )
 
-  insert_kwargs = (; insert_kwargs..., normalize, set_orthogonal_region=false)
-  common_sweep_kwargs = (; nsites, outputlevel, update_kwargs, insert_kwargs)
-  kwargs_array = [(; common_sweep_kwargs..., sweep=s) for s in 1:nsweeps]
+  insert!_kwargs = (; normalize, set_orthogonal_region=false)
+  update!_kwargs = (; outputlevel)
+  factorize_kwargs = (; maxdim, cutoff)
+
+  sweep_kwargs = (; nsites, outputlevel, update!_kwargs, insert!_kwargs, factorize_kwargs)
+  kwargs_array = [(; sweep_kwargs..., extra_sweep_kwargs..., sweep) for sweep in 1:nsweeps]
+
   sweep_iter = SweepIterator(init_prob, kwargs_array)
-  converged_prob = sweep_solve(sweep_iter; outputlevel, kws...)
+  converged_prob = sweep_solve(sweep_iter)
+
   return rename_vertices(inv_vertex_map(overlap_network), ket(converged_prob))
 end
 
@@ -109,12 +111,10 @@ end
 function ITensors.apply(
   A::ITensorNetwork,
   x::ITensorNetwork;
-  maxdim=default_maxdim(),
-  cutoff=default_cutoff(),
-  kwargs...,
+  maxdim=default_kwargs(factorize).maxdim,
+  sweep_kwargs...,
 )
   init_state = ITensorNetwork(v -> inds -> delta(inds), siteinds(x); link_space=maxdim)
   overlap_network = inner_network(x, A, init_state)
-  insert_kwargs = (; trunc=(; cutoff, maxdim))
-  return fit_tensornetwork(overlap_network; insert_kwargs, kwargs...)
+  return fit_tensornetwork(overlap_network; maxdim, sweep_kwargs...)
 end

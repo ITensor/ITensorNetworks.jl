@@ -21,15 +21,16 @@ function set_truncation_info!(E::EigsolveProblem; spectrum=nothing)
 end
 
 function update!(
-  local_state,
-  region_iterator::RegionIterator{<:EigsolveProblem};
-  outputlevel,
-  solver=eigsolve_solver,
-  kws...,
+  local_state, region_iterator::RegionIterator{<:EigsolveProblem}; outputlevel, solver
 )
   prob = problem(region_iterator)
 
-  eigval, local_state = solver(ψ -> optimal_map(operator(prob), ψ), local_state; kws...)
+  eigval, local_state = solver(
+    ψ -> optimal_map(operator(prob), ψ),
+    local_state;
+    current_kwargs(solver, region_iterator)...,
+  )
+
   prob.eigenvalue = eigval
 
   if outputlevel >= 2
@@ -38,6 +39,10 @@ function update!(
     )
   end
   return local_state
+end
+
+function default_kwargs(::typeof(update!), ::Type{<:EigsolveProblem})
+  return (; outputlevel=0, solver=eigsolve_solver)
 end
 
 function default_sweep_callback(
@@ -59,24 +64,12 @@ function default_sweep_callback(
   end
 end
 
-function eigsolve(
-  operator,
-  init_state;
-  nsweeps,
-  nsites=1,
-  outputlevel=0,
-  extract_kwargs=(;),
-  update_kwargs=(;),
-  insert_kwargs=(;),
-  kws...,
-)
+function eigsolve(operator, init_state; nsweeps, nsites=1, outputlevel=0, sweep_kwargs...)
   init_prob = EigsolveProblem(;
     state=align_indices(init_state), operator=ProjTTN(align_indices(operator))
   )
-  sweep_iter = SweepIterator(
-    init_prob, nsweeps; nsites, outputlevel, extract_kwargs, update_kwargs, insert_kwargs
-  )
-  prob = sweep_solve(sweep_iter; outputlevel, kws...)
+  sweep_iter = SweepIterator(init_prob, nsweeps; nsites, outputlevel, sweep_kwargs...)
+  prob = sweep_solve(sweep_iter; outputlevel)
   return eigenvalue(prob), state(prob)
 end
 

@@ -1,19 +1,15 @@
 using NamedGraphs.GraphsExtensions: incident_edges
 using Printf: @printf
 
+function default_kwargs(::typeof(subspace_expand!), ::Backend"densitymatrix", ::Any)
+  return (; north_pass=1)
+end
 function subspace_expand!(
-  ::Backend"densitymatrix",
-  local_state::ITensor,
-  region_iterator;
-  expansion_factor,
-  max_expand,
-  north_pass=1,
-  trunc,
-  kws...,
+  ::Backend"densitymatrix", local_state::ITensor, region_iter; north_pass
 )
-  prob = problem(region_iterator)
+  prob = problem(region_iter)
 
-  region = current_region(region_iterator)
+  region = current_region(region_iter)
   psi = copy(state(prob))
 
   prev_vertex_set = setdiff(pos(operator(prob)), region)
@@ -31,10 +27,9 @@ function subspace_expand!(
   basis_size = prod(dim.(uniqueinds(A, C)))
 
   expanded_maxdim = compute_expansion(
-    dim(a), basis_size; expansion_factor, max_expand, trunc.maxdim
+    dim(a), basis_size; current_kwargs(compute_expansion, region_iter)...
   )
   expanded_maxdim <= 0 && return local_state
-  trunc = (; trunc..., maxdim=expanded_maxdim)
 
   envs = environments(operator(prob))
   H = operator(operator(prob))
@@ -50,7 +45,7 @@ function subspace_expand!(
     sqrt_rho = conj_proj_A(sqrt_rho)
   end
   rho = sqrt_rho * dag(noprime(sqrt_rho))
-  D, U = eigen(rho; trunc..., ishermitian=true)
+  D, U = eigen(rho; current_kwargs(eigen, region_iter)..., ishermitian=true)
 
   Uproj(T) = (T - prime(A, a) * (dag(prime(A, a)) * T))
   for pass in 1:north_pass

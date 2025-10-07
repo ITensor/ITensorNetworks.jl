@@ -44,4 +44,10 @@ function current_kwargs(f::Function, iter::RegionIterator)
   rv = merge(default_kwargs(f, iter), region_kwargs)
   return rv
 end
+
+# Generic
+
+# I think these should be set independent of a function, but for now:
+function default_kwargs(::typeof(factorize), ::Any)
+  return (; maxdim=typemax(Int), cutoff=0.0, mindim=1)
 end

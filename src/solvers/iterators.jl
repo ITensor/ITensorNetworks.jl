@@ -101,9 +101,7 @@ function RegionIterator(problem; sweep, sweep_kwargs...)
   return RegionIterator(problem, plan, sweep)
 end
 
-function region_plan(problem; kws...)
-  return euler_sweep(state(problem); kws...)
-end
+region_plan(problem; sweep_kwargs...) = euler_sweep(state(problem); sweep_kwargs...)
 
 #
 # SweepIterator

@@ -1,55 +1,38 @@
 using NDTensors: NDTensors
 using NDTensors.BackendSelection: Backend, @Backend_str
 
-default_expansion_factor() = 1.5
-default_max_expand() = typemax(Int)
+function subspace_expand!(local_state, region_iter; subspace_algorithm)
+  backend = Backend(subspace_algorithm)
 
-function subspace_expand!(
-  local_state,
-  region_iterator;
-  expansion_factor=default_expansion_factor(),
-  max_expand=default_max_expand(),
-  subspace_algorithm=nothing,
-  sweep,
-  trunc,
-  kws...,
-)
-  expansion_factor = get_or_last(expansion_factor, sweep)
-  max_expand = get_or_last(max_expand, sweep)
+  if backend isa Backend"nothing"
+    return local_state
+  end
+
   local_state = subspace_expand!(
-    Backend(subspace_algorithm),
-    local_state,
-    region_iterator;
-    expansion_factor,
-    max_expand,
-    trunc,
-    kws...,
+    backend, local_state, region_iter; current_kwargs(subspace_expand!, region_iter)...
   )
   return local_state
 end
 
-function subspace_expand!(backend, local_state, region_iterator; kws...)
+function default_kwargs(::typeof(subspace_expand!), iter::RegionIterator)
+  backend = current_kwargs(extract!, iter).subspace_algorithm
+  return default_kwargs(subspace_expand!, Backend(backend), problem(iter))
+end
+default_kwargs(::typeof(subspace_expand!), ::Backend, ::Any) = (;)
+
+function subspace_expand!(backend, local_state, region_iterator; kwargs...)
+  # We allow passing of any kwargs here is this method throws an error anyway
   return error(
     "Subspace expansion (subspace_expand!) not defined for requested combination of subspace_algorithm and problem types",
   )
 end
 
-function subspace_expand!(backend::Backend{:nothing}, local_state, region_iterator; kws...)
-  return local_state
-end
-
-function compute_expansion(
-  current_dim,
-  basis_size;
-  expansion_factor=default_expansion_factor(),
-  max_expand=default_max_expand(),
-  maxdim=default_maxdim(),
-)
+function compute_expansion(current_dim, basis_size; expansion_factor, maxexpand, maxdim)
   # Note: expand_maxdim will be *added* to current bond dimension
   # Obtain expand_maxdim from expansion_factor
   expand_maxdim = ceil(Int, expansion_factor * current_dim)
   # Enforce max_expand keyword
-  expand_maxdim = min(max_expand, expand_maxdim)
+  expand_maxdim = min(maxexpand, expand_maxdim)
 
   # Restrict expand_maxdim below theoretical upper limit
   expand_maxdim = min(basis_size - current_dim, expand_maxdim)
@@ -57,5 +40,11 @@ function compute_expansion(
   expand_maxdim = min(maxdim - current_dim, expand_maxdim)
   # Ensure expand_maxdim is non-negative
   expand_maxdim = max(0, expand_maxdim)
+
   return expand_maxdim
+end
+function default_kwargs(::typeof(compute_expansion), iter::RegionIterator)
+  # Derived default
+  maxdim = current_kwargs(factorize, iter).maxdim
+  return (; maxexpand=typemax(Int), expansion_factor=1.5, maxdim)
 end

@@ -14,8 +14,10 @@ function current_time(A::ApplyExpProblem)
   return iszero(imag(t)) ? real(t) : t
 end
 
-function region_plan(A::ApplyExpProblem; nsites, time_step, sweep_kwargs...)
-  return applyexp_regions(state(A), time_step; nsites, sweep_kwargs...)
+# Rename region_plan
+function region_plan(A::ApplyExpProblem; nsites, exponent_step, sweep_kwargs...)
+  # The `exponent_step` kwarg for the `update!` function needs some pre-processing.
+  return applyexp_regions(state(A), exponent_step; nsites, sweep_kwargs...)
 end
 
 function update!(
@@ -24,14 +26,13 @@ function update!(
   nsites,
   exponent_step,
   solver=runge_kutta_solver,
-  outputlevel,
   kws...,
 )
   prob = problem(region_iterator)
 
   iszero(abs(exponent_step)) && return local_state
 
-  local_state, info = solver(
+  local_state, _ = solver(
     x -> optimal_map(operator(prob), x), exponent_step, local_state; kws...
   )
   if nsites == 1
@@ -76,20 +77,20 @@ end
 function applyexp(
   init_prob::AbstractProblem,
   exponents;
-  extract_kwargs=(;),
-  update_kwargs=(;),
-  insert_kwargs=(;),
-  outputlevel=0,
-  nsites=1,
+  sweep_callback=default_sweep_callback,
   order=4,
-  kws...,
+  nsites=2,
+  sweep_kwargs...,
 )
   exponent_steps = diff([zero(eltype(exponents)); exponents])
-  # exponent_steps = diff(exponents)
-  sweep_kws = (; outputlevel, extract_kwargs, insert_kwargs, nsites, order, update_kwargs)
-  kws_array = [(; sweep_kws..., time_step=t) for t in exponent_steps]
+
+  kws_array = [
+    (; order, nsites, sweep_kwargs..., exponent_step) for exponent_step in exponent_steps
+  ]
   sweep_iter = SweepIterator(init_prob, kws_array)
-  converged_prob = sweep_solve(sweep_iter; outputlevel, kws...)
+
+  converged_prob = sweep_solve(sweep_callback, sweep_iter; outputlevel=0)
+
   return state(converged_prob)
 end
 
@@ -111,8 +112,8 @@ function time_evolve(
   process_time=process_real_times,
   sweep_callback=(a...; k...) ->
     default_sweep_callback(a...; exponent_description="time", process_time, k...),
-  kws...,
+  sweep_kwargs...,
 )
   exponents = [-im * t for t in time_points]
-  return applyexp(operator, exponents, init_state; sweep_callback, kws...)
+  return applyexp(operator, exponents, init_state; sweep_callback, sweep_kwargs...)
 end
