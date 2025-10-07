@@ -57,9 +57,8 @@ end
 function default_sweep_callback(
   sweep_iterator::SweepIterator{<:ApplyExpProblem};
   exponent_description="exponent",
-  outputlevel,
+  outputlevel=0,
   process_time=identity,
-  kwargs...,
 )
   if outputlevel >= 1
     the_problem = problem(sweep_iterator)
@@ -89,7 +88,7 @@ function applyexp(
   ]
   sweep_iter = SweepIterator(init_prob, kws_array)
 
-  converged_prob = sweep_solve(sweep_callback, sweep_iter; outputlevel=0)
+  converged_prob = sweep_solve(sweep_callback, sweep_iter)
 
   return state(converged_prob)
 end
@@ -110,8 +109,8 @@ function time_evolve(
   time_points,
   init_state;
   process_time=process_real_times,
-  sweep_callback=(a...; k...) ->
-    default_sweep_callback(a...; exponent_description="time", process_time, k...),
+  sweep_callback=iter ->
+    default_sweep_callback(iter; exponent_description="time", process_time),
   sweep_kwargs...,
 )
   exponents = [-im * t for t in time_points]
