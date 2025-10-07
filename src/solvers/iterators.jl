@@ -41,11 +41,20 @@ end
 mutable struct RegionIterator{Problem,RegionPlan} <: AbstractNetworkIterator
   problem::Problem
   region_plan::RegionPlan
-  const sweep::Int
   which_region::Int
+  const which_sweep::Int
   function RegionIterator(problem::P, region_plan::R, sweep::Int) where {P,R}
-    return new{P,R}(problem, region_plan, sweep, 1)
+    return new{P,R}(problem, region_plan, 1, sweep)
   end
+end
+
+function RegionIterator(problem; sweep, sweep_kwargs...)
+  plan = region_plan(problem; sweep_kwargs...)
+  return RegionIterator(problem, plan, sweep)
+end
+
+function new_region_iterator(iterator::RegionIterator; sweep_kwargs...)
+  return RegionIterator(iterator.problem; sweep_kwargs...)
 end
 
 state(region_iter::RegionIterator) = region_iter.which_region
@@ -74,11 +83,10 @@ function prev_region(region_iter::RegionIterator)
 end
 
 function next_region(region_iter::RegionIterator)
-  is_last_region(region_iter) && return nothing
+  laststep(region_iter) && return nothing
   next, _ = region_iter.region_plan[region_iter.which_region + 1]
   return next
 end
-is_last_region(region_iter::RegionIterator) = length(region_iter) === state(region_iter)
 
 #
 # Functions associated with RegionIterator
@@ -96,43 +104,42 @@ function compute!(iter::RegionIterator)
   return iter
 end
 
-function RegionIterator(problem; sweep, sweep_kwargs...)
-  plan = region_plan(problem; sweep, sweep_kwargs...)
-  return RegionIterator(problem, plan, sweep)
-end
-
 region_plan(problem; sweep_kwargs...) = euler_sweep(state(problem); sweep_kwargs...)
 
 #
 # SweepIterator
 #
 
-mutable struct SweepIterator{Problem} <: AbstractNetworkIterator
-  sweep_kws
+mutable struct SweepIterator{Problem,Iter} <: AbstractNetworkIterator
   region_iter::RegionIterator{Problem}
+  sweep_kwargs::Iterators.Stateful{Iter}
   which_sweep::Int
-  function SweepIterator(problem, sweep_kws)
-    sweep_kws = Iterators.Stateful(sweep_kws)
-    first_kwargs, _ = Iterators.peel(sweep_kws)
+  function SweepIterator(problem::Prob, sweep_kwargs::Iter) where {Prob,Iter}
+    stateful_sweep_kwargs = Iterators.Stateful(sweep_kwargs)
+    first_kwargs, _ = Iterators.peel(stateful_sweep_kwargs)
     region_iter = RegionIterator(problem; sweep=1, first_kwargs...)
-    return new{typeof(problem)}(sweep_kws, region_iter, 1)
+    return new{Prob,Iter}(region_iter, stateful_sweep_kwargs, 1)
   end
 end
 
-laststep(sweep_iter::SweepIterator) = isnothing(peek(sweep_iter.sweep_kws))
+laststep(sweep_iter::SweepIterator) = isnothing(peek(sweep_iter.sweep_kwargs))
 
 region_iterator(sweep_iter::SweepIterator) = sweep_iter.region_iter
 problem(sweep_iter::SweepIterator) = problem(region_iterator(sweep_iter))
 
 state(sweep_iter::SweepIterator) = sweep_iter.which_sweep
-Base.length(sweep_iter::SweepIterator) = length(sweep_iter.sweep_kws)
+Base.length(sweep_iter::SweepIterator) = length(sweep_iter.sweep_kwargs)
 function increment!(sweep_iter::SweepIterator)
   sweep_iter.which_sweep += 1
-  sweep_kwargs, _ = Iterators.peel(sweep_iter.sweep_kws)
-  sweep_iter.region_iter = RegionIterator(
-    problem(sweep_iter); sweep=state(sweep_iter), sweep_kwargs...
-  )
+  sweep_kwargs, _ = Iterators.peel(sweep_iter.sweep_kwargs)
+  update_region_iterator!(sweep_iter; sweep_kwargs...)
   return sweep_iter
+end
+
+function update_region_iterator!(iterator::SweepIterator; kwargs...)
+  sweep = state(iterator)
+  iterator.region_iter = new_region_iterator(iterator.region_iter; sweep, kwargs...)
+  return iterator
 end
 
 function compute!(sweep_iter::SweepIterator)
