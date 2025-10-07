@@ -21,8 +21,8 @@ function region_plan(A::ApplyExpProblem; nsites, exponent_step, sweep_kwargs...)
 end
 
 function update!(
-  local_state,
-  region_iterator::RegionIterator{<:ApplyExpProblem};
+  region_iterator::RegionIterator{<:ApplyExpProblem},
+  local_state;
   nsites,
   exponent_step,
   solver=runge_kutta_solver,

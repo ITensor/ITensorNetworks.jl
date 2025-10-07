@@ -1,7 +1,7 @@
 using NDTensors: NDTensors
 using NDTensors.BackendSelection: Backend, @Backend_str
 
-function subspace_expand!(local_state, region_iter; subspace_algorithm)
+function subspace_expand!(region_iter, local_state; subspace_algorithm)
   backend = Backend(subspace_algorithm)
 
   if backend isa Backend"nothing"
@@ -9,7 +9,7 @@ function subspace_expand!(local_state, region_iter; subspace_algorithm)
   end
 
   local_state = subspace_expand!(
-    backend, local_state, region_iter; current_kwargs(subspace_expand!, region_iter)...
+    backend, region_iter, local_state; current_kwargs(subspace_expand!, region_iter)...
   )
   return local_state
 end
@@ -20,7 +20,7 @@ function default_kwargs(::typeof(subspace_expand!), iter::RegionIterator)
 end
 default_kwargs(::typeof(subspace_expand!), ::Backend, ::Any) = (;)
 
-function subspace_expand!(backend, local_state, region_iterator; kwargs...)
+function subspace_expand!(backend, region_iterator, local_state; kwargs...)
   # We allow passing of any kwargs here is this method throws an error anyway
   return error(
     "Subspace expansion (subspace_expand!) not defined for requested combination of subspace_algorithm and problem types",

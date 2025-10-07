@@ -13,7 +13,7 @@ function _extract_fallback!(region_iter::RegionIterator; subspace_algorithm)
 
   prob.state = psi
 
-  local_state = subspace_expand!(local_state, region_iter; subspace_algorithm)
+  local_state = subspace_expand!(region_iter, local_state; subspace_algorithm)
   shifted_operator = position(operator(prob), state(prob), region)
 
   prob.operator = shifted_operator

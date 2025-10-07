@@ -21,7 +21,7 @@ function set_truncation_info!(E::EigsolveProblem; spectrum=nothing)
 end
 
 function update!(
-  local_state, region_iterator::RegionIterator{<:EigsolveProblem}; outputlevel, solver
+  region_iterator::RegionIterator{<:EigsolveProblem}, local_state; outputlevel, solver
 )
   prob = problem(region_iterator)
 

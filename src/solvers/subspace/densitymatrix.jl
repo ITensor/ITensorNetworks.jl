@@ -4,9 +4,7 @@ using Printf: @printf
 function default_kwargs(::typeof(subspace_expand!), ::Backend"densitymatrix", ::Any)
   return (; north_pass=1)
 end
-function subspace_expand!(
-  ::Backend"densitymatrix", local_state::ITensor, region_iter; north_pass
-)
+function subspace_expand!(::Backend"densitymatrix", region_iter, local_state; north_pass)
   prob = problem(region_iter)
 
   region = current_region(region_iter)

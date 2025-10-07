@@ -44,7 +44,7 @@ function extract!(region_iter::RegionIterator{<:FittingProblem})
   return local_tensor
 end
 
-function update!(local_tensor, region_iter::RegionIterator{<:FittingProblem}; outputlevel)
+function update!(region_iter::RegionIterator{<:FittingProblem}, local_tensor; outputlevel)
   F = problem(region_iter)
 
   region = current_region(region_iter)

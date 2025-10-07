@@ -1,12 +1,12 @@
 using NamedGraphs: edgetype
 
-function insert!(local_tensor, region_iter; kwargs...)
+function insert!(region_iter, local_tensor; kwargs...)
   return _insert_fallback!(
-    local_tensor, region_iter; normalize=false, set_orthogonal_region=true, kwargs...
+    region_iter, local_tensor; normalize=false, set_orthogonal_region=true, kwargs...
   )
 end
 
-function _insert_fallback!(local_tensor, region_iter; normalize, set_orthogonal_region)
+function _insert_fallback!(region_iter, local_tensor; normalize, set_orthogonal_region)
   prob = problem(region_iter)
 
   region = current_region(region_iter)

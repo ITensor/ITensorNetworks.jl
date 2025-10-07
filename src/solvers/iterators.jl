@@ -90,8 +90,8 @@ end
 
 function compute!(iter::RegionIterator)
   local_state = extract!(iter; current_kwargs(extract!, iter)...)
-  local_state = update!(local_state, iter; current_kwargs(update!, iter)...)
-  insert!(local_state, iter; current_kwargs(insert!, iter)...)
+  local_state = update!(iter, local_state; current_kwargs(update!, iter)...)
+  insert!(iter, local_state; current_kwargs(insert!, iter)...)
 
   return iter
 end
