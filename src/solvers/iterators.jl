@@ -89,9 +89,9 @@ function increment!(region_iter::RegionIterator)
 end
 
 function compute!(iter::RegionIterator)
-  local_state = extract!(iter; default_kwargs(extract!, iter)...)
-  local_state = update!(local_state, iter; default_kwargs(update!, iter)...)
-  insert!(local_state, iter; default_kwargs(insert!, iter)...)
+  local_state = extract!(iter; current_kwargs(extract!, iter)...)
+  local_state = update!(local_state, iter; current_kwargs(update!, iter)...)
+  insert!(local_state, iter; current_kwargs(insert!, iter)...)
 
   return iter
 end
