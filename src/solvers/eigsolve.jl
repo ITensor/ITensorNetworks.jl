@@ -86,4 +86,4 @@ function eigsolve(
   return eigenvalue(prob), state(prob)
 end
 
-dmrg(args...; kws...) = eigsolve(args...; kws...)
+dmrg(operator, init_state; kwargs...) = eigsolve(operator, init_state; kwargs...)
