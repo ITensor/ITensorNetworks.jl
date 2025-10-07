@@ -1,4 +1,3 @@
-using Accessors: @set
 using Printf: @printf
 using ITensors: truncerror
 
@@ -13,11 +12,6 @@ eigenvalue(E::EigsolveProblem) = E.eigenvalue
 state(E::EigsolveProblem) = E.state
 operator(E::EigsolveProblem) = E.operator
 max_truncerror(E::EigsolveProblem) = E.max_truncerror
-
-set_operator(E::EigsolveProblem, operator) = (@set E.operator = operator)
-set_eigenvalue(E::EigsolveProblem, eigenvalue) = (@set E.eigenvalue = eigenvalue)
-set_state(E::EigsolveProblem, state) = (@set E.state = state)
-set_max_truncerror(E::EigsolveProblem, truncerror) = (@set E.max_truncerror = truncerror)
 
 function set_truncation_info!(E::EigsolveProblem; spectrum=nothing)
   if !isnothing(spectrum)

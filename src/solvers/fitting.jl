@@ -1,9 +1,7 @@
-using Accessors: @set
 using Graphs: vertices
 using NamedGraphs: AbstractNamedGraph, NamedEdge
 using NamedGraphs.PartitionedGraphs: partitionedges
 using Printf: @printf
-using ConstructionBase: setproperties
 
 @kwdef mutable struct FittingProblem{State<:AbstractBeliefPropagationCache} <:
                       AbstractProblem
@@ -17,9 +15,6 @@ state(F::FittingProblem) = F.state
 ket_graph(F::FittingProblem) = F.ket_graph
 overlap(F::FittingProblem) = F.overlap
 gauge_region(F::FittingProblem) = F.gauge_region
-
-set_state(F::FittingProblem, state) = (@set F.state = state)
-set_overlap(F::FittingProblem, overlap) = (@set F.overlap = overlap)
 
 function ket(F::FittingProblem)
   ket_vertices = vertices(ket_graph(F))

@@ -1,5 +1,4 @@
 using Printf: @printf
-using Accessors: @set
 
 @kwdef mutable struct ApplyExpProblem{State} <: AbstractProblem
   operator
@@ -14,10 +13,6 @@ function current_time(A::ApplyExpProblem)
   t = im * A.current_exponent
   return iszero(imag(t)) ? real(t) : t
 end
-
-set_operator(A::ApplyExpProblem, operator) = (@set A.operator = operator)
-set_state(A::ApplyExpProblem, state) = (@set A.state = state)
-set_current_exponent(A::ApplyExpProblem, exponent) = (@set A.current_exponent = exponent)
 
 function region_plan(A::ApplyExpProblem; nsites, time_step, sweep_kwargs...)
   return applyexp_regions(state(A), time_step; nsites, sweep_kwargs...)
