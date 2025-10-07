@@ -66,7 +66,7 @@ include("solvers/abstract_problem.jl")
 include("solvers/eigsolve.jl")
 include("solvers/applyexp.jl")
 include("solvers/fitting.jl")
-include("solvers/options.jl")
+include("solvers/default_kwargs.jl")
 
 include("apply.jl")
 include("inner.jl")
