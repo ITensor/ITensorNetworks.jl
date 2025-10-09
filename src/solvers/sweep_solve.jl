@@ -13,7 +13,7 @@ function sweep_solve(
   region_callback=default_region_callback,
 )
   # Don't compute the region iteration automatically as we wish to insert a callback.
-  for _ in NoComputeStep(sweep_iterator)
+  for _ in IncrementOnly(sweep_iterator)
     for _ in region_iterator(sweep_iterator)
       region_callback(sweep_iterator)
     end

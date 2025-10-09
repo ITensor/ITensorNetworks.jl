@@ -5,16 +5,16 @@ Iterator wrapper whos `compute!` function simply returns itself, doing nothing i
 process. This allows one to manually call a custom `compute!` or insert their own code it in
 the loop body in place of `compute!`.
 """
-struct NoComputeStep{S<:AbstractNetworkIterator} <: AbstractNetworkIterator
+struct IncrementOnly{S<:AbstractNetworkIterator} <: AbstractNetworkIterator
   parent::S
 end
 
-islaststep(adapter::NoComputeStep) = islaststep(adapter.parent)
-state(adapter::NoComputeStep) = state(adapter.parent)
-increment!(adapter::NoComputeStep) = increment!(adapter.parent)
-compute!(adapter::NoComputeStep) = adapter
+islaststep(adapter::IncrementOnly) = islaststep(adapter.parent)
+state(adapter::IncrementOnly) = state(adapter.parent)
+increment!(adapter::IncrementOnly) = increment!(adapter.parent)
+compute!(adapter::IncrementOnly) = adapter
 
-NoComputeStep(adapter::NoComputeStep) = adapter
+IncrementOnly(adapter::IncrementOnly) = adapter
 
 """
   struct EachRegion{SweepIterator} <: AbstractNetworkIterator
