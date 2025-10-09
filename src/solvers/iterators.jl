@@ -9,10 +9,10 @@ this call is implict. Termination of the iterator is controlled by the function 
 abstract type AbstractNetworkIterator end
 
 # We use greater than or equals here as we increment the state at the start of the iteration
-laststep(iterator::AbstractNetworkIterator) = state(iterator) >= length(iterator)
+islaststep(iterator::AbstractNetworkIterator) = state(iterator) >= length(iterator)
 
 function Base.iterate(iterator::AbstractNetworkIterator, init=true)
-  laststep(iterator) && return nothing
+  islaststep(iterator) && return nothing
   # We seperate increment! from step! and demand that any AbstractNetworkIterator *must*
   # define a method for increment! This way we avoid cases where one may wish to nest
   # calls to different step! methods accidentaly incrementing multiple times.
@@ -83,7 +83,7 @@ function prev_region(region_iter::RegionIterator)
 end
 
 function next_region(region_iter::RegionIterator)
-  laststep(region_iter) && return nothing
+  islaststep(region_iter) && return nothing
   next, _ = region_iter.region_plan[region_iter.which_region + 1]
   return next
 end
@@ -122,7 +122,7 @@ mutable struct SweepIterator{Problem,Iter} <: AbstractNetworkIterator
   end
 end
 
-laststep(sweep_iter::SweepIterator) = isnothing(peek(sweep_iter.sweep_kwargs))
+islaststep(sweep_iter::SweepIterator) = isnothing(peek(sweep_iter.sweep_kwargs))
 
 region_iterator(sweep_iter::SweepIterator) = sweep_iter.region_iter
 problem(sweep_iter::SweepIterator) = problem(region_iterator(sweep_iter))

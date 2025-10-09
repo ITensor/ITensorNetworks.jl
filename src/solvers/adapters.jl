@@ -9,7 +9,7 @@ struct NoComputeStep{S<:AbstractNetworkIterator} <: AbstractNetworkIterator
   parent::S
 end
 
-laststep(adapter::NoComputeStep) = laststep(adapter.parent)
+islaststep(adapter::NoComputeStep) = islaststep(adapter.parent)
 state(adapter::NoComputeStep) = state(adapter.parent)
 increment!(adapter::NoComputeStep) = increment!(adapter.parent)
 compute!(adapter::NoComputeStep) = adapter
@@ -30,13 +30,13 @@ end
 eachregion(iter::SweepIterator) = EachRegion(iter)
 
 # Essential definitions
-function laststep(adapter::EachRegion)
+function islaststep(adapter::EachRegion)
   region_iter = region_iterator(adapter.parent)
-  return laststep(adapter.parent) && laststep(region_iter)
+  return islaststep(adapter.parent) && islaststep(region_iter)
 end
 function increment!(adapter::EachRegion)
   region_iter = region_iterator(adapter.parent)
-  laststep(region_iter) ? increment!(adapter.parent) : increment!(region_iter)
+  islaststep(region_iter) ? increment!(adapter.parent) : increment!(region_iter)
   return adapter
 end
 function compute!(adapter::EachRegion)
