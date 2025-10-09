@@ -1,12 +1,6 @@
 using NamedGraphs: edgetype
 
-function insert!(region_iter, local_tensor; kwargs...)
-  return _insert_fallback!(
-    region_iter, local_tensor; normalize=false, set_orthogonal_region=true, kwargs...
-  )
-end
-
-function _insert_fallback!(region_iter, local_tensor; normalize, set_orthogonal_region)
+function insert!(region_iter, local_tensor; normalize=false, set_orthogonal_region=true)
   prob = problem(region_iter)
 
   region = current_region(region_iter)
@@ -19,7 +13,7 @@ function _insert_fallback!(region_iter, local_tensor; normalize, set_orthogonal_
     tags = ITensors.tags(psi, e)
 
     U, C, spectrum = factorize(
-      local_tensor, indsTe; tags, current_kwargs(factorize, region_iter)...
+      local_tensor, indsTe; tags, region_kwargs(factorize, region_iter)...
     )
 
     @preserve_graph psi[first(region)] = U

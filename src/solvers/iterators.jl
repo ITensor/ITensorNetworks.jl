@@ -71,9 +71,12 @@ function current_region(region_iter::RegionIterator)
   return region
 end
 
-function current_region_kwargs(region_iter::RegionIterator)
+function region_kwargs(region_iter::RegionIterator)
   _, kwargs = current_region_plan(region_iter)
   return kwargs
+end
+function region_kwargs(f::Function, iter::RegionIterator)
+  return get(region_kwargs(iter), Symbol(f, :_kwargs), (;))
 end
 
 function prev_region(region_iter::RegionIterator)
@@ -96,10 +99,27 @@ function increment!(region_iter::RegionIterator)
   return region_iter
 end
 
+# Purely for our convenience:
+function extract!_kwargs(iter)
+  f = extract!
+  kwargs = region_kwargs(f, iter)
+  return default_kwargs(f, iter; kwargs...)
+end
+function update!_kwargs(iter, local_state)
+  f = update!
+  kwargs = region_kwargs(f, iter)
+  return default_kwargs(f, iter, local_state; kwargs...)
+end
+function insert!_kwargs(iter, local_state)
+  f = insert!
+  kwargs = region_kwargs(f, iter)
+  return default_kwargs(f, iter, local_state; kwargs...)
+end
+
 function compute!(iter::RegionIterator)
-  local_state = extract!(iter; current_kwargs(extract!, iter)...)
-  local_state = update!(iter, local_state; current_kwargs(update!, iter)...)
-  insert!(iter, local_state; current_kwargs(insert!, iter)...)
+  local_state = extract!(iter; extract!_kwargs(iter)...)
+  local_state = update!(iter, local_state; update!_kwargs(iter, local_state)...)
+  insert!(iter, local_state; insert!_kwargs(iter, local_state)...)
 
   return iter
 end

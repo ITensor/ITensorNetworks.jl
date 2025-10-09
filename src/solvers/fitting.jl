@@ -44,7 +44,9 @@ function extract!(region_iter::RegionIterator{<:FittingProblem})
   return local_tensor
 end
 
-function update!(region_iter::RegionIterator{<:FittingProblem}, local_tensor; outputlevel)
+@default_kwargs function update!(
+  region_iter::RegionIterator{<:FittingProblem}, local_tensor; outputlevel=0
+)
   F = problem(region_iter)
 
   region = current_region(region_iter)
@@ -70,8 +72,7 @@ function fit_tensornetwork(
   nsites=1,
   outputlevel=0,
   normalize=true,
-  maxdim=default_kwargs(factorize).maxdim,
-  cutoff=default_kwargs(factorize).cutoff,
+  factorize_kwargs,
   extra_sweep_kwargs...,
 )
   bpc = BeliefPropagationCache(overlap_network, args...)
@@ -84,7 +85,6 @@ function fit_tensornetwork(
 
   insert!_kwargs = (; normalize, set_orthogonal_region=false)
   update!_kwargs = (; outputlevel)
-  factorize_kwargs = (; maxdim, cutoff)
 
   sweep_kwargs = (; nsites, outputlevel, update!_kwargs, insert!_kwargs, factorize_kwargs)
   kwargs_array = [(; sweep_kwargs..., extra_sweep_kwargs..., sweep) for sweep in 1:nsweeps]
@@ -109,12 +109,11 @@ end
 #end
 
 function ITensors.apply(
-  A::ITensorNetwork,
-  x::ITensorNetwork;
-  maxdim=default_kwargs(factorize).maxdim,
-  sweep_kwargs...,
+  A::ITensorNetwork, x::ITensorNetwork; maxdim=typemax(Int), cutoff=0.0, sweep_kwargs...
 )
   init_state = ITensorNetwork(v -> inds -> delta(inds), siteinds(x); link_space=maxdim)
   overlap_network = inner_network(x, A, init_state)
-  return fit_tensornetwork(overlap_network; maxdim, sweep_kwargs...)
+  return fit_tensornetwork(
+    overlap_network; factorize_kwargs=(; maxdim, cutoff), sweep_kwargs...
+  )
 end
