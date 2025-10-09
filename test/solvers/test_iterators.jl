@@ -1,9 +1,20 @@
 using Test: @test, @testset
-using ITensorNetworks: laststep, state, increment!, compute!
+using ITensorNetworks: SweepIterator, laststep, state, increment!, compute!, eachregion
 
 module TestIteratorUtils
 
 using ITensorNetworks
+
+struct TestProblem <: ITensorNetworks.AbstractProblem
+  data::Vector{Int}
+end
+ITensorNetworks.region_plan(::TestProblem) = [:a => (; val=1), :b => (; val=2)]
+function ITensorNetworks.compute!(iter::ITensorNetworks.RegionIterator{<:TestProblem})
+  kwargs = ITensorNetworks.current_region_kwargs(iter)
+  push!(ITensorNetworks.problem(iter).data, kwargs.val)
+  return iter
+end
+
 
 mutable struct TestIterator <: ITensorNetworks.AbstractNetworkIterator
   state::Int
@@ -35,7 +46,7 @@ end
 
 @testset "Iterators" begin
 
-  using .TestIteratorUtils: TestIterator, SquareAdapter
+  using .TestIteratorUtils: TestIterator, SquareAdapter, TestProblem
 
   @testset "`AbstractNetworkIterator` Interface" begin
     TI = TestIterator(1, 4, [])
@@ -104,23 +115,62 @@ end
     TI = TestIterator(1, 5, [])
     SA = SquareAdapter(TI)
 
-    i = 0
-    for rv in SA
-      i += 1
-      @test rv isa Int
-      @test rv == i^2
-      @test state(SA) == i
+    @testset "Generic" begin
+
+      i = 0
+      for rv in SA
+        i += 1
+        @test rv isa Int
+        @test rv == i^2
+        @test state(SA) == i
+      end
+
+      @test laststep((SA))
+
+      TI = TestIterator(1, 5, [])
+      SA = SquareAdapter(TI)
+
+      SA_c = collect(SA)
+
+      @test SA_c isa Vector
+      @test length(SA_c) == 5
+      @test SA_c == [1, 4, 9, 16, 25]
+
     end
 
-    @test laststep((SA))
+    @testset "EachRegion" begin
+      prob = TestProblem([])
+      prob_region = TestProblem([])
 
-    TI = TestIterator(1, 5, [])
-    SA = SquareAdapter(TI)
+      SI = SweepIterator(prob, 5)
+      SI_region = SweepIterator(prob_region, 5)
 
-    SA_c = collect(SA)
+      callback = []
+      callback_region = []
 
-    @test SA_c isa Vector
-    @test length(SA_c) == 5
-    @test SA_c == [1, 4, 9, 16, 25]
+      let i = 1
+        for _ in SI
+          push!(callback, i)
+          i += 1
+        end
+      end
+
+      @test length(callback) == 5
+
+      let i = 1
+        for _ in eachregion(SI_region)
+          push!(callback_region, i)
+          i += 1
+        end
+      end
+
+      @test length(callback_region) == 10
+
+      @test prob.data == prob_region.data
+
+      @test prob.data[1:2:end] == fill(1, 5)
+      @test prob.data[2:2:end] == fill(2, 5)
+
+    end
   end
 end
