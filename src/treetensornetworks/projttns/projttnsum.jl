@@ -6,12 +6,12 @@ using NamedGraphs.GraphsExtensions: incident_edges
 """
 ProjTTNSum
 """
-struct ProjTTNSum{V,T<:AbstractProjTTN{V},Z<:Number} <: AbstractProjTTN{V}
-  terms::Vector{T}
-  factors::Vector{Z}
-  function ProjTTNSum(terms::Vector{<:AbstractProjTTN}, factors::Vector{<:Number})
-    return new{vertextype(eltype(terms)),eltype(terms),eltype(factors)}(terms, factors)
-  end
+struct ProjTTNSum{V, T <: AbstractProjTTN{V}, Z <: Number} <: AbstractProjTTN{V}
+    terms::Vector{T}
+    factors::Vector{Z}
+    function ProjTTNSum(terms::Vector{<:AbstractProjTTN}, factors::Vector{<:Number})
+        return new{vertextype(eltype(terms)), eltype(terms), eltype(factors)}(terms, factors)
+    end
 end
 
 LazyApply.terms(P::ProjTTNSum) = P.terms
@@ -20,10 +20,10 @@ factors(P::ProjTTNSum) = P.factors
 Base.copy(P::ProjTTNSum) = ProjTTNSum(copy.(terms(P)), copy(factors(P)))
 
 function ProjTTNSum(operators::Vector{<:AbstractProjTTN})
-  return ProjTTNSum(operators, fill(one(Bool), length(operators)))
+    return ProjTTNSum(operators, fill(one(Bool), length(operators)))
 end
 function ProjTTNSum(operators::Vector{<:AbstractTTN})
-  return ProjTTNSum(ProjTTN.(operators))
+    return ProjTTNSum(ProjTTN.(operators))
 end
 
 on_edge(P::ProjTTNSum) = on_edge(terms(P)[1])
@@ -31,7 +31,7 @@ on_edge(P::ProjTTNSum) = on_edge(terms(P)[1])
 nsite(P::ProjTTNSum) = nsite(terms(P)[1])
 
 function set_nsite(Ps::ProjTTNSum, nsite)
-  return ProjTTNSum(map(p -> set_nsite(p, nsite), terms(Ps)), factors(Ps))
+    return ProjTTNSum(map(p -> set_nsite(p, nsite), terms(Ps)), factors(Ps))
 end
 
 DataGraphs.underlying_graph(P::ProjTTNSum) = underlying_graph(terms(P)[1])
@@ -47,21 +47,21 @@ internal_edges(P::ProjTTNSum) = internal_edges(terms(P)[1])
 ITensors.product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
 
 function ITensors.contract(P::ProjTTNSum, v::ITensor)
-  res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
-    f * contract(p, v)
-  end
-  return res
+    res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
+        f * contract(p, v)
+    end
+    return res
 end
 
 function contract_ket(P::ProjTTNSum, v::ITensor)
-  res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
-    f * contract_ket(p, v)
-  end
-  return res
+    res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
+        f * contract_ket(p, v)
+    end
+    return res
 end
 
 function Base.eltype(P::ProjTTNSum)
-  return mapreduce(eltype, promote_type, terms(P))
+    return mapreduce(eltype, promote_type, terms(P))
 end
 
 (P::ProjTTNSum)(v::ITensor) = product(P, v)
@@ -69,8 +69,8 @@ end
 Base.size(P::ProjTTNSum) = size(terms(P)[1])
 
 function position(P::ProjTTNSum, psi::AbstractTTN, pos)
-  theterms = map(M -> position(M, psi, pos), terms(P))
-  #@show typeof(theterms)
-  #@show factors(P)
-  return ProjTTNSum(theterms, factors(P))
+    theterms = map(M -> position(M, psi, pos), terms(P))
+    #@show typeof(theterms)
+    #@show factors(P)
+    return ProjTTNSum(theterms, factors(P))
 end

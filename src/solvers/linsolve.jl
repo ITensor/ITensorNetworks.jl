@@ -25,25 +25,25 @@ Keyword arguments:
 Overload of `KrylovKit.linsolve`.
 """
 function KrylovKit.linsolve(
-  A::AbstractTTN,
-  b::AbstractTTN,
-  x₀::AbstractTTN,
-  a₀::Number=0,
-  a₁::Number=1;
-  updater=linsolve_updater,
-  nsites=2,
-  nsweeps,  #it makes sense to require this to be defined
-  updater_kwargs=(;),
-  kwargs...,
-)
-  updater_kwargs = (; a₀, a₁, updater_kwargs...)
-  error("`linsolve` for TTN not yet implemented.")
+        A::AbstractTTN,
+        b::AbstractTTN,
+        x₀::AbstractTTN,
+        a₀::Number = 0,
+        a₁::Number = 1;
+        updater = linsolve_updater,
+        nsites = 2,
+        nsweeps,  #it makes sense to require this to be defined
+        updater_kwargs = (;),
+        kwargs...,
+    )
+    updater_kwargs = (; a₀, a₁, updater_kwargs...)
+    error("`linsolve` for TTN not yet implemented.")
 
-  # TODO: Define `itensornetwork_cache`
-  # TODO: Define `linsolve_cache`
+    # TODO: Define `itensornetwork_cache`
+    # TODO: Define `linsolve_cache`
 
-  P = linsolve_cache(itensornetwork_cache(x₀', A, x₀), itensornetwork_cache(x₀', b))
-  return alternating_update(
-    P, x₀; nsweeps, nsites, updater=linsolve_updater, updater_kwargs, kwargs...
-  )
+    P = linsolve_cache(itensornetwork_cache(x₀', A, x₀), itensornetwork_cache(x₀', b))
+    return alternating_update(
+        P, x₀; nsweeps, nsites, updater = linsolve_updater, updater_kwargs, kwargs...
+    )
 end

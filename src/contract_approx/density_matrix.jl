@@ -13,13 +13,13 @@ Density matrix example:
   Consider a tensor network below,
     1
     /\
-   9  2
+9  2
   /   /\
-     3  6
+3  6
     /|  /\
-   4 5 7  8
+4 5 7  8
   /  | |   \
-  The density matrix for the edge `NamedEdge(2, 3)` squares the subgraph with vertices 3, 4, 5
+The density matrix for the edge `NamedEdge(2, 3)` squares the subgraph with vertices 3, 4, 5
      |
      3
     /|
@@ -33,11 +33,11 @@ Density matrix example:
     with vertices 1, 2, 3, 4, 6, 7, 8, 9
       1
       /\
-     /  2
+/  2
     /   /\
-   /   3  6
+/   3  6
   9   /|  /\
-  |  4   7  8
+|  4   7  8
   |  |   |  |
   |  4   7  8
   |  |/  | /
@@ -52,11 +52,11 @@ Density matrix example:
     with vertices 1, 2, 3, 5, 6, 7, 8, 9
       1
       /\
-     /  2
+/  2
     /   /\
-   /   3  6
+/   3  6
   9   /|  /\
-  |    5 7  8
+|    5 7  8
   |    | |  |
   |    5 7  8
   |  |/  | /
@@ -72,13 +72,13 @@ Partial density matrix example:
   Consider a tensor network below,
     1
     /\
-   9  2
+9  2
   /   /\
-     3  6
+3  6
     /|  /\
-   4 5 7  8
+4 5 7  8
   /  | |   \
-  The partial density matrix for the Edge set `Set([NamedEdge(2, 3), NamedEdge(5, 3)])`
+The partial density matrix for the Edge set `Set([NamedEdge(2, 3), NamedEdge(5, 3)])`
     squares the subgraph with vertices 4, and contract with the tensor 3
     |
     3
@@ -88,11 +88,11 @@ Partial density matrix example:
     squares the subgraph with vertices 1, 2, 6, 7, 8, 9, and contract with the tensor 3
       1
       /\
-     /  2
+/  2
     /   /\
-   /   3  6
+/   3  6
   9   /|  /\
-  |      7  8
+|      7  8
   |      |  |
   |      7  8
   |      | /
@@ -111,14 +111,14 @@ Partial density matrix example:
   5 - 5 -
 """
 struct _DensityMatrixAlgCaches
-  e_to_dm::Dict{NamedEdge,ITensor}
-  es_to_pdm::Dict{Set{NamedEdge},ITensor}
+    e_to_dm::Dict{NamedEdge, ITensor}
+    es_to_pdm::Dict{Set{NamedEdge}, ITensor}
 end
 
 function _DensityMatrixAlgCaches()
-  e_to_dm = Dict{NamedEdge,ITensor}()
-  es_to_pdm = Dict{Set{NamedEdge},ITensor}()
-  return _DensityMatrixAlgCaches(e_to_dm, es_to_pdm)
+    e_to_dm = Dict{NamedEdge, ITensor}()
+    es_to_pdm = Dict{Set{NamedEdge}, ITensor}()
+    return _DensityMatrixAlgCaches(e_to_dm, es_to_pdm)
 end
 
 """
@@ -130,39 +130,39 @@ The struct stores data used in the density matrix algorithm.
   caches: all the cached density matrices
 """
 struct _DensityMartrixAlgGraph
-  partition::DataGraph
-  out_tree::NamedGraph
-  root::Any
-  innerinds_to_sim::Dict{<:Index,<:Index}
-  caches::_DensityMatrixAlgCaches
+    partition::DataGraph
+    out_tree::NamedGraph
+    root::Any
+    innerinds_to_sim::Dict{<:Index, <:Index}
+    caches::_DensityMatrixAlgCaches
 end
 
 function _DensityMartrixAlgGraph(partition::DataGraph, out_tree::NamedGraph, root::Any)
-  innerinds = _commoninds(partition)
-  sim_innerinds = [sim(ind) for ind in innerinds]
-  return _DensityMartrixAlgGraph(
-    partition,
-    out_tree,
-    root,
-    Dict(zip(innerinds, sim_innerinds)),
-    _DensityMatrixAlgCaches(),
-  )
+    innerinds = _commoninds(partition)
+    sim_innerinds = [sim(ind) for ind in innerinds]
+    return _DensityMartrixAlgGraph(
+        partition,
+        out_tree,
+        root,
+        Dict(zip(innerinds, sim_innerinds)),
+        _DensityMatrixAlgCaches(),
+    )
 end
 
 function _get_low_rank_projector(tensor, inds1, inds2; cutoff, maxdim)
-  @assert length(inds(tensor)) <= 4
-  F = eigen(tensor, inds1, inds2; cutoff, maxdim, ishermitian=true)
-  return F.Vt
+    @assert length(inds(tensor)) <= 4
+    F = eigen(tensor, inds1, inds2; cutoff, maxdim, ishermitian = true)
+    return F.Vt
 end
 
 """
 Returns a dict that maps the partition's outinds that are adjacent to `partition[root]` to siminds
 """
 function _densitymatrix_outinds_to_sim(partition, root)
-  outinds = _noncommoninds(partition)
-  outinds_root = intersect(outinds, flatten_siteinds(partition[root]))
-  outinds_root_to_sim = Dict(zip(outinds_root, [sim(ind) for ind in outinds_root]))
-  return outinds_root_to_sim
+    outinds = _noncommoninds(partition)
+    outinds_root = intersect(outinds, flatten_siteinds(partition[root]))
+    outinds_root_to_sim = Dict(zip(outinds_root, [sim(ind) for ind in outinds_root]))
+    return outinds_root_to_sim
 end
 
 """
@@ -171,15 +171,15 @@ corresponding value, and replace the inds that are in values of `inds_to_siminds
 to the corresponding key.
 """
 function _sim(partial_dm_tensor::ITensor, inds_to_siminds)
-  siminds_to_inds = Dict(zip(values(inds_to_siminds), keys(inds_to_siminds)))
-  indices = keys(inds_to_siminds)
-  indices = intersect(indices, inds(partial_dm_tensor))
-  simindices = setdiff(inds(partial_dm_tensor), indices)
-  reorder_inds = [indices..., simindices...]
-  reorder_siminds = vcat(
-    [inds_to_siminds[i] for i in indices], [siminds_to_inds[i] for i in simindices]
-  )
-  return replaceinds(partial_dm_tensor, reorder_inds => reorder_siminds)
+    siminds_to_inds = Dict(zip(values(inds_to_siminds), keys(inds_to_siminds)))
+    indices = keys(inds_to_siminds)
+    indices = intersect(indices, inds(partial_dm_tensor))
+    simindices = setdiff(inds(partial_dm_tensor), indices)
+    reorder_inds = [indices..., simindices...]
+    reorder_siminds = vcat(
+        [inds_to_siminds[i] for i in indices], [siminds_to_inds[i] for i in simindices]
+    )
+    return replaceinds(partial_dm_tensor, reorder_inds => reorder_siminds)
 end
 
 """
@@ -191,42 +191,42 @@ Update `caches.e_to_dm[e]` and `caches.es_to_pdm[es]`.
   inds_to_sim: a dict mapping inds to sim inds
 """
 function _update!(
-  caches::_DensityMatrixAlgCaches,
-  edge::NamedEdge,
-  children::Vector,
-  network::Vector{ITensor},
-  inds_to_sim;
-  contraction_sequence_kwargs,
-)
-  v = dst(edge)
-  if haskey(caches.e_to_dm, edge)
-    return nothing
-  end
-  child_to_dm = [c => caches.e_to_dm[NamedEdge(v, c)] for c in children]
-  pdms = []
-  for (child_v, dm_tensor) in child_to_dm
-    es = [NamedEdge(src_v, v) for src_v in setdiff(children, child_v)]
-    es = Set(vcat(es, [edge]))
-    if !haskey(caches.es_to_pdm, es)
-      caches.es_to_pdm[es] = _optcontract([dm_tensor; network]; contraction_sequence_kwargs)
+        caches::_DensityMatrixAlgCaches,
+        edge::NamedEdge,
+        children::Vector,
+        network::Vector{ITensor},
+        inds_to_sim;
+        contraction_sequence_kwargs,
+    )
+    v = dst(edge)
+    if haskey(caches.e_to_dm, edge)
+        return nothing
     end
-    push!(pdms, caches.es_to_pdm[es])
-  end
-  if length(pdms) == 0
-    sim_network = map(x -> replaceinds(x, inds_to_sim), network)
-    sim_network = map(dag, sim_network)
-    density_matrix = _optcontract([network; sim_network]; contraction_sequence_kwargs)
-  elseif length(pdms) == 1
-    sim_network = map(x -> replaceinds(x, inds_to_sim), network)
-    sim_network = map(dag, sim_network)
-    density_matrix = _optcontract([pdms[1]; sim_network]; contraction_sequence_kwargs)
-  else
-    simtensor = _sim(pdms[2], inds_to_sim)
-    simtensor = dag(simtensor)
-    density_matrix = _optcontract([pdms[1], simtensor]; contraction_sequence_kwargs)
-  end
-  caches.e_to_dm[edge] = density_matrix
-  return nothing
+    child_to_dm = [c => caches.e_to_dm[NamedEdge(v, c)] for c in children]
+    pdms = []
+    for (child_v, dm_tensor) in child_to_dm
+        es = [NamedEdge(src_v, v) for src_v in setdiff(children, child_v)]
+        es = Set(vcat(es, [edge]))
+        if !haskey(caches.es_to_pdm, es)
+            caches.es_to_pdm[es] = _optcontract([dm_tensor; network]; contraction_sequence_kwargs)
+        end
+        push!(pdms, caches.es_to_pdm[es])
+    end
+    if length(pdms) == 0
+        sim_network = map(x -> replaceinds(x, inds_to_sim), network)
+        sim_network = map(dag, sim_network)
+        density_matrix = _optcontract([network; sim_network]; contraction_sequence_kwargs)
+    elseif length(pdms) == 1
+        sim_network = map(x -> replaceinds(x, inds_to_sim), network)
+        sim_network = map(dag, sim_network)
+        density_matrix = _optcontract([pdms[1]; sim_network]; contraction_sequence_kwargs)
+    else
+        simtensor = _sim(pdms[2], inds_to_sim)
+        simtensor = dag(simtensor)
+        density_matrix = _optcontract([pdms[1], simtensor]; contraction_sequence_kwargs)
+    end
+    caches.e_to_dm[edge] = density_matrix
+    return nothing
 end
 
 """
@@ -237,88 +237,88 @@ Example:
   Consider an `alg_graph`` whose `out_tree` is shown below,
     1
     /\
-   9  2
+9  2
   /   /\
-     3  6
+3  6
     /|  /\
-   4 5 7  8
+4 5 7  8
   /  | |   \
-  when `root = 4`, the output `out_tree` will be
+when `root = 4`, the output `out_tree` will be
     1
     /\
-   9  2
+9  2
   /   /\
-     3  6
+3  6
     /|  /\
-     5 7  8
+5 7  8
      | |   \
-  and the returned tensor `U` will be the projector at vertex 4 in the output tn.
+and the returned tensor `U` will be the projector at vertex 4 in the output tn.
 """
 function _rem_vertex!(
-  alg_graph::_DensityMartrixAlgGraph, root; cutoff, maxdim, contraction_sequence_kwargs
-)
-  caches = alg_graph.caches
-  outinds_root_to_sim = _densitymatrix_outinds_to_sim(alg_graph.partition, root)
-  inds_to_sim = merge(alg_graph.innerinds_to_sim, outinds_root_to_sim)
-  dm_dfs_tree = dfs_tree(alg_graph.out_tree, root)
-  @assert length(child_vertices(dm_dfs_tree, root)) == 1
-  for v in post_order_dfs_vertices(dm_dfs_tree, root)
-    children = sort(child_vertices(dm_dfs_tree, v))
-    @assert length(children) <= 2
-    network = collect(eachtensor(alg_graph.partition[v]))
-    _update!(
-      caches,
-      NamedEdge(parent_vertex(dm_dfs_tree, v), v),
-      children,
-      network,
-      inds_to_sim;
-      contraction_sequence_kwargs,
+        alg_graph::_DensityMartrixAlgGraph, root; cutoff, maxdim, contraction_sequence_kwargs
     )
-  end
-  U = _get_low_rank_projector(
-    caches.e_to_dm[NamedEdge(nothing, root)],
-    collect(keys(outinds_root_to_sim)),
-    collect(values(outinds_root_to_sim));
-    cutoff,
-    maxdim,
-  )
-  # update partition and out_tree
-  root_tensor = _optcontract(
-    [collect(eachtensor(alg_graph.partition[root])); dag(U)]; contraction_sequence_kwargs
-  )
-  new_root = child_vertices(dm_dfs_tree, root)[1]
-  alg_graph.partition[new_root] = disjoint_union(
-    alg_graph.partition[new_root], ITensorNetwork([root_tensor])
-  )
-  rem_vertex!(alg_graph.partition, root)
-  rem_vertex!(alg_graph.out_tree, root)
-  # update es_to_pdm
-  truncate_dfs_tree = dfs_tree(alg_graph.out_tree, alg_graph.root)
-  for es in filter(es -> dst(first(es)) == root, keys(caches.es_to_pdm))
-    delete!(caches.es_to_pdm, es)
-  end
-  for es in filter(es -> dst(first(es)) == new_root, keys(caches.es_to_pdm))
-    parent_edge = NamedEdge(parent_vertex(truncate_dfs_tree, new_root), new_root)
-    edge_to_remove = NamedEdge(root, new_root)
-    if intersect(es, Set([parent_edge])) == Set()
-      new_es = setdiff(es, [edge_to_remove])
-      if new_es == Set()
-        new_es = Set([NamedEdge(nothing, new_root)])
-      end
-      @assert length(new_es) >= 1
-      caches.es_to_pdm[new_es] = _optcontract(
-        [caches.es_to_pdm[es], root_tensor]; contraction_sequence_kwargs
-      )
+    caches = alg_graph.caches
+    outinds_root_to_sim = _densitymatrix_outinds_to_sim(alg_graph.partition, root)
+    inds_to_sim = merge(alg_graph.innerinds_to_sim, outinds_root_to_sim)
+    dm_dfs_tree = dfs_tree(alg_graph.out_tree, root)
+    @assert length(child_vertices(dm_dfs_tree, root)) == 1
+    for v in post_order_dfs_vertices(dm_dfs_tree, root)
+        children = sort(child_vertices(dm_dfs_tree, v))
+        @assert length(children) <= 2
+        network = collect(eachtensor(alg_graph.partition[v]))
+        _update!(
+            caches,
+            NamedEdge(parent_vertex(dm_dfs_tree, v), v),
+            children,
+            network,
+            inds_to_sim;
+            contraction_sequence_kwargs,
+        )
     end
-    # Remove old caches since they won't be used anymore,
-    # and removing them saves later contraction costs.
-    delete!(caches.es_to_pdm, es)
-  end
-  # update e_to_dm
-  for edge in filter(e -> dst(e) in [root, new_root], keys(caches.e_to_dm))
-    delete!(caches.e_to_dm, edge)
-  end
-  return U
+    U = _get_low_rank_projector(
+        caches.e_to_dm[NamedEdge(nothing, root)],
+        collect(keys(outinds_root_to_sim)),
+        collect(values(outinds_root_to_sim));
+        cutoff,
+        maxdim,
+    )
+    # update partition and out_tree
+    root_tensor = _optcontract(
+        [collect(eachtensor(alg_graph.partition[root])); dag(U)]; contraction_sequence_kwargs
+    )
+    new_root = child_vertices(dm_dfs_tree, root)[1]
+    alg_graph.partition[new_root] = disjoint_union(
+        alg_graph.partition[new_root], ITensorNetwork([root_tensor])
+    )
+    rem_vertex!(alg_graph.partition, root)
+    rem_vertex!(alg_graph.out_tree, root)
+    # update es_to_pdm
+    truncate_dfs_tree = dfs_tree(alg_graph.out_tree, alg_graph.root)
+    for es in filter(es -> dst(first(es)) == root, keys(caches.es_to_pdm))
+        delete!(caches.es_to_pdm, es)
+    end
+    for es in filter(es -> dst(first(es)) == new_root, keys(caches.es_to_pdm))
+        parent_edge = NamedEdge(parent_vertex(truncate_dfs_tree, new_root), new_root)
+        edge_to_remove = NamedEdge(root, new_root)
+        if intersect(es, Set([parent_edge])) == Set()
+            new_es = setdiff(es, [edge_to_remove])
+            if new_es == Set()
+                new_es = Set([NamedEdge(nothing, new_root)])
+            end
+            @assert length(new_es) >= 1
+            caches.es_to_pdm[new_es] = _optcontract(
+                [caches.es_to_pdm[es], root_tensor]; contraction_sequence_kwargs
+            )
+        end
+        # Remove old caches since they won't be used anymore,
+        # and removing them saves later contraction costs.
+        delete!(caches.es_to_pdm, es)
+    end
+    # update e_to_dm
+    for edge in filter(e -> dst(e) in [root, new_root], keys(caches.e_to_dm))
+        delete!(caches.e_to_dm, edge)
+    end
+    return U
 end
 
 """
@@ -326,35 +326,35 @@ Approximate a `partition` into an output ITensorNetwork
 with the binary tree structure defined by `out_tree`.
 """
 function _approx_itensornetwork_density_matrix!(
-  input_partition::DataGraph,
-  out_tree::NamedGraph;
-  root=first(vertices(partition)),
-  cutoff=1e-15,
-  maxdim=10000,
-  contraction_sequence_kwargs,
-)
-  # Change type of each partition[v] since they will be updated
-  # with potential data type chage.
-  partition = DataGraph(NamedGraph())
-  for v in vertices(input_partition)
-    add_vertex!(partition, v)
-    partition[v] = ITensorNetwork{Any}(input_partition[v])
-  end
-  @assert sort(vertices(partition)) == sort(vertices(out_tree))
-  alg_graph = _DensityMartrixAlgGraph(partition, out_tree, root)
-  output_tn = ITensorNetwork()
-  for v in post_order_dfs_vertices(out_tree, root)[1:(end - 1)]
-    U = _rem_vertex!(alg_graph, v; cutoff, maxdim, contraction_sequence_kwargs)
-    add_vertex!(output_tn, v)
-    output_tn[v] = U
-  end
-  @assert length(vertices(partition)) == 1
-  add_vertex!(output_tn, root)
-  root_tensor = _optcontract(
-    collect(eachtensor(partition[root])); contraction_sequence_kwargs
-  )
-  root_norm = norm(root_tensor)
-  root_tensor /= root_norm
-  output_tn[root] = root_tensor
-  return output_tn, log(root_norm)
+        input_partition::DataGraph,
+        out_tree::NamedGraph;
+        root = first(vertices(partition)),
+        cutoff = 1.0e-15,
+        maxdim = 10000,
+        contraction_sequence_kwargs,
+    )
+    # Change type of each partition[v] since they will be updated
+    # with potential data type chage.
+    partition = DataGraph(NamedGraph())
+    for v in vertices(input_partition)
+        add_vertex!(partition, v)
+        partition[v] = ITensorNetwork{Any}(input_partition[v])
+    end
+    @assert sort(vertices(partition)) == sort(vertices(out_tree))
+    alg_graph = _DensityMartrixAlgGraph(partition, out_tree, root)
+    output_tn = ITensorNetwork()
+    for v in post_order_dfs_vertices(out_tree, root)[1:(end - 1)]
+        U = _rem_vertex!(alg_graph, v; cutoff, maxdim, contraction_sequence_kwargs)
+        add_vertex!(output_tn, v)
+        output_tn[v] = U
+    end
+    @assert length(vertices(partition)) == 1
+    add_vertex!(output_tn, root)
+    root_tensor = _optcontract(
+        collect(eachtensor(partition[root])); contraction_sequence_kwargs
+    )
+    root_norm = norm(root_tensor)
+    root_tensor /= root_norm
+    output_tn[root] = root_tensor
+    return output_tn, log(root_norm)
 end

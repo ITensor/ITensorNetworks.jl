@@ -4,134 +4,134 @@ using LinearAlgebra: norm, norm_sqr
 default_contract_alg(tns::Tuple) = "bp"
 
 function ITensors.inner(
-  ϕ::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  alg=default_contract_alg((ϕ, ψ)),
-  kwargs...,
-)
-  return inner(Algorithm(alg), ϕ, ψ; kwargs...)
+        ϕ::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        alg = default_contract_alg((ϕ, ψ)),
+        kwargs...,
+    )
+    return inner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
 
 function ITensors.inner(
-  ϕ::AbstractITensorNetwork,
-  A::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  alg=default_contract_alg((ϕ, A, ψ)),
-  kwargs...,
-)
-  return inner(Algorithm(alg), ϕ, A, ψ; kwargs...)
+        ϕ::AbstractITensorNetwork,
+        A::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        alg = default_contract_alg((ϕ, A, ψ)),
+        kwargs...,
+    )
+    return inner(Algorithm(alg), ϕ, A, ψ; kwargs...)
 end
 
 function ITensors.inner(
-  alg::Algorithm"exact",
-  ϕ::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  sequence=nothing,
-  contraction_sequence_kwargs=(;),
-  kwargs...,
-)
-  tn = inner_network(ϕ, ψ; kwargs...)
-  if isnothing(sequence)
-    sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
-  end
-  return scalar(tn; sequence)
+        alg::Algorithm"exact",
+        ϕ::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        sequence = nothing,
+        contraction_sequence_kwargs = (;),
+        kwargs...,
+    )
+    tn = inner_network(ϕ, ψ; kwargs...)
+    if isnothing(sequence)
+        sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
+    end
+    return scalar(tn; sequence)
 end
 
 function ITensors.inner(
-  alg::Algorithm"exact",
-  ϕ::AbstractITensorNetwork,
-  A::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  sequence=nothing,
-  contraction_sequence_kwargs=(;),
-  kwargs...,
-)
-  tn = inner_network(ϕ, A, ψ; kwargs...)
-  if isnothing(sequence)
-    sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
-  end
-  return scalar(tn; sequence)
+        alg::Algorithm"exact",
+        ϕ::AbstractITensorNetwork,
+        A::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        sequence = nothing,
+        contraction_sequence_kwargs = (;),
+        kwargs...,
+    )
+    tn = inner_network(ϕ, A, ψ; kwargs...)
+    if isnothing(sequence)
+        sequence = contraction_sequence(tn; contraction_sequence_kwargs...)
+    end
+    return scalar(tn; sequence)
 end
 
 function loginner(
-  ϕ::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  alg=default_contract_alg((ϕ, ψ)),
-  kwargs...,
-)
-  return loginner(Algorithm(alg), ϕ, ψ; kwargs...)
+        ϕ::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        alg = default_contract_alg((ϕ, ψ)),
+        kwargs...,
+    )
+    return loginner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
 
 function loginner(
-  ϕ::AbstractITensorNetwork,
-  A::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  alg=default_contract_alg((ϕ, A, ψ)),
-  kwargs...,
-)
-  return loginner(Algorithm(alg), ϕ, A, ψ; kwargs...)
+        ϕ::AbstractITensorNetwork,
+        A::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        alg = default_contract_alg((ϕ, A, ψ)),
+        kwargs...,
+    )
+    return loginner(Algorithm(alg), ϕ, A, ψ; kwargs...)
 end
 
 function loginner(
-  alg::Algorithm"exact", ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...
-)
-  return log(inner(alg, ϕ, ψ); kwargs...)
+        alg::Algorithm"exact", ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...
+    )
+    return log(inner(alg, ϕ, ψ); kwargs...)
 end
 
 function loginner(
-  alg::Algorithm"exact",
-  ϕ::AbstractITensorNetwork,
-  A::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  kwargs...,
-)
-  return log(inner(alg, ϕ, A, ψ); kwargs...)
+        alg::Algorithm"exact",
+        ϕ::AbstractITensorNetwork,
+        A::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        kwargs...,
+    )
+    return log(inner(alg, ϕ, A, ψ); kwargs...)
 end
 
 function loginner(
-  alg::Algorithm,
-  ϕ::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  dual_link_index_map=sim,
-  kwargs...,
-)
-  tn = inner_network(ϕ, ψ; dual_link_index_map)
-  return logscalar(alg, tn; kwargs...)
+        alg::Algorithm,
+        ϕ::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        dual_link_index_map = sim,
+        kwargs...,
+    )
+    tn = inner_network(ϕ, ψ; dual_link_index_map)
+    return logscalar(alg, tn; kwargs...)
 end
 
 function loginner(
-  alg::Algorithm,
-  ϕ::AbstractITensorNetwork,
-  A::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  dual_link_index_map=sim,
-  kwargs...,
-)
-  tn = inner_network(ϕ, A, ψ; dual_link_index_map)
-  return logscalar(alg, tn; kwargs...)
+        alg::Algorithm,
+        ϕ::AbstractITensorNetwork,
+        A::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        dual_link_index_map = sim,
+        kwargs...,
+    )
+    tn = inner_network(ϕ, A, ψ; dual_link_index_map)
+    return logscalar(alg, tn; kwargs...)
 end
 
 function ITensors.inner(
-  alg::Algorithm,
-  ϕ::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  dual_link_index_map=sim,
-  kwargs...,
-)
-  tn = inner_network(ϕ, ψ; dual_link_index_map)
-  return scalar(alg, tn; kwargs...)
+        alg::Algorithm,
+        ϕ::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        dual_link_index_map = sim,
+        kwargs...,
+    )
+    tn = inner_network(ϕ, ψ; dual_link_index_map)
+    return scalar(alg, tn; kwargs...)
 end
 
 function ITensors.inner(
-  alg::Algorithm,
-  ϕ::AbstractITensorNetwork,
-  A::AbstractITensorNetwork,
-  ψ::AbstractITensorNetwork;
-  dual_link_index_map=sim,
-  kwargs...,
-)
-  tn = inner_network(ϕ, A, ψ; dual_link_index_map)
-  return scalar(alg, tn; kwargs...)
+        alg::Algorithm,
+        ϕ::AbstractITensorNetwork,
+        A::AbstractITensorNetwork,
+        ψ::AbstractITensorNetwork;
+        dual_link_index_map = sim,
+        kwargs...,
+    )
+    tn = inner_network(ϕ, A, ψ; dual_link_index_map)
+    return scalar(alg, tn; kwargs...)
 end
 
 # TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
@@ -139,5 +139,5 @@ end
 LinearAlgebra.norm_sqr(ψ::AbstractITensorNetwork; kwargs...) = inner(ψ, ψ; kwargs...)
 
 function LinearAlgebra.norm(ψ::AbstractITensorNetwork; kwargs...)
-  return sqrt(abs(real(norm_sqr(ψ; kwargs...))))
+    return sqrt(abs(real(norm_sqr(ψ; kwargs...))))
 end
