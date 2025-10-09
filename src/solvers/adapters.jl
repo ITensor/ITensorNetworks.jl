@@ -17,23 +17,32 @@ compute!(adapter::NoComputeStep) = adapter
 NoComputeStep(adapter::NoComputeStep) = adapter
 
 """
-  struct EachRegion{RegionIterator} <: AbstractNetworkIterator
+  struct EachRegion{SweepIterator} <: AbstractNetworkIterator
 
-Wapper adapter that returns a tuple (region, kwargs) at each step rather than the iterator
-itself.
+Adapter that flattens the each region iterator in the parent sweep iterator into a single
+iterator, returning `region => kwargs`.
 """
-struct EachRegion{R<:RegionIterator} <: AbstractNetworkIterator
-  parent::R
+struct EachRegion{SI<:SweepIterator} <: AbstractNetworkIterator
+  parent::SI
 end
 
-# Essential definitions
-Base.length(adapter::EachRegion) = length(adapter.parent)
-state(adapter::EachRegion) = state(adapter.parent)
-increment!(adapter::EachRegion) = state(adapter.parent)
+# In keeping with Julia convention.
+eachregion(iter::SweepIterator) = EachRegion(iter)
 
+# Essential definitions
+function laststep(adapter::EachRegion)
+  region_iter = region_iterator(adapter.parent)
+  return laststep(adapter.parent) && laststep(region_iter)
+end
+function increment!(adapter::EachRegion)
+  region_iter = region_iterator(adapter.parent)
+  laststep(region_iter) ? increment!(adapter.parent) : increment!(region_iter)
+  return adapter
+end
 function compute!(adapter::EachRegion)
-  # Do the usual compute! for RegionIterator
-  compute!(adapter.parent)
-  # But now lets return something useful
-  return current_region_plan(adapter)
+  region_iter = region_iterator(adapter.parent)
+  compute!(region_iter)
+  return current_region_plan(region_iter)
+end
+
 end
