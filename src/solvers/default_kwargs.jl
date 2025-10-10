@@ -34,7 +34,6 @@ macro default_kwargs(args...)
   kwargs = (;)
   for opt in args
     if @capture(opt, key_ = val_)
-      @info "" key val
       kwargs = merge(kwargs, NamedTuple{(key,)}((val,)))
     elseif opt === last(args)
       return default_kwargs_macro(opt; kwargs...)
@@ -80,16 +79,15 @@ function default_kwargs_macro(function_def; astypes=true)
   end
 
   # Promote to the type domain if wanted
+  new_ex[:args] = convert(Vector{Any}, ex[:args])
   if astypes
-    new_ex[:args] = map(ex[:args]) do arg
+    new_ex[:args] = map(new_ex[:args]) do arg
       @capture(arg, name_::T_)
       return :($(name)::Type{<:$T})
     end
   end
 
   new_ex[:name] = :(ITensorNetworks.default_kwargs)
-  new_ex[:args] = convert(Vector{Any}, ex[:args])
-
   new_ex[:args] = pushfirst!(new_ex[:args], :(::typeof($(esc(ex[:name])))))
 
   # Escape anything on the right-hand side of a keyword definition.
