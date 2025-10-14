@@ -44,5 +44,3 @@ function compute!(adapter::EachRegion)
   compute!(region_iter)
   return current_region_plan(region_iter)
 end
-
-end
