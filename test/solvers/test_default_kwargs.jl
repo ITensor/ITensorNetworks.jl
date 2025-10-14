@@ -9,10 +9,10 @@ using ITensorNetworks: AbstractProblem, @define_default_kwargs
 struct TestProblem <: AbstractProblem end
 struct NotOurTestProblem <: AbstractProblem end
 
-@define_default_kwargs astypes = true function test_function(::AbstractProblem; bool=false, int=3)
+@define_default_kwargs function test_function(::AbstractProblem; bool=false, int=3)
   return bool, int
 end
-@define_default_kwargs astypes = true function test_function(::TestProblem; bool=true, int=0)
+@define_default_kwargs function test_function(::TestProblem; bool=true, int=0)
   return bool, int
 end
 
@@ -31,10 +31,8 @@ end # KwargsTestModule
 
   # Test dispatch
   @test default_kwargs(KwargsTestModule.test_function, problem(our_iter)) == (; bool=true, int=0)
-  @test default_kwargs(KwargsTestModule.test_function, problem(our_iter) |> typeof) == (; bool=true, int=0)
 
   @test default_kwargs(KwargsTestModule.test_function, problem(not_our_iter)) == (; bool=false, int=3)
-  @test default_kwargs(KwargsTestModule.test_function, problem(not_our_iter) |> typeof) == (; bool=false, int=3)
 
   @test KwargsTestModule.test_function(problem(our_iter); default_kwargs(KwargsTestModule.test_function, problem(our_iter); kw...)...) == (true, 1)
   @test KwargsTestModule.test_function(problem(not_our_iter); default_kwargs(KwargsTestModule.test_function, problem(not_our_iter); kw_not...)...) == (false, 2)
