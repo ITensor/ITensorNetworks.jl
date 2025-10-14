@@ -30,12 +30,9 @@ function first_order_sweep(graph, sweep_kwargs; nsites)
 end
 
 function reverse_regions(region_plan)
-  region_plan = map(reverse(region_plan)) do region_kwargs
-    region, kwargs = region_kwargs
+  return map(reverse(region_plan)) do (region, kwargs)
     return reverse(region) => kwargs
   end
-
-  return region_plan
 end
 
 # Generate the kwargs for each region.
