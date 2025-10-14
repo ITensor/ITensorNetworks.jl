@@ -1,5 +1,5 @@
 using Test: @test, @testset
-using ITensorNetworks: SweepIterator, laststep, state, increment!, compute!, eachregion
+using ITensorNetworks: SweepIterator, islaststep, state, increment!, compute!, eachregion
 
 module TestIteratorUtils
 
@@ -10,7 +10,7 @@ struct TestProblem <: ITensorNetworks.AbstractProblem
 end
 ITensorNetworks.region_plan(::TestProblem) = [:a => (; val=1), :b => (; val=2)]
 function ITensorNetworks.compute!(iter::ITensorNetworks.RegionIterator{<:TestProblem})
-  kwargs = ITensorNetworks.current_region_kwargs(iter)
+  kwargs = ITensorNetworks.region_kwargs(iter)
   push!(ITensorNetworks.problem(iter).data, kwargs.val)
   return iter
 end
@@ -46,16 +46,16 @@ end
 
 @testset "Iterators" begin
 
-  using .TestIteratorUtils: TestIterator, SquareAdapter, TestProblem
+  import .TestIteratorUtils
 
   @testset "`AbstractNetworkIterator` Interface" begin
-    TI = TestIterator(1, 4, [])
+    TI = TestIteratorUtils.TestIterator(1, 4, [])
 
-    @test !laststep((TI))
+    @test !islaststep((TI))
 
     # First iterator should compute only
     rv, st = iterate(TI)
-    @test !laststep((TI))
+    @test !islaststep((TI))
     @test !st
     @test rv === TI
     @test length(TI.output) == 1
@@ -64,34 +64,34 @@ end
     @test !st
 
     rv, st = iterate(TI, st)
-    @test !laststep((TI))
+    @test !islaststep((TI))
     @test !st
     @test length(TI.output) == 2
     @test state(TI) == 2
     @test TI.output == [1, 2]
 
     increment!(TI)
-    @test !laststep((TI))
+    @test !islaststep((TI))
     @test state(TI) == 3
     @test length(TI.output) == 2
     @test TI.output == [1, 2]
 
     compute!(TI)
-    @test !laststep((TI))
+    @test !islaststep((TI))
     @test state(TI) == 3
     @test length(TI.output) == 3
     @test TI.output == [1, 2, 3]
 
     # Final Step
     iterate(TI, false)
-    @test laststep((TI))
+    @test islaststep((TI))
     @test state(TI) == 4
     @test length(TI.output) == 4
     @test TI.output == [1, 2, 3, 4]
 
     @test iterate(TI, false) === nothing
 
-    TI = TestIterator(1, 5, [])
+    TI = TestIteratorUtils.TestIterator(1, 5, [])
 
     cb = []
 
@@ -102,18 +102,18 @@ end
       @test cb == TI.output
     end
 
-    @test laststep((TI))
+    @test islaststep((TI))
     @test length(TI.output) == 5
     @test length(cb) == 5
     @test cb == TI.output
 
 
-    TI = TestIterator(1, 5, [])
+    TI = TestIteratorUtils.TestIterator(1, 5, [])
   end
 
   @testset "Adapters" begin
-    TI = TestIterator(1, 5, [])
-    SA = SquareAdapter(TI)
+    TI = TestIteratorUtils.TestIterator(1, 5, [])
+    SA = TestIteratorUtils.SquareAdapter(TI)
 
     @testset "Generic" begin
 
@@ -125,10 +125,10 @@ end
         @test state(SA) == i
       end
 
-      @test laststep((SA))
+      @test islaststep((SA))
 
-      TI = TestIterator(1, 5, [])
-      SA = SquareAdapter(TI)
+      TI = TestIteratorUtils.TestIterator(1, 5, [])
+      SA = TestIteratorUtils.SquareAdapter(TI)
 
       SA_c = collect(SA)
 
@@ -139,8 +139,8 @@ end
     end
 
     @testset "EachRegion" begin
-      prob = TestProblem([])
-      prob_region = TestProblem([])
+      prob = TestIteratorUtils.TestProblem([])
+      prob_region = TestIteratorUtils.TestProblem([])
 
       SI = SweepIterator(prob, 5)
       SI_region = SweepIterator(prob_region, 5)

@@ -6,8 +6,6 @@ module KwargsTestModule
 using ITensorNetworks
 using ITensorNetworks: AbstractProblem, @default_kwargs
 
-export TestProblem, NotOurTestProblem, test_function
-
 struct TestProblem <: AbstractProblem end
 struct NotOurTestProblem <: AbstractProblem end
 
@@ -21,26 +19,24 @@ end
 end # KwargsTestModule
 
 @testset "Default kwargs" begin
-  using .KwargsTestModule: TestProblem, NotOurTestProblem, test_function
+  import .KwargsTestModule
 
-  our_iter = RegionIterator(TestProblem(), ["region" => (; test_function_kwargs=(; int=1))], 1)
-  not_our_iter = RegionIterator(NotOurTestProblem(), ["region" => (; test_function_kwargs=(; int=2))], 1)
+  our_iter = RegionIterator(KwargsTestModule.TestProblem(), ["region" => (; test_function_kwargs=(; int=1))], 1)
+  not_our_iter = RegionIterator(KwargsTestModule.NotOurTestProblem(), ["region" => (; test_function_kwargs=(; int=2))], 1)
 
-  kw = region_kwargs(test_function, our_iter)
+  kw = region_kwargs(KwargsTestModule.test_function, our_iter)
   @test kw == (; int=1)
-  kw_not = region_kwargs(test_function, not_our_iter)
+  kw_not = region_kwargs(KwargsTestModule.test_function, not_our_iter)
   @test kw_not == (; int=2)
 
-  @info methods(default_kwargs)
-
   # Test dispatch
-  @test default_kwargs(test_function, problem(our_iter)) == (; bool=true, int=0)
-  @test default_kwargs(test_function, problem(our_iter) |> typeof) == (; bool=true, int=0)
+  @test default_kwargs(KwargsTestModule.test_function, problem(our_iter)) == (; bool=true, int=0)
+  @test default_kwargs(KwargsTestModule.test_function, problem(our_iter) |> typeof) == (; bool=true, int=0)
 
-  @test default_kwargs(test_function, problem(not_our_iter)) == (; bool=false, int=3)
-  @test default_kwargs(test_function, problem(not_our_iter) |> typeof) == (; bool=false, int=3)
+  @test default_kwargs(KwargsTestModule.test_function, problem(not_our_iter)) == (; bool=false, int=3)
+  @test default_kwargs(KwargsTestModule.test_function, problem(not_our_iter) |> typeof) == (; bool=false, int=3)
 
-  @test test_function(problem(our_iter); default_kwargs(test_function, problem(our_iter); kw...)...) == (true, 1)
-  @test test_function(problem(not_our_iter); default_kwargs(test_function, problem(not_our_iter); kw_not...)...) == (false, 2)
+  @test KwargsTestModule.test_function(problem(our_iter); default_kwargs(KwargsTestModule.test_function, problem(our_iter); kw...)...) == (true, 1)
+  @test KwargsTestModule.test_function(problem(not_our_iter); default_kwargs(KwargsTestModule.test_function, problem(not_our_iter); kw_not...)...) == (false, 2)
 
 end
