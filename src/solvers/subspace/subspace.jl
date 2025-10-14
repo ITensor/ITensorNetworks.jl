@@ -10,16 +10,8 @@ using NDTensors.BackendSelection: Backend, @Backend_str
     return local_state
   end
 
-  subspace_expand!_kwargs = default_kwargs(
-    subspace_expand!,
-    backend,
-    region_iter,
-    local_state;
-    region_kwargs(subspace_expand!, region_iter)...,
-  )
-
-  local_state = subspace_expand!(
-    backend, region_iter, local_state; subspace_expand!_kwargs...
+  local_state = @with_defaults subspace_expand!(
+    backend, region_iter, local_state; region_kwargs(subspace_expand!, region_iter)...
   )
 
   return local_state

@@ -99,27 +99,10 @@ function increment!(region_iter::RegionIterator)
   return region_iter
 end
 
-# Purely for our convenience:
-function extract!_kwargs(iter)
-  f = extract!
-  kwargs = region_kwargs(f, iter)
-  return default_kwargs(f, iter; kwargs...)
-end
-function update!_kwargs(iter, local_state)
-  f = update!
-  kwargs = region_kwargs(f, iter)
-  return default_kwargs(f, iter, local_state; kwargs...)
-end
-function insert!_kwargs(iter, local_state)
-  f = insert!
-  kwargs = region_kwargs(f, iter)
-  return default_kwargs(f, iter, local_state; kwargs...)
-end
-
 function compute!(iter::RegionIterator)
-  local_state = extract!(iter; extract!_kwargs(iter)...)
-  local_state = update!(iter, local_state; update!_kwargs(iter, local_state)...)
-  insert!(iter, local_state; insert!_kwargs(iter, local_state)...)
+  local_state = @with_defaults extract!(iter; region_kwargs(extract!, iter)...)
+  local_state = @with_defaults update!(iter, local_state; region_kwargs(update!, iter)...)
+  @with_defaults insert!(iter, local_state; region_kwargs(insert!, iter)...)
 
   return iter
 end
