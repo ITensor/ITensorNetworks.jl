@@ -96,3 +96,20 @@ function default_kwargs_macro(function_def)
 
   return rv
 end
+
+macro with_defaults(call_expr)
+  if @capture(call_expr, (func_(args__; kwargs__)) | (func_(args__)))
+    if isnothing(kwargs)
+      kwargs = []
+    end
+    rv = quote
+      $(esc(func))(
+        $(esc.(args)...);
+        default_kwargs($(esc(func)), $(esc.(args)...); $(esc.(kwargs)...))...,
+      )
+    end
+    return rv
+  else
+    throw(ArgumentError("unable to parse function call expression, try including brackets in the macro call."))
+  end
+end

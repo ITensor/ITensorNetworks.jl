@@ -1,5 +1,5 @@
 using Test: @test, @testset
-using ITensorNetworks: AbstractProblem, default_kwargs, RegionIterator, problem, region_kwargs
+using ITensorNetworks: AbstractProblem, default_kwargs, RegionIterator, problem, region_kwargs, @with_defaults
 
 module KwargsTestModule
 
@@ -37,4 +37,11 @@ end # KwargsTestModule
   @test KwargsTestModule.test_function(problem(our_iter); default_kwargs(KwargsTestModule.test_function, problem(our_iter); kw...)...) == (true, 1)
   @test KwargsTestModule.test_function(problem(not_our_iter); default_kwargs(KwargsTestModule.test_function, problem(not_our_iter); kw_not...)...) == (false, 2)
 
+  @test @with_defaults(KwargsTestModule.test_function(problem(our_iter))) == (true, 0)
+  @test @with_defaults(KwargsTestModule.test_function(problem(our_iter);)) == (true, 0)
+  @test @with_defaults(KwargsTestModule.test_function(problem(our_iter); bool = false)) == (false, 0)
+
+  let testval = @with_defaults KwargsTestModule.test_function(problem(our_iter); int = 3)
+    @test testval == (true, 3)
+  end
 end
