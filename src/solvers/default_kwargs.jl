@@ -19,34 +19,26 @@ default_kwargs(f::Function, ::Vararg{<:Type}; kwargs...) = (; kwargs...)
 Automatically define a `default_kwargs` method for a given function. This macro should
 be applied before a function definition:
 ```
-@define_default_kwargs astypes = true function f(args...; kwargs...) 
+@define_default_kwargs function f(arg1::T1, arg2::T2, ...; kwargs...) 
   ...
 end
 ```
-If `astypes = true` then the `default_kwargs` method is defined in the 
-type domain with respect to `args`, i.e.
+The defined `default_kwargs` method takes the form
 ```
-default_kwargs(::typeof(f), arg::T; kwargs...) # astypes = false
-default_kwargs(::typeof(f), arg::Type{<:T}; kwargs...) # astypes = true
+default_kwargs(::typeof(f), arg1::T1, arg2::T2, ...; kwargs...)
 ```
+i.e. the function signature mirrors that of the function signature of `f`.
 """
-macro define_default_kwargs(args...)
-  kwargs = (;)
-  for opt in args
-    if @capture(opt, key_ = val_)
-      kwargs = merge(kwargs, NamedTuple{(key,)}((val,)))
-    elseif opt === last(args)
-      return default_kwargs_macro(opt; kwargs...)
-    else
-      throw(ArgumentError("Unknown expression object"))
-    end
-  end
+macro define_default_kwargs(function_def)
+  return default_kwargs_macro(function_def)
 end
 
-function default_kwargs_macro(function_def; astypes=true)
+function default_kwargs_macro(function_def)
   if !isdef(function_def)
     throw(
-      ArgumentError("The @define_default_kwargs macro must be followed by a function definition")
+      ArgumentError(
+        "The @define_default_kwargs macro must be followed by a function definition"
+      ),
     )
   end
 
@@ -78,14 +70,7 @@ function default_kwargs_macro(function_def; astypes=true)
     return kw
   end
 
-  # Promote to the type domain if wanted
   new_ex[:args] = convert(Vector{Any}, ex[:args])
-  if astypes
-    new_ex[:args] = map(new_ex[:args]) do arg
-      @capture(arg, name_::T_)
-      return :($(name)::Type{<:$T})
-    end
-  end
 
   new_ex[:name] = :(ITensorNetworks.default_kwargs)
   new_ex[:args] = pushfirst!(new_ex[:args], :(::typeof($(esc(ex[:name])))))
