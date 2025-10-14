@@ -1,7 +1,7 @@
 using NDTensors: NDTensors
 using NDTensors.BackendSelection: Backend, @Backend_str
 
-@default_kwargs function subspace_expand!(
+@define_default_kwargs function subspace_expand!(
   region_iter, local_state; subspace_algorithm="nothing"
 )
   backend = Backend(subspace_algorithm)

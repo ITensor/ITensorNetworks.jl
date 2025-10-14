@@ -14,12 +14,12 @@ end
 default_kwargs(f::Function, ::Vararg{<:Type}; kwargs...) = (; kwargs...)
 
 """
-    @default_kwargs
+    @define_default_kwargs
 
 Automatically define a `default_kwargs` method for a given function. This macro should
 be applied before a function definition:
 ```
-@default_kwargs astypes = true function f(args...; kwargs...) 
+@define_default_kwargs astypes = true function f(args...; kwargs...) 
   ...
 end
 ```
@@ -30,7 +30,7 @@ default_kwargs(::typeof(f), arg::T; kwargs...) # astypes = false
 default_kwargs(::typeof(f), arg::Type{<:T}; kwargs...) # astypes = true
 ```
 """
-macro default_kwargs(args...)
+macro define_default_kwargs(args...)
   kwargs = (;)
   for opt in args
     if @capture(opt, key_ = val_)
@@ -46,7 +46,7 @@ end
 function default_kwargs_macro(function_def; astypes=true)
   if !isdef(function_def)
     throw(
-      ArgumentError("The @default_kwargs macro must be followed by a function definition")
+      ArgumentError("The @define_default_kwargs macro must be followed by a function definition")
     )
   end
 

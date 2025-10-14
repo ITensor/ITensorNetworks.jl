@@ -4,15 +4,15 @@ using ITensorNetworks: AbstractProblem, default_kwargs, RegionIterator, problem,
 module KwargsTestModule
 
 using ITensorNetworks
-using ITensorNetworks: AbstractProblem, @default_kwargs
+using ITensorNetworks: AbstractProblem, @define_default_kwargs
 
 struct TestProblem <: AbstractProblem end
 struct NotOurTestProblem <: AbstractProblem end
 
-@default_kwargs astypes = true function test_function(::AbstractProblem; bool=false, int=3)
+@define_default_kwargs astypes = true function test_function(::AbstractProblem; bool=false, int=3)
   return bool, int
 end
-@default_kwargs astypes = true function test_function(::TestProblem; bool=true, int=0)
+@define_default_kwargs astypes = true function test_function(::TestProblem; bool=true, int=0)
   return bool, int
 end
 

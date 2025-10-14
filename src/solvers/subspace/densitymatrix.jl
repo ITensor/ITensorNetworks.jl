@@ -1,7 +1,7 @@
 using NamedGraphs.GraphsExtensions: incident_edges
 using Printf: @printf
 
-@default_kwargs function subspace_expand!(
+@define_default_kwargs function subspace_expand!(
   ::Backend"densitymatrix", region_iter, local_state; north_pass=1
 )
   prob = problem(region_iter)
