@@ -22,6 +22,8 @@ using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using StableRNGs: StableRNG
 using Test: @test, @test_broken, @testset
 
+# These tests are broken currently
+
 @testset "Contract MPO" begin
   N = 20
   s = siteinds("S=1/2", N)
