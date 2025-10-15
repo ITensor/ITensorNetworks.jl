@@ -20,7 +20,7 @@ IncrementOnly(adapter::IncrementOnly) = adapter
   struct EachRegion{SweepIterator} <: AbstractNetworkIterator
 
 Adapter that flattens each region iterator in the parent sweep iterator into a single
-iterator, returning `region => kwargs`.
+iterator.
 """
 struct EachRegion{SI<:SweepIterator} <: AbstractNetworkIterator
   parent::SI
@@ -42,5 +42,5 @@ end
 function compute!(adapter::EachRegion)
   region_iter = region_iterator(adapter.parent)
   compute!(region_iter)
-  return current_region_plan(region_iter)
+  return adapter
 end
