@@ -16,7 +16,7 @@ function sweep_solve!(
     end
     sweep_callback(sweep_iterator)
   end
-  return problem(sweep_iterator)
+  return sweep_iterator
 end
 
 # I suspect that `sweep_callback` is the more commonly used callback, so allow this to
@@ -39,5 +39,5 @@ function sweep_solve!(region_callback, each_region_iterator::EachRegion)
     sweep_iterator = each_region_iterator.parent
     region_callback(sweep_iterator)
   end
-  return problem(each_region_iterator)
+  return each_region_iterator
 end
