@@ -90,7 +90,7 @@ function fit_tensornetwork(
   kwargs_array = [(; sweep_kwargs..., extra_sweep_kwargs..., sweep) for sweep in 1:nsweeps]
 
   sweep_iter = SweepIterator(init_prob, kwargs_array)
-  converged_prob = sweep_solve(sweep_iter)
+  converged_prob = sweep_solve!(sweep_iter)
 
   return rename_vertices(inv_vertex_map(overlap_network), ket(converged_prob))
 end

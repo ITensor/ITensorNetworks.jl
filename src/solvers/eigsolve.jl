@@ -64,7 +64,7 @@ function eigsolve(operator, init_state; nsweeps, nsites=1, outputlevel=0, sweep_
     state=align_indices(init_state), operator=ProjTTN(align_indices(operator))
   )
   sweep_iter = SweepIterator(init_prob, nsweeps; nsites, outputlevel, sweep_kwargs...)
-  prob = sweep_solve(sweep_iter)
+  prob = sweep_solve!(sweep_iter)
   return eigenvalue(prob), state(prob)
 end
 

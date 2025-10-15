@@ -91,7 +91,7 @@ function applyexp(
   ]
   sweep_iter = SweepIterator(init_prob, kws_array)
 
-  converged_prob = sweep_solve(sweep_callback, sweep_iter)
+  converged_prob = sweep_solve!(sweep_callback, sweep_iter)
 
   return state(converged_prob)
 end
