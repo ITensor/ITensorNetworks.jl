@@ -10,23 +10,23 @@ using Printf: @printf
   psi = copy(state(prob))
 
   prev_vertex_set = setdiff(pos(operator(prob)), region)
-  (length(prev_vertex_set) != 1) && return local_state
+  (length(prev_vertex_set) != 1) && return region_iter, local_state
   prev_vertex = only(prev_vertex_set)
   A = psi[prev_vertex]
 
   next_vertices = filter(v -> (hascommoninds(psi[v], A)), region)
-  isempty(next_vertices) && return local_state
+  isempty(next_vertices) && return region_iter, local_state
   next_vertex = only(next_vertices)
   C = psi[next_vertex]
 
   a = commonind(A, C)
-  isnothing(a) && return local_state
+  isnothing(a) && return region_iter, local_state
   basis_size = prod(dim.(uniqueinds(A, C)))
 
   expanded_maxdim = compute_expansion(
     dim(a), basis_size; region_kwargs(compute_expansion, region_iter)...
   )
-  expanded_maxdim <= 0 && return local_state
+  expanded_maxdim <= 0 && return region_iter, local_state
 
   envs = environments(operator(prob))
   H = operator(operator(prob))
@@ -50,7 +50,7 @@ using Printf: @printf
   end
   if norm(dag(U) * A) > 1E-10
     @printf("Warning: |U*A| = %.3E in subspace expansion\n", norm(dag(U) * A))
-    return local_state
+    return region_iter, local_state
   end
 
   Ax, ax = directsum(A => a, U => commonind(U, D))
@@ -61,5 +61,5 @@ using Printf: @printf
 
   prob.state = psi
 
-  return local_state
+  return region_iter, local_state
 end

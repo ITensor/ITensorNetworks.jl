@@ -7,10 +7,10 @@ function extract!(region_iter::RegionIterator; subspace_algorithm="nothing")
 
   prob.state = psi
 
-  local_state = subspace_expand!(region_iter, local_state; subspace_algorithm)
+  _, local_state = subspace_expand!(region_iter, local_state; subspace_algorithm)
   shifted_operator = position(operator(prob), state(prob), region)
 
   prob.operator = shifted_operator
 
-  return local_state
+  return region_iter, local_state
 end

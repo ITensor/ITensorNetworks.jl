@@ -29,7 +29,9 @@ end
 )
   prob = problem(region_iter)
 
-  iszero(abs(exponent_step)) && return local_state
+  if iszero(abs(exponent_step))
+    return region_iter, local_state
+  end
 
   solver_kwargs = region_kwargs(solver, region_iter)
 
@@ -54,7 +56,7 @@ end
 
   prob.current_exponent += exponent_step
 
-  return local_state
+  return region_iter, local_state
 end
 
 function default_sweep_callback(
@@ -91,7 +93,7 @@ function applyexp(
   ]
   sweep_iter = SweepIterator(init_prob, kws_array)
 
-  converged_prob = sweep_solve!(sweep_callback, sweep_iter)
+  converged_prob = problem(sweep_solve!(sweep_callback, sweep_iter))
 
   return state(converged_prob)
 end

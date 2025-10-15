@@ -7,14 +7,14 @@ using NDTensors.BackendSelection: Backend, @Backend_str
   backend = Backend(subspace_algorithm)
 
   if backend isa Backend"nothing"
-    return local_state
+    return region_iter, local_state
   end
 
-  local_state = @with_defaults subspace_expand!(
+  _, local_state = @with_defaults subspace_expand!(
     backend, region_iter, local_state; region_kwargs(subspace_expand!, region_iter)...
   )
 
-  return local_state
+  return region_iter, local_state
 end
 
 function subspace_expand!(backend, region_iterator, local_state; kwargs...)

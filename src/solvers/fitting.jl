@@ -41,7 +41,7 @@ function extract!(region_iter::RegionIterator{<:FittingProblem})
   prob.state = tn
   prob.gauge_region = region
 
-  return local_tensor
+  return region_iter, local_tensor
 end
 
 @define_default_kwargs function update!(
@@ -58,7 +58,7 @@ end
     @printf("  Region %s: squared overlap = %.12f\n", region, overlap(F))
   end
 
-  return local_tensor
+  return region_iter, local_tensor
 end
 
 function region_plan(F::FittingProblem; nsites, sweep_kwargs...)
@@ -90,7 +90,7 @@ function fit_tensornetwork(
   kwargs_array = [(; sweep_kwargs..., extra_sweep_kwargs..., sweep) for sweep in 1:nsweeps]
 
   sweep_iter = SweepIterator(init_prob, kwargs_array)
-  converged_prob = sweep_solve!(sweep_iter)
+  converged_prob = problem(sweep_solve!(sweep_iter))
 
   return rename_vertices(inv_vertex_map(overlap_network), ket(converged_prob))
 end
@@ -109,7 +109,11 @@ end
 #end
 
 function ITensors.apply(
-  A::ITensorNetwork, x::ITensorNetwork; maxdim=typemax(Int), cutoff=0.0, sweep_kwargs...
+  A::AbstractITensorNetwork,
+  x::AbstractITensorNetwork;
+  maxdim=typemax(Int),
+  cutoff=0.0,
+  sweep_kwargs...,
 )
   init_state = ITensorNetwork(v -> inds -> delta(inds), siteinds(x); link_space=maxdim)
   overlap_network = inner_network(x, A, init_state)

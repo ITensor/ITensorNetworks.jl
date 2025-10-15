@@ -28,5 +28,5 @@ function insert!(region_iter, local_tensor; normalize=false, set_orthogonal_regi
 
   prob.state = psi
 
-  return prob
+  return region_iter
 end
