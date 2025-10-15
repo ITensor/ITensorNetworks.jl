@@ -1,10 +1,7 @@
 
-function default_region_callback(sweep_iterator; kwargs...)
-  return sweep_iterator
-end
-function default_sweep_callback(sweep_iterator; kwargs...)
-  return sweep_iterator
-end
+default_region_callback(sweep_iterator) = sweep_iterator
+default_sweep_callback(sweep_iterator) = sweep_iterator
+
 # In this implementation the function `sweep_solve` is essentially just a wrapper around 
 # the iterate interface that allows one to pass callbacks.
 function sweep_solve(
