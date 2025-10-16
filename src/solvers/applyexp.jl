@@ -20,7 +20,7 @@ function region_plan(A::ApplyExpProblem; nsites, exponent_step, sweep_kwargs...)
   return applyexp_regions(state(A), exponent_step; nsites, sweep_kwargs...)
 end
 
-@define_default_kwargs function update!(
+function update!(
   region_iter::RegionIterator{<:ApplyExpProblem},
   local_state;
   nsites,

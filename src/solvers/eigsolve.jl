@@ -20,7 +20,7 @@ function set_truncation_info!(E::EigsolveProblem; spectrum=nothing)
   return E
 end
 
-@define_default_kwargs function update!(
+function update!(
   region_iter::RegionIterator{<:EigsolveProblem},
   local_state;
   outputlevel=0,

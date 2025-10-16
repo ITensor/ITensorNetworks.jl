@@ -44,7 +44,7 @@ function extract!(region_iter::RegionIterator{<:FittingProblem})
   return region_iter, local_tensor
 end
 
-@define_default_kwargs function update!(
+function update!(
   region_iter::RegionIterator{<:FittingProblem}, local_tensor; outputlevel=0
 )
   F = problem(region_iter)

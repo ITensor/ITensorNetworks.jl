@@ -1,16 +1,14 @@
 using NDTensors: NDTensors
 using NDTensors.BackendSelection: Backend, @Backend_str
 
-@define_default_kwargs function subspace_expand!(
-  region_iter, local_state; subspace_algorithm="nothing"
-)
+function subspace_expand!(region_iter, local_state; subspace_algorithm="nothing")
   backend = Backend(subspace_algorithm)
 
   if backend isa Backend"nothing"
     return region_iter, local_state
   end
 
-  _, local_state = @with_defaults subspace_expand!(
+  _, local_state = subspace_expand!(
     backend, region_iter, local_state; region_kwargs(subspace_expand!, region_iter)...
   )
 
