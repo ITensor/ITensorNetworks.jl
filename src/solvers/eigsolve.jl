@@ -59,11 +59,21 @@ function default_sweep_callback(
   end
 end
 
-function eigsolve(operator, init_state; nsweeps, nsites=1, outputlevel=0, sweep_kwargs...)
+function eigsolve(
+  operator, init_state; nsweeps, nsites=1, outputlevel=0, factorize_kwargs, sweep_kwargs...
+)
   init_prob = EigsolveProblem(;
     state=align_indices(init_state), operator=ProjTTN(align_indices(operator))
   )
-  sweep_iter = SweepIterator(init_prob, nsweeps; nsites, outputlevel, sweep_kwargs...)
+  sweep_iter = SweepIterator(
+    init_prob,
+    nsweeps;
+    nsites,
+    outputlevel,
+    factorize_kwargs,
+    subspace_expand!_kwargs=(; eigen_kwargs=factorize_kwargs),
+    sweep_kwargs...,
+  )
   prob = problem(sweep_solve!(sweep_iter))
   return eigenvalue(prob), state(prob)
 end

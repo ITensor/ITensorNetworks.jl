@@ -2,7 +2,13 @@ using NamedGraphs.GraphsExtensions: incident_edges
 using Printf: @printf
 
 @define_default_kwargs function subspace_expand!(
-  ::Backend"densitymatrix", region_iter, local_state; north_pass=1
+  ::Backend"densitymatrix",
+  region_iter,
+  local_state;
+  expansion_factor=1.5,
+  maxexpand=typemax(Int),
+  north_pass=1,
+  eigen_kwargs=(;),
 )
   prob = problem(region_iter)
 
@@ -24,7 +30,7 @@ using Printf: @printf
   basis_size = prod(dim.(uniqueinds(A, C)))
 
   expanded_maxdim = compute_expansion(
-    dim(a), basis_size; region_kwargs(compute_expansion, region_iter)...
+    dim(a), basis_size; expansion_factor, maxexpand, eigen_kwargs.maxdim
   )
   expanded_maxdim <= 0 && return region_iter, local_state
 
@@ -38,14 +44,14 @@ using Printf: @printf
   sqrt_rho *= H[prev_vertex]
 
   conj_proj_A(T) = (T - prime(A) * (dag(prime(A)) * T))
-  for pass in 1:north_pass
+  for _ in 1:north_pass
     sqrt_rho = conj_proj_A(sqrt_rho)
   end
   rho = sqrt_rho * dag(noprime(sqrt_rho))
-  D, U = eigen(rho; region_kwargs(eigen, region_iter)..., ishermitian=true)
+  D, U = eigen(rho; eigen_kwargs..., ishermitian=true)
 
   Uproj(T) = (T - prime(A, a) * (dag(prime(A, a)) * T))
-  for pass in 1:north_pass
+  for _ in 1:north_pass
     U = Uproj(U)
   end
   if norm(dag(U) * A) > 1E-10

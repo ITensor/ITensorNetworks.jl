@@ -24,9 +24,8 @@ function subspace_expand!(backend, region_iterator, local_state; kwargs...)
   )
 end
 
-function compute_expansion(
-  current_dim, basis_size; expansion_factor=1.5, maxexpand=typemax(Int), maxdim=typemax(Int)
-)
+# Have these defaults set per backend in `subspace_expand!`
+function compute_expansion(current_dim, basis_size; expansion_factor, maxexpand, maxdim)
   # Note: expand_maxdim will be *added* to current bond dimension
   # Obtain expand_maxdim from expansion_factor
   expand_maxdim = ceil(Int, expansion_factor * current_dim)
