@@ -45,7 +45,6 @@ include("treetensornetworks/projttns/projttn.jl")
 include("treetensornetworks/projttns/projttnsum.jl")
 include("treetensornetworks/projttns/projouterprodttn.jl")
 
-include("solvers/default_kwargs.jl")
 include("solvers/local_solvers/eigsolve.jl")
 include("solvers/local_solvers/exponentiate.jl")
 include("solvers/local_solvers/runge_kutta.jl")
