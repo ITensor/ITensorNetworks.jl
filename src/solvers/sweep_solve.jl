@@ -1,40 +1,43 @@
 
-region_callback(problem; kws...) = nothing
+default_region_callback(sweep_iterator) = sweep_iterator
+default_sweep_callback(sweep_iterator) = sweep_iterator
 
-function sweep_callback(problem; outputlevel, sweep, nsweeps, kws...)
-  if outputlevel >= 1
-    println("Done with sweep $sweep/$nsweeps")
+# In this implementation the function `sweep_solve` is essentially just a wrapper around 
+# the iterate interface that allows one to pass callbacks.
+function sweep_solve!(
+  sweep_iterator;
+  sweep_callback=default_sweep_callback,
+  region_callback=default_region_callback,
+)
+  # Don't compute the region iteration automatically as we wish to insert a callback.
+  for _ in IncrementOnly(sweep_iterator)
+    for _ in region_iterator(sweep_iterator)
+      region_callback(sweep_iterator)
+    end
+    sweep_callback(sweep_iterator)
   end
+  return sweep_iterator
 end
 
-function sweep_solve(
-  sweep_iterator;
-  outputlevel=0,
-  region_callback=region_callback,
-  sweep_callback=sweep_callback,
-  kwargs...,
+# I suspect that `sweep_callback` is the more commonly used callback, so allow this to
+# be set using the `do` syntax.
+function sweep_solve!(
+  sweep_callback, sweep_iterator; region_callback=default_region_callback
 )
-  for (sweep, region_iter) in enumerate(sweep_iterator)
-    for (region, region_kwargs) in region_tuples(region_iter)
-      region_callback(
-        problem(region_iter);
-        nsweeps=length(sweep_iterator),
-        outputlevel,
-        region_iterator=region_iter,
-        region,
-        region_kwargs,
-        sweep,
-        kwargs...,
-      )
-    end
-    sweep_callback(
-      problem(region_iter);
-      nsweeps=length(sweep_iterator),
-      outputlevel,
-      region_iterator=region_iter,
-      sweep,
-      kwargs...,
-    )
+  return sweep_solve!(sweep_iterator; sweep_callback, region_callback)
+end
+
+function sweep_solve!(
+  each_region_iterator::EachRegion; region_callback=default_region_callback
+)
+  return sweep_solve!(region_callback, each_region_iterator)
+end
+function sweep_solve!(region_callback, each_region_iterator::EachRegion)
+  for _ in each_region_iterator
+    # I don't think it is obvious what object this particular callback should take,
+    # but for now be consistant and pass the parent sweep iterator.
+    sweep_iterator = each_region_iterator.parent
+    region_callback(sweep_iterator)
   end
-  return problem(sweep_iterator)
+  return each_region_iterator
 end

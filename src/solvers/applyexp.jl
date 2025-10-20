@@ -1,5 +1,4 @@
 using Printf: @printf
-using Accessors: @set
 
 @kwdef mutable struct ApplyExpProblem{State} <: AbstractProblem
   operator
@@ -11,66 +10,69 @@ operator(A::ApplyExpProblem) = A.operator
 state(A::ApplyExpProblem) = A.state
 current_exponent(A::ApplyExpProblem) = A.current_exponent
 function current_time(A::ApplyExpProblem)
-  t = im*A.current_exponent
+  t = im * A.current_exponent
   return iszero(imag(t)) ? real(t) : t
 end
 
-set_operator(A::ApplyExpProblem, operator) = (@set A.operator = operator)
-set_state(A::ApplyExpProblem, state) = (@set A.state = state)
-set_current_exponent(A::ApplyExpProblem, exponent) = (@set A.current_exponent = exponent)
-
-function region_plan(A::ApplyExpProblem; nsites, time_step, sweep_kwargs...)
-  return applyexp_regions(state(A), time_step; nsites, sweep_kwargs...)
+# Rename region_plan
+function region_plan(A::ApplyExpProblem; nsites, exponent_step, sweep_kwargs...)
+  # The `exponent_step` kwarg for the `update!` function needs some pre-processing.
+  return applyexp_regions(state(A), exponent_step; nsites, sweep_kwargs...)
 end
 
-function update(
-  prob::ApplyExpProblem,
-  local_state,
-  region_iterator;
+function update!(
+  region_iter::RegionIterator{<:ApplyExpProblem},
+  local_state;
   nsites,
   exponent_step,
   solver=runge_kutta_solver,
-  outputlevel,
-  kws...,
 )
-  iszero(abs(exponent_step)) && return prob, local_state
+  prob = problem(region_iter)
 
-  local_state, info = solver(
-    x->optimal_map(operator(prob), x), exponent_step, local_state; kws...
+  if iszero(abs(exponent_step))
+    return region_iter, local_state
+  end
+
+  solver_kwargs = region_kwargs(solver, region_iter)
+
+  local_state, _ = solver(
+    x -> optimal_map(operator(prob), x), exponent_step, local_state; solver_kwargs...
   )
-  if nsites==1
-    curr_reg = current_region(region_iterator)
-    next_reg = next_region(region_iterator)
+  if nsites == 1
+    curr_reg = current_region(region_iter)
+    next_reg = next_region(region_iter)
     if !isnothing(next_reg) && next_reg != curr_reg
       next_edge = first(edge_sequence_between_regions(state(prob), curr_reg, next_reg))
       v1, v2 = src(next_edge), dst(next_edge)
       psi = copy(state(prob))
       psi[v1], R = qr(local_state, uniqueinds(local_state, psi[v2]))
-      shifted_operator = position(operator(prob), psi, NamedEdge(v1=>v2))
-      R_t, _ = solver(x->optimal_map(shifted_operator, x), -exponent_step, R; kws...)
-      local_state = psi[v1]*R_t
+      shifted_operator = position(operator(prob), psi, NamedEdge(v1 => v2))
+      R_t, _ = solver(
+        x -> optimal_map(shifted_operator, x), -exponent_step, R; solver_kwargs...
+      )
+      local_state = psi[v1] * R_t
     end
   end
 
-  prob = set_current_exponent(prob, current_exponent(prob)+exponent_step)
+  prob.current_exponent += exponent_step
 
-  return prob, local_state
+  return region_iter, local_state
 end
 
-function sweep_callback(
-  problem::ApplyExpProblem;
+function default_sweep_callback(
+  sweep_iterator::SweepIterator{<:ApplyExpProblem};
   exponent_description="exponent",
-  outputlevel,
-  sweep,
-  nsweeps,
+  outputlevel=0,
   process_time=identity,
-  kws...,
 )
   if outputlevel >= 1
+    the_problem = problem(sweep_iterator)
     @printf(
-      "  Current %s = %s, ", exponent_description, process_time(current_exponent(problem))
+      "  Current %s = %s, ",
+      exponent_description,
+      process_time(current_exponent(the_problem))
     )
-    @printf("maxlinkdim=%d", maxlinkdim(state(problem)))
+    @printf("maxlinkdim=%d", maxlinkdim(state(the_problem)))
     println()
     flush(stdout)
   end
@@ -79,19 +81,20 @@ end
 function applyexp(
   init_prob::AbstractProblem,
   exponents;
-  extract_kwargs=(;),
-  update_kwargs=(;),
-  insert_kwargs=(;),
-  outputlevel=0,
-  nsites=1,
+  sweep_callback=default_sweep_callback,
   order=4,
-  kws...,
+  nsites=2,
+  sweep_kwargs...,
 )
   exponent_steps = diff([zero(eltype(exponents)); exponents])
-  sweep_kws = (; outputlevel, extract_kwargs, insert_kwargs, nsites, order, update_kwargs)
-  kws_array = [(; sweep_kws..., time_step=t) for t in exponent_steps]
-  sweep_iter = sweep_iterator(init_prob, kws_array)
-  converged_prob = sweep_solve(sweep_iter; outputlevel, kws...)
+
+  kws_array = [
+    (; order, nsites, sweep_kwargs..., exponent_step) for exponent_step in exponent_steps
+  ]
+  sweep_iter = SweepIterator(init_prob, kws_array)
+
+  converged_prob = problem(sweep_solve!(sweep_callback, sweep_iter))
+
   return state(converged_prob)
 end
 
@@ -111,11 +114,10 @@ function time_evolve(
   time_points,
   init_state;
   process_time=process_real_times,
-  sweep_callback=(
-    a...; k...
-  )->sweep_callback(a...; exponent_description="time", process_time, k...),
-  kws...,
+  sweep_callback=iter ->
+    default_sweep_callback(iter; exponent_description="time", process_time),
+  sweep_kwargs...,
 )
-  exponents = [-im*t for t in time_points]
-  return applyexp(operator, exponents, init_state; sweep_callback, kws...)
+  exponents = [-im * t for t in time_points]
+  return applyexp(operator, exponents, init_state; sweep_callback, sweep_kwargs...)
 end

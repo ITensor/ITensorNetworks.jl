@@ -1,4 +1,3 @@
-using Accessors: @set
 using Printf: @printf
 using ITensors: truncerror
 
@@ -14,42 +13,43 @@ state(E::EigsolveProblem) = E.state
 operator(E::EigsolveProblem) = E.operator
 max_truncerror(E::EigsolveProblem) = E.max_truncerror
 
-set_operator(E::EigsolveProblem, operator) = (@set E.operator = operator)
-set_eigenvalue(E::EigsolveProblem, eigenvalue) = (@set E.eigenvalue = eigenvalue)
-set_state(E::EigsolveProblem, state) = (@set E.state = state)
-set_max_truncerror(E::EigsolveProblem, truncerror) = (@set E.max_truncerror = truncerror)
-
-function set_truncation_info(E::EigsolveProblem; spectrum=nothing)
+function set_truncation_info!(E::EigsolveProblem; spectrum=nothing)
   if !isnothing(spectrum)
-    E = set_max_truncerror(E, max(max_truncerror(E), truncerror(spectrum)))
+    E.max_truncerror = max(max_truncerror(E), truncerror(spectrum))
   end
   return E
 end
 
-function update(
-  prob::EigsolveProblem,
-  local_state,
-  region_iterator;
-  outputlevel,
+function update!(
+  region_iter::RegionIterator{<:EigsolveProblem},
+  local_state;
+  outputlevel=0,
   solver=eigsolve_solver,
-  kws...,
 )
-  eigval, local_state = solver(ψ->optimal_map(operator(prob), ψ), local_state; kws...)
-  prob = set_eigenvalue(prob, eigval)
+  prob = problem(region_iter)
+
+  eigval, local_state = solver(
+    ψ -> optimal_map(operator(prob), ψ), local_state; region_kwargs(solver, region_iter)...
+  )
+
+  prob.eigenvalue = eigval
+
   if outputlevel >= 2
-    @printf(
-      "  Region %s: energy = %.12f\n", current_region(region_iterator), eigenvalue(prob)
-    )
+    @printf("  Region %s: energy = %.12f\n", current_region(region_iter), eigenvalue(prob))
   end
-  return prob, local_state
+  return region_iter, local_state
 end
 
-function sweep_callback(problem::EigsolveProblem; outputlevel, sweep, nsweeps, kws...)
+function default_sweep_callback(
+  sweep_iterator::SweepIterator{<:EigsolveProblem}; outputlevel=0
+)
   if outputlevel >= 1
-    if nsweeps >= 10
-      @printf("After sweep %02d/%d ", sweep, nsweeps)
+    nsweeps = length(sweep_iterator)
+    current_sweep = sweep_iterator.which_sweep
+    if length(sweep_iterator) >= 10
+      @printf("After sweep %02d/%d ", current_sweep, nsweeps)
     else
-      @printf("After sweep %d/%d ", sweep, nsweeps)
+      @printf("After sweep %d/%d ", current_sweep, nsweeps)
     end
     @printf("eigenvalue=%.12f", eigenvalue(problem))
     @printf(" maxlinkdim=%d", maxlinkdim(state(problem)))
@@ -60,24 +60,22 @@ function sweep_callback(problem::EigsolveProblem; outputlevel, sweep, nsweeps, k
 end
 
 function eigsolve(
-  operator,
-  init_state;
-  nsweeps,
-  nsites=1,
-  outputlevel=0,
-  extract_kwargs=(;),
-  update_kwargs=(;),
-  insert_kwargs=(;),
-  kws...,
+  operator, init_state; nsweeps, nsites=1, outputlevel=0, factorize_kwargs, sweep_kwargs...
 )
   init_prob = EigsolveProblem(;
     state=align_indices(init_state), operator=ProjTTN(align_indices(operator))
   )
-  sweep_iter = sweep_iterator(
-    init_prob, nsweeps; nsites, outputlevel, extract_kwargs, update_kwargs, insert_kwargs
+  sweep_iter = SweepIterator(
+    init_prob,
+    nsweeps;
+    nsites,
+    outputlevel,
+    factorize_kwargs,
+    subspace_expand!_kwargs=(; eigen_kwargs=factorize_kwargs),
+    sweep_kwargs...,
   )
-  prob = sweep_solve(sweep_iter; outputlevel, kws...)
+  prob = problem(sweep_solve!(sweep_iter))
   return eigenvalue(prob), state(prob)
 end
 
-dmrg(args...; kws...) = eigsolve(args...; kws...)
+dmrg(operator, init_state; kwargs...) = eigsolve(operator, init_state; kwargs...)

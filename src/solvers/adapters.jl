@@ -1,32 +1,46 @@
+"""
+  struct PauseAfterIncrement{S<:AbstractNetworkIterator}
 
-#
-# TupleRegionIterator
-#
-# Adapts outputs to be (region, region_kwargs) tuples
-#
-# More generic design? maybe just assuming RegionIterator
-# or its outputs implement some interface function that
-# generates each tuple?
-#
-
-mutable struct TupleRegionIterator{RegionIter}
-  region_iterator::RegionIter
+Iterator wrapper whos `compute!` function simply returns itself, doing nothing in the 
+process. This allows one to manually call a custom `compute!` or insert their own code it in
+the loop body in place of `compute!`.
+"""
+struct IncrementOnly{S<:AbstractNetworkIterator} <: AbstractNetworkIterator
+  parent::S
 end
 
-region_iterator(T::TupleRegionIterator) = T.region_iterator
+islaststep(adapter::IncrementOnly) = islaststep(adapter.parent)
+state(adapter::IncrementOnly) = state(adapter.parent)
+increment!(adapter::IncrementOnly) = increment!(adapter.parent)
+compute!(adapter::IncrementOnly) = adapter
 
-function Base.iterate(T::TupleRegionIterator, which=1)
-  state = iterate(region_iterator(T), which)
-  isnothing(state) && return nothing
-  (current_region, region_kwargs) = current_region_plan(region_iterator(T))
-  return (current_region, region_kwargs), last(state)
+IncrementOnly(adapter::IncrementOnly) = adapter
+
+"""
+  struct EachRegion{SweepIterator} <: AbstractNetworkIterator
+
+Adapter that flattens each region iterator in the parent sweep iterator into a single
+iterator.
+"""
+struct EachRegion{SI<:SweepIterator} <: AbstractNetworkIterator
+  parent::SI
 end
 
-"""
-  region_tuples(R::RegionIterator)
+# In keeping with Julia convention.
+eachregion(iter::SweepIterator) = EachRegion(iter)
 
-The `region_tuples` adapter converts a RegionIterator into an 
-iterator which outputs a tuple of the form (current_region, current_region_kwargs)
-at each step.
-"""
-region_tuples(R::RegionIterator) = TupleRegionIterator(R)
+# Essential definitions
+function islaststep(adapter::EachRegion)
+  region_iter = region_iterator(adapter.parent)
+  return islaststep(adapter.parent) && islaststep(region_iter)
+end
+function increment!(adapter::EachRegion)
+  region_iter = region_iterator(adapter.parent)
+  islaststep(region_iter) ? increment!(adapter.parent) : increment!(region_iter)
+  return adapter
+end
+function compute!(adapter::EachRegion)
+  region_iter = region_iterator(adapter.parent)
+  compute!(region_iter)
+  return adapter
+end

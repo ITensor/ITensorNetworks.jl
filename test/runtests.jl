@@ -24,7 +24,7 @@ end
 
 @time begin
   # tests in groups based on folder structure
-  for testgroup in filter(isdir, readdir(@__DIR__))
+  for testgroup in filter(f -> isdir(joinpath(@__DIR__, f)), readdir(@__DIR__))
     if GROUP == "ALL" || GROUP == uppercase(testgroup)
       groupdir = joinpath(@__DIR__, testgroup)
       for file in filter(istestfile, readdir(groupdir))

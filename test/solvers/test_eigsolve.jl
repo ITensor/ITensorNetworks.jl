@@ -20,8 +20,8 @@ include("utilities/tree_graphs.jl")
   for edge in edges(sites)
     i, j = src(edge), dst(edge)
     h += "Sz", i, "Sz", j
-    h += 1/2, "S+", i, "S-", j
-    h += 1/2, "S-", i, "S+", j
+    h += 1 / 2, "S+", i, "S-", j
+    h += 1 / 2, "S-", i, "S+", j
   end
   H = ttn(h, sites)
 
@@ -38,27 +38,26 @@ include("utilities/tree_graphs.jl")
 
   cutoff = 1E-5
   maxdim = 40
+
+  factorize_kwargs = (; cutoff, maxdim)
+
   nsweeps = 5
 
   #
   # Test 2-site DMRG without subspace expansion
   #
   nsites = 2
-  trunc = (; cutoff, maxdim)
-  insert_kwargs = (; trunc)
-  E, psi = dmrg(H, psi0; insert_kwargs, nsites, nsweeps, outputlevel)
+  E, psi = dmrg(H, psi0; factorize_kwargs, nsites, nsweeps, outputlevel)
   (outputlevel >= 1) && println("2-site DMRG energy = ", E)
-  @test abs(E-Ex) < 1E-5
+  @test E ≈ Ex atol = 1E-5
 
   #
   # Test 1-site DMRG with subspace expansion
   #
   nsites = 1
   nsweeps = 5
-  trunc = (; cutoff, maxdim)
-  extract_kwargs = (; trunc, subspace_algorithm="densitymatrix")
-  insert_kwargs = (; trunc)
-  E, psi = dmrg(H, psi0; extract_kwargs, insert_kwargs, nsites, nsweeps, outputlevel)
+  extract!_kwargs = (; subspace_algorithm="densitymatrix")
+  E, psi = dmrg(H, psi0; extract!_kwargs, factorize_kwargs, nsites, nsweeps, outputlevel)
   (outputlevel >= 1) && println("1-site+subspace DMRG energy = ", E)
-  @test abs(E-Ex) < 1E-5
+  @test E ≈ Ex atol = 1E-5
 end
