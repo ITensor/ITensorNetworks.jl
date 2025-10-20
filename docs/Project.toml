@@ -5,5 +5,5 @@ Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 
 [compat]
 Documenter = "1.10.0"
-ITensorNetworks = "0.14.0"
+ITensorNetworks = "0.15.0"
 Literate = "2.20.1"
