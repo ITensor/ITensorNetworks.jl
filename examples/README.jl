@@ -11,7 +11,7 @@
 # > or for us to clearly announce parts of the code we are changing.
 
 # # ITensorNetworks.jl
-# 
+#
 # [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://itensor.github.io/ITensorNetworks.jl/stable/)
 # [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://itensor.github.io/ITensorNetworks.jl/dev/)
 # [![Build Status](https://github.com/ITensor/ITensorNetworks.jl/actions/workflows/Tests.yml/badge.svg?branch=main)](https://github.com/ITensor/ITensorNetworks.jl/actions/workflows/Tests.yml?query=branch%3Amain)

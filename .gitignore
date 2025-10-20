@@ -9,6 +9,10 @@
 .vscode/
 Manifest.toml
 benchmark/*.json
+dev/
+docs/LocalPreferences.toml
 docs/Manifest.toml
 docs/build/
 docs/src/index.md
+examples/LocalPreferences.toml
+test/LocalPreferences.toml

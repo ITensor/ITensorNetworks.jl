@@ -6,61 +6,61 @@ using NamedGraphs: NamedGraph, subgraph
 using SplitApplyCombine: flatten
 
 function _partition(g::AbstractGraph, subgraph_vertices)
-  partitioned_graph = DataGraph(
-    NamedGraph(eachindex(subgraph_vertices));
-    vertex_data_eltype=typeof(g),
-    edge_data_eltype=@NamedTuple{
-      edges::Vector{edgetype(g)}, edge_data::Dictionary{edgetype(g),edge_data_eltype(g)}
-    }
-  )
-  for v in vertices(partitioned_graph)
-    partitioned_graph[v] = subgraph(g, subgraph_vertices[v])
-  end
-  for e in edges(g)
-    s1 = findfirst_on_vertices(subgraph -> src(e) ∈ vertices(subgraph), partitioned_graph)
-    s2 = findfirst_on_vertices(subgraph -> dst(e) ∈ vertices(subgraph), partitioned_graph)
-    if (!has_edge(partitioned_graph, s1, s2) && s1 ≠ s2)
-      add_edge!(partitioned_graph, s1, s2)
-      partitioned_graph[s1 => s2] = (;
-        edges=Vector{edgetype(g)}(), edge_data=Dictionary{edgetype(g),edge_data_eltype(g)}()
-      )
+    partitioned_graph = DataGraph(
+        NamedGraph(eachindex(subgraph_vertices));
+        vertex_data_eltype = typeof(g),
+        edge_data_eltype = @NamedTuple{
+            edges::Vector{edgetype(g)}, edge_data::Dictionary{edgetype(g), edge_data_eltype(g)},
+        }
+    )
+    for v in vertices(partitioned_graph)
+        partitioned_graph[v] = subgraph(g, subgraph_vertices[v])
     end
-    if has_edge(partitioned_graph, s1, s2)
-      push!(partitioned_graph[s1 => s2].edges, e)
-      if isassigned(g, e)
-        set!(partitioned_graph[s1 => s2].edge_data, e, g[e])
-      end
+    for e in edges(g)
+        s1 = findfirst_on_vertices(subgraph -> src(e) ∈ vertices(subgraph), partitioned_graph)
+        s2 = findfirst_on_vertices(subgraph -> dst(e) ∈ vertices(subgraph), partitioned_graph)
+        if (!has_edge(partitioned_graph, s1, s2) && s1 ≠ s2)
+            add_edge!(partitioned_graph, s1, s2)
+            partitioned_graph[s1 => s2] = (;
+                edges = Vector{edgetype(g)}(), edge_data = Dictionary{edgetype(g), edge_data_eltype(g)}(),
+            )
+        end
+        if has_edge(partitioned_graph, s1, s2)
+            push!(partitioned_graph[s1 => s2].edges, e)
+            if isassigned(g, e)
+                set!(partitioned_graph[s1 => s2].edge_data, e, g[e])
+            end
+        end
     end
-  end
-  return partitioned_graph
+    return partitioned_graph
 end
 
 """
 Find all vertices `v` such that `f(graph[v]) == true`
 """
 function findall_on_vertices(f::Function, graph::AbstractDataGraph)
-  return findall(f, vertex_data(graph))
+    return findall(f, vertex_data(graph))
 end
 
 """
 Find the vertex `v` such that `f(graph[v]) == true`
 """
 function findfirst_on_vertices(f::Function, graph::AbstractDataGraph)
-  return findfirst(f, vertex_data(graph))
+    return findfirst(f, vertex_data(graph))
 end
 
 """
 Find all edges `e` such that `f(graph[e]) == true`
 """
 function findall_on_edges(f::Function, graph::AbstractDataGraph)
-  return findall(f, edge_data(graph))
+    return findall(f, edge_data(graph))
 end
 
 """
 Find the edge `e` such that `f(graph[e]) == true`
 """
 function findfirst_on_edges(f::Function, graph::AbstractDataGraph)
-  return findfirst(f, edge_data(graph))
+    return findfirst(f, edge_data(graph))
 end
 
 # function subgraphs(g::AbstractSimpleGraph, subgraph_vertices)
@@ -93,12 +93,12 @@ end
 # end
 
 function _noncommoninds(partition::DataGraph)
-  tn = mapreduce(v -> collect(eachtensor(partition[v])), vcat, vertices(partition))
-  return unique(flatten_siteinds(ITensorNetwork(tn)))
+    tn = mapreduce(v -> collect(eachtensor(partition[v])), vcat, vertices(partition))
+    return unique(flatten_siteinds(ITensorNetwork(tn)))
 end
 
 # Util functions for partition
 function _commoninds(partition::DataGraph)
-  tn = mapreduce(v -> collect(eachtensor(partition[v])), vcat, vertices(partition))
-  return unique(flatten_linkinds(ITensorNetwork(tn)))
+    tn = mapreduce(v -> collect(eachtensor(partition[v])), vcat, vertices(partition))
+    return unique(flatten_linkinds(ITensorNetwork(tn)))
 end
