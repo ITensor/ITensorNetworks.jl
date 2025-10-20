@@ -25,7 +25,8 @@ using ITensorNetworks:
   update_factor,
   updated_message,
   message_diff
-using ITensors: ITensors, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
+using ITensors:
+  ITensors, ITensor, Algorithm, combiner, dag, inds, inner, op, prime, random_itensor
 using ITensorNetworks.ModelNetworks: ModelNetworks
 using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
@@ -62,7 +63,7 @@ using Test: @test, @testset
     @test bpc[vket] == new_A
     @test bpc[vbra] == new_A_dag
 
-    bpc = update(bpc; maxiter=25, tol=eps(real(elt)))
+    bpc = update(bpc; alg="bp", maxiter=25, tol=eps(real(elt)))
     #Test messages are converged
     for pe in partitionedges(bpc)
       @test message_diff(updated_message(bpc, pe), message(bpc, pe)) < 10 * eps(real(elt))

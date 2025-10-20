@@ -1,16 +1,20 @@
 using LinearAlgebra: LinearAlgebra, eigen, pinv
 using ITensors:
+  ITensors,
   ITensor,
   Index,
   commonind,
   dag,
+  dir,
   hasqns,
+  indices,
   inds,
   isdiag,
   itensor,
   map_diag,
   noncommonind,
   noprime,
+  permute,
   replaceind,
   replaceinds,
   sim,
@@ -58,18 +62,57 @@ function eigendecomp(A::ITensor, linds, rinds; ishermitian=false, kwargs...)
   D, U = eigen(A, linds, rinds; ishermitian, kwargs...)
   ul, ur = noncommonind(D, U), commonind(D, U)
   Ul = replaceinds(U, vcat(rinds, ur), vcat(linds, ul))
-
   return Ul, D, dag(U)
 end
 
-function map_eigvals(f::Function, A::ITensor, inds...; ishermitian=false, kwargs...)
-  if isdiag(A)
-    return map_diag(f, A)
+function make_bosonic(A::ITensor, Linds, Rinds)
+  # Bring indices into i',j',..,dag(j),dag(i)
+  # ordering with Out indices coming before In indices
+  # Resulting tensor acts like a normal matrix (no extra signs
+  # when taking powers A^n)
+  Linds = indices(Linds)
+  Rinds = indices(Rinds)
+  if all(j->dir(j)==ITensors.Out, Linds) && all(j->dir(j)==ITensors.In, Rinds)
+    ordered_inds = [Linds..., reverse(Rinds)...]
+  elseif all(j->dir(j)==ITensors.Out, Rinds) && all(j->dir(j)==ITensors.In, Linds)
+    ordered_inds = [Rinds..., reverse(Linds)...]
+  else
+    error(
+      "For fermionic exp, Linds and Rinds must have same directions within each set. Got dir.(Linds)=",
+      dir.(Linds),
+      ", dir.(Rinds)=",
+      dir.(Rinds),
+    )
+  end
+  # permuted A^n will be sign free, ok to temporarily disable fermion system
+  return permute(A, ordered_inds)
+end
+
+function map_eigvals(f::Function, A::ITensor, Linds, Rinds; kws...)
+  # <fermions>
+  fermionic_itensor =
+    ITensors.using_auto_fermion() && ITensors.has_fermionic_subspaces(inds(A))
+  if fermionic_itensor
+    A = make_bosonic(A::ITensor, Linds, Rinds)
+    ordered_inds = inds(A)
+    ITensors.disable_auto_fermion()
   end
 
-  Ul, D, Ur = eigendecomp(A, inds...; ishermitian, kwargs...)
+  if isdiag(A)
+    mapped_A = map_diag(f, A)
+  else
+    Ul, D, Ur = eigendecomp(A, Linds, Rinds; kws...)
+    mapped_A = Ul * map_diag(f, D) * Ur
+  end
 
-  return Ul * map_diag(f, D) * Ur
+  # <fermions>
+  if fermionic_itensor
+    # Ensure indices in "matrix" form before re-enabling fermion system
+    mapped_A = permute(mapped_A, ordered_inds)
+    ITensors.enable_auto_fermion()
+  end
+
+  return mapped_A
 end
 
 # Analagous to `denseblocks`.

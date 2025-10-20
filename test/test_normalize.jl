@@ -4,7 +4,9 @@ using ITensorNetworks:
   QuadraticFormNetwork,
   edge_scalars,
   norm_sqr_network,
+  messages,
   random_tensornetwork,
+  scalartype,
   siteinds,
   vertex_scalars,
   rescale
@@ -29,7 +31,7 @@ using Test: @test, @testset
   tn_r = rescale(tn; alg="exact")
   @test scalar(tn_r; alg="exact") ≈ 1.0
 
-  tn_r = rescale(tn; alg="bp")
+  tn_r = rescale(tn; alg="bp", cache_update_kwargs=(; maxiter=20))
   @test scalar(tn_r; alg="exact") ≈ 1.0
 
   #Now a state on a loopy graph
@@ -39,16 +41,19 @@ using Test: @test, @testset
 
   g = named_grid((Lx, Ly))
   s = siteinds("S=1/2", g)
-  x = random_tensornetwork(rng, s; link_space=χ)
+  x = random_tensornetwork(rng, ComplexF32, s; link_space=χ)
 
   ψ = normalize(x; alg="exact")
   @test scalar(norm_sqr_network(ψ); alg="exact") ≈ 1.0
 
   ψIψ_bpc = Ref(BeliefPropagationCache(QuadraticFormNetwork(x)))
-  ψ = normalize(x; alg="bp", (cache!)=ψIψ_bpc, update_cache=true)
+  ψ = normalize(
+    x; alg="bp", (cache!)=ψIψ_bpc, update_cache=true, cache_update_kwargs=(; maxiter=20)
+  )
   ψIψ_bpc = ψIψ_bpc[]
+  @test all(m -> scalartype(only(m)) == ComplexF32, messages(ψIψ_bpc))
   @test all(x -> x ≈ 1.0, edge_scalars(ψIψ_bpc))
   @test all(x -> x ≈ 1.0, vertex_scalars(ψIψ_bpc))
-  @test scalar(QuadraticFormNetwork(ψ); alg="bp") ≈ 1.0
+  @test scalar(QuadraticFormNetwork(ψ); alg="bp", cache_update_kwargs=(; maxiter=20)) ≈ 1.0
 end
 end

@@ -11,10 +11,11 @@ using NamedGraphs.PartitionedGraphs:
   partitionvertices,
   partitionedges,
   partitioned_vertices,
+  partitions_graph,
   unpartitioned_graph,
   which_partition
 using SimpleTraits: SimpleTraits, Not, @traitfn
-using NDTensors: NDTensors
+using NDTensors: NDTensors, Algorithm
 
 function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
   return (; partitioned_vertices=default_partitioned_vertices(ψ))
@@ -51,7 +52,6 @@ end
 function cache(alg::Algorithm"bp", tn; kwargs...)
   return BeliefPropagationCache(tn; kwargs...)
 end
-default_cache_update_kwargs(alg::Algorithm"bp") = (; maxiter=25, tol=1e-8)
 
 function partitioned_tensornetwork(bp_cache::BeliefPropagationCache)
   return bp_cache.partitioned_tensornetwork
@@ -60,7 +60,7 @@ end
 messages(bp_cache::BeliefPropagationCache) = bp_cache.messages
 
 function default_message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
-  return default_message(scalartype(bp_cache), linkinds(bp_cache, edge))
+  return default_message(datatype(bp_cache), linkinds(bp_cache, edge))
 end
 
 function Base.copy(bp_cache::BeliefPropagationCache)
@@ -69,18 +69,37 @@ function Base.copy(bp_cache::BeliefPropagationCache)
   )
 end
 
-default_message_update_alg(bp_cache::BeliefPropagationCache) = "bp"
+default_update_alg(bp_cache::BeliefPropagationCache) = "bp"
+default_message_update_alg(bp_cache::BeliefPropagationCache) = "contract"
+default_normalize(::Algorithm"contract") = true
+default_sequence_alg(::Algorithm"contract") = "optimal"
+function set_default_kwargs(alg::Algorithm"contract")
+  normalize = get(alg.kwargs, :normalize, default_normalize(alg))
+  sequence_alg = get(alg.kwargs, :sequence_alg, default_sequence_alg(alg))
+  return Algorithm("contract"; normalize, sequence_alg)
+end
+function set_default_kwargs(alg::Algorithm"adapt_update")
+  _alg = set_default_kwargs(get(alg.kwargs, :alg, Algorithm("contract")))
+  return Algorithm("adapt_update"; adapt=alg.kwargs.adapt, alg=_alg)
+end
+default_verbose(::Algorithm"bp") = false
+default_tol(::Algorithm"bp") = nothing
+function set_default_kwargs(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
+  verbose = get(alg.kwargs, :verbose, default_verbose(alg))
+  maxiter = get(alg.kwargs, :maxiter, default_bp_maxiter(bp_cache))
+  edge_sequence = get(alg.kwargs, :edge_sequence, default_bp_edge_sequence(bp_cache))
+  tol = get(alg.kwargs, :tol, default_tol(alg))
+  message_update_alg = set_default_kwargs(
+    get(alg.kwargs, :message_update_alg, Algorithm(default_message_update_alg(bp_cache)))
+  )
+  return Algorithm("bp"; verbose, maxiter, edge_sequence, tol, message_update_alg)
+end
 
-function default_bp_maxiter(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
-  return default_bp_maxiter(partitioned_graph(bp_cache))
+function default_bp_maxiter(bp_cache::BeliefPropagationCache)
+  return default_bp_maxiter(partitions_graph(bp_cache))
 end
-function default_edge_sequence(alg::Algorithm"bp", bp_cache::BeliefPropagationCache)
+function default_bp_edge_sequence(bp_cache::BeliefPropagationCache)
   return default_edge_sequence(partitioned_tensornetwork(bp_cache))
-end
-function default_message_update_kwargs(
-  alg::Algorithm"bp", bpc::AbstractBeliefPropagationCache
-)
-  return (;)
 end
 
 Base.setindex!(bpc::BeliefPropagationCache, factor::ITensor, vertex) = not_implemented()
@@ -123,7 +142,7 @@ function rescale_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:Partit
       n *= sign(n)
     end
 
-    sf = (1 / sqrt(n)) ^ (1 / length(me))
+    sf = inv(sqrt(n)) ^ inv(oftype(n, length(me)))
     set!(mts, pe, sf .* me)
     set!(mts, reverse(pe), sf .* mer)
   end

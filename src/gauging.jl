@@ -128,7 +128,7 @@ function VidalITensorNetwork(
   ψ::ITensorNetwork;
   (cache!)=nothing,
   update_cache=isnothing(cache!),
-  cache_update_kwargs=default_cache_update_kwargs(Algorithm("bp")),
+  cache_update_kwargs=(;),
   kwargs...,
 )
   if isnothing(cache!)
