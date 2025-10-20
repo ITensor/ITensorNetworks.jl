@@ -11,47 +11,47 @@ using Test: @test, @testset, @test_broken
 ITensors.disable_warn_order()
 
 @testset "Ising TEBD" begin
-  dims = (2, 3)
-  n = prod(dims)
-  g = named_grid(dims)
+    dims = (2, 3)
+    n = prod(dims)
+    g = named_grid(dims)
 
-  h = 0.1
+    h = 0.1
 
-  s = siteinds("S=1/2", g)
+    s = siteinds("S=1/2", g)
 
-  #
-  # PEPS TEBD optimization
-  #
-  ℋ = ModelHamiltonians.ising(g; h)
-  χ = 2
-  β = 2.0
-  Δβ = 0.2
+    #
+    # PEPS TEBD optimization
+    #
+    ℋ = ModelHamiltonians.ising(g; h)
+    χ = 2
+    β = 2.0
+    Δβ = 0.2
 
-  ψ_init = ITensorNetwork(v -> "↑", s)
-  #E0 = expect(ℋ, ψ_init)
-  ψ = tebd(
-    group_terms(ℋ, g),
-    ψ_init;
-    β,
-    Δβ,
-    cutoff=1e-8,
-    maxdim=χ,
-    ortho=false,
-    print_frequency=typemax(Int),
-  )
-  #E1 = expect(ℋ, ψ)
-  ψ = tebd(
-    group_terms(ℋ, g),
-    ψ_init;
-    β,
-    Δβ,
-    cutoff=1e-8,
-    maxdim=χ,
-    ortho=true,
-    print_frequency=typemax(Int),
-  )
-  #E2 = expect(ℋ, ψ)
-  #@show E0, E1, E2, E_dmrg
-  @test_broken (((abs((E2 - E1) / E2) < 1e-3) && (E1 < E0)) || (E2 < E1 < E0))
+    ψ_init = ITensorNetwork(v -> "↑", s)
+    #E0 = expect(ℋ, ψ_init)
+    ψ = tebd(
+        group_terms(ℋ, g),
+        ψ_init;
+        β,
+        Δβ,
+        cutoff = 1.0e-8,
+        maxdim = χ,
+        ortho = false,
+        print_frequency = typemax(Int),
+    )
+    #E1 = expect(ℋ, ψ)
+    ψ = tebd(
+        group_terms(ℋ, g),
+        ψ_init;
+        β,
+        Δβ,
+        cutoff = 1.0e-8,
+        maxdim = χ,
+        ortho = true,
+        print_frequency = typemax(Int),
+    )
+    #E2 = expect(ℋ, ψ)
+    #@show E0, E1, E2, E_dmrg
+    @test_broken (((abs((E2 - E1) / E2) < 1.0e-3) && (E1 < E0)) || (E2 < E1 < E0))
 end
 end

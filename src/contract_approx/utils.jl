@@ -9,26 +9,27 @@ In particular, the tensor of each leaf vertex is contracted with the tensor of i
 to keep the tensor unchanged.
 """
 function _rem_leaf_vertices!(
-  tn::ITensorNetwork; root=first(vertices(tn)), contraction_sequence_kwargs
-)
-  dfs_t = dfs_tree(tn, root)
-  leaves = leaf_vertices(dfs_t)
-  parents = [parent_vertex(dfs_t, leaf) for leaf in leaves]
-  for (l, p) in zip(leaves, parents)
-    tn[p] = _optcontract([tn[p], tn[l]]; contraction_sequence_kwargs)
-    rem_vertex!(tn, l)
-  end
+        tn::ITensorNetwork; root = first(vertices(tn)), contraction_sequence_kwargs
+    )
+    dfs_t = dfs_tree(tn, root)
+    leaves = leaf_vertices(dfs_t)
+    parents = [parent_vertex(dfs_t, leaf) for leaf in leaves]
+    for (l, p) in zip(leaves, parents)
+        tn[p] = _optcontract([tn[p], tn[l]]; contraction_sequence_kwargs)
+        rem_vertex!(tn, l)
+    end
+    return
 end
 
 """
 Contract of a vector of tensors, `network`, with a contraction sequence generated via sa_bipartite
 """
-function _optcontract(network::Vector; contraction_sequence_kwargs=(;))
-  if length(network) == 0
-    return ITensor(1)
-  end
-  @assert network isa Vector{ITensor}
-  sequence = contraction_sequence(network; contraction_sequence_kwargs...)
-  output = contract(network; sequence)
-  return output
+function _optcontract(network::Vector; contraction_sequence_kwargs = (;))
+    if length(network) == 0
+        return ITensor(1)
+    end
+    @assert network isa Vector{ITensor}
+    sequence = contraction_sequence(network; contraction_sequence_kwargs...)
+    output = contract(network; sequence)
+    return output
 end

@@ -6,17 +6,17 @@ using .ITensorsExtensions: is_delta
 Rewrite of the function
   `DataStructures.root_union!(s::IntDisjointSet{T}, x::T, y::T) where {T<:Integer}`.
 """
-function _introot_union!(s::DataStructures.IntDisjointSets, x, y; left_root=true)
-  parents = s.parents
-  rks = s.ranks
-  @inbounds xrank = rks[x]
-  @inbounds yrank = rks[y]
-  if !left_root
-    x, y = y, x
-  end
-  @inbounds parents[y] = x
-  s.ngroups -= 1
-  return x
+function _introot_union!(s::DataStructures.IntDisjointSets, x, y; left_root = true)
+    parents = s.parents
+    rks = s.ranks
+    @inbounds xrank = rks[x]
+    @inbounds yrank = rks[y]
+    if !left_root
+        x, y = y, x
+    end
+    @inbounds parents[y] = x
+    s.ngroups -= 1
+    return x
 end
 
 """
@@ -28,8 +28,8 @@ A specified root is useful in functions such as `_remove_deltas`, where when we 
 indices into one disjointset, we want the index that is the outinds if the given tensor network
 to always be the root in the DisjointSets.
 """
-function _root_union!(s::DisjointSets, x, y; left_root=true)
-  return s.revmap[_introot_union!(s.internal, s.intmap[x], s.intmap[y]; left_root=true)]
+function _root_union!(s::DisjointSets, x, y; left_root = true)
+    return s.revmap[_introot_union!(s.internal, s.intmap[x], s.intmap[y]; left_root = true)]
 end
 
 """
@@ -39,21 +39,21 @@ If a disjoint set contains indices in `rootinds`, then one of such indices in `r
 must be the root of this set.
 """
 function _delta_inds_disjointsets(deltas::Vector{<:ITensor}, rootinds::Vector{<:Index})
-  if deltas == []
-    return DisjointSets()
-  end
-  inds_list = map(t -> collect(inds(t)), deltas)
-  deltainds = collect(Set(vcat(inds_list...)))
-  ds = DisjointSets(deltainds)
-  for t in deltas
-    i1, i2 = inds(t)
-    if find_root!(ds, i1) in rootinds
-      _root_union!(ds, find_root!(ds, i1), find_root!(ds, i2))
-    else
-      _root_union!(ds, find_root!(ds, i2), find_root!(ds, i1))
+    if deltas == []
+        return DisjointSets()
     end
-  end
-  return ds
+    inds_list = map(t -> collect(inds(t)), deltas)
+    deltainds = collect(Set(vcat(inds_list...)))
+    ds = DisjointSets(deltainds)
+    for t in deltas
+        i1, i2 = inds(t)
+        if find_root!(ds, i1) in rootinds
+            _root_union!(ds, find_root!(ds, i1), find_root!(ds, i2))
+        else
+            _root_union!(ds, find_root!(ds, i2), find_root!(ds, i1))
+        end
+    end
+    return ds
 end
 
 """
@@ -86,35 +86,35 @@ Example:
    4 │ ((dim=2|id=626|"6"), (dim=2|id=237|"5"))
 """
 function _contract_deltas(tn::ITensorNetwork)
-  deltas = filter(is_delta, collect(eachtensor(tn)))
-  if isempty(deltas)
+    deltas = filter(is_delta, collect(eachtensor(tn)))
+    if isempty(deltas)
+        return tn
+    end
+    tn = copy(tn)
+    outinds = flatten_siteinds(tn)
+    ds = _delta_inds_disjointsets(deltas, outinds)
+    deltainds = [ds...]
+    sim_deltainds = [find_root!(ds, i) for i in deltainds]
+    # `rem_vertex!(tn, v)` changes `vertices(tn)` in place.
+    # We copy it here so that the enumeration won't be affected.
+    vs = copy(vertices(tn))
+    for v in vs
+        if !is_delta(tn[v])
+            tn[v] = replaceinds(tn[v], deltainds, sim_deltainds)
+            continue
+        end
+        i1, i2 = inds(tn[v])
+        root = find_root!(ds, i1)
+        @assert root == find_root!(ds, i2)
+        if i1 != root && i1 in outinds
+            tn[v] = delta(i1, root)
+        elseif i2 != root && i2 in outinds
+            tn[v] = delta(i2, root)
+        else
+            rem_vertex!(tn, v)
+        end
+    end
     return tn
-  end
-  tn = copy(tn)
-  outinds = flatten_siteinds(tn)
-  ds = _delta_inds_disjointsets(deltas, outinds)
-  deltainds = [ds...]
-  sim_deltainds = [find_root!(ds, i) for i in deltainds]
-  # `rem_vertex!(tn, v)` changes `vertices(tn)` in place.
-  # We copy it here so that the enumeration won't be affected.
-  vs = copy(vertices(tn))
-  for v in vs
-    if !is_delta(tn[v])
-      tn[v] = replaceinds(tn[v], deltainds, sim_deltainds)
-      continue
-    end
-    i1, i2 = inds(tn[v])
-    root = find_root!(ds, i1)
-    @assert root == find_root!(ds, i2)
-    if i1 != root && i1 in outinds
-      tn[v] = delta(i1, root)
-    elseif i2 != root && i2 in outinds
-      tn[v] = delta(i2, root)
-    else
-      rem_vertex!(tn, v)
-    end
-  end
-  return tn
 end
 
 """
@@ -127,34 +127,34 @@ Note: only delta tensors of non-leaf vertices will be contracted.
 Note: this function assumes that all noncommoninds of the partition are in leaf partitions.
 """
 function _contract_deltas_ignore_leaf_partitions(
-  partition::DataGraph; root=first(vertices(partition))
-)
-  partition = copy(partition)
-  leaves = leaf_vertices(dfs_tree(partition, root))
-  nonleaves = setdiff(vertices(partition), leaves)
-  rootinds = _noncommoninds(subgraph(partition, nonleaves))
-  # check rootinds are not noncommoninds of the partition
-  @assert isempty(intersect(rootinds, _noncommoninds(partition)))
-  nonleaves_tn = _contract_deltas(reduce(union, [partition[v] for v in nonleaves]))
-  nondelta_vs = filter(v -> !is_delta(nonleaves_tn[v]), vertices(nonleaves_tn))
-  for v in nonleaves
-    partition[v] = subgraph(nonleaves_tn, intersect(nondelta_vs, vertices(partition[v])))
-  end
-  # Note: we also need to change inds in the leaves since they can be connected by deltas
-  # in nonleaf vertices
-  delta_vs = setdiff(vertices(nonleaves_tn), nondelta_vs)
-  if isempty(delta_vs)
-    return partition
-  end
-  ds = _delta_inds_disjointsets(
-    Vector{ITensor}(subgraph(nonleaves_tn, delta_vs)), Vector{Index}()
-  )
-  deltainds = Index[ds...]
-  sim_deltainds = Index[find_root!(ds, ind) for ind in deltainds]
-  for tn_v in leaves
-    partition[tn_v] = map_data(partition[tn_v]; edges=[]) do t
-      return replaceinds(t, deltainds, sim_deltainds)
+        partition::DataGraph; root = first(vertices(partition))
+    )
+    partition = copy(partition)
+    leaves = leaf_vertices(dfs_tree(partition, root))
+    nonleaves = setdiff(vertices(partition), leaves)
+    rootinds = _noncommoninds(subgraph(partition, nonleaves))
+    # check rootinds are not noncommoninds of the partition
+    @assert isempty(intersect(rootinds, _noncommoninds(partition)))
+    nonleaves_tn = _contract_deltas(reduce(union, [partition[v] for v in nonleaves]))
+    nondelta_vs = filter(v -> !is_delta(nonleaves_tn[v]), vertices(nonleaves_tn))
+    for v in nonleaves
+        partition[v] = subgraph(nonleaves_tn, intersect(nondelta_vs, vertices(partition[v])))
     end
-  end
-  return partition
+    # Note: we also need to change inds in the leaves since they can be connected by deltas
+    # in nonleaf vertices
+    delta_vs = setdiff(vertices(nonleaves_tn), nondelta_vs)
+    if isempty(delta_vs)
+        return partition
+    end
+    ds = _delta_inds_disjointsets(
+        Vector{ITensor}(subgraph(nonleaves_tn, delta_vs)), Vector{Index}()
+    )
+    deltainds = Index[ds...]
+    sim_deltainds = Index[find_root!(ds, ind) for ind in deltainds]
+    for tn_v in leaves
+        partition[tn_v] = map_data(partition[tn_v]; edges = []) do t
+            return replaceinds(t, deltainds, sim_deltainds)
+        end
+    end
+    return partition
 end

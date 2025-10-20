@@ -12,29 +12,29 @@ using OMEinsumContractionOrders: OMEinsumContractionOrders
 # infer the output tensor labels
 # TODO: Use `symdiff` instead.
 function infer_output(inputs::AbstractVector{<:AbstractVector{<:Index}})
-  indslist = reduce(vcat, inputs)
-  # get output indices
-  iy = eltype(eltype(inputs))[]
-  for l in indslist
-    c = count(==(l), indslist)
-    if c == 1
-      push!(iy, l)
-    elseif c !== 2
-      error("Each index in a tensor network must appear at most twice!")
+    indslist = reduce(vcat, inputs)
+    # get output indices
+    iy = eltype(eltype(inputs))[]
+    for l in indslist
+        c = count(==(l), indslist)
+        if c == 1
+            push!(iy, l)
+        elseif c !== 2
+            error("Each index in a tensor network must appear at most twice!")
+        end
     end
-  end
-  return iy
+    return iy
 end
 
 # get a (labels, size_dict) representation of a collection of ITensors
 function rawcode(tensors::ITensorList)
-  # we use id as the label
-  indsAs = [collect(Index{Int}, ITensors.inds(A)) for A in tensors]
-  ixs = collect.(inds.(tensors))
-  unique_labels = unique(reduce(vcat, indsAs))
-  size_dict = Dict([x => dim(x) for x in unique_labels])
-  index_dict = Dict([x => x for x in unique_labels])
-  return OMEinsumContractionOrders.EinCode(ixs, infer_output(indsAs)), size_dict, index_dict
+    # we use id as the label
+    indsAs = [collect(Index{Int}, ITensors.inds(A)) for A in tensors]
+    ixs = collect.(inds.(tensors))
+    unique_labels = unique(reduce(vcat, indsAs))
+    size_dict = Dict([x => dim(x) for x in unique_labels])
+    index_dict = Dict([x => x for x in unique_labels])
+    return OMEinsumContractionOrders.EinCode(ixs, infer_output(indsAs)), size_dict, index_dict
 end
 
 """
@@ -50,43 +50,43 @@ julia> net = optimize_contraction([x, y, z]; optimizer=TreeSA());
 ```
 """
 function optimize_contraction_nested_einsum(
-  tensors::ITensorList;
-  optimizer::OMEinsumContractionOrders.CodeOptimizer=OMEinsumContractionOrders.TreeSA(),
-)
-  r, size_dict, index_dict = rawcode(tensors)
-  # merge vectors can speed up contraction order finding
-  # optimize the permutation of tensors is set to true
-  res = OMEinsumContractionOrders.optimize_code(
-    r, size_dict, optimizer, OMEinsumContractionOrders.MergeVectors(), true
-  )
-  if res isa OMEinsumContractionOrders.SlicedEinsum   # slicing is not supported!
-    if length(res.slicing) != 0
-      @warn "Slicing is not yet supported by `ITensors`, removing slices..."
+        tensors::ITensorList;
+        optimizer::OMEinsumContractionOrders.CodeOptimizer = OMEinsumContractionOrders.TreeSA(),
+    )
+    r, size_dict, index_dict = rawcode(tensors)
+    # merge vectors can speed up contraction order finding
+    # optimize the permutation of tensors is set to true
+    res = OMEinsumContractionOrders.optimize_code(
+        r, size_dict, optimizer, OMEinsumContractionOrders.MergeVectors(), true
+    )
+    if res isa OMEinsumContractionOrders.SlicedEinsum   # slicing is not supported!
+        if length(res.slicing) != 0
+            @warn "Slicing is not yet supported by `ITensors`, removing slices..."
+        end
+        res = res.eins
     end
-    res = res.eins
-  end
-  return res
+    return res
 end
 
 """
 Convert NestedEinsum to contraction sequence, such as `[[1, 2], [3, 4]]`.
 """
 function convert_to_contraction_sequence(net::OMEinsumContractionOrders.NestedEinsum)
-  if OMEinsumContractionOrders.isleaf(net)
-    return net.tensorindex
-  else
-    return convert_to_contraction_sequence.(net.args)
-  end
+    if OMEinsumContractionOrders.isleaf(net)
+        return net.tensorindex
+    else
+        return convert_to_contraction_sequence.(net.args)
+    end
 end
 
 """
 Convert the result of `optimize_contraction` to a contraction sequence.
 """
 function optimize_contraction_sequence(
-  tensors::ITensorList; optimizer::OMEinsumContractionOrders.CodeOptimizer=TreeSA()
-)
-  res = optimize_contraction_nested_einsum(tensors; optimizer)
-  return convert_to_contraction_sequence(res)
+        tensors::ITensorList; optimizer::OMEinsumContractionOrders.CodeOptimizer = TreeSA()
+    )
+    res = optimize_contraction_nested_einsum(tensors; optimizer)
+    return convert_to_contraction_sequence(res)
 end
 
 """
@@ -100,11 +100,11 @@ The fast but poor greedy optimizer. Input arguments are:
 * `nrepeat` is the number of repeatition, returns the best contraction order.
 """
 function ITensorNetworks.contraction_sequence(
-  ::Algorithm"greedy", tn::Vector{ITensor}; kwargs...
-)
-  return optimize_contraction_sequence(
-    tn; optimizer=OMEinsumContractionOrders.GreedyMethod(; kwargs...)
-  )
+        ::Algorithm"greedy", tn::Vector{ITensor}; kwargs...
+    )
+    return optimize_contraction_sequence(
+        tn; optimizer = OMEinsumContractionOrders.GreedyMethod(; kwargs...)
+    )
 end
 
 """
@@ -125,11 +125,11 @@ Optimize the einsum contraction pattern using the simulated annealing on tensor 
 * [Recursive Multi-Tensor Contraction for XEB Verification of Quantum Circuits](https://arxiv.org/abs/2108.05665)
 """
 function ITensorNetworks.contraction_sequence(
-  ::Algorithm"tree_sa", tn::ITensorList; kwargs...
-)
-  return optimize_contraction_sequence(
-    tn; optimizer=OMEinsumContractionOrders.TreeSA(; kwargs...)
-  )
+        ::Algorithm"tree_sa", tn::ITensorList; kwargs...
+    )
+    return optimize_contraction_sequence(
+        tn; optimizer = OMEinsumContractionOrders.TreeSA(; kwargs...)
+    )
 end
 
 """
@@ -154,11 +154,11 @@ Then finds the contraction order inside each group with the greedy search algori
 * [Hyper-optimized tensor network contraction](https://arxiv.org/abs/2002.01935)
 """
 function ITensorNetworks.contraction_sequence(
-  ::Algorithm"sa_bipartite", tn::ITensorList; kwargs...
-)
-  return optimize_contraction_sequence(
-    tn; optimizer=OMEinsumContractionOrders.SABipartite(; kwargs...)
-  )
+        ::Algorithm"sa_bipartite", tn::ITensorList; kwargs...
+    )
+    return optimize_contraction_sequence(
+        tn; optimizer = OMEinsumContractionOrders.SABipartite(; kwargs...)
+    )
 end
 
 """
@@ -180,10 +180,10 @@ Then finds the contraction order inside each group with the greedy search algori
 * [Simulating the Sycamore quantum supremacy circuits](https://arxiv.org/abs/2103.03074)
 """
 function ITensorNetworks.contraction_sequence(
-  ::Algorithm"kahypar_bipartite", tn::ITensorList; kwargs...
-)
-  return optimize_contraction_sequence(
-    tn; optimizer=OMEinsumContractionOrders.KaHyParBipartite(; kwargs...)
-  )
+        ::Algorithm"kahypar_bipartite", tn::ITensorList; kwargs...
+    )
+    return optimize_contraction_sequence(
+        tn; optimizer = OMEinsumContractionOrders.KaHyParBipartite(; kwargs...)
+    )
 end
 end
