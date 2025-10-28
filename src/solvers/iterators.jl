@@ -47,6 +47,9 @@ mutable struct RegionIterator{Problem, RegionPlan} <: AbstractNetworkIterator
     which_region::Int
     const which_sweep::Int
     function RegionIterator(problem::P, region_plan::R, sweep::Int) where {P, R}
+        if length(region_plan) == 0
+            throw(BoundsError("Cannot construct a region iterator with 0 elements."))
+        end
         return new{P, R}(problem, region_plan, 1, sweep)
     end
 end
@@ -122,8 +125,15 @@ mutable struct SweepIterator{Problem, Iter} <: AbstractNetworkIterator
     which_sweep::Int
     function SweepIterator(problem::Prob, sweep_kwargs::Iter) where {Prob, Iter}
         stateful_sweep_kwargs = Iterators.Stateful(sweep_kwargs)
-        first_kwargs, _ = Iterators.peel(stateful_sweep_kwargs)
+        first_state = Iterators.peel(stateful_sweep_kwargs)
+
+        if isnothing(first_state)
+            throw(BoundsError("Cannot construct a sweep iterator with 0 elements."))
+        end
+
+        first_kwargs, _ = first_state
         region_iter = RegionIterator(problem; sweep = 1, first_kwargs...)
+
         return new{Prob, Iter}(region_iter, stateful_sweep_kwargs, 1)
     end
 end
