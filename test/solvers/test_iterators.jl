@@ -189,6 +189,17 @@ end
             @test prob.data[1:2:end] == fill(1, 5)
             @test prob.data[2:2:end] == fill(2, 5)
 
+
+            let i = 1, prob = TestIteratorUtils.TestProblem([])
+                SI = SweepIterator(prob, 1)
+                cb = []
+                for _ in eachregion(SI)
+                    push!(cb, i)
+                    i += 1
+                end
+                @test length(cb) == 2
+            end
+
         end
     end
 end
