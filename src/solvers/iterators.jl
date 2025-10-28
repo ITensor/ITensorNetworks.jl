@@ -12,7 +12,10 @@ abstract type AbstractNetworkIterator end
 islaststep(iterator::AbstractNetworkIterator) = state(iterator) >= length(iterator)
 
 function Base.iterate(iterator::AbstractNetworkIterator, init = true)
-    islaststep(iterator) && return nothing
+    # The assumption is that first "increment!" is implicit, therefore we must skip the
+    # the termination check for the first iteration, i.e. `AbstractNetworkIterator` is not
+    # defined when length < 1,
+    init || islaststep(iterator) && return nothing
     # We seperate increment! from step! and demand that any AbstractNetworkIterator *must*
     # define a method for increment! This way we avoid cases where one may wish to nest
     # calls to different step! methods accidentaly incrementing multiple times.

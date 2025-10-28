@@ -49,6 +49,19 @@ end
     import .TestIteratorUtils
 
     @testset "`AbstractNetworkIterator` Interface" begin
+
+        @testset "Edge cases" begin
+            TI = TestIteratorUtils.TestIterator(1, 1, [])
+            cb = []
+            @test islaststep(TI)
+            for _ in TI
+                @test islaststep(TI)
+                push!(cb, state(TI))
+            end
+            @test length(cb) == 1
+            @test length(TI.output) == 1
+            @test only(cb) == 1
+        end
         TI = TestIteratorUtils.TestIterator(1, 4, [])
 
         @test !islaststep((TI))
