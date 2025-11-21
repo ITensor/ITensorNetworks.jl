@@ -6,10 +6,10 @@ using ITensors: dir
 using NamedGraphs.PartitionedGraphs:
     PartitionedGraphs,
     PartitionedGraph,
-    PartitionVertex,
-    boundary_partitionedges,
-    partitionvertices,
-    partitionedges,
+    QuotientVertex,
+    boundary_quotientedges,
+    quotientvertices,
+    quotientedges,
     unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
 using NamedGraphs.SimilarType: SimilarType
@@ -52,7 +52,7 @@ end
 partitioned_tensornetwork(bpc::AbstractBeliefPropagationCache) = not_implemented()
 messages(bpc::AbstractBeliefPropagationCache) = not_implemented()
 function default_message(
-        bpc::AbstractBeliefPropagationCache, edge::PartitionEdge; kwargs...
+        bpc::AbstractBeliefPropagationCache, edge::QuotientEdge; kwargs...
     )
     return not_implemented()
 end
@@ -66,14 +66,14 @@ end
 function environment(bpc::AbstractBeliefPropagationCache, verts::Vector; kwargs...)
     return not_implemented()
 end
-function region_scalar(bpc::AbstractBeliefPropagationCache, pv::PartitionVertex; kwargs...)
+function region_scalar(bpc::AbstractBeliefPropagationCache, pv::QuotientVertex; kwargs...)
     return not_implemented()
 end
-function region_scalar(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge; kwargs...)
+function region_scalar(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge; kwargs...)
     return not_implemented()
 end
 partitions(bpc::AbstractBeliefPropagationCache) = not_implemented()
-PartitionedGraphs.partitionedges(bpc::AbstractBeliefPropagationCache) = not_implemented()
+PartitionedGraphs.quotientedges(bpc::AbstractBeliefPropagationCache) = not_implemented()
 
 default_bp_edge_sequence(bpc::AbstractBeliefPropagationCache) = not_implemented()
 default_bp_maxiter(bpc::AbstractBeliefPropagationCache) = not_implemented()
@@ -87,12 +87,12 @@ function factors(bpc::AbstractBeliefPropagationCache, verts::Vector)
 end
 
 function factors(
-        bpc::AbstractBeliefPropagationCache, partition_verts::Vector{<:PartitionVertex}
+        bpc::AbstractBeliefPropagationCache, partition_verts::Vector{<:QuotientVertex}
     )
     return factors(bpc, vertices(bpc, partition_verts))
 end
 
-function factors(bpc::AbstractBeliefPropagationCache, partition_vertex::PartitionVertex)
+function factors(bpc::AbstractBeliefPropagationCache, partition_vertex::QuotientVertex)
     return factors(bpc, [partition_vertex])
 end
 
@@ -101,7 +101,7 @@ function vertex_scalars(bpc::AbstractBeliefPropagationCache, pvs = partitions(bp
 end
 
 function edge_scalars(
-        bpc::AbstractBeliefPropagationCache, pes = partitionedges(bpc); kwargs...
+        bpc::AbstractBeliefPropagationCache, pes = quotientedges(bpc); kwargs...
     )
     return map(pe -> region_scalar(bpc, pe; kwargs...), pes)
 end
@@ -112,16 +112,16 @@ end
 
 function incoming_messages(
         bpc::AbstractBeliefPropagationCache,
-        partition_vertices::Vector{<:PartitionVertex};
+        partition_vertices::Vector{<:QuotientVertex};
         ignore_edges = (),
     )
-    bpes = boundary_partitionedges(bpc, partition_vertices; dir = :in)
+    bpes = boundary_quotientedges(bpc, partition_vertices; dir = :in)
     ms = messages(bpc, setdiff(bpes, ignore_edges))
     return reduce(vcat, ms; init = ITensor[])
 end
 
 function incoming_messages(
-        bpc::AbstractBeliefPropagationCache, partition_vertex::PartitionVertex; kwargs...
+        bpc::AbstractBeliefPropagationCache, partition_vertex::QuotientVertex; kwargs...
     )
     return incoming_messages(bpc, [partition_vertex]; kwargs...)
 end
@@ -158,11 +158,11 @@ end
 
 #Forward from partitioned graph
 for f in [
-        :(PartitionedGraphs.partitionedge),
-        :(PartitionedGraphs.partitionvertices),
-        :(PartitionedGraphs.partitions_graph),
+        :(PartitionedGraphs.quotientedge),
+        :(PartitionedGraphs.quotientvertices),
+        :(PartitionedGraphs.quotient_graph),
         :(PartitionedGraphs.vertices),
-        :(PartitionedGraphs.boundary_partitionedges),
+        :(PartitionedGraphs.boundary_quotientedges),
     ]
     @eval begin
         function $f(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
@@ -171,7 +171,7 @@ for f in [
     end
 end
 
-function linkinds(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge)
+function linkinds(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge)
     return linkinds(partitioned_tensornetwork(bpc), pe)
 end
 
@@ -195,37 +195,37 @@ function update_factor(bpc, vertex, factor)
     return bpc
 end
 
-function message(bpc::AbstractBeliefPropagationCache, edge::PartitionEdge; kwargs...)
+function message(bpc::AbstractBeliefPropagationCache, edge::QuotientEdge; kwargs...)
     mts = messages(bpc)
     return get(() -> default_message(bpc, edge; kwargs...), mts, edge)
 end
 function messages(bpc::AbstractBeliefPropagationCache, edges; kwargs...)
     return map(edge -> message(bpc, edge; kwargs...), edges)
 end
-function set_messages!(bpc::AbstractBeliefPropagationCache, partitionedges_messages)
+function set_messages!(bpc::AbstractBeliefPropagationCache, quotientedges_messages)
     ms = messages(bpc)
-    for pe in eachindex(partitionedges_messages)
+    for pe in eachindex(quotientedges_messages)
         # TODO: Add a check that this preserves the graph structure.
-        set!(ms, pe, partitionedges_messages[pe])
+        set!(ms, pe, quotientedges_messages[pe])
     end
     return bpc
 end
-function set_message!(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge, message)
+function set_message!(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge, message)
     ms = messages(bpc)
     set!(ms, pe, message)
     return bpc
 end
 
-function set_messages(bpc::AbstractBeliefPropagationCache, partitionedges_messages)
+function set_messages(bpc::AbstractBeliefPropagationCache, quotientedges_messages)
     bpc = copy(bpc)
-    return set_messages!(bpc, partitionedges_messages)
+    return set_messages!(bpc, quotientedges_messages)
 end
-function set_message(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge, message)
+function set_message(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge, message)
     bpc = copy(bpc)
     return set_message!(bpc, pe, message)
 end
 function delete_messages!(
-        bpc::AbstractBeliefPropagationCache, pes::Vector{<:PartitionEdge} = keys(messages(bpc))
+        bpc::AbstractBeliefPropagationCache, pes::Vector{<:QuotientEdge} = keys(messages(bpc))
     )
     ms = messages(bpc)
     for pe in pes
@@ -233,24 +233,24 @@ function delete_messages!(
     end
     return bpc
 end
-function delete_message!(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge)
+function delete_message!(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge)
     return delete_messages!(bpc, [pe])
 end
 function delete_messages(
-        bpc::AbstractBeliefPropagationCache, pes::Vector{<:PartitionEdge} = keys(messages(bpc))
+        bpc::AbstractBeliefPropagationCache, pes::Vector{<:QuotientEdge} = keys(messages(bpc))
     )
     bpc = copy(bpc)
     return delete_messages!(bpc, pes)
 end
-function delete_message(bpc::AbstractBeliefPropagationCache, pe::PartitionEdge)
+function delete_message(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge)
     return delete_messages(bpc, [pe])
 end
 
 function updated_message(
-        alg::Algorithm"contract", bpc::AbstractBeliefPropagationCache, edge::PartitionEdge
+        alg::Algorithm"contract", bpc::AbstractBeliefPropagationCache, edge::QuotientEdge
     )
     vertex = src(edge)
-    incoming_ms = incoming_messages(bpc, vertex; ignore_edges = PartitionEdge[reverse(edge)])
+    incoming_ms = incoming_messages(bpc, vertex; ignore_edges = QuotientEdge[reverse(edge)])
     state = factors(bpc, vertex)
     contract_list = ITensor[incoming_ms; state]
     sequence = contraction_sequence(contract_list; alg = alg.kwargs.sequence_alg)
@@ -263,10 +263,10 @@ function updated_message(
 end
 
 function updated_message(
-        alg::Algorithm"adapt_update", bpc::AbstractBeliefPropagationCache, edge::PartitionEdge
+        alg::Algorithm"adapt_update", bpc::AbstractBeliefPropagationCache, edge::QuotientEdge
     )
     incoming_pes = setdiff(
-        boundary_partitionedges(bpc, [src(edge)]; dir = :in), [reverse(edge)]
+        boundary_quotientedges(bpc, [src(edge)]; dir = :in), [reverse(edge)]
     )
     adapted_bpc = adapt_messages(alg.kwargs.adapt, bpc, incoming_pes)
     adapted_bpc = adapt_factors(alg.kwargs.adapt, bpc, vertices(bpc, src(edge)))
@@ -277,7 +277,7 @@ end
 
 function updated_message(
         bpc::AbstractBeliefPropagationCache,
-        edge::PartitionEdge;
+        edge::QuotientEdge;
         alg = default_message_update_alg(bpc),
         kwargs...,
     )
@@ -285,7 +285,7 @@ function updated_message(
 end
 
 function update_message(
-        message_update_alg::Algorithm, bpc::AbstractBeliefPropagationCache, edge::PartitionEdge
+        message_update_alg::Algorithm, bpc::AbstractBeliefPropagationCache, edge::QuotientEdge
     )
     return set_message(bpc, edge, updated_message(message_update_alg, bpc, edge))
 end
@@ -318,7 +318,7 @@ mts relevant to that group.
 function update_iteration(
         alg::Algorithm"bp",
         bpc::AbstractBeliefPropagationCache,
-        edge_groups::Vector{<:Vector{<:PartitionEdge}};
+        edge_groups::Vector{<:Vector{<:QuotientEdge}};
         (update_diff!) = nothing,
     )
     new_mts = empty(messages(bpc))
@@ -357,13 +357,13 @@ function update(bpc::AbstractBeliefPropagationCache; alg = default_update_alg(bp
 end
 
 function rescale_messages(
-        bp_cache::AbstractBeliefPropagationCache, partitionedge::PartitionEdge
+        bp_cache::AbstractBeliefPropagationCache, quotientedge::QuotientEdge
     )
-    return rescale_messages(bp_cache, [partitionedge])
+    return rescale_messages(bp_cache, [quotientedge])
 end
 
 function rescale_messages(bp_cache::AbstractBeliefPropagationCache)
-    return rescale_messages(bp_cache, partitionedges(bp_cache))
+    return rescale_messages(bp_cache, quotientedges(bp_cache))
 end
 
 function rescale_partitions(

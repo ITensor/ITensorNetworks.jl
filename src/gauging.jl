@@ -1,6 +1,6 @@
 using ITensors: tags
 using ITensors.NDTensors: dense, scalartype
-using NamedGraphs.PartitionedGraphs: partitionedge
+using NamedGraphs.PartitionedGraphs: quotientedge
 
 function default_bond_tensors(ψ::ITensorNetwork)
     return DataGraph(
@@ -49,7 +49,7 @@ function ITensorNetwork(
 
         for e in edges(ψ)
             vsrc, vdst = src(e), dst(e)
-            pe = partitionedge(bp_cache, (vsrc, "bra") => (vdst, "bra"))
+            pe = quotientedge(bp_cache, (vsrc, "bra") => (vdst, "bra"))
             set!(mts, pe, copy(ITensor[dense(bond_tensor(ψ_vidal, e))]))
             set!(mts, reverse(pe), copy(ITensor[dense(bond_tensor(ψ_vidal, e))]))
         end
@@ -78,7 +78,7 @@ function vidalitensornetwork_preserve_cache(
         vsrc, vdst = src(e), dst(e)
         ψvsrc, ψvdst = ψ_vidal_site_tensors[vsrc], ψ_vidal_site_tensors[vdst]
 
-        pe = partitionedge(cache, (vsrc, "bra") => (vdst, "bra"))
+        pe = quotientedge(cache, (vsrc, "bra") => (vdst, "bra"))
         edge_ind = commoninds(ψvsrc, ψvdst)
         edge_ind_sim = sim(edge_ind)
 
