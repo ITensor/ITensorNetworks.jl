@@ -25,7 +25,8 @@ function data_graph_type(bpc::AbstractBeliefPropagationCache)
 end
 data_graph(bpc::AbstractBeliefPropagationCache) = data_graph(tensornetwork(bpc))
 
-#TODO: Take `dot` without precontracting the messages to allow scaling to more complex messages
+#TODO: Take `dot` without precontracting the messages to allow scaling to more complex
+# messages
 function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
     lhs, rhs = contract(message_a), contract(message_b)
     f = abs2(dot(lhs / norm(lhs), rhs / norm(rhs)))
@@ -74,6 +75,9 @@ function region_scalar(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge; kw
 end
 partitions(bpc::AbstractBeliefPropagationCache) = not_implemented()
 PartitionedGraphs.quotientedges(bpc::AbstractBeliefPropagationCache) = not_implemented()
+function PartitionedGraphs.partitioned_vertices(bpc::AbstractBeliefPropagationCache)
+    return not_implemented()
+end
 
 default_bp_edge_sequence(bpc::AbstractBeliefPropagationCache) = not_implemented()
 default_bp_maxiter(bpc::AbstractBeliefPropagationCache) = not_implemented()
@@ -96,7 +100,9 @@ function factors(bpc::AbstractBeliefPropagationCache, partition_vertex::Quotient
     return factors(bpc, [partition_vertex])
 end
 
-function vertex_scalars(bpc::AbstractBeliefPropagationCache, pvs = partitions(bpc); kwargs...)
+function vertex_scalars(
+        bpc::AbstractBeliefPropagationCache, pvs = partitions(bpc); kwargs...
+    )
     return map(pv -> region_scalar(bpc, pv; kwargs...), pvs)
 end
 
@@ -157,18 +163,37 @@ function Adapt.adapt_structure(to, bpc::AbstractBeliefPropagationCache)
 end
 
 #Forward from partitioned graph
-for f in [
-        :(PartitionedGraphs.quotientedge),
-        :(PartitionedGraphs.quotientvertices),
-        :(PartitionedGraphs.quotient_graph),
-        :(PartitionedGraphs.vertices),
-        :(PartitionedGraphs.boundary_quotientedges),
-    ]
-    @eval begin
-        function $f(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
-            return $f(partitioned_tensornetwork(bpc), args...; kwargs...)
-        end
-    end
+using Graphs: Graphs, vertices
+function Graphs.vertices(bpc::AbstractBeliefPropagationCache)
+    return vertices(partitioned_tensornetwork(bpc))
+end
+function PartitionedGraphs.quotient_graph(bpc::AbstractBeliefPropagationCache)
+    return PartitionedGraphs.quotient_graph(partitioned_tensornetwork(bpc))
+end
+function PartitionedGraphs.quotientedge(
+        bpc::AbstractBeliefPropagationCache, edge::AbstractEdge
+    )
+    return PartitionedGraphs.quotientedge(partitioned_tensornetwork(bpc), edge)
+end
+function PartitionedGraphs.quotientvertices(bpc::AbstractBeliefPropagationCache)
+    return PartitionedGraphs.quotientvertices(partitioned_tensornetwork(bpc))
+end
+function PartitionedGraphs.quotientvertices(bpc::AbstractBeliefPropagationCache, vs)
+    return PartitionedGraphs.quotientvertices(partitioned_tensornetwork(bpc), vs)
+end
+function PartitionedGraphs.boundary_quotientedges(
+        bpc::AbstractBeliefPropagationCache, quotientvertices; kwargs...
+    )
+    return PartitionedGraphs.boundary_quotientedges(
+        partitioned_tensornetwork(bpc), quotientvertices; kwargs...
+    )
+end
+function PartitionedGraphs.boundary_quotientedges(
+        bpc::AbstractBeliefPropagationCache, quotientvertex::QuotientVertex; kwargs...
+    )
+    return PartitionedGraphs.boundary_quotientedges(
+        partitioned_tensornetwork(bpc), quotientvertex; kwargs...
+    )
 end
 
 function linkinds(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge)
@@ -225,7 +250,8 @@ function set_message(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge, mess
     return set_message!(bpc, pe, message)
 end
 function delete_messages!(
-        bpc::AbstractBeliefPropagationCache, pes::Vector{<:QuotientEdge} = keys(messages(bpc))
+        bpc::AbstractBeliefPropagationCache,
+        pes::Vector{<:QuotientEdge} = keys(messages(bpc)),
     )
     ms = messages(bpc)
     for pe in pes
@@ -237,7 +263,8 @@ function delete_message!(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge)
     return delete_messages!(bpc, [pe])
 end
 function delete_messages(
-        bpc::AbstractBeliefPropagationCache, pes::Vector{<:QuotientEdge} = keys(messages(bpc))
+        bpc::AbstractBeliefPropagationCache,
+        pes::Vector{<:QuotientEdge} = keys(messages(bpc)),
     )
     bpc = copy(bpc)
     return delete_messages!(bpc, pes)

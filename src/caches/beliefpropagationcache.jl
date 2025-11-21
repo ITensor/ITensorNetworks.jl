@@ -8,12 +8,11 @@ using NamedGraphs.PartitionedGraphs:
     PartitionedGraph,
     QuotientVertex,
     boundary_quotientedges,
-    quotientvertices,
-    quotientedges,
     partitioned_vertices,
     quotient_graph,
-    unpartitioned_graph,
-    which_partition
+    quotientedges,
+    quotientvertices,
+    unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
 using NDTensors: NDTensors, Algorithm
 
@@ -107,6 +106,9 @@ partitions(bpc::BeliefPropagationCache) = quotientvertices(partitioned_tensornet
 function PartitionedGraphs.quotientedges(bpc::BeliefPropagationCache)
     return quotientedges(partitioned_tensornetwork(bpc))
 end
+function PartitionedGraphs.partitioned_vertices(bpc::BeliefPropagationCache)
+    return partitioned_vertices(partitioned_tensornetwork(bpc))
+end
 
 function environment(bpc::BeliefPropagationCache, verts::Vector; kwargs...)
     partition_verts = quotientvertices(bpc, verts)
@@ -129,7 +131,7 @@ function region_scalar(bp_cache::BeliefPropagationCache, pe::QuotientEdge)
     return contract(ts; sequence)[]
 end
 
-function rescale_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:QuotientEdge})
+function rescale_messages(bp_cache::BeliefPropagationCache, pes)
     bp_cache = copy(bp_cache)
     mts = messages(bp_cache)
     for pe in pes
