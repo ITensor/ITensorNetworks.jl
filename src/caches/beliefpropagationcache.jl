@@ -6,14 +6,13 @@ using NamedGraphs.PartitionedGraphs:
     AbstractPartitionedGraph,
     PartitionedGraphs,
     PartitionedGraph,
-    PartitionVertex,
-    boundary_partitionedges,
-    partitionvertices,
-    partitionedges,
+    QuotientVertex,
+    boundary_quotientedges,
     partitioned_vertices,
-    partitions_graph,
-    unpartitioned_graph,
-    which_partition
+    quotient_graph,
+    quotientedges,
+    quotientvertices,
+    unpartitioned_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
 using NDTensors: NDTensors, Algorithm
 
@@ -59,7 +58,7 @@ end
 
 messages(bp_cache::BeliefPropagationCache) = bp_cache.messages
 
-function default_message(bp_cache::BeliefPropagationCache, edge::PartitionEdge)
+function default_message(bp_cache::BeliefPropagationCache, edge::QuotientEdge)
     return default_message(datatype(bp_cache), linkinds(bp_cache, edge))
 end
 
@@ -96,26 +95,29 @@ function set_default_kwargs(alg::Algorithm"bp", bp_cache::BeliefPropagationCache
 end
 
 function default_bp_maxiter(bp_cache::BeliefPropagationCache)
-    return default_bp_maxiter(partitions_graph(bp_cache))
+    return default_bp_maxiter(quotient_graph(bp_cache))
 end
 function default_bp_edge_sequence(bp_cache::BeliefPropagationCache)
     return default_edge_sequence(partitioned_tensornetwork(bp_cache))
 end
 
 Base.setindex!(bpc::BeliefPropagationCache, factor::ITensor, vertex) = not_implemented()
-partitions(bpc::BeliefPropagationCache) = partitionvertices(partitioned_tensornetwork(bpc))
-function PartitionedGraphs.partitionedges(bpc::BeliefPropagationCache)
-    return partitionedges(partitioned_tensornetwork(bpc))
+partitions(bpc::BeliefPropagationCache) = quotientvertices(partitioned_tensornetwork(bpc))
+function PartitionedGraphs.quotientedges(bpc::BeliefPropagationCache)
+    return quotientedges(partitioned_tensornetwork(bpc))
+end
+function PartitionedGraphs.partitioned_vertices(bpc::BeliefPropagationCache)
+    return partitioned_vertices(partitioned_tensornetwork(bpc))
 end
 
 function environment(bpc::BeliefPropagationCache, verts::Vector; kwargs...)
-    partition_verts = partitionvertices(bpc, verts)
+    partition_verts = quotientvertices(bpc, verts)
     messages = incoming_messages(bpc, partition_verts; kwargs...)
     central_tensors = factors(bpc, setdiff(vertices(bpc, partition_verts), verts))
     return vcat(messages, central_tensors)
 end
 
-function region_scalar(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
+function region_scalar(bp_cache::BeliefPropagationCache, pv::QuotientVertex)
     incoming_mts = incoming_messages(bp_cache, [pv])
     local_state = factors(bp_cache, pv)
     ts = vcat(incoming_mts, local_state)
@@ -123,13 +125,13 @@ function region_scalar(bp_cache::BeliefPropagationCache, pv::PartitionVertex)
     return contract(ts; sequence)[]
 end
 
-function region_scalar(bp_cache::BeliefPropagationCache, pe::PartitionEdge)
+function region_scalar(bp_cache::BeliefPropagationCache, pe::QuotientEdge)
     ts = vcat(message(bp_cache, pe), message(bp_cache, reverse(pe)))
     sequence = contraction_sequence(ts; alg = "optimal")
     return contract(ts; sequence)[]
 end
 
-function rescale_messages(bp_cache::BeliefPropagationCache, pes::Vector{<:PartitionEdge})
+function rescale_messages(bp_cache::BeliefPropagationCache, pes)
     bp_cache = copy(bp_cache)
     mts = messages(bp_cache)
     for pe in pes

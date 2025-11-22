@@ -2,12 +2,12 @@ using Graphs: IsDirected, connected_components, edges, edgetype
 using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs: NamedGraphs
 using NamedGraphs.GraphsExtensions: GraphsExtensions, forest_cover, undirected_graph
-using NamedGraphs.PartitionedGraphs: PartitionEdge, PartitionedGraph, partitions_graph
+using NamedGraphs.PartitionedGraphs: QuotientEdge, PartitionedGraph, quotient_graph
 using SimpleTraits: SimpleTraits, Not, @traitfn
 
 default_edge_sequence_alg() = "forest_cover"
 function default_edge_sequence(pg::PartitionedGraph)
-    return PartitionEdge.(edge_sequence(partitions_graph(pg)))
+    return QuotientEdge.(edge_sequence(quotient_graph(pg)))
 end
 
 @traitfn function edge_sequence(
