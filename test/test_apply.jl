@@ -13,7 +13,6 @@ using ITensorNetworks:
     update
 using ITensors: ITensors, ITensor, Algorithm, inner, op
 using NamedGraphs.NamedGraphGenerators: named_grid
-using NamedGraphs.PartitionedGraphs: PartitionVertex
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations

@@ -32,7 +32,7 @@ using ITensors.NDTensors: array
 using LinearAlgebra: eigvals, tr
 using NamedGraphs: NamedEdge, NamedGraph
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using NamedGraphs.PartitionedGraphs: PartitionVertex, partitionedges
+using NamedGraphs.PartitionedGraphs: quotientedges
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
@@ -65,7 +65,7 @@ using Test: @test, @testset
 
         bpc = update(bpc; alg = "bp", maxiter = 25, tol = eps(real(elt)))
         #Test messages are converged
-        for pe in partitionedges(bpc)
+        for pe in quotientedges(bpc)
             @test message_diff(updated_message(bpc, pe), message(bpc, pe)) < 10 * eps(real(elt))
             @test eltype(only(message(bpc, pe))) == elt
         end
