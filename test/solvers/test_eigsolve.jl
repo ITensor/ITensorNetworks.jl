@@ -53,11 +53,22 @@ include("utilities/tree_graphs.jl")
 
     #
     # Test 1-site DMRG with subspace expansion
+    # and cutoff and maxdim as vectors of values
     #
     nsites = 1
     nsweeps = 5
+    factorize_kwargs = (; cutoff = [1.0e-5, 1.0e-6], maxdim = [8, 16, 32])
     extract!_kwargs = (; subspace_algorithm = "densitymatrix")
     E, psi = dmrg(H, psi0; extract!_kwargs, factorize_kwargs, nsites, nsweeps, outputlevel)
     (outputlevel >= 1) && println("1-site+subspace DMRG energy = ", E)
+    @test E ≈ Ex atol = 1.0e-5
+
+    #
+    # Test passing cutoff and maxdim as a vector of values
+    #
+    nsites = 2
+    factorize_kwargs = (; cutoff = [1.0e-5, 1.0e-6], maxdim = [8, 16, 32])
+    E, psi = dmrg(H, psi0; factorize_kwargs, nsites, nsweeps, outputlevel)
+    (outputlevel >= 1) && println("2-site DMRG energy = ", E)
     @test E ≈ Ex atol = 1.0e-5
 end

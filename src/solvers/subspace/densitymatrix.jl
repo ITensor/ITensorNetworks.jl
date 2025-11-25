@@ -29,8 +29,9 @@ function subspace_expand!(
     isnothing(a) && return region_iter, local_state
     basis_size = prod(dim.(uniqueinds(A, C)))
 
+    trunc_kwargs = truncation_parameters(region_iter.which_sweep; eigen_kwargs...)
     expanded_maxdim = compute_expansion(
-        dim(a), basis_size; expansion_factor, maxexpand, eigen_kwargs.maxdim
+        dim(a), basis_size; expansion_factor, maxexpand, trunc_kwargs.maxdim
     )
     expanded_maxdim <= 0 && return region_iter, local_state
 
@@ -48,7 +49,7 @@ function subspace_expand!(
         sqrt_rho = conj_proj_A(sqrt_rho)
     end
     rho = sqrt_rho * dag(noprime(sqrt_rho))
-    D, U = eigen(rho; eigen_kwargs..., ishermitian = true)
+    D, U = eigen(rho; trunc_kwargs..., ishermitian = true)
 
     Uproj(T) = (T - prime(A, a) * (dag(prime(A, a)) * T))
     for _ in 1:north_pass
