@@ -53,7 +53,7 @@ end
 
         nsites = 2
         factorize_kwargs = (; cutoff, maxdim)
-        E, gs_psi = dmrg(H, psi0; factorize_kwargs, nsites, nsweeps, outputlevel)
+        E, gs_psi = dmrg(H, psi0; factorize_kwargs, nsites, nsweeps, outputlevel = 0)
         (outputlevel >= 1) && println("2-site DMRG energy = ", E)
 
         nsites = 1
