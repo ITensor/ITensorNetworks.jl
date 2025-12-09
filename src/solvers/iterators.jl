@@ -12,7 +12,10 @@ abstract type AbstractNetworkIterator end
 islaststep(iterator::AbstractNetworkIterator) = state(iterator) >= length(iterator)
 
 function Base.iterate(iterator::AbstractNetworkIterator, init = true)
-    islaststep(iterator) && return nothing
+    # The assumption is that first "increment!" is implicit, therefore we must skip the
+    # the termination check for the first iteration, i.e. `AbstractNetworkIterator` is not
+    # defined when length < 1,
+    init || islaststep(iterator) && return nothing
     # We seperate increment! from step! and demand that any AbstractNetworkIterator *must*
     # define a method for increment! This way we avoid cases where one may wish to nest
     # calls to different step! methods accidentaly incrementing multiple times.
@@ -44,6 +47,9 @@ mutable struct RegionIterator{Problem, RegionPlan} <: AbstractNetworkIterator
     which_region::Int
     const which_sweep::Int
     function RegionIterator(problem::P, region_plan::R, sweep::Int) where {P, R}
+        if length(region_plan) == 0
+            throw(BoundsError("Cannot construct a region iterator with 0 elements."))
+        end
         return new{P, R}(problem, region_plan, 1, sweep)
     end
 end
@@ -115,26 +121,33 @@ region_plan(problem; sweep_kwargs...) = euler_sweep(state(problem); sweep_kwargs
 
 mutable struct SweepIterator{Problem, Iter} <: AbstractNetworkIterator
     region_iter::RegionIterator{Problem}
-    sweep_kwargs::Iterators.Stateful{Iter}
+    sweep_kwargs::Iter
     which_sweep::Int
+    nsweeps::Int
     function SweepIterator(problem::Prob, sweep_kwargs::Iter) where {Prob, Iter}
-        stateful_sweep_kwargs = Iterators.Stateful(sweep_kwargs)
-        first_kwargs, _ = Iterators.peel(stateful_sweep_kwargs)
+        first_state = Iterators.peel(sweep_kwargs)
+        if isnothing(first_state)
+            throw(BoundsError("Cannot construct a sweep iterator with 0 elements."))
+        end
+        first_kwargs, sweep_kwargs_rest = first_state
         region_iter = RegionIterator(problem; sweep = 1, first_kwargs...)
-        return new{Prob, Iter}(region_iter, stateful_sweep_kwargs, 1)
+        return new{Prob, typeof(sweep_kwargs_rest)}(region_iter, sweep_kwargs_rest, 1, length(sweep_kwargs))
     end
 end
 
-islaststep(sweep_iter::SweepIterator) = isnothing(peek(sweep_iter.sweep_kwargs))
+islaststep(sweep_iter::SweepIterator) = isempty(sweep_iter.sweep_kwargs)
 
 region_iterator(sweep_iter::SweepIterator) = sweep_iter.region_iter
+
 problem(sweep_iter::SweepIterator) = problem(region_iterator(sweep_iter))
 
 state(sweep_iter::SweepIterator) = sweep_iter.which_sweep
-Base.length(sweep_iter::SweepIterator) = length(sweep_iter.sweep_kwargs)
+
+Base.length(sweep_iter::SweepIterator) = sweep_iter.nsweeps
+
 function increment!(sweep_iter::SweepIterator)
     sweep_iter.which_sweep += 1
-    sweep_kwargs, _ = Iterators.peel(sweep_iter.sweep_kwargs)
+    sweep_kwargs, sweep_iter.sweep_kwargs = Iterators.peel(sweep_iter.sweep_kwargs)
     update_region_iterator!(sweep_iter; sweep_kwargs...)
     return sweep_iter
 end
