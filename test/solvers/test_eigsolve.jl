@@ -4,6 +4,7 @@ using ITensorNetworks: siteinds, ttn, dmrg
 using Graphs: dst, edges, src, vertices
 using ITensorMPS: OpSum
 using TensorOperations: TensorOperations #For contraction order finding
+using Suppressor: @capture_out
 
 include("utilities/simple_ed_methods.jl")
 include("utilities/tree_graphs.jl")
@@ -68,7 +69,24 @@ include("utilities/tree_graphs.jl")
     #
     nsites = 2
     factorize_kwargs = (; cutoff = [1.0e-5, 1.0e-6], maxdim = [8, 16, 32])
-    E, psi = dmrg(H, psi0; factorize_kwargs, nsites, nsweeps, outputlevel)
+    E, psi = dmrg(H, psi0; factorize_kwargs, nsites, nsweeps, outputlevel = 0)
     (outputlevel >= 1) && println("2-site DMRG energy = ", E)
     @test E ≈ Ex atol = 1.0e-5
+
+    #
+    # Test that outputlevel > 0 generates output
+    # and outputlevel == 0 generates no output
+    #
+    nsweeps = 2
+    outputlevel = 1
+    output = @capture_out begin
+        dmrg(H, psi0; factorize_kwargs, nsweeps, outputlevel)
+    end
+    @test length(output) > 0
+
+    outputlevel = 0
+    output = @capture_out begin
+        dmrg(H, psi0; factorize_kwargs, nsweeps, outputlevel)
+    end
+    @test length(output) == 0
 end

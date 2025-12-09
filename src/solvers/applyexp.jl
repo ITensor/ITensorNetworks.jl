@@ -62,9 +62,9 @@ end
 function default_sweep_callback(
         sweep_iterator::SweepIterator{<:ApplyExpProblem};
         exponent_description = "exponent",
-        outputlevel = 0,
         process_time = identity,
     )
+    outputlevel = get(region_kwargs(region_iterator(sweep_iterator)), :outputlevel, 0)
     return if outputlevel >= 1
         the_problem = problem(sweep_iterator)
         @printf(
