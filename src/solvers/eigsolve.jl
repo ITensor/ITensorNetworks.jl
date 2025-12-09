@@ -23,8 +23,7 @@ end
 function update!(
         region_iter::RegionIterator{<:EigsolveProblem},
         local_state;
-        outputlevel = 0,
-        solver = eigsolve_solver,
+        solver = eigsolve_solver
     )
     prob = problem(region_iter)
 
@@ -34,6 +33,7 @@ function update!(
 
     prob.eigenvalue = eigval
 
+    outputlevel = get(region_kwargs(region_iter), :outputlevel, 0)
     if outputlevel >= 2
         @printf("  Region %s: energy = %.12f\n", current_region(region_iter), eigenvalue(prob))
     end
@@ -41,8 +41,9 @@ function update!(
 end
 
 function default_sweep_callback(
-        sweep_iterator::SweepIterator{<:EigsolveProblem}; outputlevel = 0
+        sweep_iterator::SweepIterator{<:EigsolveProblem}
     )
+    outputlevel = get(region_kwargs(region_iterator(sweep_iterator)), :outputlevel, 0)
     return if outputlevel >= 1
         nsweeps = length(sweep_iterator)
         current_sweep = sweep_iterator.which_sweep
@@ -51,9 +52,10 @@ function default_sweep_callback(
         else
             @printf("After sweep %d/%d ", current_sweep, nsweeps)
         end
-        @printf("eigenvalue=%.12f", eigenvalue(problem))
-        @printf(" maxlinkdim=%d", maxlinkdim(state(problem)))
-        @printf(" max truncerror=%d", max_truncerror(problem))
+        current_problem = problem(sweep_iterator)
+        @printf("eigenvalue=%.12f", eigenvalue(current_problem))
+        @printf(" maxlinkdim=%d", maxlinkdim(current_problem))
+        @printf(" max truncerror=%d", max_truncerror(current_problem))
         println()
         flush(stdout)
     end
