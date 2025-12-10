@@ -23,7 +23,6 @@ end
 function update!(
         region_iter::RegionIterator{<:EigsolveProblem},
         local_state;
-        outputlevel = 0,
         solver = eigsolve_solver,
     )
     prob = problem(region_iter)
@@ -34,6 +33,7 @@ function update!(
 
     prob.eigenvalue = eigval
 
+    outputlevel = get(region_kwargs(region_iter), :outputlevel, 0)
     if outputlevel >= 2
         @printf("  Region %s: energy = %.12f\n", current_region(region_iter), eigenvalue(prob))
     end
@@ -41,26 +41,23 @@ function update!(
 end
 
 function default_sweep_callback(
-        sweep_iterator::SweepIterator{<:EigsolveProblem}; outputlevel = 0
+        sweep_iterator::SweepIterator{<:EigsolveProblem}
     )
+    outputlevel = get(region_kwargs(region_iterator(sweep_iterator)), :outputlevel, 0)
     return if outputlevel >= 1
-        nsweeps = length(sweep_iterator)
         current_sweep = sweep_iterator.which_sweep
-        if length(sweep_iterator) >= 10
-            @printf("After sweep %02d/%d ", current_sweep, nsweeps)
-        else
-            @printf("After sweep %d/%d ", current_sweep, nsweeps)
-        end
-        @printf("eigenvalue=%.12f", eigenvalue(problem))
-        @printf(" maxlinkdim=%d", maxlinkdim(state(problem)))
-        @printf(" max truncerror=%d", max_truncerror(problem))
+        the_problem = problem(sweep_iterator)
+        @printf("After sweep %d ", current_sweep)
+        @printf("eigenvalue=%.12f", eigenvalue(the_problem))
+        @printf(" maxlinkdim=%d", maxlinkdim(state(the_problem)))
+        @printf(" max truncerror=%d", max_truncerror(the_problem))
         println()
         flush(stdout)
     end
 end
 
 function eigsolve(
-        operator, init_state; nsweeps, nsites = 1, outputlevel = 0, factorize_kwargs, sweep_kwargs...
+        operator, init_state; nsweeps, nsites = 1, factorize_kwargs, sweep_kwargs...
     )
     init_prob = EigsolveProblem(;
         state = align_indices(init_state), operator = ProjTTN(align_indices(operator))
@@ -69,7 +66,6 @@ function eigsolve(
         init_prob,
         nsweeps;
         nsites,
-        outputlevel,
         factorize_kwargs,
         subspace_expand!_kwargs = (; eigen_kwargs = factorize_kwargs),
         sweep_kwargs...,
