@@ -8,7 +8,6 @@ function subspace_expand!(
         expansion_factor = 1.5,
         maxexpand = typemax(Int),
         north_pass = 1,
-        eigen_kwargs = (;),
     )
     prob = problem(region_iter)
 
@@ -29,7 +28,7 @@ function subspace_expand!(
     isnothing(a) && return region_iter, local_state
     basis_size = prod(dim.(uniqueinds(A, C)))
 
-    trunc_kwargs = truncation_parameters(region_iter.which_sweep; eigen_kwargs...)
+    trunc_kwargs = truncation_parameters(region_iter.which_sweep; region_kwargs(factorize, region_iter)...)
     expanded_maxdim = compute_expansion(
         dim(a), basis_size; expansion_factor, maxexpand, trunc_kwargs.maxdim
     )
