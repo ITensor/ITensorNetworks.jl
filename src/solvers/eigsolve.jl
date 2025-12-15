@@ -67,7 +67,6 @@ function eigsolve(
         nsweeps;
         nsites,
         factorize_kwargs,
-        subspace_expand!_kwargs = (; eigen_kwargs = factorize_kwargs),
         sweep_kwargs...,
     )
     prob = problem(sweep_solve!(sweep_iter))

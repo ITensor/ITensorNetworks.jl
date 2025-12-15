@@ -1,6 +1,6 @@
 using Test: @test, @testset
 using ITensors
-using ITensorNetworks: siteinds, ttn, dmrg
+using ITensorNetworks: dmrg, maxlinkdim, siteinds, ttn
 using Graphs: dst, edges, src, vertices
 using ITensorMPS: OpSum
 using TensorOperations: TensorOperations #For contraction order finding
@@ -58,11 +58,15 @@ include("utilities/tree_graphs.jl")
     #
     nsites = 1
     nsweeps = 5
-    factorize_kwargs = (; cutoff = [1.0e-5, 1.0e-6], maxdim = [8, 16, 32])
+    maxdim = [8, 16, 32]
+    factorize_kwargs = (; cutoff = [1.0e-5, 1.0e-6], maxdim)
     extract!_kwargs = (; subspace_algorithm = "densitymatrix")
     E, psi = dmrg(H, psi0; extract!_kwargs, factorize_kwargs, nsites, nsweeps, outputlevel)
     (outputlevel >= 1) && println("1-site+subspace DMRG energy = ", E)
     @test E ≈ Ex atol = 1.0e-5
+
+    # Regression test that subspace expansion feature obeys maxdim limit
+    @test maxlinkdim(psi) <= last(maxdim)
 
     #
     # Test passing cutoff and maxdim as a vector of values
