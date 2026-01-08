@@ -12,7 +12,10 @@ abstract type AbstractNetworkIterator end
 islaststep(iterator::AbstractNetworkIterator) = state(iterator) >= length(iterator)
 
 function Base.iterate(iterator::AbstractNetworkIterator, init = true)
-    islaststep(iterator) && return nothing
+    # The assumption is that first "increment!" is implicit, therefore we must skip the
+    # the termination check for the first iteration, i.e. `AbstractNetworkIterator` is not
+    # defined when length < 1,
+    init || islaststep(iterator) && return nothing
     # We seperate increment! from step! and demand that any AbstractNetworkIterator *must*
     # define a method for increment! This way we avoid cases where one may wish to nest
     # calls to different step! methods accidentaly incrementing multiple times.
@@ -44,6 +47,9 @@ mutable struct RegionIterator{Problem, RegionPlan} <: AbstractNetworkIterator
     which_region::Int
     const which_sweep::Int
     function RegionIterator(problem::P, region_plan::R, sweep::Int) where {P, R}
+        if length(region_plan) == 0
+            throw(BoundsError("Cannot construct a region iterator with 0 elements."))
+        end
         return new{P, R}(problem, region_plan, 1, sweep)
     end
 end
@@ -119,8 +125,15 @@ mutable struct SweepIterator{Problem, Iter} <: AbstractNetworkIterator
     which_sweep::Int
     function SweepIterator(problem::Prob, sweep_kwargs::Iter) where {Prob, Iter}
         stateful_sweep_kwargs = Iterators.Stateful(sweep_kwargs)
-        first_kwargs, _ = Iterators.peel(stateful_sweep_kwargs)
+        first_state = Iterators.peel(stateful_sweep_kwargs)
+
+        if isnothing(first_state)
+            throw(BoundsError("Cannot construct a sweep iterator with 0 elements."))
+        end
+
+        first_kwargs, _ = first_state
         region_iter = RegionIterator(problem; sweep = 1, first_kwargs...)
+
         return new{Prob, Iter}(region_iter, stateful_sweep_kwargs, 1)
     end
 end
