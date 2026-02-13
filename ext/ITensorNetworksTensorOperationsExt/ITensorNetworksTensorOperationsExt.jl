@@ -1,7 +1,7 @@
 module ITensorNetworksTensorOperationsExt
 
-using ITensors: ITensors, ITensor, dim, inds
 using ITensorNetworks: ITensorNetworks, ITensorList
+using ITensors: ITensors, ITensor, dim, inds
 using NDTensors.AlgorithmSelection: @Algorithm_str
 using TensorOperations: TensorOperations, optimaltree
 

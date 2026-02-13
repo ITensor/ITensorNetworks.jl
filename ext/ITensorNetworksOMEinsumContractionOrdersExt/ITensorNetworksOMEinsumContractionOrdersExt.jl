@@ -1,9 +1,9 @@
 module ITensorNetworksOMEinsumContractionOrdersExt
 using DocStringExtensions: TYPEDSIGNATURES
 using ITensorNetworks: ITensorNetworks, ITensorList
-using ITensors: ITensors, Index, ITensor, inds
-using NDTensors: dim
+using ITensors: ITensors, ITensor, Index, inds
 using NDTensors.AlgorithmSelection: @Algorithm_str
+using NDTensors: dim
 using OMEinsumContractionOrders: OMEinsumContractionOrders
 
 # OMEinsumContractionOrders wrapper for ITensors

@@ -1,5 +1,5 @@
-using ITensorNetworks: ITensorNetworks
 using Documenter: Documenter, DocMeta, deploydocs, makedocs
+using ITensorNetworks: ITensorNetworks
 
 DocMeta.setdocmeta!(
     ITensorNetworks, :DocTestSetup, :(using ITensorNetworks); recursive = true
