@@ -1,7 +1,12 @@
 using Graphs: dst, src
 using NamedGraphs.GraphsExtensions: default_root_vertex
 
-function euler_sweep(graph; nsites, root_vertex = default_root_vertex(graph), sweep_kwargs...)
+function euler_sweep(
+        graph;
+        nsites,
+        root_vertex = default_root_vertex(graph),
+        sweep_kwargs...
+    )
     sweep_kwargs = (; nsites, root_vertex, sweep_kwargs...)
 
     if nsites == 1

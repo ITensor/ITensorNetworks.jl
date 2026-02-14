@@ -8,7 +8,7 @@ function subspace_expand!(
         expansion_factor = 1.5,
         maxexpand = typemax(Int),
         north_pass = 1,
-        eigen_kwargs = (;),
+        eigen_kwargs = (;)
     )
     prob = problem(region_iter)
 

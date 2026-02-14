@@ -11,7 +11,7 @@ function eigsolve_solver(
         maxiter = 1,
         verbosity = 0,
         eager = false,
-        kws...,
+        kws...
     )
     vals, vecs, info = KrylovKit.eigsolve(
         operator,
@@ -23,7 +23,7 @@ function eigsolve_solver(
         krylovdim,
         maxiter,
         verbosity,
-        eager,
+        eager
     )
     return vals[1], vecs[1]
 end

@@ -1,7 +1,8 @@
 module ITensorNetworksEinExprsExt
 
 using EinExprs: EinExprs, EinExpr, SizedEinExpr, einexpr
-using ITensorNetworks: ITensorNetworks, ITensorList, ITensorNetwork, contraction_sequence, vertex_data, vertextype
+using ITensorNetworks: ITensorNetworks, ITensorList, ITensorNetwork, contraction_sequence,
+    vertex_data, vertextype
 using ITensors: @Algorithm_str, ITensor, Index, inds, noncommoninds
 
 function to_einexpr(ts::ITensorList)

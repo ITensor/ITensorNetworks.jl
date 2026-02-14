@@ -3,8 +3,8 @@ using DataGraphs: vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
 using ITensorNetworks: IndsNetwork, siteinds
-using ITensors: Index, SiteType, hastags, space
 using ITensors.NDTensors: dim
+using ITensors: Index, SiteType, hastags, space
 using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @testset
 

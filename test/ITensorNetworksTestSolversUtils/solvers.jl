@@ -10,7 +10,7 @@ function ode_solver(
         current_time = 0.0,
         outputlevel = 0,
         solver_alg = Tsit5(),
-        kwargs...,
+        kwargs...
     )
     if outputlevel ≥ 3
         println("    In ODE solver, current_time = $current_time, time_step = $time_step")
@@ -30,7 +30,9 @@ function krylov_solver(
         H::TimeDependentSum, time_step, ψ₀; current_time = 0.0, outputlevel = 0, kwargs...
     )
     if outputlevel ≥ 3
-        println("    In Krylov solver, current_time = $current_time, time_step = $time_step")
+        println(
+            "    In Krylov solver, current_time = $current_time, time_step = $time_step"
+        )
     end
     ψₜ, info = exponentiate(H(current_time), time_step, ψ₀; kwargs...)
     return ψₜ, info

@@ -1,11 +1,11 @@
 @eval module $(gensym())
 using Dictionaries: Dictionary, Indices
 using Graphs: vertices
-using ITensors: ITensors, ITensor
-using ITensorNetworks: ITensorNetwork, ProjTTN, ttn, environments, position, siteinds
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
-using NamedGraphs: NamedEdge
+using ITensorNetworks: ITensorNetwork, ProjTTN, environments, position, siteinds, ttn
+using ITensors: ITensors, ITensor
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_path_graph
+using NamedGraphs: NamedEdge
 using Test: @test, @testset
 
 @testset "ProjTTN position" begin

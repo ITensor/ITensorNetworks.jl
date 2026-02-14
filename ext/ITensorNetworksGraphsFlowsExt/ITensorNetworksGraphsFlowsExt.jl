@@ -10,7 +10,7 @@ function ITensorNetworks.mincut(
         source_vertex,
         target_vertex;
         capacity_matrix,
-        alg = GraphsFlows.PushRelabelAlgorithm(),
+        alg = GraphsFlows.PushRelabelAlgorithm()
     )
     # TODO: Replace with `Backend(backend)`.
     return GraphsFlows.mincut(graph, source_vertex, target_vertex, capacity_matrix, alg)

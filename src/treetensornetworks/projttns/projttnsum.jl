@@ -1,7 +1,7 @@
-using ITensors: ITensors, contract, product
 using ITensors.LazyApply: LazyApply, terms
-using NamedGraphs: NamedGraphs
+using ITensors: ITensors, contract, product
 using NamedGraphs.GraphsExtensions: incident_edges
+using NamedGraphs: NamedGraphs
 
 """
 ProjTTNSum
@@ -10,7 +10,10 @@ struct ProjTTNSum{V, T <: AbstractProjTTN{V}, Z <: Number} <: AbstractProjTTN{V}
     terms::Vector{T}
     factors::Vector{Z}
     function ProjTTNSum(terms::Vector{<:AbstractProjTTN}, factors::Vector{<:Number})
-        return new{vertextype(eltype(terms)), eltype(terms), eltype(factors)}(terms, factors)
+        return new{vertextype(eltype(terms)), eltype(terms), eltype(factors)}(
+            terms,
+            factors
+        )
     end
 end
 
@@ -48,14 +51,14 @@ ITensors.product(P::ProjTTNSum, v::ITensor) = noprime(contract(P, v))
 
 function ITensors.contract(P::ProjTTNSum, v::ITensor)
     res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
-        f * contract(p, v)
+        return f * contract(p, v)
     end
     return res
 end
 
 function contract_ket(P::ProjTTNSum, v::ITensor)
     res = mapreduce(+, zip(factors(P), terms(P))) do (f, p)
-        f * contract_ket(p, v)
+        return f * contract_ket(p, v)
     end
     return res
 end

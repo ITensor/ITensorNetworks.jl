@@ -1,7 +1,12 @@
 default_index_map = prime
 default_inv_index_map = noprime
 
-struct QuadraticFormNetwork{V, FormNetwork <: BilinearFormNetwork{V}, IndexMap, InvIndexMap} <:
+struct QuadraticFormNetwork{
+        V,
+        FormNetwork <: BilinearFormNetwork{V},
+        IndexMap,
+        InvIndexMap,
+    } <:
     AbstractFormNetwork{V}
     formnetwork::FormNetwork
     dual_index_map::IndexMap
@@ -39,7 +44,7 @@ function QuadraticFormNetwork(
         ket::AbstractITensorNetwork;
         dual_index_map = default_index_map,
         dual_inv_index_map = default_inv_index_map,
-        kwargs...,
+        kwargs...
     )
     blf = BilinearFormNetwork(
         operator,
@@ -47,7 +52,7 @@ function QuadraticFormNetwork(
         ket;
         dual_site_index_map = dual_index_map,
         dual_link_index_map = dual_index_map,
-        kwargs...,
+        kwargs...
     )
     return QuadraticFormNetwork(blf, dual_index_map, dual_inv_index_map)
 end
@@ -56,14 +61,14 @@ function QuadraticFormNetwork(
         ket::AbstractITensorNetwork;
         dual_index_map = default_index_map,
         dual_inv_index_map = default_inv_index_map,
-        kwargs...,
+        kwargs...
     )
     blf = BilinearFormNetwork(
         ket,
         ket;
         dual_site_index_map = dual_index_map,
         dual_link_index_map = dual_index_map,
-        kwargs...,
+        kwargs...
     )
     return QuadraticFormNetwork(blf, dual_index_map, dual_inv_index_map)
 end
@@ -76,7 +81,7 @@ function update(qf::QuadraticFormNetwork, original_state_vertex, ket_state::ITen
         original_state_vertex,
         original_state_vertex,
         bra_state,
-        ket_state,
+        ket_state
     )
     return QuadraticFormNetwork(new_blf, dual_index_map(qf), dual_index_map(qf))
 end

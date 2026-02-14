@@ -2,8 +2,8 @@ using DataGraphs: DataGraphs, underlying_graph
 using Dictionaries: Dictionary, Indices
 using Graphs: edgetype, vertices
 using ITensors: ITensor
-using NamedGraphs: NamedEdge
 using NamedGraphs.GraphsExtensions: incident_edges, is_leaf_vertex
+using NamedGraphs: NamedEdge
 
 """
 ProjTTN
@@ -16,14 +16,14 @@ struct ProjTTN{V, Pos <: Union{Indices{V}, NamedEdge{V}}} <: AbstractProjTTN{V}
         return new{vertextype(operator), Indices{vertextype(operator)}}(
             Indices{vertextype(operator)}(pos),
             operator,
-            convert(Dictionary{NamedEdge{vertextype(operator)}, ITensor}, environments),
+            convert(Dictionary{NamedEdge{vertextype(operator)}, ITensor}, environments)
         )
     end
     global function _ProjTTN(pos::NamedEdge, operator::TTN, environments::Dictionary)
         return new{vertextype(operator), NamedEdge{vertextype(operator)}}(
             convert(NamedEdge{vertextype(operator)}, pos),
             operator,
-            convert(Dictionary{NamedEdge{vertextype(operator)}, ITensor}, environments),
+            convert(Dictionary{NamedEdge{vertextype(operator)}, ITensor}, environments)
         )
     end
 end
@@ -80,7 +80,8 @@ function make_environment(P::ProjTTN, state::AbstractTTN, e::AbstractEdge)
             # other environments
             frst, scnd, rst = _separate_first_two(neighbor_envs)
             itensor_map = vcat(
-                state[src(e)], frst, scnd, operator(P)[src(e)], dag(prime(state[src(e)])), rst
+                state[src(e)], frst, scnd, operator(P)[src(e)],
+                dag(prime(state[src(e)])), rst
             )
             # TODO: actually use optimal contraction sequence here
             env = reduce(*, itensor_map)

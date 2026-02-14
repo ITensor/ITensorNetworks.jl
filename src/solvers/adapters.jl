@@ -1,7 +1,7 @@
 """
-  struct PauseAfterIncrement{S<:AbstractNetworkIterator}
+struct PauseAfterIncrement{S<:AbstractNetworkIterator}
 
-Iterator wrapper whos `compute!` function simply returns itself, doing nothing in the 
+Iterator wrapper whos `compute!` function simply returns itself, doing nothing in the
 process. This allows one to manually call a custom `compute!` or insert their own code it in
 the loop body in place of `compute!`.
 """
@@ -17,7 +17,7 @@ compute!(adapter::IncrementOnly) = adapter
 IncrementOnly(adapter::IncrementOnly) = adapter
 
 """
-  struct EachRegion{SweepIterator} <: AbstractNetworkIterator
+struct EachRegion{SweepIterator} <: AbstractNetworkIterator
 
 Adapter that flattens each region iterator in the parent sweep iterator into a single
 iterator.

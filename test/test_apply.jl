@@ -1,17 +1,9 @@
 @eval module $(gensym())
 using Compat: Compat
 using Graphs: vertices
-using ITensorNetworks:
-    BeliefPropagationCache,
-    ITensorNetwork,
-    VidalITensorNetwork,
-    apply,
-    environment,
-    norm_sqr_network,
-    random_tensornetwork,
-    siteinds,
-    update
-using ITensors: ITensors, ITensor, Algorithm, inner, op
+using ITensorNetworks: BeliefPropagationCache, ITensorNetwork, VidalITensorNetwork, apply,
+    environment, norm_sqr_network, random_tensornetwork, siteinds, update
+using ITensors: ITensors, Algorithm, ITensor, inner, op
 using NamedGraphs.NamedGraphGenerators: named_grid
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
@@ -42,7 +34,7 @@ using Test: @test, @testset
     singular_values = ITensor()
     function callback(; singular_values, truncation_error)
         truncerr = truncation_error
-        singular_values = singular_values
+        return singular_values = singular_values
     end
     for i in 1:ngates
         o = op("RandomUnitary", s[v1]..., s[v2]...)
@@ -55,7 +47,7 @@ using Test: @test, @testset
             normalize = true,
             print_fidelity_loss = true,
             envisposdef = true,
-            callback,
+            callback
         )
         ψOv = apply(o, ψv; maxdim = χ, normalize = true)
         ψOVidal_symm = ITensorNetwork(ψOv)
@@ -66,19 +58,25 @@ using Test: @test, @testset
             maxdim = χ,
             normalize = true,
             print_fidelity_loss = true,
-            envisposdef = true,
+            envisposdef = true
         )
         fSBP =
             inner(ψOSBP, ψOexact; alg = inner_alg) /
-            sqrt(inner(ψOexact, ψOexact; alg = inner_alg) * inner(ψOSBP, ψOSBP; alg = inner_alg))
+            sqrt(
+            inner(ψOexact, ψOexact; alg = inner_alg) *
+                inner(ψOSBP, ψOSBP; alg = inner_alg)
+        )
         fVidal =
             inner(ψOVidal_symm, ψOexact; alg = inner_alg) / sqrt(
             inner(ψOexact, ψOexact; alg = inner_alg) *
-                inner(ψOVidal_symm, ψOVidal_symm; alg = inner_alg),
+                inner(ψOVidal_symm, ψOVidal_symm; alg = inner_alg)
         )
         fGBP =
             inner(ψOGBP, ψOexact; alg = inner_alg) /
-            sqrt(inner(ψOexact, ψOexact; alg = inner_alg) * inner(ψOGBP, ψOGBP; alg = inner_alg))
+            sqrt(
+            inner(ψOexact, ψOexact; alg = inner_alg) *
+                inner(ψOGBP, ψOGBP; alg = inner_alg)
+        )
         @test !iszero(truncerr)
         @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
         @test isapprox(real(fSBP * conj(fSBP)), real(fVidal * conj(fVidal)); atol = 1.0e-3)

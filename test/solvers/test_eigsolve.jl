@@ -1,10 +1,10 @@
-using Test: @test, @testset
-using ITensors
-using ITensorNetworks: siteinds, ttn, dmrg
 using Graphs: dst, edges, src, vertices
 using ITensorMPS: OpSum
-using TensorOperations: TensorOperations #For contraction order finding
+using ITensorNetworks: dmrg, siteinds, ttn
+using ITensors
 using Suppressor: @capture_out
+using TensorOperations: TensorOperations
+using Test: @test, @testset
 
 include("utilities/simple_ed_methods.jl")
 include("utilities/tree_graphs.jl")

@@ -131,7 +131,7 @@ end
 function insert_linkinds(
         indsnetwork::AbstractIndsNetwork,
         edges = edges(indsnetwork);
-        link_space = trivial_space(indsnetwork),
+        link_space = trivial_space(indsnetwork)
     )
     indsnetwork = copy(indsnetwork)
     for e in edges

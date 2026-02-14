@@ -1,13 +1,13 @@
 # TODO: Move to `NamedGraphsITensorVisualizationCoreExt`.
 using Graphs: vertices
-using NamedGraphs: NamedGraphs, AbstractNamedGraph
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore
+using NamedGraphs: NamedGraphs, AbstractNamedGraph
 function ITensorVisualizationCore.visualize(
         graph::AbstractNamedGraph,
         args...;
         vertex_labels_prefix = nothing,
         vertex_labels = nothing,
-        kwargs...,
+        kwargs...
     )
     if !isnothing(vertex_labels_prefix)
         vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(graph)]

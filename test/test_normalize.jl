@@ -1,20 +1,11 @@
 @eval module $(gensym())
-using ITensorNetworks:
-    BeliefPropagationCache,
-    QuadraticFormNetwork,
-    edge_scalars,
-    norm_sqr_network,
-    messages,
-    random_tensornetwork,
-    scalartype,
-    siteinds,
-    vertex_scalars,
-    rescale
-using ITensors: dag, inner, scalar
 using Graphs: SimpleGraph, uniform_tree
+using ITensorNetworks: BeliefPropagationCache, QuadraticFormNetwork, edge_scalars, messages,
+    norm_sqr_network, random_tensornetwork, rescale, scalartype, siteinds, vertex_scalars
+using ITensors: dag, inner, scalar
 using LinearAlgebra: normalize
+using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NamedGraphs: NamedGraph
-using NamedGraphs.NamedGraphGenerators: named_grid, named_comb_tree
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset
@@ -48,12 +39,17 @@ using Test: @test, @testset
 
     ψIψ_bpc = Ref(BeliefPropagationCache(QuadraticFormNetwork(x)))
     ψ = normalize(
-        x; alg = "bp", (cache!) = ψIψ_bpc, update_cache = true, cache_update_kwargs = (; maxiter = 20)
+        x; alg = "bp", (cache!) = ψIψ_bpc, update_cache = true,
+        cache_update_kwargs = (; maxiter = 20)
     )
     ψIψ_bpc = ψIψ_bpc[]
     @test all(m -> scalartype(only(m)) == ComplexF32, messages(ψIψ_bpc))
     @test all(x -> x ≈ 1.0, edge_scalars(ψIψ_bpc))
     @test all(x -> x ≈ 1.0, vertex_scalars(ψIψ_bpc))
-    @test scalar(QuadraticFormNetwork(ψ); alg = "bp", cache_update_kwargs = (; maxiter = 20)) ≈ 1.0
+    @test scalar(
+        QuadraticFormNetwork(ψ);
+        alg = "bp",
+        cache_update_kwargs = (; maxiter = 20)
+    ) ≈ 1.0
 end
 end

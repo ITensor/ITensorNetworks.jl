@@ -1,6 +1,6 @@
 @eval module $(gensym())
 using Graphs: vertices
-using ITensorNetworks: ttn, expect, random_mps, siteinds
+using ITensorNetworks: expect, random_mps, siteinds, ttn
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using StableRNGs: StableRNG

@@ -1,5 +1,5 @@
-using ITensors
 using Graphs: AbstractEdge
+using ITensors
 
 expand_space(χ::Integer, expansion_factor) = max(χ + 1, floor(Int, expansion_factor * χ))
 
@@ -26,7 +26,7 @@ function subspace_expand!(
         mindim = default_mindim(),
         expansion_factor = default_expansion_factor(),
         max_expand = default_max_expand(),
-        kws...,
+        kws...
     )
     prev_region = prev_region(region_iterator)
     region = current_region(region_iterator)
@@ -63,7 +63,8 @@ function subspace_expand!(
         dim(a), basis_size; expansion_factor, max_expand, maxdim
     )
     (norm(Y) <= 1.0e-15 || expand_maxdim <= 0) && return local_tensor
-    Ux, S, V = svd(Y, basis_inds; cutoff = 1.0e-14, maxdim = expand_maxdim, lefttags = "ux,Link")
+    Ux, S, V =
+        svd(Y, basis_inds; cutoff = 1.0e-14, maxdim = expand_maxdim, lefttags = "ux,Link")
 
     Ux = linear_map(Ux)
     ux = commonind(Ux, S)

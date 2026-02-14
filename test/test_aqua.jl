@@ -1,5 +1,5 @@
-using ITensorNetworks: ITensorNetworks
 using Aqua: Aqua
+using ITensorNetworks: ITensorNetworks
 using Test: @testset
 
 @testset "Code quality (Aqua.jl)" begin

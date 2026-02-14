@@ -3,8 +3,8 @@ using DataGraphs: edge_data, vertex_data
 using Dictionaries: Dictionary
 using Graphs: edges, ne, nv, vertices
 using ITensorNetworks: IndsNetwork, union_all_inds
-using ITensors: Index
 using ITensors.NDTensors: dim
+using ITensors: Index
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using StableRNGs: StableRNG
 using Test: @test, @testset
@@ -54,7 +54,8 @@ using Test: @test, @testset
     @test all(map(x -> dim.(x) == uniform_dim_multi, edge_data(is_umlink)))
     @test isempty(vertex_data(is_umlink))
     # initialize sites and links
-    is_usite_umlink = IndsNetwork(c; site_space = uniform_dim, link_space = uniform_dim_multi)
+    is_usite_umlink =
+        IndsNetwork(c; site_space = uniform_dim, link_space = uniform_dim_multi)
     @test is_usite_umlink isa IndsNetwork
     @test all(map(x -> dim.(x) == [uniform_dim], vertex_data(is_usite_umlink)))
     @test all(map(x -> dim.(x) == uniform_dim_multi, edge_data(is_usite_umlink)))
@@ -74,7 +75,8 @@ using Test: @test, @testset
     @test all(dim.(is_msite[v]) == site_dim_map_multi[v] for v in vertices(is_msite))
     @test isempty(edge_data(is_msite))
     # integer site vector, uniform integer links
-    is_msite_ulink = IndsNetwork(c; site_space = site_dim_map_multi, link_space = uniform_dim)
+    is_msite_ulink =
+        IndsNetwork(c; site_space = site_dim_map_multi, link_space = uniform_dim)
     @test is_msite_ulink isa IndsNetwork
     @test all(
         dim.(is_msite_ulink[v]) == site_dim_map_multi[v] for v in vertices(is_msite_ulink)
@@ -90,9 +92,12 @@ using Test: @test, @testset
     @test all(is_misite[v] == site_inds_map_multi[v] for v in vertices(is_misite))
     @test isempty(edge_data(is_misite))
     # Index site vector, uniform integer links
-    is_misite_ulink = IndsNetwork(c; site_space = site_inds_map_multi, link_space = uniform_dim)
+    is_misite_ulink =
+        IndsNetwork(c; site_space = site_inds_map_multi, link_space = uniform_dim)
     @test is_misite_ulink isa IndsNetwork
-    @test all(is_misite_ulink[v] == site_inds_map_multi[v] for v in vertices(is_misite_ulink))
+    @test all(
+        is_misite_ulink[v] == site_inds_map_multi[v] for v in vertices(is_misite_ulink)
+    )
     @test all(map(x -> dim.(x) == [uniform_dim], edge_data(is_misite_ulink)))
 
     # specify site spaces as Dictionary of dims or indices, and/or link spaces as Dictionary
@@ -107,15 +112,24 @@ using Test: @test, @testset
     @test all(is_isite_link[v] == [site_inds_map[v]] for v in vertices(is_isite_link))
     @test all(dim.(is_isite_link[e]) == [link_dim_map[e]] for e in edges(is_isite_link))
     @test all(e -> dim.(is_isite_link[e]) == [link_dim_map[e]], keys(link_dim_map))
-    is_isite_mlink = IndsNetwork(c; site_space = site_inds_map, link_space = link_dim_map_multi)
+    is_isite_mlink =
+        IndsNetwork(c; site_space = site_inds_map, link_space = link_dim_map_multi)
     @test is_isite_mlink isa IndsNetwork
     @test all(is_isite_mlink[v] == [site_inds_map[v]] for v in vertices(is_isite_mlink))
-    @test all(dim.(is_isite_mlink[e]) == link_dim_map_multi[e] for e in edges(is_isite_mlink))
-    @test all(e -> dim.(is_isite_mlink[e]) == link_dim_map_multi[e], keys(link_dim_map_multi))
+    @test all(
+        dim.(is_isite_mlink[e]) == link_dim_map_multi[e] for e in edges(is_isite_mlink)
+    )
+    @test all(
+        e -> dim.(is_isite_mlink[e]) == link_dim_map_multi[e],
+        keys(link_dim_map_multi)
+    )
     # index site dict, index link dict
-    is_misite_ilink = IndsNetwork(c; site_space = site_inds_map_multi, link_space = link_inds_map)
+    is_misite_ilink =
+        IndsNetwork(c; site_space = site_inds_map_multi, link_space = link_inds_map)
     @test is_misite_ilink isa IndsNetwork
-    @test all(is_misite_ilink[v] == site_inds_map_multi[v] for v in vertices(is_misite_ilink))
+    @test all(
+        is_misite_ilink[v] == site_inds_map_multi[v] for v in vertices(is_misite_ilink)
+    )
     @test all(is_misite_ilink[e] == [link_inds_map[e]] for e in edges(is_misite_ilink))
     @test all(e -> is_misite_ilink[e] == [link_inds_map[e]], keys(link_inds_map))
     is_misite_milink = IndsNetwork(
@@ -125,7 +139,9 @@ using Test: @test, @testset
     @test all(
         is_misite_milink[v] == site_inds_map_multi[v] for v in vertices(is_misite_milink)
     )
-    @test all(is_misite_milink[e] == link_inds_map_multi[e] for e in edges(is_misite_milink))
+    @test all(
+        is_misite_milink[e] == link_inds_map_multi[e] for e in edges(is_misite_milink)
+    )
     @test all(e -> is_misite_milink[e] == link_inds_map_multi[e], keys(link_inds_map_multi))
 end
 

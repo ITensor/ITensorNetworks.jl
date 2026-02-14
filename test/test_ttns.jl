@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using DataGraphs: vertex_data
 using Graphs: vertices
-using ITensorNetworks: ttn, contract, ortho_region, siteinds
+using ITensorNetworks: contract, ortho_region, siteinds, ttn
 using ITensors: @disable_warn_order, random_itensor
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree

@@ -1,12 +1,12 @@
 @eval module $(gensym())
 using Graphs: vertices
-using ITensors: ITensors
-using ITensorNetworks: ITensorNetwork, cartesian_to_linear, dmrg, expect, siteinds, tebd
 using ITensorNetworks.ITensorsExtensions: group_terms
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
+using ITensorNetworks: ITensorNetwork, cartesian_to_linear, dmrg, expect, siteinds, tebd
+using ITensors: ITensors
 using NamedGraphs.GraphsExtensions: rename_vertices
 using NamedGraphs.NamedGraphGenerators: named_grid
-using Test: @test, @testset, @test_broken
+using Test: @test, @test_broken, @testset
 
 ITensors.disable_warn_order()
 
@@ -37,7 +37,7 @@ ITensors.disable_warn_order()
         cutoff = 1.0e-8,
         maxdim = χ,
         ortho = false,
-        print_frequency = typemax(Int),
+        print_frequency = typemax(Int)
     )
     #E1 = expect(ℋ, ψ)
     ψ = tebd(
@@ -48,7 +48,7 @@ ITensors.disable_warn_order()
         cutoff = 1.0e-8,
         maxdim = χ,
         ortho = true,
-        print_frequency = typemax(Int),
+        print_frequency = typemax(Int)
     )
     #E2 = expect(ℋ, ψ)
     #@show E0, E1, E2, E_dmrg

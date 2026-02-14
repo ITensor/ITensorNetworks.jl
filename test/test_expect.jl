@@ -1,14 +1,9 @@
 @eval module $(gensym())
 using Graphs: SimpleGraph, uniform_tree
-using NamedGraphs: NamedGraph, vertices
+using ITensorNetworks: BeliefPropagationCache, ITensorNetwork, expect,
+    original_state_vertex, random_tensornetwork, siteinds
 using NamedGraphs.NamedGraphGenerators: named_grid
-using ITensorNetworks:
-    BeliefPropagationCache,
-    ITensorNetwork,
-    expect,
-    random_tensornetwork,
-    siteinds,
-    original_state_vertex
+using NamedGraphs: NamedGraph, vertices
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
@@ -37,7 +32,8 @@ using Test: @test, @testset
         partitioned_vertices = group(v -> first(first(v)), quadratic_form_vertices),
     )
     sz_bp = expect(
-        ψ, "Sz"; alg = "bp", cache_construction_kwargs, cache_update_kwargs = (; maxiter = 20)
+        ψ, "Sz"; alg = "bp", cache_construction_kwargs,
+        cache_update_kwargs = (; maxiter = 20)
     )
     sz_exact = expect(ψ, "Sz"; alg = "exact")
     @test sz_bp ≈ sz_exact

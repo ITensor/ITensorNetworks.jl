@@ -1,30 +1,14 @@
 @eval module $(gensym())
 using DataGraphs: underlying_graph
 using Graphs: nv
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using ITensorNetworks:
-    BeliefPropagationCache,
-    BilinearFormNetwork,
-    LinearFormNetwork,
-    QuadraticFormNetwork,
-    bra_network,
-    bra_vertex,
-    dual_index_map,
-    environment,
-    flatten_siteinds,
-    inner,
-    ket_network,
-    ket_vertex,
-    operator_network,
-    random_tensornetwork,
-    scalar,
-    siteinds,
-    state_vertices,
-    tensornetwork,
-    union_all_inds,
+using ITensorNetworks: BeliefPropagationCache, BilinearFormNetwork, LinearFormNetwork,
+    QuadraticFormNetwork, bra_network, bra_vertex, dual_index_map, environment,
+    flatten_siteinds, inner, ket_network, ket_vertex, operator_network,
+    random_tensornetwork, scalar, siteinds, state_vertices, tensornetwork, union_all_inds,
     update
 using ITensors: Index, contract, dag, inds, prime, random_itensor, sim
 using LinearAlgebra: norm
+using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset

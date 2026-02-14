@@ -37,13 +37,15 @@ end
 
 # Generate the kwargs for each region.
 function applyexp_regions(
-        graph, raw_exponent_step; order, nsites, update!_kwargs = (; nsites), remaining_kwargs...
+        graph, raw_exponent_step; order, nsites, update!_kwargs = (; nsites),
+        remaining_kwargs...
     )
     sweep_plan = []
 
     for (step, weight) in enumerate(applyexp_sub_steps(order))
         # Use this exponent step only if none provided
-        new_update!_kwargs = (; exponent_step = weight * raw_exponent_step, update!_kwargs...)
+        new_update!_kwargs =
+            (; exponent_step = weight * raw_exponent_step, update!_kwargs...)
 
         sweep_kwargs = (; remaining_kwargs..., update!_kwargs = new_update!_kwargs)
 

@@ -12,7 +12,10 @@ function insert!(region_iter, local_tensor; normalize = false, set_orthogonal_re
         indsTe = inds(psi[first(region)])
         tags = ITensors.tags(psi, e)
 
-        trunc_kwargs = truncation_parameters(region_iter.which_sweep; region_kwargs(factorize, region_iter)...)
+        trunc_kwargs = truncation_parameters(
+            region_iter.which_sweep;
+            region_kwargs(factorize, region_iter)...
+        )
         U, C, spectrum = factorize(
             local_tensor, indsTe; tags, trunc_kwargs...
         )

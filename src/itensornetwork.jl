@@ -1,7 +1,7 @@
+using .ITensorsExtensions: trivial_space
 using DataGraphs: DataGraphs, DataGraph
 using Dictionaries: Indices, dictionary
 using ITensors: ITensors, ITensor, op
-using .ITensorsExtensions: trivial_space
 using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
 
 struct Private end
@@ -217,7 +217,8 @@ function ITensorNetwork(
 end
 
 function ITensorNetwork(
-        itensor_constructor::Function, is::IndsNetwork; link_space = trivial_space(is), kwargs...
+        itensor_constructor::Function, is::IndsNetwork; link_space = trivial_space(is),
+        kwargs...
     )
     is = insert_linkinds(is; link_space)
     tn = ITensorNetwork{vertextype(is)}()

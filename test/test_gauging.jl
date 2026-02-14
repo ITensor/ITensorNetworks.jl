@@ -1,16 +1,9 @@
 @eval module $(gensym())
 using Compat: Compat
-using ITensorNetworks:
-    BeliefPropagationCache,
-    ITensorNetwork,
-    VidalITensorNetwork,
-    gauge_error,
-    messages,
-    random_tensornetwork,
-    siteinds,
-    update
-using ITensors: diag_itensor, inds, inner
+using ITensorNetworks: BeliefPropagationCache, ITensorNetwork, VidalITensorNetwork,
+    gauge_error, messages, random_tensornetwork, siteinds, update
 using ITensors.NDTensors: Algorithm, vector
+using ITensors: diag_itensor, inds, inner
 using LinearAlgebra: diag
 using NamedGraphs.NamedGraphGenerators: named_grid
 using StableRNGs: StableRNG
@@ -46,7 +39,8 @@ using Test: @test, @testset
     #Test all message tensors are approximately diagonal even when we keep running BP
     bp_cache = update(bp_cache; maxiter = 10)
     for m_e in values(messages(bp_cache))
-        @test diag_itensor(vector(diag(only(m_e))), inds(only(m_e))) ≈ only(m_e) atol = 1.0e-8
+        @test diag_itensor(vector(diag(only(m_e))), inds(only(m_e))) ≈ only(m_e) atol =
+            1.0e-8
     end
 end
 end

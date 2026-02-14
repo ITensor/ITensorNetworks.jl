@@ -1,11 +1,12 @@
-using Test: @test, @testset
-using ITensors
-using ITensorNetworks: ITensorNetworks, applyexp, dmrg, maxlinkdim, siteinds, time_evolve, ttn
-using Graphs: add_vertex!, add_edge!, vertices
-using NamedGraphs: NamedGraph
-using NamedGraphs.NamedGraphGenerators: named_path_graph
+using Graphs: add_edge!, add_vertex!, vertices
 using ITensorMPS: OpSum
-using TensorOperations: TensorOperations #For contraction order finding
+using ITensorNetworks:
+    ITensorNetworks, applyexp, dmrg, maxlinkdim, siteinds, time_evolve, ttn
+using ITensors
+using NamedGraphs.NamedGraphGenerators: named_path_graph
+using NamedGraphs: NamedGraph
+using TensorOperations: TensorOperations
+using Test: @test, @testset #For contraction order finding
 
 function chain_plus_ancilla(; nchain)
     g = NamedGraph()
@@ -22,7 +23,6 @@ function chain_plus_ancilla(; nchain)
 end
 
 @testset "Time Evolution" begin
-
     @testset "Test Tree Time Evolution" begin
         outputlevel = 0
 
@@ -105,18 +105,40 @@ end
         time_points = [0.0, 0.1, 0.25, 0.32, 0.4]
         times = Real[]
         function collect_times(sweep_iterator; kws...)
-            push!(times, ITensorNetworks.current_time(ITensorNetworks.problem(sweep_iterator)))
+            return push!(
+                times,
+                ITensorNetworks.current_time(ITensorNetworks.problem(sweep_iterator))
+            )
         end
-        time_evolve(H, time_points, psi0; factorize_kwargs, nsites, sweep_callback = collect_times, outputlevel = 1)
+        time_evolve(
+            H,
+            time_points,
+            psi0;
+            factorize_kwargs,
+            nsites,
+            sweep_callback = collect_times,
+            outputlevel = 1
+        )
         @test times ≈ time_points atol = 10 * eps(Float64)
 
         # Test that all exponents are reached and reported correctly
         exponent_points = [-0.0, -0.1, -0.25, -0.32, -0.4]
         exponents = Real[]
         function collect_exponents(sweep_iterator; kws...)
-            push!(exponents, ITensorNetworks.current_exponent(ITensorNetworks.problem(sweep_iterator)))
+            return push!(
+                exponents,
+                ITensorNetworks.current_exponent(ITensorNetworks.problem(sweep_iterator))
+            )
         end
-        applyexp(H, exponent_points, psi0; factorize_kwargs, nsites, sweep_callback = collect_exponents, outputlevel = 1)
+        applyexp(
+            H,
+            exponent_points,
+            psi0;
+            factorize_kwargs,
+            nsites,
+            sweep_callback = collect_exponents,
+            outputlevel = 1
+        )
         @test exponents ≈ exponent_points atol = 10 * eps(Float64)
     end
 end

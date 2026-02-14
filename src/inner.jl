@@ -7,7 +7,7 @@ function ITensors.inner(
         ϕ::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;
         alg = default_contract_alg((ϕ, ψ)),
-        kwargs...,
+        kwargs...
     )
     return inner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
@@ -17,7 +17,7 @@ function ITensors.inner(
         A::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;
         alg = default_contract_alg((ϕ, A, ψ)),
-        kwargs...,
+        kwargs...
     )
     return inner(Algorithm(alg), ϕ, A, ψ; kwargs...)
 end
@@ -28,7 +28,7 @@ function ITensors.inner(
         ψ::AbstractITensorNetwork;
         sequence = nothing,
         contraction_sequence_kwargs = (;),
-        kwargs...,
+        kwargs...
     )
     tn = inner_network(ϕ, ψ; kwargs...)
     if isnothing(sequence)
@@ -44,7 +44,7 @@ function ITensors.inner(
         ψ::AbstractITensorNetwork;
         sequence = nothing,
         contraction_sequence_kwargs = (;),
-        kwargs...,
+        kwargs...
     )
     tn = inner_network(ϕ, A, ψ; kwargs...)
     if isnothing(sequence)
@@ -57,7 +57,7 @@ function loginner(
         ϕ::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;
         alg = default_contract_alg((ϕ, ψ)),
-        kwargs...,
+        kwargs...
     )
     return loginner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
@@ -67,7 +67,7 @@ function loginner(
         A::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;
         alg = default_contract_alg((ϕ, A, ψ)),
-        kwargs...,
+        kwargs...
     )
     return loginner(Algorithm(alg), ϕ, A, ψ; kwargs...)
 end
@@ -83,7 +83,7 @@ function loginner(
         ϕ::AbstractITensorNetwork,
         A::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;
-        kwargs...,
+        kwargs...
     )
     return log(inner(alg, ϕ, A, ψ); kwargs...)
 end
@@ -93,7 +93,7 @@ function loginner(
         ϕ::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;
         dual_link_index_map = sim,
-        kwargs...,
+        kwargs...
     )
     tn = inner_network(ϕ, ψ; dual_link_index_map)
     return logscalar(alg, tn; kwargs...)
@@ -105,7 +105,7 @@ function loginner(
         A::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;
         dual_link_index_map = sim,
-        kwargs...,
+        kwargs...
     )
     tn = inner_network(ϕ, A, ψ; dual_link_index_map)
     return logscalar(alg, tn; kwargs...)
@@ -116,7 +116,7 @@ function ITensors.inner(
         ϕ::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;
         dual_link_index_map = sim,
-        kwargs...,
+        kwargs...
     )
     tn = inner_network(ϕ, ψ; dual_link_index_map)
     return scalar(alg, tn; kwargs...)
@@ -128,7 +128,7 @@ function ITensors.inner(
         A::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;
         dual_link_index_map = sim,
-        kwargs...,
+        kwargs...
     )
     tn = inner_network(ϕ, A, ψ; dual_link_index_map)
     return scalar(alg, tn; kwargs...)

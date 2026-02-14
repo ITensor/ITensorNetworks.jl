@@ -1,41 +1,10 @@
+using ITensors.NDTensors: Block, BlockOffsets, DenseTensor, DiagBlockSparseTensor,
+    NDTensors, Tensor, blockdim, blockoffsets, denseblocks, diaglength, getdiagindex,
+    nzblocks, setdiagindex!, svd, tensor
+using ITensors: ITensors, ITensor, Index, commonind, dag, dir, hasqns, indices, inds,
+    isdiag, itensor, map_diag, noncommonind, noprime, permute, replaceind, replaceinds, sim,
+    space, sqrt_decomp
 using LinearAlgebra: LinearAlgebra, eigen, pinv
-using ITensors:
-    ITensors,
-    ITensor,
-    Index,
-    commonind,
-    dag,
-    dir,
-    hasqns,
-    indices,
-    inds,
-    isdiag,
-    itensor,
-    map_diag,
-    noncommonind,
-    noprime,
-    permute,
-    replaceind,
-    replaceinds,
-    sim,
-    space,
-    sqrt_decomp
-using ITensors.NDTensors:
-    NDTensors,
-    Block,
-    Tensor,
-    blockdim,
-    blockoffsets,
-    denseblocks,
-    diaglength,
-    getdiagindex,
-    nzblocks,
-    setdiagindex!,
-    svd,
-    tensor,
-    DiagBlockSparseTensor,
-    DenseTensor,
-    BlockOffsets
 
 function NDTensors.blockoffsets(dense::DenseTensor)
     return BlockOffsets{ndims(dense)}([Block(ntuple(Returns(1), ndims(dense)))], [0])
@@ -81,7 +50,7 @@ function make_bosonic(A::ITensor, Linds, Rinds)
             "For fermionic exp, Linds and Rinds must have same directions within each set. Got dir.(Linds)=",
             dir.(Linds),
             ", dir.(Rinds)=",
-            dir.(Rinds),
+            dir.(Rinds)
         )
     end
     # permuted A^n will be sign free, ok to temporarily disable fermion system

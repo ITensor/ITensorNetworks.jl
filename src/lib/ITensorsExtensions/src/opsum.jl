@@ -1,8 +1,8 @@
 using ..BaseExtensions: maybe_real, to_tuple
 using Graphs: dst, edges, src
-using ITensors: ITensors
 using ITensors.LazyApply: Applied, Prod, Scaled, Sum
-using ITensors.Ops: Ops, Op
+using ITensors.Ops: Op, Ops
+using ITensors: ITensors
 using SplitApplyCombine: group
 
 # TODO: Rename this `replace_sites`?
@@ -32,7 +32,7 @@ end
 function group_terms(ℋ::Sum, g)
     grouped_terms = group(ITensors.terms(ℋ)) do t
         findfirst(edges(g)) do e
-            to_tuple.(ITensors.sites(t)) ⊆ [src(e), dst(e)]
+            return to_tuple.(ITensors.sites(t)) ⊆ [src(e), dst(e)]
         end
     end
     return Sum(collect(sum.(grouped_terms)))

@@ -1,20 +1,11 @@
 @eval module $(gensym())
 using Graphs: dfs_tree, nv, vertices
-# Trigger package extension.
 using GraphsFlows: GraphsFlows
-using ITensors: Index, ITensor, delta, noncommoninds, random_itensor
-using ITensorNetworks:
-    IndsNetwork,
-    ITensorNetwork,
-    _contract_deltas,
-    _contract_deltas_ignore_leaf_partitions,
-    _noncommoninds,
-    _partition,
-    binary_tree_structure,
-    eachtensor,
-    flatten_siteinds,
-    path_graph_structure,
+using ITensorNetworks: ITensorNetwork, IndsNetwork, _contract_deltas,
+    _contract_deltas_ignore_leaf_partitions, _noncommoninds, _partition,
+    binary_tree_structure, eachtensor, flatten_siteinds, path_graph_structure,
     random_tensornetwork
+using ITensors: ITensor, Index, delta, noncommoninds, random_itensor
 using NamedGraphs.GraphsExtensions: leaf_vertices, root_vertex
 using NamedGraphs.NamedGraphGenerators: named_grid
 using StableRNGs: StableRNG

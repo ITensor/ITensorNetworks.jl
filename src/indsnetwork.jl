@@ -1,13 +1,13 @@
+using .ITensorsExtensions: ITensorsExtensions, indtype
 using DataGraphs: DataGraphs, DataGraph, IsUnderlyingGraph, map_data, vertex_data
 using Dictionaries: AbstractDictionary, Dictionary, Indices
-using Graphs: Graphs
 using Graphs.SimpleGraphs: AbstractSimpleGraph
+using Graphs: Graphs
 using ITensors: Index, QN, dag
-using .ITensorsExtensions: ITensorsExtensions, indtype
-using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph
 using NamedGraphs.GraphsExtensions: vertextype
 using NamedGraphs.NamedGraphGenerators: named_path_graph
-using SimpleTraits: SimpleTraits, Not, @traitfn
+using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph
+using SimpleTraits: SimpleTraits, @traitfn, Not
 
 struct IndsNetwork{V, I} <: AbstractIndsNetwork{V, I}
     data_graph::DataGraph{V, Vector{I}, Vector{I}, NamedGraph{V}, NamedEdge{V}}
@@ -44,7 +44,9 @@ function IndsNetwork(data_graph::DataGraph)
     return IndsNetwork{vertextype(data_graph)}(data_graph)
 end
 
-@traitfn function IndsNetwork{V, I}(g::G) where {G <: DataGraph, V, I; !IsUnderlyingGraph{G}}
+@traitfn function IndsNetwork{V, I}(
+        g::G
+    ) where {G <: DataGraph, V, I; !IsUnderlyingGraph{G}}
     return _IndsNetwork(V, I, g)
 end
 
@@ -65,7 +67,11 @@ end
     return IndsNetwork{V, I}(g, link_space, site_space)
 end
 
-@traitfn function IndsNetwork(g::G, link_space, site_space) where {{G; IsUnderlyingGraph{G}}}
+@traitfn function IndsNetwork(
+        g::G,
+        link_space,
+        site_space
+    ) where {{G; IsUnderlyingGraph{G}}}
     V = vertextype(g)
     return IndsNetwork{V}(g, link_space, site_space)
 end
@@ -76,7 +82,7 @@ end
 function IndsNetwork{V, I}(
         g::AbstractNamedGraph,
         link_space::Dictionary{<:Any, <:Vector{<:Index}},
-        site_space::Dictionary{<:Any, <:Vector{<:Index}},
+        site_space::Dictionary{<:Any, <:Vector{<:Index}}
     ) where {V, I}
     dg = DataGraph{V}(g; vertex_data_eltype = Vector{I}, edge_data_eltype = Vector{I})
     for e in keys(link_space)
@@ -91,7 +97,7 @@ end
 function IndsNetwork{V, I}(
         g::AbstractSimpleGraph,
         link_space::Dictionary{<:Any, <:Vector{<:Index}},
-        site_space::Dictionary{<:Any, <:Vector{<:Index}},
+        site_space::Dictionary{<:Any, <:Vector{<:Index}}
     ) where {V, I}
     return IndsNetwork{V, I}(NamedGraph(g), link_space, site_space)
 end
@@ -141,7 +147,7 @@ end
         V::Type,
         I::Type{<:Index},
         g::::IsUnderlyingGraph,
-        link_spaces::Dictionary{<:Any, Vector{Int}},
+        link_spaces::Dictionary{<:Any, Vector{Int}}
     )
     # TODO: Convert `g` to vertex type `V`
     # @assert vertextype(g) == V
@@ -159,7 +165,7 @@ end
         V::Type,
         I::Type{<:Index},
         g::::IsUnderlyingGraph,
-        linkinds::AbstractDictionary{<:Any, Vector{<:Index}},
+        linkinds::AbstractDictionary{<:Any, Vector{<:Index}}
     )
     E = edgetype(g)
     return convert(Dictionary{E, Vector{I}}, linkinds)
@@ -169,7 +175,7 @@ end
         V::Type,
         I::Type{<:Index},
         g::::IsUnderlyingGraph,
-        linkinds::AbstractDictionary{<:Any, <:Index},
+        linkinds::AbstractDictionary{<:Any, <:Index}
     )
     return link_space_map(V, I, g, map(l -> [l], linkinds))
 end
@@ -206,7 +212,7 @@ end
         V::Type,
         I::Type{<:Index},
         g::::IsUnderlyingGraph,
-        link_space::AbstractDictionary{<:Any, <:Vector{<:Index}},
+        link_space::AbstractDictionary{<:Any, <:Vector{<:Index}}
     )
     return link_space
 end
@@ -215,7 +221,7 @@ end
         V::Type,
         I::Type{<:Index},
         g::::IsUnderlyingGraph,
-        siteinds::AbstractDictionary{<:Any, Vector{<:Index}},
+        siteinds::AbstractDictionary{<:Any, Vector{<:Index}}
     )
     return convert(Dictionary{V, Vector{I}}, siteinds)
 end
@@ -224,7 +230,7 @@ end
         V::Type,
         I::Type{<:Index},
         g::::IsUnderlyingGraph,
-        siteinds::AbstractDictionary{<:Any, <:Index},
+        siteinds::AbstractDictionary{<:Any, <:Index}
     )
     return site_space_map(V, I, g, map(s -> [s], siteinds))
 end
@@ -233,7 +239,7 @@ end
         V::Type,
         I::Type{<:Index},
         g::::IsUnderlyingGraph,
-        site_spaces::AbstractDictionary{<:Any, Vector{Int}},
+        site_spaces::AbstractDictionary{<:Any, Vector{Int}}
     )
     siteinds_dictionary = Dictionary{V, Vector{I}}()
     for v in keys(site_spaces)
@@ -263,7 +269,7 @@ end
         V::Type,
         I::Type{<:Index},
         g::::IsUnderlyingGraph,
-        site_spaces::AbstractDictionary{<:Any, Int},
+        site_spaces::AbstractDictionary{<:Any, Int}
     )
     return site_space_map(V, I, g, map(site_space -> [site_space], site_spaces))
 end
@@ -273,7 +279,7 @@ end
         V::Type,
         I::Type{<:Index},
         g::::IsUnderlyingGraph,
-        site_space::AbstractDictionary{<:Any, <:Vector{<:Index}},
+        site_space::AbstractDictionary{<:Any, <:Vector{<:Index}}
     )
     return site_space
 end

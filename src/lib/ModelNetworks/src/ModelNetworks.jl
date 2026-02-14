@@ -1,6 +1,6 @@
 module ModelNetworks
-using Graphs: degree, dst, edges, src
 using ..ITensorNetworks: IndsNetwork, delta_network, insert_linkinds, itensor
+using Graphs: degree, dst, edges, src
 using ITensors: commoninds, diag_itensor, inds, noprime
 using LinearAlgebra: Diagonal, eigen
 using NamedGraphs: NamedGraph
@@ -9,10 +9,10 @@ using NamedGraphs: NamedGraph
 BUILD Z OF CLASSICAL ISING MODEL ON A GIVEN GRAPH AT INVERSE TEMP BETA
 H = -\\sum_{(v,v') \\in edges}\\sigma^{z}_{v}\\sigma^{z}_{v'}
 OPTIONAL ARGUMENT:
-  h: EXTERNAL MAGNETIC FIELD
-  szverts: A LIST OF VERTICES OVER WHICH TO APPLY A SZ.
-    THE RESULTANT NETWORK CAN THEN BE CONTRACTED AND DIVIDED BY THE ACTUAL PARTITION FUNCTION TO GET THAT OBSERVABLE
-    INDSNETWORK IS ASSUMED TO BE BUILT FROM A GRAPH (NO SITE INDS) AND OF LINK SPACE 2
+h: EXTERNAL MAGNETIC FIELD
+szverts: A LIST OF VERTICES OVER WHICH TO APPLY A SZ.
+THE RESULTANT NETWORK CAN THEN BE CONTRACTED AND DIVIDED BY THE ACTUAL PARTITION FUNCTION TO GET THAT OBSERVABLE
+INDSNETWORK IS ASSUMED TO BE BUILT FROM A GRAPH (NO SITE INDS) AND OF LINK SPACE 2
 """
 function ising_network(
         eltype::Type, s::IndsNetwork, beta::Number; h::Number = 0.0, szverts = nothing
@@ -62,8 +62,10 @@ function ising_network(g::NamedGraph, beta::Number; h::Number = 0.0, szverts = n
     return ising_network(eltype(beta), g, beta; h, szverts)
 end
 
-"""Build the wavefunction whose norm is equal to Z of the classical ising model
-s needs to have site indices in this case!"""
+"""
+Build the wavefunction whose norm is equal to Z of the classical ising model
+s needs to have site indices in this case!
+"""
 function ising_network_state(eltype::Type, s::IndsNetwork, beta::Number; h::Number = 0.0)
     return ising_network(eltype, s, 0.5 * beta; h)
 end

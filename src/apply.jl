@@ -1,29 +1,10 @@
 using .BaseExtensions: maybe_real
 using Graphs: has_edge
-using LinearAlgebra: qr
-using ITensors: Ops
-using ITensors:
-    ITensors,
-    Index,
-    ITensor,
-    apply,
-    commonind,
-    commoninds,
-    contract,
-    dag,
-    denseblocks,
-    factorize,
-    factorize_svd,
-    hasqns,
-    isdiag,
-    noprime,
-    prime,
-    replaceind,
-    replaceinds,
-    unioninds,
-    uniqueinds
+using ITensors: ITensors, ITensor, Index, Ops, apply, commonind, commoninds, contract, dag,
+    denseblocks, factorize, factorize_svd, hasqns, isdiag, noprime, prime, replaceind,
+    replaceinds, unioninds, uniqueinds
 using KrylovKit: linsolve
-using LinearAlgebra: eigen, norm, svd
+using LinearAlgebra: eigen, norm, qr, svd
 using NamedGraphs: NamedEdge, has_edge
 
 function full_update_bp(
@@ -36,7 +17,7 @@ function full_update_bp(
         envisposdef = false,
         callback = Returns(nothing),
         symmetrize = false,
-        apply_kwargs...,
+        apply_kwargs...
     )
     outer_dim_v1, outer_dim_v2 = dim(uniqueinds(ψ[v⃗[1]], o, ψ[v⃗[2]])),
         dim(uniqueinds(ψ[v⃗[2]], o, ψ[v⃗[1]]))
@@ -62,7 +43,7 @@ function full_update_bp(
         nfullupdatesweeps,
         print_fidelity_loss,
         envisposdef,
-        apply_kwargs...,
+        apply_kwargs...
     )
     if symmetrize
         singular_values! = Ref(ITensor())
@@ -72,7 +53,7 @@ function full_update_bp(
             ortho = "none",
             tags = edge_tag(v⃗[1] => v⃗[2]),
             singular_values!,
-            apply_kwargs...,
+            apply_kwargs...
         )
         callback(; singular_values = singular_values![], truncation_error = spec.truncerr)
     end
@@ -112,17 +93,20 @@ function simple_update_bp_full(
     ψᵥ₁ᵥ₂ = contract(ψᵥ₁ᵥ₂_tn; sequence = contraction_sequence(ψᵥ₁ᵥ₂_tn; alg = "optimal"))
     oψ = apply(o, ψᵥ₁ᵥ₂)
     v1_inds = reduce(
-        vcat, [uniqueinds(sqrt_env_v1, ψ[v⃗[1]]) for sqrt_env_v1 in sqrt_envs_v1]; init = Index[]
+        vcat, [uniqueinds(sqrt_env_v1, ψ[v⃗[1]]) for sqrt_env_v1 in sqrt_envs_v1];
+        init = Index[]
     )
     v2_inds = reduce(
-        vcat, [uniqueinds(sqrt_env_v2, ψ[v⃗[2]]) for sqrt_env_v2 in sqrt_envs_v2]; init = Index[]
+        vcat, [uniqueinds(sqrt_env_v2, ψ[v⃗[2]]) for sqrt_env_v2 in sqrt_envs_v2];
+        init = Index[]
     )
     v1_inds = [v1_inds; siteinds(ψ, v⃗[1])]
     v2_inds = [v2_inds; siteinds(ψ, v⃗[2])]
     e = v⃗[1] => v⃗[2]
     singular_values! = Ref(ITensor())
     ψᵥ₁, ψᵥ₂, spec = factorize_svd(
-        oψ, v1_inds; ortho = "none", tags = edge_tag(e), singular_values!, apply_kwargs...
+        oψ, v1_inds; ortho = "none", tags = edge_tag(e), singular_values!,
+        apply_kwargs...
     )
     callback(; singular_values = singular_values![], truncation_error = spec.truncerr)
     for inv_sqrt_env_v1 in inv_sqrt_envs_v1
@@ -179,7 +163,7 @@ function simple_update_bp(
         ortho = "none",
         tags = edge_tag(e),
         singular_values!,
-        apply_kwargs...,
+        apply_kwargs...
     )
     callback(; singular_values = singular_values![], truncation_error = spec.truncerr)
     Qᵥ₁ = contract([Qᵥ₁; dag.(inv_sqrt_envs_v1)])
@@ -202,7 +186,7 @@ function ITensors.apply(
         variational_optimization_only = false,
         symmetrize = false,
         reduced = true,
-        apply_kwargs...,
+        apply_kwargs...
     )
     ψ = copy(ψ)
     v⃗ = neighbor_vertices(ψ, o)
@@ -236,7 +220,7 @@ function ITensors.apply(
                 envisposdef,
                 callback,
                 symmetrize,
-                apply_kwargs...,
+                apply_kwargs...
             )
         else
             if reduced
@@ -264,7 +248,7 @@ function ITensors.apply(
         ψ::AbstractITensorNetwork;
         normalize = false,
         ortho = false,
-        apply_kwargs...,
+        apply_kwargs...
     )
     o⃗ψ = ψ
     for oᵢ in o⃗
@@ -279,7 +263,7 @@ function ITensors.apply(
         cutoff = nothing,
         normalize = false,
         ortho = false,
-        apply_kwargs...,
+        apply_kwargs...
     )
     return maybe_real(Ops.coefficient(o⃗)) *
         apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho, apply_kwargs...)
@@ -321,8 +305,10 @@ function _contract_gate(o::AbstractEdge, ψv1, Λ, ψv2)
 end
 
 #In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
-"""Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
-Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site"""
+"""
+Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
+Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site
+"""
 function ITensors.apply(
         o::Union{NamedEdge, ITensor}, ψ::VidalITensorNetwork; normalize = false, apply_kwargs...
     )
@@ -353,7 +339,7 @@ function ITensors.apply(
             uniqueinds(Rᵥ₁, Rᵥ₂);
             lefttags = ITensorNetworks.edge_tag(e),
             righttags = ITensorNetworks.edge_tag(e),
-            apply_kwargs...,
+            apply_kwargs...
         )
 
         ind_to_replace = commonind(V, S)
@@ -365,13 +351,15 @@ function ITensors.apply(
 
         for vn in neighbors(ψ, src(e))
             if (vn != dst(e))
-                ψv1 = noprime(ψv1 * ITensorsExtensions.inv_diag(bond_tensor(ψ, vn => src(e))))
+                ψv1 =
+                    noprime(ψv1 * ITensorsExtensions.inv_diag(bond_tensor(ψ, vn => src(e))))
             end
         end
 
         for vn in neighbors(ψ, dst(e))
             if (vn != src(e))
-                ψv2 = noprime(ψv2 * ITensorsExtensions.inv_diag(bond_tensor(ψ, vn => dst(e))))
+                ψv2 =
+                    noprime(ψv2 * ITensorsExtensions.inv_diag(bond_tensor(ψ, vn => dst(e))))
             end
         end
 
@@ -394,14 +382,16 @@ end
 
 ### Full Update Routines ###
 
-"""Calculate the overlap of the gate acting on the previous p and q versus the new p and q in the presence of environments. This is the cost function that optimise_p_q will minimise"""
+"""
+Calculate the overlap of the gate acting on the previous p and q versus the new p and q in the presence of environments. This is the cost function that optimise_p_q will minimise
+"""
 function fidelity(
         envs::Vector{ITensor},
         p_cur::ITensor,
         q_cur::ITensor,
         p_prev::ITensor,
         q_prev::ITensor,
-        gate::ITensor,
+        gate::ITensor
     )
     p_sind, q_sind = commonind(p_cur, gate), commonind(q_cur, gate)
     p_sind_sim, q_sind_sim = sim(p_sind), sim(q_sind)
@@ -415,7 +405,7 @@ function fidelity(
             replaceind(prime(dag(q_prev)), prime(q_sind), q_sind_sim),
             gate_sq,
         ],
-        envs,
+        envs
     )
     sequence = contraction_sequence(term1_tns; alg = "optimal")
     term1 = ITensors.contract(term1_tns; sequence)
@@ -427,7 +417,7 @@ function fidelity(
             replaceind(prime(dag(p_cur)), prime(p_sind), p_sind),
             replaceind(prime(dag(q_cur)), prime(q_sind), q_sind),
         ],
-        envs,
+        envs
     )
     sequence = contraction_sequence(term2_tns; alg = "optimal")
     term2 = ITensors.contract(term2_tns; sequence)
@@ -439,8 +429,10 @@ function fidelity(
     return f * conj(f)
 end
 
-"""Do Full Update Sweeping, Optimising the tensors p and q in the presence of the environments envs,
-Specifically this functions find the p_cur and q_cur which optimise envs*gate*p*q*dag(prime(p_cur))*dag(prime(q_cur))"""
+"""
+Do Full Update Sweeping, Optimising the tensors p and q in the presence of the environments envs,
+Specifically this functions find the p_cur and q_cur which optimise envs*gate*p*q*dag(prime(p_cur))*dag(prime(q_cur))
+"""
 function optimise_p_q(
         p::ITensor,
         q::ITensor,
@@ -449,7 +441,7 @@ function optimise_p_q(
         nfullupdatesweeps = 10,
         print_fidelity_loss = false,
         envisposdef = true,
-        apply_kwargs...,
+        apply_kwargs...
     )
     p_cur, q_cur = factorize(
         apply(o, p * q), inds(p); tags = tags(commonind(p, q)), apply_kwargs...
@@ -469,9 +461,10 @@ function optimise_p_q(
     function M_p(envs::Vector{ITensor}, p_q_tensor::ITensor, s_ind, apply_tensor::ITensor)
         ts = vcat(
             ITensor[
-                p_q_tensor, replaceinds(prime(dag(p_q_tensor)), prime(s_ind), s_ind), apply_tensor,
+                p_q_tensor, replaceinds(prime(dag(p_q_tensor)), prime(s_ind), s_ind),
+                apply_tensor,
             ],
-            envs,
+            envs
         )
         sequence = contraction_sequence(ts; alg = "optimal")
         return noprime(ITensors.contract(ts; sequence))
@@ -488,7 +481,8 @@ function optimise_p_q(
         M_p_tilde_partial = partial(M_p, envs, p_cur, ps_ind)
 
         q_cur, info = linsolve(
-            M_p_tilde_partial, b_tilde_vec, q_cur; isposdef = envisposdef, ishermitian = false
+            M_p_tilde_partial, b_tilde_vec, q_cur; isposdef = envisposdef,
+            ishermitian = false
         )
     end
 
@@ -497,7 +491,7 @@ function optimise_p_q(
     diff = real(fend - fstart)
     if print_fidelity_loss && diff < -eps(diff) && nfullupdatesweeps >= 1
         println(
-            "Warning: Krylov Solver Didn't Find a Better Solution by Sweeping. Something might be amiss.",
+            "Warning: Krylov Solver Didn't Find a Better Solution by Sweeping. Something might be amiss."
         )
     end
 

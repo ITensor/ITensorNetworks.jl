@@ -1,14 +1,8 @@
 using DataGraphs: DataGraph
-using ITensors: Index, ITensor, delta, replaceinds, sim
-using ITensors.NDTensors: Algorithm, @Algorithm_str
-using NamedGraphs.GraphsExtensions:
-    disjoint_union,
-    is_binary_arborescence,
-    is_leaf_vertex,
-    pre_order_dfs_vertices,
-    rename_vertices,
-    root_vertex,
-    subgraph
+using ITensors.NDTensors: @Algorithm_str, Algorithm
+using ITensors: ITensor, Index, delta, replaceinds, sim
+using NamedGraphs.GraphsExtensions: disjoint_union, is_binary_arborescence, is_leaf_vertex,
+    pre_order_dfs_vertices, rename_vertices, root_vertex, subgraph
 
 function _binary_partition(tn::ITensorNetwork, source_inds::Vector{<:Index})
     external_inds = flatten_siteinds(tn)
@@ -59,18 +53,11 @@ end
 Given an input tn and a rooted binary tree of indices, return a partition of tn with the
 same binary tree structure as inds_btree.
 Note: in the output partition, we add multiple delta tensors to the network so that
-  the output graph is guaranteed to be the same binary tree as inds_btree.
+the output graph is guaranteed to be the same binary tree as inds_btree.
 Note: in the output partition, we add multiple scalar tensors. These tensors are used to
-  make the output partition connected, even if the input `tn` is disconnected.
+make the output partition connected, even if the input `tn` is disconnected.
 Note: in the output partition, tensor vertex names will be changed. For a given input
-  tensor with vertex name `v``, its name in the output partition will be `(v, 1)`. Any
-  delta tensor will have name `(v, 2)`, and any scalar tensor used to maintain the connectivity
-  of the partition will have name `(v, 3)`.
-Note: for a given binary tree with n indices, the output partition will contain 2n-1 vertices,
-  with each leaf vertex corresponding to a sub tn adjacent to one output index. Keeping these
-  leaf vertices in the partition makes later `approx_itensornetwork` algorithms more efficient.
-Note: name of vertices in the output partition are the same as the name of vertices
-  in `inds_btree`.
+tensor with vertex name ```v``, its name in the output partition will be ```(v, 1)`. Any delta tensor will have name `(v, 2)`, and any scalar tensor used to maintain the connectivity of the partition will have name `(v, 3)`. Note: for a given binary tree with n indices, the output partition will contain 2n-1 vertices, with each leaf vertex corresponding to a sub tn adjacent to one output index. Keeping these leaf vertices in the partition makes later `approx_itensornetwork`algorithms more efficient. Note: name of vertices in the output partition are the same as the name of vertices in`inds_btree`.
 """
 function _partition(
         ::Algorithm"mincut_recursive_bisection", tn::ITensorNetwork, inds_btree::DataGraph

@@ -12,7 +12,7 @@ function contract_approx(
         root,
         cutoff = 1.0e-15,
         maxdim = 10000,
-        contraction_sequence_kwargs,
+        contraction_sequence_kwargs
     )
     @assert is_tree(binary_tree_partition)
     @assert root in vertices(binary_tree_partition)
@@ -29,7 +29,7 @@ function contract_approx(
         root,
         cutoff,
         maxdim,
-        contraction_sequence_kwargs,
+        contraction_sequence_kwargs
     )
 end
 
@@ -39,7 +39,7 @@ function contract_approx(
         root,
         cutoff = 1.0e-15,
         maxdim = 10000,
-        contraction_sequence_kwargs,
+        contraction_sequence_kwargs
     )
     @assert is_tree(binary_tree_partition)
     @assert root in vertices(binary_tree_partition)
@@ -60,16 +60,21 @@ function contract_approx(
         inds_btree::DataGraph;
         cutoff = 1.0e-15,
         maxdim = 10000,
-        contraction_sequence_kwargs = (;),
+        contraction_sequence_kwargs = (;)
     )
     par = _partition(tn, inds_btree; alg = "mincut_recursive_bisection")
     output_tn, log_root_norm = contract_approx(
-        alg, par; root = root_vertex(inds_btree), cutoff, maxdim, contraction_sequence_kwargs
+        alg, par; root = root_vertex(inds_btree), cutoff, maxdim,
+        contraction_sequence_kwargs
     )
     # Each leaf vertex in `output_tn` is adjacent to one output index.
     # We remove these leaf vertices so that each non-root vertex in `output_tn`
     # is an order 3 tensor.
-    _rem_leaf_vertices!(output_tn; root = root_vertex(inds_btree), contraction_sequence_kwargs)
+    _rem_leaf_vertices!(
+        output_tn;
+        root = root_vertex(inds_btree),
+        contraction_sequence_kwargs
+    )
     return output_tn, log_root_norm
 end
 
@@ -83,7 +88,7 @@ function contract_approx(
         output_structure::Function = path_graph_structure;
         cutoff = 1.0e-15,
         maxdim = 10000,
-        contraction_sequence_kwargs = (;),
+        contraction_sequence_kwargs = (;)
     )
     inds_btree = output_structure(tn)
     return contract_approx(alg, tn, inds_btree; cutoff, maxdim, contraction_sequence_kwargs)
@@ -96,7 +101,7 @@ function contract_approx(
         root,
         cutoff = 1.0e-15,
         maxdim = 10000,
-        contraction_sequence_kwargs = (;),
+        contraction_sequence_kwargs = (;)
     )
     return contract_approx(
         Algorithm(alg), partitioned_tn; root, cutoff, maxdim, contraction_sequence_kwargs
@@ -109,7 +114,7 @@ function contract_approx(
         alg::String,
         cutoff = 1.0e-15,
         maxdim = 10000,
-        contraction_sequence_kwargs = (;),
+        contraction_sequence_kwargs = (;)
     )
     return contract_approx(
         Algorithm(alg), tn, inds_btree; cutoff, maxdim, contraction_sequence_kwargs
@@ -122,7 +127,7 @@ function contract_approx(
         alg::String,
         cutoff = 1.0e-15,
         maxdim = 10000,
-        contraction_sequence_kwargs = (;),
+        contraction_sequence_kwargs = (;)
     )
     return contract_approx(
         Algorithm(alg), tn, output_structure; cutoff, maxdim, contraction_sequence_kwargs

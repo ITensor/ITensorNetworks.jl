@@ -14,10 +14,10 @@ makedocs(;
     format = Documenter.HTML(;
         canonical = "https://itensor.github.io/ITensorNetworks.jl",
         edit_link = "main",
-        assets = ["assets/favicon.ico", "assets/extras.css"],
+        assets = ["assets/favicon.ico", "assets/extras.css"]
     ),
     pages = ["Home" => "index.md", "Reference" => "reference.md"],
-    warnonly = true,
+    warnonly = true
 )
 
 deploydocs(;

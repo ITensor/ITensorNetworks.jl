@@ -1,10 +1,10 @@
+using .ITensorsExtensions: is_delta
 using DataStructures: DataStructures, DisjointSets, find_root!
 using ITensors.NDTensors: ind
-using .ITensorsExtensions: is_delta
 
 """
 Rewrite of the function
-  `DataStructures.root_union!(s::IntDisjointSet{T}, x::T, y::T) where {T<:Integer}`.
+`DataStructures.root_union!(s::IntDisjointSet{T}, x::T, y::T) where {T<:Integer}`.
 """
 function _introot_union!(s::DataStructures.IntDisjointSets, x, y; left_root = true)
     parents = s.parents
@@ -63,27 +63,27 @@ the same tensor network but with less delta tensors.
 
 ========
 Example:
-  julia> is = [Index(2, string(i)) for i in 1:6]
-  julia> a = ITensor(is[1], is[2])
-  julia> b = ITensor(is[2], is[3])
-  julia> delta1 = delta(is[3], is[4])
-  julia> delta2 = delta(is[5], is[6])
-  julia> tn = ITensorNetwork([a, b, delta1, delta2])
-  julia> ITensorNetworks._contract_deltas(tn)
-  ITensorNetwork{Int64} with 3 vertices:
-  3-element Vector{Int64}:
-   1
-   2
-   4
+julia> is = [Index(2, string(i)) for i in 1:6]
+julia> a = ITensor(is[1], is[2])
+julia> b = ITensor(is[2], is[3])
+julia> delta1 = delta(is[3], is[4])
+julia> delta2 = delta(is[5], is[6])
+julia> tn = ITensorNetwork([a, b, delta1, delta2])
+julia> ITensorNetworks._contract_deltas(tn)
+ITensorNetwork{Int64} with 3 vertices:
+3-element Vector{Int64}:
+1
+2
+4
 
-  and 1 edge(s):
-  1 => 2
+and 1 edge(s):
+1 => 2
 
-  with vertex data:
-  3-element Dictionaries.Dictionary{Int64, Any}
-   1 │ ((dim=2|id=457|"1"), (dim=2|id=296|"2"))
-   2 │ ((dim=2|id=296|"2"), (dim=2|id=613|"4"))
-   4 │ ((dim=2|id=626|"6"), (dim=2|id=237|"5"))
+with vertex data:
+3-element Dictionaries.Dictionary{Int64, Any}
+1 │ ((dim=2|id=457|"1"), (dim=2|id=296|"2"))
+2 │ ((dim=2|id=296|"2"), (dim=2|id=613|"4"))
+4 │ ((dim=2|id=626|"6"), (dim=2|id=237|"5"))
 """
 function _contract_deltas(tn::ITensorNetwork)
     deltas = filter(is_delta, collect(eachtensor(tn)))
@@ -122,7 +122,7 @@ Given an input `partition`, contract redundent delta tensors of non-leaf vertice
 in `partition` without changing the tensor network value.
 `root` is the root of the dfs_tree that defines the leaves.
 Note: for each vertex `v` of `partition`, the number of non-delta tensors
-  in `partition[v]` will not be changed.
+in `partition[v]` will not be changed.
 Note: only delta tensors of non-leaf vertices will be contracted.
 Note: this function assumes that all noncommoninds of the partition are in leaf partitions.
 """
@@ -138,7 +138,8 @@ function _contract_deltas_ignore_leaf_partitions(
     nonleaves_tn = _contract_deltas(reduce(union, [partition[v] for v in nonleaves]))
     nondelta_vs = filter(v -> !is_delta(nonleaves_tn[v]), vertices(nonleaves_tn))
     for v in nonleaves
-        partition[v] = subgraph(nonleaves_tn, intersect(nondelta_vs, vertices(partition[v])))
+        partition[v] =
+            subgraph(nonleaves_tn, intersect(nondelta_vs, vertices(partition[v])))
     end
     # Note: we also need to change inds in the leaves since they can be connected by deltas
     # in nonleaf vertices

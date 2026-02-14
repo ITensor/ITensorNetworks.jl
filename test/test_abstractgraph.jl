@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using Graphs: add_edge!, add_vertex!
+using NamedGraphs.GraphsExtensions: is_binary_arborescence, is_rooted, root_vertex
 using NamedGraphs: NamedDiGraph
-using NamedGraphs.GraphsExtensions: root_vertex, is_rooted, is_binary_arborescence
 using Test: @test, @testset
 
 @testset "test rooted directed graphs" begin

@@ -1,20 +1,12 @@
 using Graphs: IsDirected
-using SplitApplyCombine: group
-using LinearAlgebra: diag, dot
 using ITensors: dir
-using NamedGraphs.PartitionedGraphs:
-    AbstractPartitionedGraph,
-    PartitionedGraphs,
-    PartitionedGraph,
-    QuotientVertex,
-    boundary_quotientedges,
-    partitioned_vertices,
-    quotient_graph,
-    quotientedges,
-    quotientvertices,
-    unpartitioned_graph
-using SimpleTraits: SimpleTraits, Not, @traitfn
+using LinearAlgebra: diag, dot
 using NDTensors: NDTensors, Algorithm
+using NamedGraphs.PartitionedGraphs: AbstractPartitionedGraph, PartitionedGraph,
+    PartitionedGraphs, QuotientVertex, boundary_quotientedges, partitioned_vertices,
+    quotient_graph, quotientedges, quotientvertices, unpartitioned_graph
+using SimpleTraits: SimpleTraits, @traitfn, Not
+using SplitApplyCombine: group
 
 function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
     return (; partitioned_vertices = default_partitioned_vertices(ψ))
@@ -43,7 +35,7 @@ end
 function BeliefPropagationCache(
         tn::AbstractITensorNetwork;
         partitioned_vertices = default_partitioned_vertices(tn),
-        kwargs...,
+        kwargs...
     )
     return BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
 end
@@ -89,7 +81,11 @@ function set_default_kwargs(alg::Algorithm"bp", bp_cache::BeliefPropagationCache
     edge_sequence = get(alg.kwargs, :edge_sequence, default_bp_edge_sequence(bp_cache))
     tol = get(alg.kwargs, :tol, default_tol(alg))
     message_update_alg = set_default_kwargs(
-        get(alg.kwargs, :message_update_alg, Algorithm(default_message_update_alg(bp_cache)))
+        get(
+            alg.kwargs,
+            :message_update_alg,
+            Algorithm(default_message_update_alg(bp_cache))
+        )
     )
     return Algorithm("bp"; verbose, maxiter, edge_sequence, tol, message_update_alg)
 end
