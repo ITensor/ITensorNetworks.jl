@@ -2,10 +2,10 @@ using Graphs: add_edge!, add_vertex!
 using NamedGraphs: NamedGraph
 
 """
-  build_tree
+build_tree
 
-  Make a tree with central vertex (0,0) and
-  nbranch branches of nbranch_sites each.
+Make a tree with central vertex (0,0) and
+nbranch branches of nbranch_sites each.
 """
 function build_tree(; nbranch = 3, nbranch_sites = 3)
     g = NamedGraph()

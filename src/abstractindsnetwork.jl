@@ -1,10 +1,9 @@
-using ITensors: IndexSet
+using .ITensorsExtensions: ITensorsExtensions, promote_indtype
 using DataGraphs: DataGraphs, AbstractDataGraph, edge_data, vertex_data
 using Graphs: Graphs, AbstractEdge
-using ITensors: ITensors, unioninds, uniqueinds
-using .ITensorsExtensions: ITensorsExtensions, promote_indtype
-using NamedGraphs: NamedGraphs
+using ITensors: ITensors, IndexSet, unioninds, uniqueinds
 using NamedGraphs.GraphsExtensions: incident_edges, rename_vertices
+using NamedGraphs: NamedGraphs
 
 abstract type AbstractIndsNetwork{V, I} <: AbstractDataGraph{V, Vector{I}, Vector{I}} end
 
@@ -132,7 +131,7 @@ end
 function insert_linkinds(
         indsnetwork::AbstractIndsNetwork,
         edges = edges(indsnetwork);
-        link_space = trivial_space(indsnetwork),
+        link_space = trivial_space(indsnetwork)
     )
     indsnetwork = copy(indsnetwork)
     for e in edges

@@ -81,7 +81,7 @@ function interleave(a::Vector, b::Vector)
         return append!(ab, [last(a)])
     else
         error(
-            "Trying to interleave vectors of length $(length(a)) and $(length(b)), not implemented.",
+            "Trying to interleave vectors of length $(length(a)) and $(length(b)), not implemented."
         )
     end
 end

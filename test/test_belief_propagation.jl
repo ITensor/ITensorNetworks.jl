@@ -1,38 +1,19 @@
 @eval module $(gensym())
 using Compat: Compat
 using Graphs: vertices
-# Trigger package extension.
-using ITensorNetworks:
-    ITensorNetworks,
-    BeliefPropagationCache,
-    ⊗,
-    @preserve_graph,
-    combine_linkinds,
-    contract,
-    contraction_sequence,
-    eachtensor,
-    environment,
-    inner_network,
-    linkinds_combiners,
-    message,
-    partitioned_tensornetwork,
-    random_tensornetwork,
-    scalar,
-    siteinds,
-    split_index,
-    tensornetwork,
-    update,
-    update_factor,
-    updated_message,
-    message_diff
-using ITensors:
-    ITensors, ITensor, Algorithm, combiner, dag, inds, inner, op, prime, random_itensor
 using ITensorNetworks.ModelNetworks: ModelNetworks
+using ITensorNetworks: ITensorNetworks, @preserve_graph, BeliefPropagationCache,
+    combine_linkinds, contract, contraction_sequence, eachtensor, environment,
+    inner_network, linkinds_combiners, message, message_diff, partitioned_tensornetwork,
+    random_tensornetwork, scalar, siteinds, split_index, tensornetwork, update,
+    update_factor, updated_message, ⊗
 using ITensors.NDTensors: array
+using ITensors:
+    ITensors, Algorithm, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
 using LinearAlgebra: eigvals, tr
-using NamedGraphs: NamedEdge, NamedGraph
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NamedGraphs.PartitionedGraphs: quotientedges
+using NamedGraphs: NamedEdge, NamedGraph
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
@@ -66,7 +47,8 @@ using Test: @test, @testset
         bpc = update(bpc; alg = "bp", maxiter = 25, tol = eps(real(elt)))
         #Test messages are converged
         for pe in quotientedges(bpc)
-            @test message_diff(updated_message(bpc, pe), message(bpc, pe)) < 10 * eps(real(elt))
+            @test message_diff(updated_message(bpc, pe), message(bpc, pe)) <
+                10 * eps(real(elt))
             @test eltype(only(message(bpc, pe))) == elt
         end
         #Test updating the underlying tensornetwork in the cache
@@ -82,9 +64,12 @@ using Test: @test, @testset
 
         ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
         env_tensors = environment(bpc, [(v, 2) for v in vs])
-        rdm = contract(vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]))
+        rdm =
+            contract(vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]))
 
-        rdm = array((rdm * combiner(inds(rdm; plev = 0)...)) * combiner(inds(rdm; plev = 1)...))
+        rdm = array(
+            (rdm * combiner(inds(rdm; plev = 0)...)) * combiner(inds(rdm; plev = 1)...)
+        )
         rdm /= tr(rdm)
 
         eigs = eigvals(rdm)

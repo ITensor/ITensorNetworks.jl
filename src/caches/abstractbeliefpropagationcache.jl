@@ -1,19 +1,13 @@
 using Adapt: Adapt, adapt, adapt_structure
 using Graphs: Graphs, IsDirected
-using SplitApplyCombine: group
-using LinearAlgebra: diag, dot
 using ITensors: dir
-using NamedGraphs.PartitionedGraphs:
-    PartitionedGraphs,
-    PartitionedGraph,
-    QuotientVertex,
-    boundary_quotientedges,
-    quotientvertices,
-    quotientedges,
-    unpartitioned_graph
-using SimpleTraits: SimpleTraits, Not, @traitfn
-using NamedGraphs.SimilarType: SimilarType
+using LinearAlgebra: diag, dot
 using NDTensors: NDTensors
+using NamedGraphs.PartitionedGraphs: PartitionedGraph, PartitionedGraphs, QuotientVertex,
+    boundary_quotientedges, quotientedges, quotientvertices, unpartitioned_graph
+using NamedGraphs.SimilarType: SimilarType
+using SimpleTraits: SimpleTraits, @traitfn, Not
+using SplitApplyCombine: group
 
 abstract type AbstractBeliefPropagationCache{V, PV} <: AbstractITensorNetwork{V} end
 
@@ -119,7 +113,7 @@ end
 function incoming_messages(
         bpc::AbstractBeliefPropagationCache,
         partition_vertices::Vector{<:QuotientVertex};
-        ignore_edges = (),
+        ignore_edges = ()
     )
     bpes = boundary_quotientedges(bpc, partition_vertices; dir = :in)
     ms = messages(bpc, setdiff(bpes, ignore_edges))
@@ -251,7 +245,7 @@ function set_message(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge, mess
 end
 function delete_messages!(
         bpc::AbstractBeliefPropagationCache,
-        pes::Vector{<:QuotientEdge} = keys(messages(bpc)),
+        pes::Vector{<:QuotientEdge} = keys(messages(bpc))
     )
     ms = messages(bpc)
     for pe in pes
@@ -264,7 +258,7 @@ function delete_message!(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge)
 end
 function delete_messages(
         bpc::AbstractBeliefPropagationCache,
-        pes::Vector{<:QuotientEdge} = keys(messages(bpc)),
+        pes::Vector{<:QuotientEdge} = keys(messages(bpc))
     )
     bpc = copy(bpc)
     return delete_messages!(bpc, pes)
@@ -306,7 +300,7 @@ function updated_message(
         bpc::AbstractBeliefPropagationCache,
         edge::QuotientEdge;
         alg = default_message_update_alg(bpc),
-        kwargs...,
+        kwargs...
     )
     return updated_message(set_default_kwargs(Algorithm(alg; kwargs...)), bpc, edge)
 end
@@ -324,7 +318,7 @@ function update_iteration(
         alg::Algorithm"bp",
         bpc::AbstractBeliefPropagationCache,
         edges::Vector;
-        (update_diff!) = nothing,
+        (update_diff!) = nothing
     )
     bpc = copy(bpc)
     for e in edges
@@ -346,7 +340,7 @@ function update_iteration(
         alg::Algorithm"bp",
         bpc::AbstractBeliefPropagationCache,
         edge_groups::Vector{<:Vector{<:QuotientEdge}};
-        (update_diff!) = nothing,
+        (update_diff!) = nothing
     )
     new_mts = empty(messages(bpc))
     for edges in edge_groups
@@ -379,7 +373,11 @@ function update(alg::Algorithm"bp", bpc::AbstractBeliefPropagationCache)
     return bpc
 end
 
-function update(bpc::AbstractBeliefPropagationCache; alg = default_update_alg(bpc), kwargs...)
+function update(
+        bpc::AbstractBeliefPropagationCache;
+        alg = default_update_alg(bpc),
+        kwargs...
+    )
     return update(set_default_kwargs(Algorithm(alg; kwargs...), bpc), bpc)
 end
 
@@ -396,7 +394,7 @@ end
 function rescale_partitions(
         bpc::AbstractBeliefPropagationCache,
         partitions::Vector;
-        verts::Vector = vertices(bpc, partitions),
+        verts::Vector = vertices(bpc, partitions)
     )
     bpc = copy(bpc)
     tn = tensornetwork(bpc)

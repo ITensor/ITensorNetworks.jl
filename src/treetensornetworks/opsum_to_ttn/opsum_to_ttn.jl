@@ -1,10 +1,10 @@
 #using FillArrays: OneElement
 #using DataGraphs: DataGraph
 using Graphs: degree, is_tree
-using ITensors: flux, has_fermion_string, itensor, removeqns, space
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks, truncate!
-using ITensors.Ops: argument, coefficient, Op, OpSum, name, params, site, terms, which_op
+using ITensors.Ops: Op, OpSum, argument, coefficient, name, params, site, terms, which_op
+using ITensors: flux, has_fermion_string, itensor, removeqns, space
 using NamedGraphs.GraphsExtensions:
     GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
 using StaticArrays: MVector
@@ -93,7 +93,7 @@ function make_symbolic_ttn(
         ordered_verts,
         ordered_edges,
         root_vertex,
-        term_qn_map,
+        term_qn_map
     )
     inmaps = Dict{Pair{edgetype(sites), QN}, Dict{Vector{Op}, Int}}()
     outmaps = Dict{Pair{edgetype(sites), QN}, Dict{Vector{Op}, Int}}()
@@ -134,7 +134,8 @@ function make_symbolic_ttn(
         # TODO: better way to make which_incident_edge below?
         subgraphs = split_at_vertex(sites, v)
         _boundary_edges = [
-            only(boundary_edges(underlying_graph(sites), subgraph)) for subgraph in subgraphs
+            only(boundary_edges(underlying_graph(sites), subgraph)) for
+                subgraph in subgraphs
         ]
         _boundary_edges = align_edges(_boundary_edges, edges)
         which_incident_edge = Dict(
@@ -142,7 +143,7 @@ function make_symbolic_ttn(
                 [
                     subgraphs[i] .=> ((_boundary_edges[i]),) for i in eachindex(subgraphs)
                 ]
-            ),
+            )
         )
 
         # Sanity check, leaves only have single incoming or outgoing edge
@@ -166,7 +167,8 @@ function make_symbolic_ttn(
             non_onsite_ops = setdiff(ops, onsite_ops)
 
             # Filter out ops that come in from the direction of the incoming edge
-            incoming_ops = filter(t -> which_incident_edge[site(t)] == edge_in, non_onsite_ops)
+            incoming_ops =
+                filter(t -> which_incident_edge[site(t)] == edge_in, non_onsite_ops)
 
             # Also store all non-incoming ops in standard order, used for channel merging
             non_incoming_ops = filter(
@@ -209,14 +211,16 @@ function make_symbolic_ttn(
             for dout in dims_out
                 out_edge = edges[dout]
                 out_op = outgoing_ops[out_edge]
-                coutmap = get!(outmaps, out_edge => term_qn_map(out_op), Dict{Vector{Op}, Int}())
+                coutmap =
+                    get!(outmaps, out_edge => term_qn_map(out_op), Dict{Vector{Op}, Int}())
                 # Add outgoing channel
                 T_inds[dout] = pos_in_link!(coutmap, out_op)
                 T_qns[dout] = term_qn_map(out_op)
             end
             # If term starts at this site, add its coefficient as a site factor
             site_coef = one(coefficient_type)
-            if (isnothing(dim_in) || T_inds[dim_in] == -1) && argument(term) ∉ site_coef_done
+            if (isnothing(dim_in) || T_inds[dim_in] == -1) &&
+                    argument(term) ∉ site_coef_done
                 site_coef = convert(coefficient_type, coefficient(term))
                 push!(site_coef_done, argument(term))
             end
@@ -284,7 +288,8 @@ function compress_ttn(
     for e in ordered_edges
         operator_blocks = [q => size(Vq, 2) for (q, Vq) in Vs[e]]
         link_space[e] = Index(
-            QN() => 1, operator_blocks..., Hflux => 1; tags = edge_tag(e), dir = linkdir_ref
+            QN() => 1, operator_blocks..., Hflux => 1; tags = edge_tag(e),
+            dir = linkdir_ref
         )
     end
 
@@ -309,7 +314,8 @@ function compress_ttn(
         linkinds = [link_space[e] for e in edges]
 
         # construct blocks
-        blocks = Dict{Tuple{Block{v_degree}, Vector{Op}}, Array{coefficient_type, v_degree}}()
+        blocks =
+            Dict{Tuple{Block{v_degree}, Vector{Op}}, Array{coefficient_type, v_degree}}()
         for el in symbolic_ttn[v]
             t = el.val
             (abs(coefficient(t)) > eps(real(coefficient_type))) || continue
@@ -318,7 +324,8 @@ function compress_ttn(
             T_qns = el.qn_idxs
             ct = convert(coefficient_type, coefficient(t))
             sublinkdims = [
-                (T_inds[i] == -1 ? 1 : qnblockdim(linkinds[i], T_qns[i])) for i in 1:v_degree
+                (T_inds[i] == -1 ? 1 : qnblockdim(linkinds[i], T_qns[i])) for
+                    i in 1:v_degree
             ]
             zero_arr() = zeros(coefficient_type, sublinkdims...)
             terminal_dims = findall(d -> T_inds[d] == -1, 1:v_degree)   # directions in which term starts or ends
@@ -477,7 +484,8 @@ function ttn_svd(
     ordered_edges = _default_edge_ordering(sites, root_vertex)
 
     symbolic_ttn, inbond_coefs = make_symbolic_ttn(
-        coefficient_type, os, sites; ordered_verts, ordered_edges, root_vertex, term_qn_map
+        coefficient_type, os, sites; ordered_verts, ordered_edges, root_vertex,
+        term_qn_map
     )
 
     Vs = svd_bond_coefs(
@@ -630,14 +638,14 @@ end
 """
     ttn(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
     ttn(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
-       
+
 Convert an OpSum object `os` to a TreeTensorNetwork, with indices given by `sites`.
 """
 function ttn(
         os::OpSum,
         sites::IndsNetwork;
         root_vertex = GraphsExtensions.default_root_vertex(sites),
-        kwargs...,
+        kwargs...
     )
     length(terms(os)) == 0 && error("OpSum has no terms")
     is_tree(sites) || error("Site index graph must be a tree.")

@@ -1,5 +1,5 @@
 using Dictionaries: Dictionary, set!
-using ITensors: Op, op, contract, which_op
+using ITensors: Op, contract, op, which_op
 
 default_expect_alg() = "bp"
 
@@ -27,7 +27,7 @@ function expect(
         update_cache = isnothing(cache!),
         cache_update_kwargs = (;),
         cache_construction_kwargs = (;),
-        kwargs...,
+        kwargs...
     )
     ψIψ = QuadraticFormNetwork(ψ)
     if isnothing(cache!)
@@ -56,6 +56,11 @@ function expect(
     return expect(Algorithm(alg), ψ, [Op(op, vertex) for vertex in vertices]; kwargs...)
 end
 
-function expect(ψ::AbstractITensorNetwork, op::String; alg = default_expect_alg(), kwargs...)
+function expect(
+        ψ::AbstractITensorNetwork,
+        op::String;
+        alg = default_expect_alg(),
+        kwargs...
+    )
     return expect(ψ, op, vertices(ψ); alg, kwargs...)
 end

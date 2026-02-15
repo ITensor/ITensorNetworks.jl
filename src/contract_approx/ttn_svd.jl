@@ -14,7 +14,7 @@ function _approx_itensornetwork_ttn_svd!(
         root = first(vertices(partition)),
         cutoff = 1.0e-15,
         maxdim = 10000,
-        contraction_sequence_kwargs,
+        contraction_sequence_kwargs
     )
     tn = ITensorNetwork{vertextype(input_partition)}()
     for v in vertices(input_partition)

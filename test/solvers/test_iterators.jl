@@ -1,5 +1,5 @@
+using ITensorNetworks: SweepIterator, compute!, eachregion, increment!, islaststep, state
 using Test: @test, @testset
-using ITensorNetworks: SweepIterator, islaststep, state, increment!, compute!, eachregion
 
 module TestIteratorUtils
 
@@ -14,7 +14,6 @@ module TestIteratorUtils
         push!(ITensorNetworks.problem(iter).data, kwargs.val)
         return iter
     end
-
 
     mutable struct TestIterator <: ITensorNetworks.AbstractNetworkIterator
         state::Int
@@ -45,7 +44,6 @@ module TestIteratorUtils
 end
 
 @testset "Iterators" begin
-
     import .TestIteratorUtils
 
     @testset "`AbstractNetworkIterator` Interface" begin
@@ -107,7 +105,6 @@ end
         @test length(cb) == 5
         @test cb == TI.output
 
-
         TI = TestIteratorUtils.TestIterator(1, 5, [])
     end
 
@@ -116,7 +113,6 @@ end
         SA = TestIteratorUtils.SquareAdapter(TI)
 
         @testset "Generic" begin
-
             i = 0
             for rv in SA
                 i += 1
@@ -135,7 +131,6 @@ end
             @test SA_c isa Vector
             @test length(SA_c) == 5
             @test SA_c == [1, 4, 9, 16, 25]
-
         end
 
         @testset "EachRegion" begin
@@ -170,7 +165,6 @@ end
 
             @test prob.data[1:2:end] == fill(1, 5)
             @test prob.data[2:2:end] == fill(2, 5)
-
         end
     end
 end

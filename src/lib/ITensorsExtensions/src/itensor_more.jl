@@ -1,7 +1,7 @@
-using NamedGraphs.Keys: Key
-using ITensors: ITensors, Index, ITensor, QN, filterinds, inds, op, replaceinds, uniqueinds
-using ITensors.NDTensors: NDTensors
 using Dictionaries: AbstractDictionary, Dictionary
+using ITensors.NDTensors: NDTensors
+using ITensors: ITensors, ITensor, Index, QN, filterinds, inds, op, replaceinds, uniqueinds
+using NamedGraphs.Keys: Key
 
 # Tensor sum: `A ⊞ B = A ⊗ Iᴮ + Iᴬ ⊗ B`
 # https://github.com/JuliaLang/julia/issues/13333#issuecomment-143825995

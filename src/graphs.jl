@@ -1,4 +1,4 @@
-using Graphs.SimpleGraphs: SimpleGraphs, SimpleGraph
+using Graphs.SimpleGraphs: SimpleGraph, SimpleGraphs
 using ITensors: ITensor, hascommoninds
 
 function SimpleGraphs.SimpleGraph(itensors::Vector{ITensor})

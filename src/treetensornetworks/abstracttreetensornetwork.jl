@@ -1,14 +1,9 @@
 using Graphs: has_vertex
-using NamedGraphs.GraphsExtensions:
-    GraphsExtensions,
-    edge_path,
-    leaf_vertices,
-    post_order_dfs_edges,
-    post_order_dfs_vertices,
-    a_star
-using NamedGraphs: namedgraph_a_star, steiner_tree
+using ITensors: ITensors, @Algorithm_str, Algorithm, directsum, hasinds, permute, plev
 using IsApprox: IsApprox, Approx
-using ITensors: ITensors, Algorithm, @Algorithm_str, directsum, hasinds, permute, plev
+using NamedGraphs.GraphsExtensions: GraphsExtensions, a_star, edge_path, leaf_vertices,
+    post_order_dfs_edges, post_order_dfs_vertices
+using NamedGraphs: namedgraph_a_star, steiner_tree
 using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
@@ -181,7 +176,8 @@ end
 
 # TODO: stick with this traversal or find optimal contraction sequence?
 function loginner(
-        tn1::AbstractTTN, tn2::AbstractTTN; root_vertex = GraphsExtensions.default_root_vertex(tn1)
+        tn1::AbstractTTN, tn2::AbstractTTN;
+        root_vertex = GraphsExtensions.default_root_vertex(tn1)
     )
     N = nv(tn1)
     if nv(tn2) != N
@@ -224,7 +220,7 @@ function Base.:+(
         tns::AbstractTTN...;
         cutoff = 1.0e-15,
         root_vertex = GraphsExtensions.default_root_vertex(first(tns)),
-        kwargs...,
+        kwargs...
     )
     return error("Not implemented (yet) for trees.")
 end
@@ -232,7 +228,7 @@ end
 function Base.:+(
         ::Algorithm"directsum",
         tns::AbstractTTN...;
-        root_vertex = GraphsExtensions.default_root_vertex(first(tns)),
+        root_vertex = GraphsExtensions.default_root_vertex(first(tns))
     )
     @assert all(tn -> nv(first(tns)) == nv(tn), tns)
 
@@ -283,7 +279,7 @@ function Base.isapprox(
         x::AbstractTTN,
         y::AbstractTTN;
         atol::Real = 0,
-        rtol::Real = Base.rtoldefault(scalartype(x), scalartype(y), atol),
+        rtol::Real = Base.rtoldefault(scalartype(x), scalartype(y), atol)
     )
     d = norm(x - y)
     if isfinite(d)
@@ -302,7 +298,7 @@ function ITensors.inner(
         y::AbstractTTN,
         A::AbstractTTN,
         x::AbstractTTN;
-        root_vertex = GraphsExtensions.default_root_vertex(x),
+        root_vertex = GraphsExtensions.default_root_vertex(x)
     )
     traversal_order = reverse(post_order_dfs_vertices(x, root_vertex))
     ydag = sim(dag(y); sites = [])
@@ -320,14 +316,14 @@ function ITensors.inner(
         y::AbstractTTN,
         A::AbstractTTN,
         x::AbstractTTN;
-        root_vertex = GraphsExtensions.default_root_vertex(B),
+        root_vertex = GraphsExtensions.default_root_vertex(B)
     )
     N = nv(B)
     if nv(y) != N || nv(x) != N || nv(A) != N
         throw(
             DimensionMismatch(
                 "inner: mismatched number of vertices $N and $(nv(x)) or $(nv(y)) or $(nv(A))"
-            ),
+            )
         )
     end
     ydag = sim(linkinds, dag(y))
@@ -350,7 +346,7 @@ function expect(
         state::AbstractTTN;
         vertices = vertices(state),
         # TODO: verify that this is a sane default
-        root_vertex = GraphsExtensions.default_root_vertex(state),
+        root_vertex = GraphsExtensions.default_root_vertex(state)
     )
     # TODO: Optimize this with proper caching.
     state /= norm(state)

@@ -1,8 +1,8 @@
+using ITensors.NDTensors: @Algorithm_str, Algorithm, NDTensors, contract
 using ITensors: ITensor, scalar
-using ITensors.NDTensors: NDTensors, Algorithm, @Algorithm_str, contract
 using LinearAlgebra: normalize!
-using NamedGraphs: NamedGraphs
 using NamedGraphs.OrdinalIndexing: th
+using NamedGraphs: NamedGraphs
 
 function NDTensors.contract(tn::AbstractITensorNetwork; alg = "exact", kwargs...)
     return contract(Algorithm(alg), tn; kwargs...)
@@ -13,7 +13,7 @@ function NDTensors.contract(
         tn::AbstractITensorNetwork;
         contraction_sequence_kwargs = (;),
         sequence = contraction_sequence(tn; contraction_sequence_kwargs...),
-        kwargs...,
+        kwargs...
     )
     sequence_linear_index = deepmap(v -> NamedGraphs.vertex_positions(tn)[v], sequence)
     ts = map(v -> tn[v], (1:nv(tn))th)
@@ -24,7 +24,7 @@ function NDTensors.contract(
         alg::Union{Algorithm"density_matrix", Algorithm"ttn_svd"},
         tn::AbstractITensorNetwork;
         output_structure::Function = path_graph_structure,
-        kwargs...,
+        kwargs...
     )
     return contract_approx(alg, tn, output_structure; kwargs...)
 end
@@ -53,7 +53,7 @@ function logscalar(
         (cache!) = nothing,
         cache_construction_kwargs = default_cache_construction_kwargs(alg, tn),
         update_cache = isnothing(cache!),
-        cache_update_kwargs = (;),
+        cache_update_kwargs = (;)
     )
     if isnothing(cache!)
         cache! = Ref(cache(alg, tn; cache_construction_kwargs...))

@@ -1,6 +1,6 @@
 using Adapt: adapt
-using ITensors: ITensor, Op, prime, sim
 using ITensors.NDTensors: datatype, denseblocks
+using ITensors: ITensor, Op, prime, sim
 
 default_dual_site_index_map = prime
 default_dual_link_index_map = sim
@@ -26,13 +26,13 @@ function BilinearFormNetwork(
         bra_vertex_suffix = default_bra_vertex_suffix(),
         ket_vertex_suffix = default_ket_vertex_suffix(),
         dual_site_index_map = default_dual_site_index_map,
-        dual_link_index_map = default_dual_link_index_map,
+        dual_link_index_map = default_dual_link_index_map
     )
     bra_mapped = dual_link_index_map(dual_site_index_map(bra; links = []); sites = [])
     tn = disjoint_union(
         operator_vertex_suffix => operator,
         bra_vertex_suffix => dag(bra_mapped),
-        ket_vertex_suffix => ket,
+        ket_vertex_suffix => ket
     )
     return BilinearFormNetwork(
         tn, operator_vertex_suffix, bra_vertex_suffix, ket_vertex_suffix
@@ -50,7 +50,7 @@ function Base.copy(blf::BilinearFormNetwork)
         copy(tensornetwork(blf)),
         operator_vertex_suffix(blf),
         bra_vertex_suffix(blf),
-        ket_vertex_suffix(blf),
+        ket_vertex_suffix(blf)
     )
 end
 
@@ -66,7 +66,7 @@ function BilinearFormNetwork(
         bra::AbstractITensorNetwork,
         ket::AbstractITensorNetwork;
         dual_site_index_map = default_dual_site_index_map,
-        kwargs...,
+        kwargs...
     )
     @assert issetequal(flatten_siteinds(bra), flatten_siteinds(ket))
     link_space = isempty(flatten_siteinds(bra)) ? 1 : nothing
@@ -86,7 +86,7 @@ function update(
         original_bra_state_vertex,
         original_ket_state_vertex,
         bra_state::ITensor,
-        ket_state::ITensor,
+        ket_state::ITensor
     )
     blf = copy(blf)
     # TODO: Maybe add a check that it really does preserve the graph.

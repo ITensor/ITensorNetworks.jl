@@ -1,8 +1,8 @@
 using DataGraphs: DataGraphs, underlying_graph
 using Graphs: neighbors
 using ITensors: ITensor, contract, order, product
-using NamedGraphs: NamedGraphs, NamedEdge, vertextype
 using NamedGraphs.GraphsExtensions: incident_edges
+using NamedGraphs: NamedGraphs, NamedEdge, vertextype
 
 abstract type AbstractProjTTN{V} end
 
@@ -87,8 +87,8 @@ function ITensors.product(P::AbstractProjTTN, v::ITensor)
                 "(1) You are trying to multiply the ProjTTN with the $(nsite(P))-site wave-function at the wrong position.\n",
                 "(2) `orthogonalize!` was called, changing the MPS without updating the ProjTTN.\n\n",
                 "P*v inds: $(inds(Pv)) \n\n",
-                "v inds: $(inds(v))",
-            ),
+                "v inds: $(inds(v))"
+            )
         )
     end
     return noprime(Pv)

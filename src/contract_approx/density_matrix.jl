@@ -2,10 +2,10 @@ using DataGraphs: DataGraph
 using Graphs: vertices
 using ITensors: ITensor, inds
 using LinearAlgebra: ishermitian, norm
-using NamedGraphs: NamedEdge
 using NamedGraphs.GraphsExtensions: child_vertices, parent_vertex, post_order_dfs_vertices
+using NamedGraphs: NamedEdge
 
-"""
+#=
 The struct contains cached density matrices and cached partial density matrices
 for each edge / set of edges in the tensor network.
 
@@ -109,7 +109,7 @@ The partial density matrix for the Edge set `Set([NamedEdge(2, 3), NamedEdge(5, 
     3
    /
   5 - 5 -
-"""
+=#
 struct _DensityMatrixAlgCaches
     e_to_dm::Dict{NamedEdge, ITensor}
     es_to_pdm::Dict{Set{NamedEdge}, ITensor}

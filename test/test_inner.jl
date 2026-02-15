@@ -1,20 +1,11 @@
 @eval module $(gensym())
-using ITensorNetworks:
-    ITensorNetwork,
-    inner,
-    inner_network,
-    loginner,
-    logscalar,
-    random_tensornetwork,
-    scalar,
-    siteinds,
-    ttn,
-    underlying_graph
-using ITensorNetworks.ModelHamiltonians: heisenberg
-using ITensors: dag
-using SplitApplyCombine: group
 using Graphs: SimpleGraph, uniform_tree
+using ITensorNetworks.ModelHamiltonians: heisenberg
+using ITensorNetworks: ITensorNetwork, inner, inner_network, loginner, logscalar,
+    random_tensornetwork, scalar, siteinds, ttn, underlying_graph
+using ITensors: dag
 using NamedGraphs: NamedGraph
+using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset

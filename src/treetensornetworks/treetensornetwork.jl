@@ -82,7 +82,7 @@ function ttn(
         a::ITensor,
         is::IndsNetwork;
         ortho_region = Indices([GraphsExtensions.default_root_vertex(is)]),
-        kwargs...,
+        kwargs...
     )
     for v in vertices(is)
         @assert hasinds(a, is[v])

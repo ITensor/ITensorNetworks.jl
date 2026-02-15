@@ -1,6 +1,6 @@
 using Graphs: vertices
+using ITensors.NDTensors: @Algorithm_str, Algorithm
 using ITensors: ITensor
-using ITensors.NDTensors: Algorithm, @Algorithm_str
 using NamedGraphs.Keys: Key
 using NamedGraphs.OrdinalIndexing: th
 
@@ -14,8 +14,8 @@ function contraction_sequence(alg::Algorithm, tn::ITensorList)
     return throw(
         ArgumentError(
             "Algorithm $alg isn't defined for contraction sequence finding. Try loading a backend package like 
-        TensorOperations.jl or OMEinsumContractionOrders.jl.",
-        ),
+        TensorOperations.jl or OMEinsumContractionOrders.jl."
+        )
     )
 end
 

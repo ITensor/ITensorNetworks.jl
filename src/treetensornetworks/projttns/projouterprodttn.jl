@@ -21,7 +21,7 @@ function ProjOuterProdTTN(internal_state::AbstractTTN, operator::AbstractTTN)
         vertextype(operator)[],
         internal_state,
         operator,
-        Dictionary{edgetype(operator), ITensor}(),
+        Dictionary{edgetype(operator), ITensor}()
     )
 end
 
@@ -68,7 +68,8 @@ function make_environment(P::ProjOuterProdTTN, state::AbstractTTN, e::AbstractEd
             # other environments
             frst, scnd, rst = _separate_first_two(neighbor_envs)
             itensor_map = vcat(
-                internal_state(P)[src(e)], frst, scnd, operator(P)[src(e)], dag(state[src(e)]), rst
+                internal_state(P)[src(e)], frst, scnd, operator(P)[src(e)],
+                dag(state[src(e)]), rst
             ) # no prime here in comparison to the same routine for Projttn
             # TODO: actually use optimal contraction sequence here
             env = reduce(*, itensor_map)

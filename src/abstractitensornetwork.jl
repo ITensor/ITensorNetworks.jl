@@ -1,51 +1,19 @@
+using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using Adapt: Adapt, adapt, adapt_structure
 using DataGraphs:
     DataGraphs, edge_data, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
-using Graphs:
-    Graphs,
-    Graph,
-    add_edge!,
-    add_vertex!,
-    bfs_tree,
-    center,
-    dst,
-    edges,
-    edgetype,
-    ne,
-    neighbors,
-    rem_edge!,
-    src,
-    vertices
-using ITensors:
-    ITensors,
-    ITensor,
-    @Algorithm_str,
-    addtags,
-    combiner,
-    commoninds,
-    commontags,
-    contract,
-    dag,
-    hascommoninds,
-    noprime,
-    onehot,
-    prime,
-    replaceprime,
-    setprime,
-    unioninds,
-    uniqueinds,
-    replacetags,
-    settags,
-    sim,
-    swaptags
-using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
+using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
+    ne, neighbors, rem_edge!, src, vertices
+using ITensors: ITensors, @Algorithm_str, ITensor, addtags, combiner, commoninds,
+    commontags, contract, dag, hascommoninds, noprime, onehot, prime, replaceprime,
+    replacetags, setprime, settags, sim, swaptags, unioninds, uniqueinds
 using LinearAlgebra: LinearAlgebra, factorize
 using MacroTools: @capture
-using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, steiner_tree
+using NDTensors: NDTensors, Algorithm, dim
 using NamedGraphs.GraphsExtensions:
-    ⊔, directed_graph, incident_edges, rename_vertices, vertextype
-using NDTensors: NDTensors, dim, Algorithm
+    directed_graph, incident_edges, rename_vertices, vertextype, ⊔
+using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, steiner_tree
 using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V, ITensor, ITensor} end
@@ -173,7 +141,7 @@ is_assignment_expr(expr) = false
 macro preserve_graph(expr)
     if !is_setindex!_expr(expr)
         error(
-            "preserve_graph must be used with setindex! syntax (as @preserve_graph a[i,j,...] = value)",
+            "preserve_graph must be used with setindex! syntax (as @preserve_graph a[i,j,...] = value)"
         )
     end
     @capture(expr, array_[indices__] = value_)
@@ -381,7 +349,11 @@ const map_inds_label_functions = [
 
 for f in map_inds_label_functions
     @eval begin
-        function ITensors.$f(n::Union{IndsNetwork, AbstractITensorNetwork}, args...; kwargs...)
+        function ITensors.$f(
+                n::Union{IndsNetwork, AbstractITensorNetwork},
+                args...;
+                kwargs...
+            )
             return map_inds($f, n, args...; kwargs...)
         end
 
@@ -389,7 +361,7 @@ for f in map_inds_label_functions
                 ffilter::typeof(linkinds),
                 n::Union{IndsNetwork, AbstractITensorNetwork},
                 args...;
-                kwargs...,
+                kwargs...
             )
             return map_inds($f, n, args...; sites = [], kwargs...)
         end
@@ -398,7 +370,7 @@ for f in map_inds_label_functions
                 ffilter::typeof(siteinds),
                 n::Union{IndsNetwork, AbstractITensorNetwork},
                 args...;
-                kwargs...,
+                kwargs...
             )
             return map_inds($f, n, args...; links = [], kwargs...)
         end
@@ -424,7 +396,11 @@ function map_vertex_data_preserve_graph(f, tn::AbstractITensorNetwork)
     return tn
 end
 
-function map_vertices_preserve_graph!(f, tn::AbstractITensorNetwork; vertices = vertices(tn))
+function map_vertices_preserve_graph!(
+        f,
+        tn::AbstractITensorNetwork;
+        vertices = vertices(tn)
+    )
     for v in vertices
         @preserve_graph tn[v] = f(v)
     end
@@ -447,7 +423,7 @@ function ⊗(
         tn1::AbstractITensorNetwork,
         tn2::AbstractITensorNetwork,
         tn_tail::AbstractITensorNetwork...;
-        kwargs...,
+        kwargs...
     )
     return ⊔(tn1, tn2, tn_tail...; kwargs...)
 end
@@ -456,7 +432,7 @@ function ⊗(
         tn1::Pair{<:Any, <:AbstractITensorNetwork},
         tn2::Pair{<:Any, <:AbstractITensorNetwork},
         tn_tail::Pair{<:Any, <:AbstractITensorNetwork}...;
-        kwargs...,
+        kwargs...
     )
     return ⊔(tn1, tn2, tn_tail...; kwargs...)
 end
@@ -468,13 +444,13 @@ function Base.isapprox(
         x::AbstractITensorNetwork,
         y::AbstractITensorNetwork;
         atol::Real = 0,
-        rtol::Real = Base.rtoldefault(scalartype(x), scalartype(y), atol),
+        rtol::Real = Base.rtoldefault(scalartype(x), scalartype(y), atol)
     )
     error("Not implemented")
     d = norm(x - y)
     if !isfinite(d)
         error(
-            "In `isapprox(x::AbstractITensorNetwork, y::AbstractITensorNetwork)`, `norm(x - y)` is not finite",
+            "In `isapprox(x::AbstractITensorNetwork, y::AbstractITensorNetwork)`, `norm(x - y)` is not finite"
         )
     end
     return d <= max(atol, rtol * max(norm(x), norm(y)))
@@ -534,11 +510,12 @@ function LinearAlgebra.svd(
         V_vertex = (edge, "V"),
         u_tags = tags(tn, edge),
         v_tags = tags(tn, edge),
-        kwargs...,
+        kwargs...
     )
     tn = copy(tn)
     left_inds = uniqueinds(tn, edge)
-    U, S, V = svd(tn[src(edge)], left_inds; lefttags = u_tags, righttags = v_tags, kwargs...)
+    U, S, V =
+        svd(tn[src(edge)], left_inds; lefttags = u_tags, righttags = v_tags, kwargs...)
 
     rem_vertex!(tn, src(edge))
     add_vertex!(tn, U_vertex)
@@ -559,7 +536,7 @@ function LinearAlgebra.qr(
         Q_vertex = src(edge),
         R_vertex = (edge, "R"),
         tags = tags(tn, edge),
-        kwargs...,
+        kwargs...
     )
     tn = copy(tn)
     left_inds = uniqueinds(tn, edge)
@@ -581,7 +558,7 @@ function LinearAlgebra.factorize(
         X_vertex = src(edge),
         Y_vertex = ("Y", edge),
         tags = tags(tn, edge),
-        kwargs...,
+        kwargs...
     )
     # Promote vertex type
     V = promote_type(vertextype(tn), typeof(X_vertex), typeof(Y_vertex))
@@ -671,7 +648,7 @@ function tree_gauge(
         ψ::AbstractITensorNetwork,
         cur_region::Vector,
         new_region::Vector;
-        kwargs...,
+        kwargs...
     )
     es = edge_sequence_between_regions(ψ, cur_region, new_region)
     ψ = gauge_walk(alg, ψ, es; kwargs...)
@@ -731,7 +708,7 @@ function linkinds_combiners(tn::AbstractITensorNetwork; edges = edges(tn))
     combiners = DataGraph(
         directed_graph(underlying_graph(tn));
         vertex_data_eltype = ITensor,
-        edge_data_eltype = ITensor,
+        edge_data_eltype = ITensor
     )
     for e in edges
         C = combiner(linkinds(tn, e); tags = edge_tag(e))
@@ -763,7 +740,7 @@ function split_index(
         tn::AbstractITensorNetwork,
         edges_to_split;
         src_ind_map::Function = identity,
-        dst_ind_map::Function = prime,
+        dst_ind_map::Function = prime
     )
     tn = copy(tn)
     for e in edges_to_split
@@ -780,7 +757,8 @@ function inner_network(x::AbstractITensorNetwork, y::AbstractITensorNetwork; kwa
 end
 
 function inner_network(
-        x::AbstractITensorNetwork, A::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...
+        x::AbstractITensorNetwork, A::AbstractITensorNetwork, y::AbstractITensorNetwork;
+        kwargs...
     )
     return BilinearFormNetwork(A, x, y; kwargs...)
 end
@@ -817,7 +795,7 @@ function ITensorVisualizationCore.visualize(
         args...;
         vertex_labels_prefix = nothing,
         vertex_labels = nothing,
-        kwargs...,
+        kwargs...
     )
     if !isnothing(vertex_labels_prefix)
         vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
@@ -900,11 +878,15 @@ function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
     return inds
 end
 
-"""Check if the edge of an itensornetwork has multiple indices"""
+"""
+Check if the edge of an itensornetwork has multiple indices
+"""
 is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
 is_multi_edge(tn::AbstractITensorNetwork) = Base.Fix1(is_multi_edge, tn)
 
-"""Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex """
+"""
+Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex
+"""
 function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
     @assert issetequal(vertices(tn1), vertices(tn2))
 
@@ -929,10 +911,10 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
             [
                 Index(
                         dim(only(linkinds(tn1, e))) + dim(only(linkinds(tn2, e))),
-                        tags(only(linkinds(tn1, e))),
+                        tags(only(linkinds(tn1, e)))
                     ) for e in edges_tn1
-            ],
-        ),
+            ]
+        )
     )
 
     #Create vertices of tn12 as direct sum of tn1[v] and tn2[v]. Work out the matching indices by matching edges. Make index tags those of tn1[v]
@@ -953,23 +935,27 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
             tn12v_linkinds,
             tn1[v] => Tuple(tn1v_linkinds),
             tn2[v] => Tuple(tn2v_linkinds);
-            tags = tags.(Tuple(tn1v_linkinds)),
+            tags = tags.(Tuple(tn1v_linkinds))
         )
     end
 
     return tn12
 end
 
-""" Scale each tensor of the network via a function vertex -> Number"""
+"""
+Scale each tensor of the network via a function vertex -> Number
+"""
 function scale!(
         weight_function::Function,
         tn::AbstractITensorNetwork;
-        vertices = collect(Graphs.vertices(tn)),
+        vertices = collect(Graphs.vertices(tn))
     )
     return map_vertices_preserve_graph!(v -> weight_function(v) * tn[v], tn; vertices)
 end
 
-""" Scale each tensor of the network by a scale factor for each vertex in the keys of the dictionary"""
+"""
+Scale each tensor of the network by a scale factor for each vertex in the keys of the dictionary
+"""
 function scale!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
     return scale!(v -> vertices_weights[v], tn; vertices = keys(vertices_weights))
 end

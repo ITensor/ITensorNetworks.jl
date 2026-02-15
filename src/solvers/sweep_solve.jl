@@ -6,7 +6,7 @@ default_sweep_callback(sweep_iterator) = sweep_iterator
 function sweep_solve!(
         sweep_iterator;
         sweep_callback = default_sweep_callback,
-        region_callback = default_region_callback,
+        region_callback = default_region_callback
     )
     # Don't compute the region iteration automatically as we wish to insert a callback.
     for _ in IncrementOnly(sweep_iterator)

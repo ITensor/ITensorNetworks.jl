@@ -1,7 +1,7 @@
 using Printf: @printf
 
 @kwdef mutable struct ApplyExpProblem{State} <: AbstractProblem
-    operator
+    operator::Any
     state::State
     current_exponent::Number = 0.0
 end
@@ -25,7 +25,7 @@ function update!(
         local_state;
         nsites,
         exponent_step,
-        solver = runge_kutta_solver,
+        solver = runge_kutta_solver
     )
     prob = problem(region_iter)
 
@@ -36,19 +36,22 @@ function update!(
     solver_kwargs = region_kwargs(solver, region_iter)
 
     local_state, _ = solver(
-        x -> optimal_map(operator(prob), x), exponent_step, local_state; solver_kwargs...
+        x -> optimal_map(operator(prob), x), exponent_step, local_state;
+        solver_kwargs...
     )
     if nsites == 1
         curr_reg = current_region(region_iter)
         next_reg = next_region(region_iter)
         if !isnothing(next_reg) && next_reg != curr_reg
-            next_edge = first(edge_sequence_between_regions(state(prob), curr_reg, next_reg))
+            next_edge =
+                first(edge_sequence_between_regions(state(prob), curr_reg, next_reg))
             v1, v2 = src(next_edge), dst(next_edge)
             psi = copy(state(prob))
             psi[v1], R = qr(local_state, uniqueinds(local_state, psi[v2]))
             shifted_operator = position(operator(prob), psi, NamedEdge(v1 => v2))
             R_t, _ = solver(
-                x -> optimal_map(shifted_operator, x), -exponent_step, R; solver_kwargs...
+                x -> optimal_map(shifted_operator, x), -exponent_step, R;
+                solver_kwargs...
             )
             local_state = psi[v1] * R_t
         end
@@ -62,7 +65,7 @@ end
 function default_sweep_callback(
         sweep_iterator::SweepIterator{<:ApplyExpProblem};
         exponent_description = "exponent",
-        process_time = identity,
+        process_time = identity
     )
     outputlevel = get(region_kwargs(region_iterator(sweep_iterator)), :outputlevel, 0)
     return if outputlevel >= 1
@@ -84,12 +87,13 @@ function applyexp(
         sweep_callback = default_sweep_callback,
         order = 4,
         nsites = 2,
-        sweep_kwargs...,
+        sweep_kwargs...
     )
     exponent_steps = diff([zero(eltype(exponents)); exponents])
 
     kws_array = [
-        (; order, nsites, sweep_kwargs..., exponent_step) for exponent_step in exponent_steps
+        (; order, nsites, sweep_kwargs..., exponent_step) for
+            exponent_step in exponent_steps
     ]
     sweep_iter = SweepIterator(init_prob, kws_array)
 
@@ -102,7 +106,7 @@ function applyexp(operator, exponents, init_state; kws...)
     init_prob = ApplyExpProblem(;
         state = align_indices(init_state),
         operator = ProjTTN(align_indices(operator)),
-        current_exponent = first(exponents),
+        current_exponent = first(exponents)
     )
     return applyexp(init_prob, exponents; kws...)
 end
@@ -116,7 +120,7 @@ function time_evolve(
         process_time = process_real_times,
         sweep_callback = iter ->
         default_sweep_callback(iter; exponent_description = "time", process_time),
-        sweep_kwargs...,
+        sweep_kwargs...
     )
     exponents = [-im * t for t in time_points]
     return applyexp(operator, exponents, init_state; sweep_callback, sweep_kwargs...)

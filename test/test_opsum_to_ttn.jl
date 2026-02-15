@@ -1,23 +1,14 @@
 @eval module $(gensym())
 using DataGraphs: vertex_data
 using Dictionaries: Dictionary, getindices
-using Graphs: add_vertex!, rem_vertex!, add_edge!, rem_edge!, vertices
-using ITensors:
-    ITensors,
-    Index,
-    ITensor,
-    @disable_warn_order,
-    combinedind,
-    combiner,
-    contract,
-    dag,
-    inds,
-    removeqns
+using Graphs: add_edge!, add_vertex!, rem_edge!, rem_vertex!, vertices
 using ITensorMPS: ITensorMPS
-using ITensors.NDTensors: matrix
-using ITensorNetworks: ITensorNetworks, OpSum, ttn, siteinds
 using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
+using ITensorNetworks: ITensorNetworks, OpSum, siteinds, ttn
+using ITensors.NDTensors: matrix
+using ITensors: ITensors, @disable_warn_order, ITensor, Index, combinedind, combiner,
+    contract, dag, inds, removeqns
 using KrylovKit: eigsolve
 using LinearAlgebra: eigvals, norm
 using NamedGraphs.GraphsExtensions: leaf_vertices, post_order_dfs_vertices
@@ -186,7 +177,10 @@ end
             Hsvd = ttn(H, is; root_vertex, cutoff = 1.0e-10)
             # get corresponding MPO Hamiltonian
             sites = [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
-            vmap = Dictionary(reverse(post_order_dfs_vertices(c, root_vertex)), 1:length(sites))
+            vmap = Dictionary(
+                reverse(post_order_dfs_vertices(c, root_vertex)),
+                1:length(sites)
+            )
             Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
             @disable_warn_order begin
                 Tmpo = prod(Hline)
@@ -230,7 +224,8 @@ end
         # linearized version
         linear_order = [4, 1, 2, 5, 3, 6]
         vmap = Dictionary(collect(vertices(is))[linear_order], eachindex(linear_order))
-        sites = only.(filter(d -> !isempty(d), collect(vertex_data(is_missing_site))))[linear_order]
+        sites =
+            only.(filter(d -> !isempty(d), collect(vertex_data(is_missing_site))))[linear_order]
 
         J1 = -1
         J2 = 2

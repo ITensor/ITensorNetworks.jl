@@ -1,25 +1,7 @@
 @eval module $(gensym())
-using ITensors:
-    ITensors,
-    ITensor,
-    Index,
-    QN,
-    apply,
-    dag,
-    delta,
-    inds,
-    mapprime,
-    noprime,
-    norm,
-    op,
-    permute,
-    prime,
-    random_itensor,
-    replaceind,
-    replaceinds,
-    sim,
-    swapprime
 using ITensorNetworks.ITensorsExtensions: eigendecomp, map_eigvals
+using ITensors: ITensors, ITensor, Index, QN, apply, dag, delta, inds, mapprime, noprime,
+    norm, op, permute, prime, random_itensor, replaceind, replaceinds, sim, swapprime
 using StableRNGs: StableRNG
 using Test: @test, @testset
 @testset "ITensorsExtensions" begin

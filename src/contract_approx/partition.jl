@@ -1,6 +1,6 @@
 using DataGraphs: AbstractDataGraph, DataGraph, edge_data, edge_data_eltype, vertex_data
 using Dictionaries: Dictionary
-using Graphs: AbstractGraph, add_edge!, has_edge, dst, edges, edgetype, src, vertices
+using Graphs: AbstractGraph, add_edge!, dst, edges, edgetype, has_edge, src, vertices
 using ITensors: ITensor, noncommoninds
 using NamedGraphs: NamedGraph, subgraph
 using SplitApplyCombine: flatten
@@ -10,19 +10,27 @@ function _partition(g::AbstractGraph, subgraph_vertices)
         NamedGraph(eachindex(subgraph_vertices));
         vertex_data_eltype = typeof(g),
         edge_data_eltype = @NamedTuple{
-            edges::Vector{edgetype(g)}, edge_data::Dictionary{edgetype(g), edge_data_eltype(g)},
+            edges::Vector{edgetype(g)},
+            edge_data::Dictionary{edgetype(g), edge_data_eltype(g)},
         }
     )
     for v in vertices(partitioned_graph)
         partitioned_graph[v] = subgraph(g, subgraph_vertices[v])
     end
     for e in edges(g)
-        s1 = findfirst_on_vertices(subgraph -> src(e) ∈ vertices(subgraph), partitioned_graph)
-        s2 = findfirst_on_vertices(subgraph -> dst(e) ∈ vertices(subgraph), partitioned_graph)
+        s1 = findfirst_on_vertices(
+            subgraph -> src(e) ∈ vertices(subgraph),
+            partitioned_graph
+        )
+        s2 = findfirst_on_vertices(
+            subgraph -> dst(e) ∈ vertices(subgraph),
+            partitioned_graph
+        )
         if (!has_edge(partitioned_graph, s1, s2) && s1 ≠ s2)
             add_edge!(partitioned_graph, s1, s2)
             partitioned_graph[s1 => s2] = (;
-                edges = Vector{edgetype(g)}(), edge_data = Dictionary{edgetype(g), edge_data_eltype(g)}(),
+                edges = Vector{edgetype(g)}(),
+                edge_data = Dictionary{edgetype(g), edge_data_eltype(g)}(),
             )
         end
         if has_edge(partitioned_graph, s1, s2)

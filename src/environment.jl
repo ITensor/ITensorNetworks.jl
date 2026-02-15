@@ -7,7 +7,7 @@ function environment(
         tn::AbstractITensorNetwork,
         vertices::Vector;
         alg = default_environment_algorithm(),
-        kwargs...,
+        kwargs...
     )
     return environment(Algorithm(alg), tn, vertices; kwargs...)
 end
@@ -25,7 +25,7 @@ function environment(
         (cache!) = nothing,
         update_cache = isnothing(cache!),
         cache_construction_kwargs = default_cache_construction_kwargs(alg, ptn),
-        cache_update_kwargs = (;),
+        cache_update_kwargs = (;)
     )
     if isnothing(cache!)
         cache! = Ref(cache(alg, ptn; cache_construction_kwargs...))
@@ -43,7 +43,7 @@ function environment(
         tn::AbstractITensorNetwork,
         vertices::Vector;
         partitioned_vertices = default_partitioned_vertices(tn),
-        kwargs...,
+        kwargs...
     )
     return environment(alg, PartitionedGraph(tn, partitioned_vertices), vertices; kwargs...)
 end

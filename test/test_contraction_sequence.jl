@@ -29,7 +29,8 @@ using Test: @test, @testset
             tn; alg = "einexpr", optimizer = Exhaustive()
         )
         res_einexprs_exhaustive = contract(tn; sequence = seq_einexprs_exhaustive)[]
-        seq_einexprs_greedy = contraction_sequence(tn; alg = "einexpr", optimizer = Greedy())
+        seq_einexprs_greedy =
+            contraction_sequence(tn; alg = "einexpr", optimizer = Greedy())
         res_einexprs_greedy = contract(tn; sequence = seq_einexprs_exhaustive)[]
         @test res_greedy ≈ res_optimal
         @test res_tree_sa ≈ res_optimal

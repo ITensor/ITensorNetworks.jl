@@ -1,5 +1,5 @@
-using Printf: @printf
 using ITensors: truncerror
+using Printf: @printf
 
 @kwdef mutable struct EigsolveProblem{State, Operator} <: AbstractProblem
     operator::Operator
@@ -23,19 +23,24 @@ end
 function update!(
         region_iter::RegionIterator{<:EigsolveProblem},
         local_state;
-        solver = eigsolve_solver,
+        solver = eigsolve_solver
     )
     prob = problem(region_iter)
 
     eigval, local_state = solver(
-        ψ -> optimal_map(operator(prob), ψ), local_state; region_kwargs(solver, region_iter)...
+        ψ -> optimal_map(operator(prob), ψ), local_state;
+        region_kwargs(solver, region_iter)...
     )
 
     prob.eigenvalue = eigval
 
     outputlevel = get(region_kwargs(region_iter), :outputlevel, 0)
     if outputlevel >= 2
-        @printf("  Region %s: energy = %.12f\n", current_region(region_iter), eigenvalue(prob))
+        @printf(
+            "  Region %s: energy = %.12f\n",
+            current_region(region_iter),
+            eigenvalue(prob)
+        )
     end
     return region_iter, local_state
 end
@@ -68,7 +73,7 @@ function eigsolve(
         nsites,
         factorize_kwargs,
         subspace_expand!_kwargs = (; eigen_kwargs = factorize_kwargs),
-        sweep_kwargs...,
+        sweep_kwargs...
     )
     prob = problem(sweep_solve!(sweep_iter))
     return eigenvalue(prob), state(prob)

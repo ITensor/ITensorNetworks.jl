@@ -15,7 +15,7 @@ function LinearFormNetwork(
         ket::AbstractITensorNetwork;
         bra_vertex_suffix = default_bra_vertex_suffix(),
         ket_vertex_suffix = default_ket_vertex_suffix(),
-        dual_link_index_map = default_dual_link_index_map,
+        dual_link_index_map = default_dual_link_index_map
     )
     bra_mapped = dual_link_index_map(bra; sites = [])
     tn = disjoint_union(bra_vertex_suffix => dag(bra_mapped), ket_vertex_suffix => ket)

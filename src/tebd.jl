@@ -8,7 +8,7 @@ function tebd(
         cutoff,
         print_frequency = 10,
         ortho = false,
-        kwargs...,
+        kwargs...
     )
     𝒰 = exp(-Δβ * ℋ; alg = Trotter{2}())
     # Imaginary time evolution terms

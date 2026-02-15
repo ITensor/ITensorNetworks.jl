@@ -1,9 +1,9 @@
 """
-  abstract type AbstractNetworkIterator
+abstract type AbstractNetworkIterator
 
 A stateful iterator with two states: `increment!` and `compute!`. Each iteration begins
 with a call to `increment!` before executing `compute!`, however the initial call to
-`iterate` skips the `increment!` call as it is assumed the iterator is initalized such that 
+`iterate` skips the `increment!` call as it is assumed the iterator is initalized such that
 this call is implict. Termination of the iterator is controlled by the function `done`.
 """
 abstract type AbstractNetworkIterator end
@@ -36,7 +36,7 @@ end
 # RegionIterator
 #
 """
-  struct RegionIterator{Problem, RegionPlan} <: AbstractNetworkIterator
+struct RegionIterator{Problem, RegionPlan} <: AbstractNetworkIterator
 """
 mutable struct RegionIterator{Problem, RegionPlan} <: AbstractNetworkIterator
     problem::Problem

@@ -20,7 +20,7 @@ function rescale(
         cache_construction_kwargs = default_cache_construction_kwargs(alg, tn),
         update_cache = isnothing(cache!),
         cache_update_kwargs = (;),
-        kwargs...,
+        kwargs...
     )
     if isnothing(cache!)
         cache! = Ref(cache(alg, tn; cache_construction_kwargs...))
@@ -57,7 +57,7 @@ function LinearAlgebra.normalize(
         cache(alg, tn; default_cache_construction_kwargs(alg, tn)...),
         update_cache = isnothing(cache!),
         cache_update_kwargs = (;),
-        cache_construction_kwargs = (;),
+        cache_construction_kwargs = (;)
     )
     norm_tn = inner_network(tn, tn)
     if isnothing(cache!)

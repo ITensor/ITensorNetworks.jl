@@ -1,8 +1,8 @@
 using AbstractTrees: Leaves, PostOrderDFS
 using Combinatorics: powerset
 using Graphs: dijkstra_shortest_paths, weights
-using NamedGraphs: NamedDiGraph
 using NDTensors.AlgorithmSelection: Algorithm
+using NamedGraphs: NamedDiGraph
 
 # a large number to prevent this edge being a cut
 MAX_WEIGHT = 1.0e32
@@ -64,7 +64,13 @@ function _mincut(tn::ITensorNetwork, source_inds::Vector, terminal_inds::Vector)
     tn = disjoint_union(
         ITensorNetwork([ITensor(source_inds...), ITensor(terminal_inds...)]), tn
     )
-    return mincut(tn, (1, 1), (2, 1); backend = "GraphsFlows", capacity_matrix = weights(tn))
+    return mincut(
+        tn,
+        (1, 1),
+        (2, 1);
+        backend = "GraphsFlows",
+        capacity_matrix = weights(tn)
+    )
 end
 
 """
@@ -137,6 +143,7 @@ If maximally_unbalanced=true, the binary tree will have a line/mps structure.
 The binary tree is recursively constructed from leaves to the root.
 
 Example:
+
 # TODO
 """
 function _binary_tree_structure(
@@ -204,7 +211,8 @@ function _mps_partition_inds_order(tn::ITensorNetwork, outinds::Union{Nothing, V
 end
 
 function _binary_tree_partition_inds_maximally_unbalanced(
-        tn_pair::Pair{<:ITensorNetwork, <:ITensorNetwork}, out_to_maxweight_ind::Dict{Index, Index}
+        tn_pair::Pair{<:ITensorNetwork, <:ITensorNetwork},
+        out_to_maxweight_ind::Dict{Index, Index}
     )
     outinds = collect(keys(out_to_maxweight_ind))
     @assert length(outinds) >= 1
@@ -229,7 +237,8 @@ function _binary_tree_partition_inds_maximally_unbalanced(
 end
 
 function _binary_tree_partition_inds_mincut(
-        tn_pair::Pair{<:ITensorNetwork, <:ITensorNetwork}, out_to_maxweight_ind::Dict{Index, Index}
+        tn_pair::Pair{<:ITensorNetwork, <:ITensorNetwork},
+        out_to_maxweight_ind::Dict{Index, Index}
     )
     outinds = collect(keys(out_to_maxweight_ind))
     @assert length(outinds) >= 1
@@ -250,22 +259,22 @@ end
 """
 Find a vector of indices within sourceinds_list yielding the mincut of given tn_pair.
 Args:
-  tn_pair: a pair of tns (tn1 => tn2), where tn2 is generated via _maxweightoutinds_tn(tn1)
-  out_to_maxweight_ind: a dict mapping each out ind in tn1 to out ind in tn2
-  sourceinds_list: a list of vector of indices to be considered
+tn_pair: a pair of tns (tn1 => tn2), where tn2 is generated via _maxweightoutinds_tn(tn1)
+out_to_maxweight_ind: a dict mapping each out ind in tn1 to out ind in tn2
+sourceinds_list: a list of vector of indices to be considered
 Note:
-  For each sourceinds in sourceinds_list, we consider its mincut within both tns (tn1, tn2) given in tn_pair.
-  The mincut in tn1 represents the rank upper bound when splitting sourceinds with other inds in outinds.
-  The mincut in tn2 represents the rank upper bound when the weights of outinds are very large.
-  The first mincut upper_bounds the number of non-zero singular values, while the second empirically reveals the
-  singular value decay.
-  We output the sourceinds where the first mincut value is the minimum, the secound mincut value is also
-  the minimum under the condition that the first mincut is optimal, and the sourceinds have the lowest all-pair shortest path.
+For each sourceinds in sourceinds_list, we consider its mincut within both tns (tn1, tn2) given in tn_pair.
+The mincut in tn1 represents the rank upper bound when splitting sourceinds with other inds in outinds.
+The mincut in tn2 represents the rank upper bound when the weights of outinds are very large.
+The first mincut upper_bounds the number of non-zero singular values, while the second empirically reveals the
+singular value decay.
+We output the sourceinds where the first mincut value is the minimum, the secound mincut value is also
+the minimum under the condition that the first mincut is optimal, and the sourceinds have the lowest all-pair shortest path.
 """
 function _mincut_inds(
         tn_pair::Pair{<:ITensorNetwork, <:ITensorNetwork},
         out_to_maxweight_ind::Dict{<:Index, <:Index},
-        sourceinds_list::Vector{<:Vector{<:Index}},
+        sourceinds_list::Vector{<:Vector{<:Index}}
     )
     function _mincut_value(tn, sinds, outinds)
         tinds = setdiff(outinds, sinds)
@@ -287,7 +296,8 @@ function _mincut_inds(
     for source_inds in sourceinds_list
         maxweight_source_inds = [out_to_maxweight_ind[i] for i in source_inds]
         push!(
-            weights, _get_weights(source_inds, outinds, maxweight_source_inds, maxweight_outinds)
+            weights,
+            _get_weights(source_inds, outinds, maxweight_source_inds, maxweight_outinds)
         )
     end
     i = argmin(weights)

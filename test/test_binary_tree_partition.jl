@@ -1,26 +1,16 @@
 @eval module $(gensym())
 using DataGraphs: DataGraph, underlying_graph, vertex_data
 using Graphs: add_vertex!, vertices
-# Trigger package extension.
 using GraphsFlows: GraphsFlows
-using ITensors: Index, ITensor, contract, noncommoninds, random_itensor
-using ITensorNetworks:
-    _DensityMartrixAlgGraph,
-    _contract_deltas_ignore_leaf_partitions,
-    _mps_partition_inds_order,
-    _mincut_partitions,
-    _partition,
-    _rem_vertex!,
-    IndsNetwork,
-    ITensorNetwork,
-    binary_tree_structure,
-    eachtensor,
-    path_graph_structure,
+using ITensorNetworks: ITensorNetwork, IndsNetwork, _DensityMartrixAlgGraph,
+    _contract_deltas_ignore_leaf_partitions, _mincut_partitions, _mps_partition_inds_order,
+    _partition, _rem_vertex!, binary_tree_structure, eachtensor, path_graph_structure,
     random_tensornetwork
-using NamedGraphs: NamedEdge, NamedGraph
-using NamedGraphs.NamedGraphGenerators: named_grid
+using ITensors: ITensor, Index, contract, noncommoninds, random_itensor
 using NamedGraphs.GraphsExtensions:
     is_binary_arborescence, post_order_dfs_vertices, root_vertex
+using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs: NamedEdge, NamedGraph
 using OMEinsumContractionOrders: OMEinsumContractionOrders
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations

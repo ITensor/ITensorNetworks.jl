@@ -1,64 +1,22 @@
 @eval module $(gensym())
 using Dictionaries: Dictionary
 using Distributions: Uniform
-using Graphs:
-    degree,
-    dijkstra_shortest_paths,
-    edges,
-    grid,
-    has_vertex,
-    ne,
-    neighbors,
-    nv,
-    rem_vertex!,
-    vertices,
-    weights
+using Graphs: degree, dijkstra_shortest_paths, edges, grid, has_vertex, ne, neighbors, nv,
+    rem_vertex!, vertices, weights
 using GraphsFlows: GraphsFlows
-using ITensors:
-    ITensors,
-    Index,
-    ITensor,
-    Op,
-    commonind,
-    commoninds,
-    contract,
-    dag,
-    hascommoninds,
-    hasinds,
-    inds,
-    inner,
-    itensor,
-    onehot,
-    order,
-    prime,
-    random_itensor,
-    scalartype,
-    sim,
-    uniqueinds
+using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork, contraction_sequence,
+    flatten_linkinds, flatten_siteinds, inner_network, linkinds, neighbor_tensors, norm_sqr,
+    norm_sqr_network, orthogonalize, random_tensornetwork, siteinds, tree_orthogonalize,
+    ttn, ⊗
 using ITensors.NDTensors: NDTensors, dim
-using ITensorNetworks:
-    ITensorNetworks,
-    ⊗,
-    IndsNetwork,
-    ITensorNetwork,
-    contraction_sequence,
-    flatten_linkinds,
-    flatten_siteinds,
-    inner_network,
-    linkinds,
-    neighbor_tensors,
-    norm_sqr,
-    norm_sqr_network,
-    orthogonalize,
-    random_tensornetwork,
-    siteinds,
-    tree_orthogonalize,
-    ttn
+using ITensors: ITensors, ITensor, Index, Op, commonind, commoninds, contract, dag,
+    hascommoninds, hasinds, inds, inner, itensor, onehot, order, prime, random_itensor,
+    scalartype, sim, uniqueinds
 using LinearAlgebra: factorize
-using NamedGraphs: NamedEdge
+using NDTensors: NDTensors, dim
 using NamedGraphs.GraphsExtensions: disjoint_union, incident_edges
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using NDTensors: NDTensors, dim
+using NamedGraphs: NamedEdge
 using Random: randn!
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations

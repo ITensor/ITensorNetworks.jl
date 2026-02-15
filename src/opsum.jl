@@ -1,8 +1,8 @@
 using .BaseExtensions: maybe_real
-using ITensors: ITensor, hascommoninds, op
-using ITensors.LazyApply: Applied, Prod, Scaled, Sum
-using ITensors.Ops: Ops, Op
 using .ITensorsExtensions: tensor_sum
+using ITensors.LazyApply: Applied, Prod, Scaled, Sum
+using ITensors.Ops: Op, Ops
+using ITensors: ITensor, hascommoninds, op
 
 function ITensors.ITensor(o::Op, s::IndsNetwork)
     s⃗ = [only(s[nᵢ]) for nᵢ in Ops.sites(o)]

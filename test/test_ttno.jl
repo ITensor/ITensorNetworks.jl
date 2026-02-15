@@ -1,6 +1,6 @@
 @eval module $(gensym())
 using Graphs: vertices
-using ITensorNetworks: ttn, contract, ortho_region, siteinds, union_all_inds
+using ITensorNetworks: contract, ortho_region, siteinds, ttn, union_all_inds
 using ITensors: @disable_warn_order, prime, random_itensor
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
