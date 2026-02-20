@@ -123,11 +123,11 @@ end
 
 """
 The struct stores data used in the density matrix algorithm.
-  partition: The given tn partition
-  out_tree: the binary tree structure of the output ITensorNetwork
-  root: root vertex of the bfs_tree for truncation
-  innerinds_to_sim: mapping each inner index of the tn represented by `partition` to a sim index
-  caches: all the cached density matrices
+partition: The given tn partition
+out_tree: the binary tree structure of the output ITensorNetwork
+root: root vertex of the bfs_tree for truncation
+innerinds_to_sim: mapping each inner index of the tn represented by `partition` to a sim index
+caches: all the cached density matrices
 """
 struct _DensityMartrixAlgGraph
     partition::DataGraph
@@ -145,7 +145,7 @@ function _DensityMartrixAlgGraph(partition::DataGraph, out_tree::NamedGraph, roo
         out_tree,
         root,
         Dict(zip(innerinds, sim_innerinds)),
-        _DensityMatrixAlgCaches(),
+        _DensityMatrixAlgCaches()
     )
 end
 
@@ -184,11 +184,11 @@ end
 
 """
 Update `caches.e_to_dm[e]` and `caches.es_to_pdm[es]`.
-  caches: the caches of the density matrix algorithm.
-  edge: the edge defining the density matrix
-  children: the children vertices of `dst(edge)` in the dfs_tree
-  network: the tensor network at vertex `dst(edge)`
-  inds_to_sim: a dict mapping inds to sim inds
+caches: the caches of the density matrix algorithm.
+edge: the edge defining the density matrix
+children: the children vertices of `dst(edge)` in the dfs_tree
+network: the tensor network at vertex `dst(edge)`
+inds_to_sim: a dict mapping inds to sim inds
 """
 function _update!(
         caches::_DensityMatrixAlgCaches,
@@ -196,7 +196,7 @@ function _update!(
         children::Vector,
         network::Vector{ITensor},
         inds_to_sim;
-        contraction_sequence_kwargs,
+        contraction_sequence_kwargs
     )
     v = dst(edge)
     if haskey(caches.e_to_dm, edge)
@@ -208,7 +208,8 @@ function _update!(
         es = [NamedEdge(src_v, v) for src_v in setdiff(children, child_v)]
         es = Set(vcat(es, [edge]))
         if !haskey(caches.es_to_pdm, es)
-            caches.es_to_pdm[es] = _optcontract([dm_tensor; network]; contraction_sequence_kwargs)
+            caches.es_to_pdm[es] =
+                _optcontract([dm_tensor; network]; contraction_sequence_kwargs)
         end
         push!(pdms, caches.es_to_pdm[es])
     end
@@ -229,31 +230,29 @@ function _update!(
     return nothing
 end
 
-"""
-Perform truncation and remove `root` vertex in the `partition` and `out_tree`
-of `alg_graph`.
-
-Example:
-  Consider an `alg_graph`` whose `out_tree` is shown below,
-    1
-    /\
-9  2
-  /   /\
-3  6
-    /|  /\
-4 5 7  8
-  /  | |   \
-when `root = 4`, the output `out_tree` will be
-    1
-    /\
-9  2
-  /   /\
-3  6
-    /|  /\
-5 7  8
-     | |   \
-and the returned tensor `U` will be the projector at vertex 4 in the output tn.
-"""
+# Perform truncation and remove `root` vertex in the `partition` and `out_tree`
+# of `alg_graph`.
+#
+# Example:
+#   Consider an `alg_graph`` whose `out_tree` is shown below,
+#     1
+#     /\
+# 9  2
+#   /   /\
+# 3  6
+#     /|  /\
+# 4 5 7  8
+#   /  | |   \
+# when `root = 4`, the output `out_tree` will be
+#     1
+#     /\
+# 9  2
+#   /   /\
+# 3  6
+#     /|  /\
+# 5 7  8
+#      | |   \
+# and the returned tensor `U` will be the projector at vertex 4 in the output tn.
 function _rem_vertex!(
         alg_graph::_DensityMartrixAlgGraph, root; cutoff, maxdim, contraction_sequence_kwargs
     )
@@ -272,7 +271,7 @@ function _rem_vertex!(
             children,
             network,
             inds_to_sim;
-            contraction_sequence_kwargs,
+            contraction_sequence_kwargs
         )
     end
     U = _get_low_rank_projector(
@@ -280,11 +279,12 @@ function _rem_vertex!(
         collect(keys(outinds_root_to_sim)),
         collect(values(outinds_root_to_sim));
         cutoff,
-        maxdim,
+        maxdim
     )
     # update partition and out_tree
     root_tensor = _optcontract(
-        [collect(eachtensor(alg_graph.partition[root])); dag(U)]; contraction_sequence_kwargs
+        [collect(eachtensor(alg_graph.partition[root])); dag(U)];
+        contraction_sequence_kwargs
     )
     new_root = child_vertices(dm_dfs_tree, root)[1]
     alg_graph.partition[new_root] = disjoint_union(
@@ -331,7 +331,7 @@ function _approx_itensornetwork_density_matrix!(
         root = first(vertices(partition)),
         cutoff = 1.0e-15,
         maxdim = 10000,
-        contraction_sequence_kwargs,
+        contraction_sequence_kwargs
     )
     # Change type of each partition[v] since they will be updated
     # with potential data type chage.
