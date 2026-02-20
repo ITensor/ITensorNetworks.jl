@@ -8,7 +8,13 @@ on:
     tags: "*"
     paths-ignore:
       - "docs/**"
-  pull_request: ~
+  pull_request:
+    types:
+      - "opened"
+      - "synchronize"
+      - "reopened"
+      - "ready_for_review"
+      - "converted_to_draft"
   workflow_dispatch: ~
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
@@ -34,3 +40,14 @@ jobs:
       localregistry: "https://github.com/ITensor/ITensorRegistry.git"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+  tests-gate:
+    name: "Tests"
+    needs: "tests"
+    if: "${{ always() }}"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Fail if any matrix leg failed"
+        run: |
+          echo "tests.result = ${{ needs.tests.result }}"
+          test "${{ needs.tests.result }}" = "success"
+          
