@@ -1,0 +1,26 @@
+name: "IntegrationTest"
+on:
+  push:
+    branches:
+      - "main"
+    tags: "*"
+    paths:
+      - "Project.toml"
+  pull_request:
+    types:
+      - "opened"
+      - "synchronize"
+      - "reopened"
+      - "ready_for_review"
+      - "converted_to_draft"
+jobs:
+  integration-test:
+    name: "IntegrationTest"
+    strategy:
+      matrix:
+        pkg:
+          - "__none__"
+    uses: "ITensor/ITensorActions/.github/workflows/IntegrationTest.yml@main"
+    with:
+      localregistry: "https://github.com/ITensor/ITensorRegistry.git"
+      pkg: "${{ matrix.pkg }}"
