@@ -1,17 +1,17 @@
 ci:
-  skip: [runic]
-
+  skip:
+    - "runic"
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v6.0.0
-  hooks:
-  - id: check-merge-conflict
-  - id: check-toml
-  - id: check-yaml
-  - id: end-of-file-fixer
-    exclude_types: [markdown]  # incompatible with Literate.jl
-
-- repo: https://github.com/fredrikekre/runic-pre-commit
-  rev: v2.0.1
-  hooks:
-    - id: runic
+  - repo: "https://github.com/pre-commit/pre-commit-hooks"
+    rev: "v6.0.0"
+    hooks:
+      - id: "check-merge-conflict"
+      - id: "check-toml"
+      - id: "check-yaml"
+      - id: "end-of-file-fixer"
+        exclude_types:
+          - "markdown"
+  - repo: "https://github.com/fredrikekre/runic-pre-commit"
+    rev: "v2.0.1"
+    hooks:
+      - id: "runic"

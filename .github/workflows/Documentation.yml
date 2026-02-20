@@ -1,23 +1,20 @@
 name: "Documentation"
-
 on:
   push:
     branches:
-      - main
-    tags: '*'
-  pull_request:
+      - "main"
+    tags: "*"
+  pull_request: ~
   schedule:
-    - cron: '1 4 * * 4'
-
+    - cron: "1 4 * * 4"
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref_name != github.event.repository.default_branch || github.ref != 'refs/tags/v*' }}
-
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: "${{ github.ref_name != github.event.repository.default_branch || github.ref != 'refs/tags/v*' }}"
 jobs:
   build-and-deploy-docs:
     name: "Documentation"
     uses: "ITensor/ITensorActions/.github/workflows/Documentation.yml@main"
     with:
-      localregistry: https://github.com/ITensor/ITensorRegistry.git
+      localregistry: "https://github.com/ITensor/ITensorRegistry.git"
     secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
