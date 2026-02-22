@@ -38,6 +38,24 @@ function gauge(alg::Algorithm, ttn::AbstractTTN, region; kwargs...)
     return gauge(alg, ttn, [region]; kwargs...)
 end
 
+"""
+    orthogonalize(ttn::AbstractTreeTensorNetwork, region; kwargs...) -> TreeTensorNetwork
+
+Bring `ttn` into an orthogonal gauge with orthogonality center at `region`.
+`region` may be a single vertex or a vector of vertices.
+
+QR decompositions are applied along the unique tree path from the current
+`ortho_region` to `region`, so that all tensors outside `region` are left- or
+right-orthogonal with respect to that path.
+
+# Example
+```julia
+psi = orthogonalize(psi, root_vertex)    # single-site orthogonality center
+psi = orthogonalize(psi, [v1, v2])       # two-site orthogonality center
+```
+
+See also: [`set_ortho_region`](@ref), [`ortho_region`](@ref), [`truncate`](@ref).
+"""
 function orthogonalize(ttn::AbstractTTN, region; kwargs...)
     return gauge(Algorithm("orthogonalize"), ttn, region; kwargs...)
 end
@@ -50,6 +68,28 @@ end
 # Truncation
 #
 
+"""
+    truncate(tn::AbstractTreeTensorNetwork; root_vertex=..., kwargs...) -> TreeTensorNetwork
+
+Truncate the bond dimensions of `tn` by sweeping from the leaves toward `root_vertex`
+and performing an SVD-based truncation on each bond.
+
+Before truncating each bond the relevant subtree is first orthogonalized (controlled
+truncation), ensuring that discarded singular values correspond to actual truncation error.
+Truncation parameters are passed through `kwargs`.
+
+# Keyword Arguments
+- `root_vertex`: Root of the DFS traversal. Defaults to `default_root_vertex(tn)`.
+- `cutoff`: Drop singular values smaller than this threshold (relative or absolute).
+- `maxdim`: Maximum number of singular values to retain on each bond.
+
+# Example
+```julia
+psi_trunc = truncate(psi; cutoff = 1e-10, maxdim = 50)
+```
+
+See also: [`orthogonalize`](@ref).
+"""
 function Base.truncate(
         tn::AbstractTTN; root_vertex = GraphsExtensions.default_root_vertex(tn), kwargs...
     )
@@ -87,6 +127,16 @@ function NDTensors.contract(
     # return tn[root_vertex]
 end
 
+"""
+    inner(x::AbstractTreeTensorNetwork, y::AbstractTreeTensorNetwork) -> Number
+
+Compute the inner product ⟨x|y⟩ by contracting the bra-ket network using a
+post-order DFS traversal rooted at `root_vertex`.
+
+Both networks must have the same graph structure and compatible site indices.
+
+See also: [`loginner`](@ref ITensorNetworks.loginner), `norm`, [`inner(y, A, x)`](@ref ITensorNetworks.inner).
+"""
 function ITensors.inner(
         x::AbstractTTN, y::AbstractTTN; root_vertex = GraphsExtensions.default_root_vertex(x)
     )
@@ -259,12 +309,36 @@ function Base.:+(
 end
 
 # TODO: switch default algorithm once more are implemented
+"""
+    +(tn1::AbstractTreeTensorNetwork, tn2::AbstractTreeTensorNetwork; alg="directsum", kwargs...) -> TreeTensorNetwork
+
+Add two tree tensor networks by growing the bond dimension, returning a network that
+represents the state `tn1 + tn2`. The bond dimension of the result is the sum of the
+bond dimensions of the two inputs.
+
+Use [`truncate`](@ref) afterward to compress the resulting network.
+
+# Keyword Arguments
+- `alg="directsum"`: Algorithm for combining the networks. Currently only `"directsum"` is
+  supported for trees.
+
+Both networks must share the same graph structure and site indices.
+
+See also: [`add`](@ref), [`truncate`](@ref).
+"""
 function Base.:+(tns::AbstractTTN...; alg = Algorithm"directsum"(), kwargs...)
     return +(Algorithm(alg), tns...; kwargs...)
 end
 
 Base.:+(tn::AbstractTTN) = tn
 
+"""
+    add(tns::AbstractTreeTensorNetwork...; kwargs...) -> TreeTensorNetwork
+
+Add tree tensor networks together by growing the bond dimension. Equivalent to `+(tns...)`.
+
+See also: [`+(tns...)`](@ref), [`truncate`](@ref).
+"""
 add(tns::AbstractTTN...; kwargs...) = +(tns...; kwargs...)
 
 function Base.:-(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
@@ -293,6 +367,16 @@ end
 # Inner products
 #
 
+"""
+    inner(y::AbstractTreeTensorNetwork, A::AbstractTreeTensorNetwork, x::AbstractTreeTensorNetwork) -> Number
+
+Compute the matrix element ⟨y|A|x⟩ where `A` is a tree tensor network operator.
+The contraction proceeds via a post-order DFS traversal.
+
+All three networks must have compatible graph structure and indices.
+
+See also: [`inner(x, y)`](@ref).
+"""
 # TODO: implement using multi-graph disjoint union
 function ITensors.inner(
         y::AbstractTTN,
@@ -341,6 +425,33 @@ function ITensors.inner(
     return O[]
 end
 
+"""
+    expect(operator::String, state::AbstractTreeTensorNetwork; vertices=vertices(state), root_vertex=...) -> Dictionary
+
+Compute local expectation values ⟨state|op_v|state⟩ / ⟨state|state⟩ for each vertex `v`
+in `vertices` using exact contraction via successive orthogonalization.
+
+The state is normalized before computing expectation values. The operator name is passed to
+`ITensors.op`; each vertex must carry exactly one site index.
+
+# Arguments
+- `operator`: Name of the local operator, e.g. `"Sz"`, `"N"`, `"Sx"`.
+- `state`: The tree tensor network state.
+- `vertices`: Subset of vertices at which to evaluate the operator. Defaults to all vertices.
+- `root_vertex`: Root used for the DFS traversal order.
+
+# Returns
+A `Dictionary` mapping each vertex to its (real-typed) expectation value.
+
+# Example
+```julia
+sz = expect("Sz", psi)
+sz_sub = expect("Sz", psi; vertices = [1, 3, 5])
+```
+
+See also: [`expect(ψ, op::String)`](@ref) for general `ITensorNetwork` states with belief
+propagation support.
+"""
 function expect(
         operator::String,
         state::AbstractTTN;

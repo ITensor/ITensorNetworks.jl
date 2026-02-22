@@ -61,6 +61,39 @@ function default_sweep_callback(
     end
 end
 
+"""
+    eigsolve(operator, init_state; nsweeps, nsites=1, factorize_kwargs, sweep_kwargs...) -> (eigenvalue, state)
+
+Find the lowest eigenvalue and corresponding eigenvector of `operator` using a
+DMRG-like sweep algorithm on a `TreeTensorNetwork`.
+
+# Arguments
+- `operator`: The operator to diagonalize, typically a `TreeTensorNetwork` representing a
+  Hamiltonian constructed from an `OpSum` (e.g. via `ttn(opsum, sites)`).
+- `init_state`: Initial guess for the eigenvector as a `TreeTensorNetwork`.
+- `nsweeps`: Number of sweeps over the network.
+- `nsites=1`: Number of sites optimized simultaneously per local update step (1 or 2).
+- `factorize_kwargs`: Keyword arguments controlling bond truncation after each local solve,
+  e.g. `(; cutoff=1e-10, maxdim=50)`.
+- `sweep_kwargs...`: Additional keyword arguments forwarded to the sweep driver, such as
+  `outputlevel` (0=silent, 1=per-sweep summary, 2=per-region detail).
+
+# Returns
+A tuple `(eigenvalue, state)` where `eigenvalue` is the converged lowest eigenvalue and
+`state` is the optimized `TreeTensorNetwork` eigenvector.
+
+# Example
+```julia
+energy, psi = eigsolve(H, psi0;
+    nsweeps = 10,
+    nsites = 2,
+    factorize_kwargs = (; cutoff = 1e-10, maxdim = 50),
+    outputlevel = 1,
+)
+```
+
+See also: [`dmrg`](@ref), [`time_evolve`](@ref).
+"""
 function eigsolve(
         operator, init_state; nsweeps, nsites = 1, factorize_kwargs, sweep_kwargs...
     )
@@ -79,4 +112,21 @@ function eigsolve(
     return eigenvalue(prob), state(prob)
 end
 
+"""
+    dmrg(operator, init_state; kwargs...) -> (eigenvalue, state)
+
+Find the lowest eigenvalue and eigenvector of `operator` using the Density Matrix
+Renormalization Group (DMRG) algorithm. This is an alias for [`eigsolve`](@ref).
+
+See [`eigsolve`](@ref) for the full description of arguments and keyword arguments.
+
+# Example
+```julia
+energy, psi = dmrg(H, psi0;
+    nsweeps = 10,
+    nsites = 2,
+    factorize_kwargs = (; cutoff = 1e-10, maxdim = 50),
+)
+```
+"""
 dmrg(operator, init_state; kwargs...) = eigsolve(operator, init_state; kwargs...)

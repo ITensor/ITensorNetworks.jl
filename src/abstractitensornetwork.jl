@@ -681,6 +681,24 @@ function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs..
     return tn
 end
 
+"""
+    truncate(tn::AbstractITensorNetwork, edge; kwargs...) -> ITensorNetwork
+
+Truncate the bond across `edge` in `tn` by performing an SVD and discarding small
+singular values. `edge` may be an `AbstractEdge` or a `Pair` of vertices.
+
+Truncation parameters are passed as keyword arguments and forwarded to `ITensors.svd`:
+
+- `cutoff`: Drop singular values smaller than this threshold.
+- `maxdim`: Maximum number of singular values to keep.
+- `mindim`: Minimum number of singular values to keep.
+
+This operates on a single bond. For `TreeTensorNetwork`, the no-argument form
+`truncate(ttn; kwargs...)` sweeps all bonds and is generally preferred for full
+recompression after addition or subspace expansion.
+
+See also: `Base.truncate(::AbstractTreeTensorNetwork)`.
+"""
 function Base.truncate(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
     return _truncate_edge(tn, edge; kwargs...)
 end
@@ -885,7 +903,17 @@ is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
 is_multi_edge(tn::AbstractITensorNetwork) = Base.Fix1(is_multi_edge, tn)
 
 """
-Add two itensornetworks together by growing the bond dimension. The network structures need to be have the same vertex names, same site index on each vertex
+    add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) -> ITensorNetwork
+
+Add two `ITensorNetwork`s together by taking their direct sum (growing the bond dimension).
+The result represents the state `tn1 + tn2`, with bond dimension on each edge equal to the
+sum of the bond dimensions of `tn1` and `tn2`.
+
+Both networks must have the same vertex set and matching site indices at each vertex.
+
+Use `truncate` on the result to compress back to a lower bond dimension.
+
+See also: `Base.:+` for `TreeTensorNetwork`, `truncate`.
 """
 function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
     @assert issetequal(vertices(tn1), vertices(tn2))

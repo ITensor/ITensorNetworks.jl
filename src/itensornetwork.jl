@@ -7,7 +7,63 @@ using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
 struct Private end
 
 """
-    ITensorNetwork
+    ITensorNetwork{V}
+
+A tensor network where each vertex holds an `ITensor`. The network graph is a
+`NamedGraph{V}` and edges represent shared indices between neighboring tensors.
+
+# Constructors
+
+**From an `IndsNetwork` (most common):**
+```julia
+ITensorNetwork(is::IndsNetwork; link_space=1)
+ITensorNetwork(f, is::IndsNetwork; link_space=1)
+ITensorNetwork(eltype, undef, is::IndsNetwork; link_space=1)
+```
+- With no function argument `f`, tensors are initialized to zero.
+- With a function `f(v)` that returns a state label (e.g. `"Up"`, `"Dn"`) or
+  an `ITensor` constructor, tensors are initialized accordingly.
+- `link_space` controls the bond-index dimension (default 1).
+
+**From a graph (site indices inferred as trivial):**
+```julia
+ITensorNetwork(graph::AbstractNamedGraph; link_space=...)
+ITensorNetwork(f, graph::AbstractNamedGraph; link_space=...)
+```
+
+**From a collection of `ITensor`s:**
+```julia
+ITensorNetwork(ts::AbstractVector{ITensor})
+ITensorNetwork(vs, ts::AbstractVector{ITensor})
+ITensorNetwork(ts::AbstractVector{<:Pair{<:Any,ITensor}})
+ITensorNetwork(ts::AbstractDict{<:Any,ITensor})
+```
+Edges are inferred from shared indices between tensors.
+
+**From a single `ITensor`:**
+```julia
+ITensorNetwork(t::ITensor)
+```
+Wraps the tensor in a single-vertex network.
+
+# Example
+```julia
+using ITensorNetworks, ITensors, NamedGraphs.NamedGraphGenerators
+
+g = named_grid((4,))
+s = siteinds("S=1/2", g)
+
+# Zero-initialized network with bond dimension 2
+tn = ITensorNetwork(s; link_space = 2)
+
+# Product state initialized to "Up" on every site
+tn = ITensorNetwork("Up", s)
+
+# Random state
+tn = ITensorNetwork(v -> randn, s; link_space = 4)
+```
+
+See also: `IndsNetwork`, [`ttn`](@ref ITensorNetworks.ttn), [`TreeTensorNetwork`](@ref ITensorNetworks.TreeTensorNetwork).
 """
 struct ITensorNetwork{V} <: AbstractITensorNetwork{V}
     data_graph::DataGraph{V, ITensor, ITensor, NamedGraph{V}, NamedEdge{V}}

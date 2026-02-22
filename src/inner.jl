@@ -3,6 +3,17 @@ using LinearAlgebra: norm, norm_sqr
 
 default_contract_alg(tns::Tuple) = "bp"
 
+"""
+    inner(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; alg="bp", kwargs...) -> Number
+
+Compute the inner product ⟨ϕ|ψ⟩ by contracting the combined bra-ket network.
+
+# Keyword Arguments
+- `alg="bp"`: Contraction algorithm. `"bp"` uses belief propagation (default, efficient
+  for large or loopy networks); `"exact"` uses full contraction with an optimized sequence.
+
+See also: [`loginner`](@ref ITensorNetworks.loginner), `norm`, [`inner(ϕ, A, ψ)`](@ref ITensorNetworks.inner).
+"""
 function ITensors.inner(
         ϕ::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;
@@ -12,6 +23,16 @@ function ITensors.inner(
     return inner(Algorithm(alg), ϕ, ψ; kwargs...)
 end
 
+"""
+    inner(ϕ::AbstractITensorNetwork, A::AbstractITensorNetwork, ψ::AbstractITensorNetwork; alg="bp", kwargs...) -> Number
+
+Compute the matrix element ⟨ϕ|A|ψ⟩ where `A` is a tensor network operator.
+
+# Keyword Arguments
+- `alg="bp"`: Contraction algorithm. `"bp"` (default) or `"exact"`.
+
+See also: [`inner(ϕ, ψ)`](@ref).
+"""
 function ITensors.inner(
         ϕ::AbstractITensorNetwork,
         A::AbstractITensorNetwork,
@@ -53,6 +74,19 @@ function ITensors.inner(
     return scalar(tn; sequence)
 end
 
+"""
+    loginner(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; alg="bp", kwargs...) -> Number
+
+Compute `log(⟨ϕ|ψ⟩)` in a numerically stable way by accumulating logarithms during
+contraction rather than computing the inner product directly.
+
+Useful when the inner product would overflow or underflow in floating-point arithmetic.
+
+# Keyword Arguments
+- `alg="bp"`: Contraction algorithm, `"bp"` (default) or `"exact"`.
+
+See also: [`inner`](@ref ITensorNetworks.inner), `lognorm`.
+"""
 function loginner(
         ϕ::AbstractITensorNetwork,
         ψ::AbstractITensorNetwork;

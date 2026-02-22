@@ -35,6 +35,25 @@ function rescale(
     return tensornetwork(cache![])
 end
 
+"""
+    normalize(tn::AbstractITensorNetwork; alg="exact", kwargs...) -> AbstractITensorNetwork
+
+Return a copy of `tn` rescaled so that `norm(tn) ≈ 1`.
+
+The rescaling is distributed evenly across all tensors in the network (each tensor is
+multiplied by the same scalar factor).
+
+# Keyword Arguments
+- `alg="exact"`: Normalization algorithm. `"exact"` contracts ⟨ψ|ψ⟩ exactly;
+  `"bp"` uses belief propagation for large networks.
+
+# Example
+```julia
+psi = normalize(psi)
+```
+
+See also: `norm`, [`inner`](@ref ITensorNetworks.inner).
+"""
 function LinearAlgebra.normalize(tn::AbstractITensorNetwork; alg = "exact", kwargs...)
     return normalize(Algorithm(alg), tn; kwargs...)
 end
