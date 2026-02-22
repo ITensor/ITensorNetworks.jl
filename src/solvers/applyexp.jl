@@ -113,6 +113,45 @@ end
 
 process_real_times(z) = iszero(abs(z)) ? 0.0 : round(-imag(z); digits = 10)
 
+"""
+    time_evolve(operator, time_points, init_state; sweep_kwargs...) -> state
+
+Time-evolve `init_state` under `operator` using the Time-Dependent Variational Principle
+(TDVP) sweep algorithm on a `TreeTensorNetwork`.
+
+The state is evolved from `t=0` (or more precisely from `first(time_points)`) through the
+successive time points in `time_points`. The operator should represent the Hamiltonian `H`;
+internally the evolution `exp(-i H t)` is applied via a Runge-Kutta integrator.
+
+# Arguments
+- `operator`: The Hamiltonian as a `TreeTensorNetwork` operator (e.g. built from an `OpSum`).
+- `time_points`: A vector (or range) of real time values. The state is evolved incrementally
+  between consecutive entries.
+- `init_state`: The initial `TreeTensorNetwork` state.
+
+# Keyword Arguments
+- `nsites=2`: Number of sites optimized per local update (1 or 2).
+- `order=4`: Order of the Runge-Kutta integrator used for each local step.
+- `factorize_kwargs`: Keyword arguments for bond truncation, e.g. `(; cutoff=1e-10, maxdim=50)`.
+- `outputlevel=0`: Verbosity level (0=silent, 1=print after each time step).
+- `sweep_kwargs...`: Additional keyword arguments forwarded to the sweep driver.
+
+# Returns
+The evolved `TreeTensorNetwork` state at `last(time_points)`.
+
+# Example
+```julia
+times = 0.1:0.1:1.0
+psi_t = time_evolve(H, times, psi0;
+    nsites = 2,
+    order = 4,
+    factorize_kwargs = (; cutoff = 1e-10, maxdim = 50),
+    outputlevel = 1,
+)
+```
+
+See also: [`eigsolve`](@ref), [`dmrg`](@ref).
+"""
 function time_evolve(
         operator,
         time_points,
