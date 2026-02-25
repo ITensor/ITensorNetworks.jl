@@ -16,7 +16,7 @@
 # [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://itensor.github.io/ITensorNetworks.jl/dev/)
 # [![Build Status](https://github.com/ITensor/ITensorNetworks.jl/actions/workflows/Tests.yml/badge.svg?branch=main)](https://github.com/ITensor/ITensorNetworks.jl/actions/workflows/Tests.yml?query=branch%3Amain)
 # [![Coverage](https://codecov.io/gh/ITensor/ITensorNetworks.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ITensor/ITensorNetworks.jl)
-# [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
+# [![Code Style](https://img.shields.io/badge/code_style-ITensor-purple)](https://github.com/ITensor/ITensorFormatter.jl)
 # [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 # ## Support
