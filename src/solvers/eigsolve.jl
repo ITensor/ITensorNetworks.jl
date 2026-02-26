@@ -75,8 +75,7 @@ DMRG-like sweep algorithm on a `TreeTensorNetwork`.
 - `nsites=1`: Number of sites optimized simultaneously per local update step (1 or 2).
 - `factorize_kwargs`: Keyword arguments controlling bond truncation after each local solve,
   e.g. `(; cutoff=1e-10, maxdim=50)`.
-- `sweep_kwargs...`: Additional keyword arguments forwarded to the sweep driver, such as
-  `outputlevel` (0=silent, 1=per-sweep summary, 2=per-region detail).
+- `outputlevel=0`: Level of output to print (0 = no output, 1 = sweep level information, 2 = step details)
 
 # Returns
 A tuple `(eigenvalue, state)` where `eigenvalue` is the converged lowest eigenvalue and

@@ -16,19 +16,22 @@ variational sweep algorithm.
 [`dmrg`](@ref ITensorNetworks.dmrg) is an alias for `eigsolve`.
 
 ```julia
-using ITensorNetworks, ITensors, NamedGraphs.NamedGraphGenerators
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using ITensors: OpSum
+using ITensorNetworks: dmrg, dst, edges, normalize, random_ttn, siteinds, src, ttn
+using TensorOperations
 
+let
 # Build a Heisenberg Hamiltonian on a comb tree
 g  = named_comb_tree((4, 3))
 s  = siteinds("S=1/2", g)
-os = OpSum()
+h = OpSum()
 for e in edges(g)
-    os += 0.5, "S+", src(e), "S-", dst(e)
-    os += 0.5, "S-", src(e), "S+", dst(e)
-    os +=      "Sz", src(e), "Sz", dst(e)
+    h += 0.5, "S+", src(e), "S-", dst(e)
+    h += 0.5, "S-", src(e), "S+", dst(e)
+    h +=      "Sz", src(e), "Sz", dst(e)
 end
-H = ttn(os, s)
+H = ttn(h, s)
 
 # Random initial state (normalise first!)
 psi0 = normalize(random_ttn(s; link_space = 4))
@@ -40,16 +43,8 @@ energy, psi = dmrg(H, psi0;
     factorize_kwargs = (; cutoff = 1e-10, maxdim = 50),
     outputlevel      = 1,
 )
+end
 ```
-
-Key keyword arguments:
-
-| Keyword | Default | Description |
-|---------|---------|-------------|
-| `nsweeps` | — | Number of sweeps (**required**) |
-| `nsites` | `1` | Sites per local update (1 or 2) |
-| `factorize_kwargs` | — | Bond truncation options: `cutoff`, `maxdim`, `mindim`, … (**required**) |
-| `outputlevel` | `0` | `0`=silent, `1`=per-sweep, `2`=per-region |
 
 ```@docs
 ITensorNetworks.eigsolve
@@ -57,32 +52,6 @@ ITensorNetworks.dmrg
 ```
 
 ## Time Evolution — `time_evolve`
-
-[`time_evolve`](@ref ITensorNetworks.time_evolve) applies the time-evolution operator
-`exp(-i H t)` to an initial state using the Time-Dependent Variational Principle (TDVP)
-algorithm. Internally each local step is integrated with a Runge–Kutta method.
-
-Pass a vector (or range) of real time points; the state is evolved **incrementally**
-between consecutive points, so you can inspect it at intermediate times:
-
-```julia
-times = 0.0:0.05:2.0
-psi_t = time_evolve(H, times, psi0;
-    nsites           = 2,
-    order            = 4,
-    factorize_kwargs = (; cutoff = 1e-10, maxdim = 50),
-    outputlevel      = 1,
-)
-```
-
-Key keyword arguments:
-
-| Keyword | Default | Description |
-|---------|---------|-------------|
-| `nsites` | `2` | Sites per local update (1 or 2) |
-| `order` | `4` | Runge–Kutta order |
-| `factorize_kwargs` | — | Bond truncation: `cutoff`, `maxdim`, … |
-| `outputlevel` | `0` | `0`=silent, `1`=per-step summary |
 
 ```@docs
 ITensorNetworks.time_evolve

@@ -99,6 +99,6 @@ For a `TreeTensorNetwork`, the sweep-based `truncate(ttn; kwargs...)` is usually
 convenient because it recompresses the entire network at once with controlled errors;
 see the [Tree Tensor Networks](@ref) page.
 
-```@docs
+```@docs; canonical=false
 Base.truncate(::ITensorNetworks.AbstractITensorNetwork, ::Graphs.AbstractEdge)
 ```

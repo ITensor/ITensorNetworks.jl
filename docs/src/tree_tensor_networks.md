@@ -19,25 +19,28 @@ and provides a convenient interface for 1D calculations.
 ### From an `IndsNetwork` or graph
 
 ```julia
-using ITensorNetworks, ITensors, NamedGraphs.NamedGraphGenerators
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using ITensorNetworks: mps, random_mps, random_ttn, siteinds, ttn
 
+let
 # Comb-tree TTN (a popular tree topology for 2D-like systems)
 g = named_comb_tree((4, 3))
-s = siteinds("S=1/2", g)
+sites = siteinds("S=1/2", g)
 
-psi = ttn(v -> "Up", s; link_space = 2)   # product state
-psi = ttn(s; link_space = 2)              # zero-initialised
+psi = ttn(sites)              # zero-initialised
+psi = ttn(v -> "Up", sites)   # product state
 
 # Random, normalised TTN
-psi = random_ttn(s; link_space = 4)
+psi = random_ttn(sites; link_space = 4)
 
 # 1D MPS
 s1d = siteinds("S=1/2", 10)
-mps_state = mps(v -> "Up", s1d; link_space = 1)   # product MPS
+mps_state = mps(v -> "Up", s1d)   # product MPS
 mps_state  = random_mps(s1d; link_space = 4)
+end
 ```
 
-```@docs
+```@docs; canonical=false
 ITensorNetworks.ttn
 ITensorNetworks.mps
 ITensorNetworks.random_ttn
@@ -52,7 +55,7 @@ orthogonality region. Use the `TreeTensorNetwork` constructor to convert a plain
 gauge metadata when you need a plain network again.
 
 ```julia
-itn = ITensorNetwork(s; link_space = 2)
+itn = ITensorNetwork(sites; link_space = 2)
 psi = TreeTensorNetwork(itn)               # ITensorNetwork → TTN
 itn = ITensorNetwork(psi)                  # TTN → ITensorNetwork
 ```
@@ -69,9 +72,10 @@ tree edges. Truncation parameters (e.g. `cutoff`, `maxdim`) are forwarded to the
 factorisation step.
 
 ```julia
-A  = randomITensor(s[(1,1)], s[(1,2)], s[(1,3)])
-is = IndsNetwork(named_comb_tree((3,)); site_space = ...)
-ttn_A = ttn(A, is)
+g = named_comb_tree((3,1))
+sites = siteinds("S=1/2",g)
+A  = ITensors.random_itensor(sites[(1,1)], sites[(2,1)], sites[(3,1)])
+ttn_A = ttn(A, sites)
 ```
 
 ```@docs
@@ -96,7 +100,7 @@ ortho_region(psi)                   # query current ortho region (returns an ind
 psi = set_ortho_region(psi, vs)     # update metadata only, no tensor operations
 ```
 
-```@docs
+```@docs; canonical=false
 ITensorNetworks.orthogonalize
 ITensorNetworks.ortho_region
 ITensorNetworks.set_ortho_region

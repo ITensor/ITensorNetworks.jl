@@ -30,7 +30,7 @@ z = inner(y, A, x)   # ⟨y|A|x⟩
 n = norm(psi)        # uses ortho_region if available for efficiency
 ```
 
-```@docs
+```@docs; canonical=false
 ITensors.inner(::ITensorNetworks.AbstractITensorNetwork, ::ITensorNetworks.AbstractITensorNetwork)
 ITensors.inner(::ITensorNetworks.AbstractITensorNetwork, ::ITensorNetworks.AbstractITensorNetwork, ::ITensorNetworks.AbstractITensorNetwork)
 ITensorNetworks.loginner
@@ -48,7 +48,7 @@ psi = normalize(psi)              # exact (default)
 psi = normalize(psi; alg = "bp") # belief-propagation (for large loopy networks)
 ```
 
-```@docs
+```@docs; canonical=false
 LinearAlgebra.normalize(::ITensorNetworks.AbstractITensorNetwork)
 ```
 
@@ -79,7 +79,7 @@ using ITensors: Op
 sz = expect(psi, Op("Sz", v))    # single-operator form
 ```
 
-```@docs
+```@docs; canonical=false
 ITensorNetworks.expect(::ITensorNetworks.AbstractITensorNetwork, ::String)
 ITensorNetworks.expect(::ITensorNetworks.AbstractITensorNetwork, ::String, ::Any)
 ITensorNetworks.expect(::ITensorNetworks.AbstractITensorNetwork, ::ITensors.Ops.Op)
@@ -99,6 +99,6 @@ sz = expect("Sz", psi; vertices = [1, 3, 5])   # selected sites
 This is more efficient than the belief propagation approach for tree-structured networks
 because it reuses the orthogonal gauge.
 
-```@docs
+```@docs; canonical=false
 ITensorNetworks.expect(::String, ::ITensorNetworks.AbstractTreeTensorNetwork)
 ```
