@@ -32,6 +32,10 @@ TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 UnicodePlots = "b8865327-cd53-5732-bb35-84acbb429228"
 
+
+[sources.ITensorNetworks]
+path = ".."
+
 [compat]
 AbstractTrees = "0.4.5"
 Adapt = "4.3"
