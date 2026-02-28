@@ -7,13 +7,16 @@ on:
       - "main"
     paths:
       - "Project.toml"
+  issue_comment:
+    types:
+      - "created"
 permissions:
   contents: "write"
   pull-requests: "write"
+  issues: "write"
 jobs:
   Register:
     uses: "ITensor/ITensorActions/.github/workflows/Registrator.yml@main"
     with:
       localregistry: "ITensor/ITensorRegistry"
-    secrets:
-      REGISTRATOR_KEY: "${{ secrets.REGISTRATOR_KEY }}"
+    secrets: "inherit"
