@@ -264,23 +264,21 @@ function _add_maxlinkdims(tns::AbstractTTN...)
     return maxdims
 end
 
-# TODO: actually implement this?
-function Base.:+(
-        ::Algorithm"densitymatrix",
-        tns::AbstractTTN...;
-        cutoff = 1.0e-15,
-        root_vertex = GraphsExtensions.default_root_vertex(first(tns)),
-        kwargs...
-    )
-    return error("Not implemented (yet) for trees.")
-end
-
 function Base.:+(
         ::Algorithm"directsum",
         tns::AbstractTTN...;
         root_vertex = GraphsExtensions.default_root_vertex(first(tns))
     )
     @assert all(tn -> nv(first(tns)) == nv(tn), tns)
+
+    # For QN-conserving TN's, directsum strategy requires each
+    # tensor to have the same flux, which orthogonalizing
+    # to the same 'center' vertex ensures (assuming TN's have
+    # the same total flux)
+    tns = collect(tns)
+    for j in 1:length(tns)
+        tns[j] = orthogonalize(tns[j], root_vertex)
+    end
 
     # Output state
     tn = ttn(siteinds(tns[1]))
