@@ -4,6 +4,9 @@ Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 ITensorNetworks = "2919e153-833c-4bdc-8836-1ea460a35fc7"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 
+[sources.ITensorNetworks]
+path = ".."
+
 [compat]
 Documenter = "1"
 ITensorNetworks = "0.15"
