@@ -1,9 +1,10 @@
 @eval module $(gensym())
 using Graphs: rem_edge!, vertices
-using ITensorNetworks: ITensorNetwork, inner_network, random_tensornetwork, siteinds
+using ITensorNetworks: ITensorNetwork, inner_network, orthogonalize, random_tensornetwork,
+    siteinds, truncate, ttn
 using ITensors: ITensors, apply, inner, op, scalar
 using LinearAlgebra: norm_sqr
-using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NamedGraphs: NamedEdge
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
@@ -53,5 +54,36 @@ using Test: @test, @testset
     expec_method2 = inner(ψ12, Oψ12; alg) / norm_sqr(ψ12; alg)
 
     @test expec_method1 ≈ expec_method2
+end
+
+#
+# This test is a regression test for an
+# issue where summing two product states
+# results in incorrect fluxes of the
+# output state's tensors
+#
+@testset "Sum Product States" begin
+    g = named_comb_tree((2, 2))
+    sites = siteinds("S=1/2", g; conserve_qns = true)
+
+    verts = collect(vertices(g))
+
+    state1 = Dict{Tuple, String}()
+    for (j, v) in enumerate(verts)
+        state1[v] = isodd(j) ? "Up" : "Dn"
+    end
+    ψ1 = ttn(state1, sites)
+
+    state2 = Dict{Tuple, String}()
+    for (j, v) in enumerate(vertices(g))
+        state2[v] = isodd(j) ? "Dn" : "Up"
+    end
+    ψ2 = ttn(state2, sites)
+
+    ϕ = ψ1 + ψ2
+
+    for v in vertices(g)
+        @test ITensors.allfluxequal(ITensors.tensor(ϕ[v]))
+    end
 end
 end

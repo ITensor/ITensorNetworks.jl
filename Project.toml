@@ -1,6 +1,6 @@
 name = "ITensorNetworks"
 uuid = "2919e153-833c-4bdc-8836-1ea460a35fc7"
-version = "0.15.20"
+version = "0.15.21"
 authors = ["Matthew Fishman <mfishman@flatironinstitute.org>, Joseph Tindall <jtindall@flatironinstitute.org> and contributors"]
 
 [workspace]
