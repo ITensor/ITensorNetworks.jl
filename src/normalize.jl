@@ -44,10 +44,12 @@ The rescaling is distributed evenly across all tensors in the network (each tens
 multiplied by the same scalar factor).
 
 # Keyword Arguments
-- `alg="exact"`: Normalization algorithm. `"exact"` contracts ⟨ψ|ψ⟩ exactly;
-  `"bp"` uses belief propagation for large networks.
+
+  - `alg="exact"`: Normalization algorithm. `"exact"` contracts ⟨ψ|ψ⟩ exactly;
+    `"bp"` uses belief propagation for large networks.
 
 # Example
+
 ```julia
 psi = normalize(psi)
 ```

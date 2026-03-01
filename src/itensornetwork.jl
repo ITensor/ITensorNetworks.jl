@@ -15,38 +15,46 @@ A tensor network where each vertex holds an `ITensor`. The network graph is a
 # Constructors
 
 **From an `IndsNetwork` (most common):**
+
 ```julia
-ITensorNetwork(is::IndsNetwork; link_space=1)
-ITensorNetwork(f, is::IndsNetwork; link_space=1)
-ITensorNetwork(eltype, undef, is::IndsNetwork; link_space=1)
+ITensorNetwork(is::IndsNetwork; link_space = 1)
+ITensorNetwork(f, is::IndsNetwork; link_space = 1)
+ITensorNetwork(eltype, undef, is::IndsNetwork; link_space = 1)
 ```
-- With no function argument `f`, tensors are initialized to zero.
-- With a function `f(v)` that returns a state label (e.g. `"Up"`, `"Dn"`) or
-  an `ITensor` constructor, tensors are initialized accordingly.
-- `link_space` controls the bond-index dimension (default 1).
+
+  - With no function argument `f`, tensors are initialized to zero.
+  - With a function `f(v)` that returns a state label (e.g. `"Up"`, `"Dn"`) or
+    an `ITensor` constructor, tensors are initialized accordingly.
+  - `link_space` controls the bond-index dimension (default 1).
 
 **From a graph (site indices inferred as trivial):**
+
 ```julia
-ITensorNetwork(graph::AbstractNamedGraph; link_space=...)
-ITensorNetwork(f, graph::AbstractNamedGraph; link_space=...)
+ITensorNetwork(graph::AbstractNamedGraph; link_space = 1)
+ITensorNetwork(f, graph::AbstractNamedGraph; link_space = 1)
 ```
 
 **From a collection of `ITensor`s:**
+
 ```julia
 ITensorNetwork(ts::AbstractVector{ITensor})
 ITensorNetwork(vs, ts::AbstractVector{ITensor})
-ITensorNetwork(ts::AbstractVector{<:Pair{<:Any,ITensor}})
-ITensorNetwork(ts::AbstractDict{<:Any,ITensor})
+ITensorNetwork(ts::AbstractVector{<:Pair{<:Any, ITensor}})
+ITensorNetwork(ts::AbstractDict{<:Any, ITensor})
 ```
+
 Edges are inferred from shared indices between tensors.
 
 **From a single `ITensor`:**
+
 ```julia
 ITensorNetwork(t::ITensor)
 ```
+
 Wraps the tensor in a single-vertex network.
 
 # Example
+
 ```julia
 using ITensorNetworks, ITensors, NamedGraphs.NamedGraphGenerators
 

@@ -9,8 +9,9 @@ default_contract_alg(tns::Tuple) = "bp"
 Compute the inner product ⟨ϕ|ψ⟩ by contracting the combined bra-ket network.
 
 # Keyword Arguments
-- `alg="bp"`: Contraction algorithm. `"bp"` uses belief propagation (default, efficient
-  for large or loopy networks); `"exact"` uses full contraction with an optimized sequence.
+
+  - `alg="bp"`: Contraction algorithm. `"bp"` uses belief propagation (default, efficient
+    for large or loopy networks); `"exact"` uses full contraction with an optimized sequence.
 
 See also: [`loginner`](@ref ITensorNetworks.loginner), `norm`, [`inner(ϕ, A, ψ)`](@ref ITensorNetworks.inner).
 """
@@ -29,7 +30,8 @@ end
 Compute the matrix element ⟨ϕ|A|ψ⟩ where `A` is a tensor network operator.
 
 # Keyword Arguments
-- `alg="bp"`: Contraction algorithm. `"bp"` (default) or `"exact"`.
+
+  - `alg="bp"`: Contraction algorithm. `"bp"` (default) or `"exact"`.
 
 See also: [`inner(ϕ, ψ)`](@ref).
 """
@@ -83,7 +85,8 @@ contraction rather than computing the inner product directly.
 Useful when the inner product would overflow or underflow in floating-point arithmetic.
 
 # Keyword Arguments
-- `alg="bp"`: Contraction algorithm, `"bp"` (default) or `"exact"`.
+
+  - `alg="bp"`: Contraction algorithm, `"bp"` (default) or `"exact"`.
 
 See also: [`inner`](@ref ITensorNetworks.inner), `lognorm`.
 """

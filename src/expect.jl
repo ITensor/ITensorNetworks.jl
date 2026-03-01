@@ -81,23 +81,27 @@ Compute local expectation values ⟨ψ|op_v|ψ⟩ / ⟨ψ|ψ⟩ for the operator
 vertex of `ψ`.
 
 # Arguments
-- `ψ`: The tensor network state.
-- `op`: Name of the local operator (e.g. `"Sz"`, `"N"`, `"Sx"`), passed to `ITensors.op`.
-- `alg="bp"`: Contraction algorithm. `"bp"` uses belief propagation (efficient for
-  loopy or large networks); `"exact"` performs full contraction.
+
+  - `ψ`: The tensor network state.
+  - `op`: Name of the local operator (e.g. `"Sz"`, `"N"`, `"Sx"`), passed to `ITensors.op`.
+  - `alg="bp"`: Contraction algorithm. `"bp"` uses belief propagation (efficient for
+    loopy or large networks); `"exact"` performs full contraction.
 
 # Keyword Arguments (alg="bp" only)
-- `cache!`: Optional `Ref` to a pre-built belief propagation cache. If provided,
-  the cache is reused across multiple `expect` calls for efficiency.
-- `update_cache=true`: Whether to update the cache before computing expectation values.
+
+  - `cache!`: Optional `Ref` to a pre-built belief propagation cache. If provided,
+    the cache is reused across multiple `expect` calls for efficiency.
+  - `update_cache=true`: Whether to update the cache before computing expectation values.
 
 # Returns
+
 A `Dictionary` mapping each vertex of `ψ` to its expectation value.
 
 # Example
+
 ```julia
 sz = expect(psi, "Sz")             # all sites, belief propagation
-sz = expect(psi, "Sz"; alg="exact")  # exact contraction
+sz = expect(psi, "Sz"; alg = "exact")  # exact contraction
 ```
 
 See also: [`expect(ψ, op::String, vertices)`](@ref),

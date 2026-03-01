@@ -49,6 +49,7 @@ QR decompositions are applied along the unique tree path from the current
 right-orthogonal with respect to that path.
 
 # Example
+
 ```julia
 psi = orthogonalize(psi, root_vertex)    # single-site orthogonality center
 psi = orthogonalize(psi, [v1, v2])       # two-site orthogonality center
@@ -79,11 +80,13 @@ truncation), ensuring that discarded singular values correspond to actual trunca
 Truncation parameters are passed through `kwargs`.
 
 # Keyword Arguments
-- `root_vertex`: Root of the DFS traversal. Defaults to `default_root_vertex(tn)`.
-- `cutoff`: Drop singular values smaller than this threshold (relative or absolute).
-- `maxdim`: Maximum number of singular values to retain on each bond.
+
+  - `root_vertex`: Root of the DFS traversal. Defaults to `default_root_vertex(tn)`.
+  - `cutoff`: Drop singular values smaller than this threshold (relative or absolute).
+  - `maxdim`: Maximum number of singular values to retain on each bond.
 
 # Example
+
 ```julia
 psi_trunc = truncate(psi; cutoff = 1e-10, maxdim = 50)
 ```
@@ -317,8 +320,9 @@ bond dimensions of the two inputs.
 Use [`truncate`](@ref) afterward to compress the resulting network.
 
 # Keyword Arguments
-- `alg="directsum"`: Algorithm for combining the networks. Currently only `"directsum"` is
-  supported for trees.
+
+  - `alg="directsum"`: Algorithm for combining the networks. Currently only `"directsum"` is
+    supported for trees.
 
 Both networks must share the same graph structure and site indices.
 
@@ -433,15 +437,18 @@ The state is normalized before computing expectation values. The operator name i
 `ITensors.op`; each vertex must carry exactly one site index.
 
 # Arguments
-- `operator`: Name of the local operator, e.g. `"Sz"`, `"N"`, `"Sx"`.
-- `state`: The tree tensor network state.
-- `vertices`: Subset of vertices at which to evaluate the operator. Defaults to all vertices.
-- `root_vertex`: Root used for the DFS traversal order.
+
+  - `operator`: Name of the local operator, e.g. `"Sz"`, `"N"`, `"Sx"`.
+  - `state`: The tree tensor network state.
+  - `vertices`: Subset of vertices at which to evaluate the operator. Defaults to all vertices.
+  - `root_vertex`: Root used for the DFS traversal order.
 
 # Returns
+
 A `Dictionary` mapping each vertex to its (real-typed) expectation value.
 
 # Example
+
 ```julia
 sz = expect("Sz", psi)
 sz_sub = expect("Sz", psi; vertices = [1, 3, 5])
