@@ -68,26 +68,29 @@ Find the lowest eigenvalue and corresponding eigenvector of `operator` using a
 DMRG-like sweep algorithm on a `TreeTensorNetwork`.
 
 # Arguments
-- `operator`: The operator to diagonalize, typically a `TreeTensorNetwork` representing a
-  Hamiltonian constructed from an `OpSum` (e.g. via `ttn(opsum, sites)`).
-- `init_state`: Initial guess for the eigenvector as a `TreeTensorNetwork`.
-- `nsweeps`: Number of sweeps over the network.
-- `nsites=1`: Number of sites optimized simultaneously per local update step (1 or 2).
-- `factorize_kwargs`: Keyword arguments controlling bond truncation after each local solve,
-  e.g. `(; cutoff=1e-10, maxdim=50)`.
-- `outputlevel=0`: Level of output to print (0 = no output, 1 = sweep level information, 2 = step details)
+
+  - `operator`: The operator to diagonalize, typically a `TreeTensorNetwork` representing a
+    Hamiltonian constructed from an `OpSum` (e.g. via `ttn(opsum, sites)`).
+  - `init_state`: Initial guess for the eigenvector as a `TreeTensorNetwork`.
+  - `nsweeps`: Number of sweeps over the network.
+  - `nsites=1`: Number of sites optimized simultaneously per local update step (1 or 2).
+  - `factorize_kwargs`: Keyword arguments controlling bond truncation after each local solve,
+    e.g. `(; cutoff=1e-10, maxdim=50)`.
+  - `outputlevel=0`: Level of output to print (0 = no output, 1 = sweep level information, 2 = step details)
 
 # Returns
+
 A tuple `(eigenvalue, state)` where `eigenvalue` is the converged lowest eigenvalue and
 `state` is the optimized `TreeTensorNetwork` eigenvector.
 
 # Example
+
 ```julia
 energy, psi = eigsolve(H, psi0;
     nsweeps = 10,
     nsites = 2,
     factorize_kwargs = (; cutoff = 1e-10, maxdim = 50),
-    outputlevel = 1,
+    outputlevel = 1
 )
 ```
 
@@ -120,11 +123,12 @@ Renormalization Group (DMRG) algorithm. This is an alias for [`eigsolve`](@ref).
 See [`eigsolve`](@ref) for the full description of arguments and keyword arguments.
 
 # Example
+
 ```julia
 energy, psi = dmrg(H, psi0;
     nsweeps = 10,
     nsites = 2,
-    factorize_kwargs = (; cutoff = 1e-10, maxdim = 50),
+    factorize_kwargs = (; cutoff = 1e-10, maxdim = 50)
 )
 ```
 """

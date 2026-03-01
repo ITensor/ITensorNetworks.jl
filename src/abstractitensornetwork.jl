@@ -689,9 +689,9 @@ singular values. `edge` may be an `AbstractEdge` or a `Pair` of vertices.
 
 Truncation parameters are passed as keyword arguments and forwarded to `ITensors.svd`:
 
-- `cutoff`: Drop singular values smaller than this threshold.
-- `maxdim`: Maximum number of singular values to keep.
-- `mindim`: Minimum number of singular values to keep.
+  - `cutoff`: Drop singular values smaller than this threshold.
+  - `maxdim`: Maximum number of singular values to keep.
+  - `mindim`: Minimum number of singular values to keep.
 
 This operates on a single bond. For `TreeTensorNetwork`, the no-argument form
 `truncate(ttn; kwargs...)` sweeps all bonds and is generally preferred for full

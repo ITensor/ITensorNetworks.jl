@@ -47,6 +47,7 @@ actual orthogonal gauge, call [`orthogonalize`](@ref) afterward.
 Throws an error if the underlying graph of `tn` is not a tree.
 
 # Example
+
 ```julia
 ttn_state = TreeTensorNetwork(itn; ortho_region = [root_vertex])
 ```
@@ -122,6 +123,7 @@ If `ortho_region` is not specified, all vertices are set as the orthogonal regio
 (i.e. no particular gauge is assumed). Call [`orthogonalize`](@ref) to impose a gauge.
 
 # Example
+
 ```julia
 using ITensorNetworks, NamedGraphs.NamedGraphGenerators
 
@@ -165,6 +167,7 @@ Construct a matrix product state (MPS) from a function `f` and a flat vector of 
 indices `is`. The indices are arranged on a 1D path graph automatically.
 
 # Example
+
 ```julia
 s = siteinds("S=1/2", 10)
 psi = mps(v -> "Up", s)
@@ -224,6 +227,7 @@ Construct a random, unit-norm `TreeTensorNetwork`. Arguments are forwarded to
 `random_tensornetwork`, which accepts the same interface as [`ITensorNetwork`](@ref).
 
 # Example
+
 ```julia
 g = named_comb_tree((3, 4))
 s = siteinds("S=1/2", g)
@@ -244,6 +248,7 @@ Construct a random, unit-norm matrix product state (MPS) as a `TreeTensorNetwork
 Arguments are forwarded to [`random_ttn`](@ref).
 
 # Example
+
 ```julia
 s = siteinds("S=1/2", 10)
 psi = random_mps(s; link_space = 4)
