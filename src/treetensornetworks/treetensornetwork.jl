@@ -119,8 +119,8 @@ end
 Construct a `TreeTensorNetwork` (TTN) using the same interface as [`ITensorNetwork`](@ref).
 All positional and keyword arguments are forwarded to the `ITensorNetwork` constructor.
 
-If `ortho_region` is not specified, all vertices are set as the orthogonal region
-(i.e. no particular gauge is assumed). Call [`orthogonalize`](@ref) to impose a gauge.
+If `ortho_region` is not specified, no particular gauge is assumed.
+Call [`orthogonalize`](@ref) to impose a gauge.
 
 # Example
 
@@ -130,7 +130,7 @@ using ITensorNetworks, NamedGraphs.NamedGraphGenerators
 # Comb-tree TTN with random bond-dimension-2 tensors
 g = named_comb_tree((3, 4))
 s = siteinds("S=1/2", g)
-psi = ttn(v -> "Up", s; link_space = 2)
+psi = ttn(v -> "Up", s)
 ```
 
 See also: [`mps`](@ref), [`random_ttn`](@ref), [`TreeTensorNetwork`](@ref).
@@ -188,6 +188,7 @@ root vertex, then the network is orthogonalized to `ortho_region` (defaults to t
 Extra `kwargs` (e.g. `cutoff`, `maxdim`) are forwarded to the factorization.
 
 # Example
+
 ```julia
 i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k")
 A = randomITensor(i, j, k)
@@ -195,7 +196,6 @@ is = IndsNetwork(named_comb_tree((3,)); site_space = [i, j, k])
 ttn_A = ttn(A, is)
 ```
 """
-# Construct from dense ITensor, using IndsNetwork of site indices.
 function ttn(
         a::ITensor,
         is::IndsNetwork;

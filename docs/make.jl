@@ -22,7 +22,7 @@ makedocs(;
     pages = [
         "Home" => "index.md",
         "Manual" => [
-            "Tensor Networks" => "tensor_networks.md",
+            "ITensor Networks" => "itensor_networks.md",
             "Tree Tensor Networks" => "tree_tensor_networks.md",
             "Computing Properties" => "computing_properties.md",
             "Solvers" => "solvers.md",

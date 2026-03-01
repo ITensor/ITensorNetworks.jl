@@ -7,7 +7,7 @@ A `TreeTensorNetwork` (alias `TTN`) is an `ITensorNetwork` whose underlying grap
 via QR decomposition — a key ingredient in variational algorithms such as DMRG and TDVP.
 
 A `TreeTensorNetwork` carries an extra piece of metadata: the `ortho_region`, which
-records which vertices currently form the orthogonality centre of the network. Algorithms
+records which vertices currently form the orthogonality center of the network. Algorithms
 update this field as the gauge changes.
 
 **MPS** (matrix product states) are the special case of a `TreeTensorNetwork` on a
@@ -78,7 +78,7 @@ A  = ITensors.random_itensor(sites[(1,1)], sites[(2,1)], sites[(3,1)])
 ttn_A = ttn(A, sites)
 ```
 
-```@docs
+```@docs; canonical=false
 ITensorNetworks.ttn(::ITensors.ITensor, ::ITensorNetworks.IndsNetwork)
 ```
 
@@ -86,15 +86,15 @@ ITensorNetworks.ttn(::ITensors.ITensor, ::ITensorNetworks.IndsNetwork)
 
 One of the most powerful features of tree tensor networks is the ability to bring the
 network into an **orthogonal gauge** in linear time. When the network is in a gauge
-centred on vertex `v`, all tensors away from `v` are isometric with respect to the bond
+centered on vertex `v`, all tensors away from `v` are isometric with respect to the bond
 pointing toward `v`. This makes computing local observables, inner products, and
 eigenvalue problems numerically efficient and stable.
 
-The current orthogonality centre is tracked by the `ortho_region` field.
+The current orthogonality center is tracked by the `ortho_region` field.
 
 ```julia
-psi = orthogonalize(psi, v)         # QR-sweep to put ortho centre at vertex v
-psi = orthogonalize(psi, [v1, v2])  # two-site centre (for nsites=2 sweeps)
+psi = orthogonalize(psi, v)         # QR-sweep to put ortho center at vertex v
+psi = orthogonalize(psi, [v1, v2])  # two-site center (for nsites=2 sweeps)
 
 ortho_region(psi)                   # query current ortho region (returns an index set)
 psi = set_ortho_region(psi, vs)     # update metadata only, no tensor operations
@@ -115,7 +115,7 @@ After algorithms that grow the bond dimension (e.g. addition, subspace expansion
   the leaves to the root, orthogonalising and truncating every bond in sequence. This is
   the preferred form after addition or DMRG expansion.
 - **Single-bond truncation** (available for any `ITensorNetwork`): `truncate(tn, edge;
-  kwargs...)` truncates one bond by SVD — see the [Tensor Networks](@ref) page.
+  kwargs...)` truncates one bond by SVD — see the [ITensor Networks](@ref) page.
 
 ```julia
 psi = truncate(psi; cutoff = 1e-10, maxdim = 50)

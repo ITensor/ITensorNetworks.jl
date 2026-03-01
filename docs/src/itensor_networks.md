@@ -1,4 +1,4 @@
-# Tensor Networks
+# ITensor Networks
 
 ## The `ITensorNetwork` Type
 
@@ -72,13 +72,14 @@ linkinds(ψ)              # IndsNetwork of bond (virtual) indices
 ## Adding Two `ITensorNetwork`s
 
 Two networks with the same graph and site indices can be added. The result represents the
-quantum state `ψ₁ + ψ₂` and has bond dimension equal to the **sum** of the two input bond
+tensor network `ψ₁ + ψ₂` and has bond dimension equal to the **sum** of the two input bond
 dimensions. Individual bonds of the result can be recompressed with `truncate(tn, edge)`.
 For `TreeTensorNetwork`, the no-argument form `truncate(ttn; kwargs...)` sweeps and
 recompresses all bonds at once.
 
 ```julia
 ψ12 = add(ψ1, ψ2)
+ψ12 = ψ1 + ψ2
 ```
 
 ```@docs; canonical=false
