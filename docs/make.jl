@@ -28,8 +28,7 @@ makedocs(;
             "Solvers" => "solvers.md",
         ],
         "API Reference" => "reference.md",
-    ],
-    warnonly = true
+    ]
 )
 
 deploydocs(;

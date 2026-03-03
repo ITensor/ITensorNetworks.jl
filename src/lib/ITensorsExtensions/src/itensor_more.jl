@@ -95,14 +95,12 @@ trivial_space(x::Type) = trivial_space(promote_indtype(x))
 trivial_space(i::Type{<:Index{<:Integer}}) = 1
 trivial_space(i::Type{<:Index{<:Vector{<:Pair{<:QN, <:Integer}}}}) = [QN() => 1]
 
-"""
-Given an input tensor and a Dict (ind_to_newind), replace inds of tensor that are also
-keys of ind_to_newind to the value of ind_to_newind.
-Note that it is the same as
-ITensors.replaceinds(tensor, collect(keys(ind_to_newind)) => collect(values(ind_to_newind))).
-Based on benchmark, this implementation is more efficient when the size of ind_to_newind is large.
-TODO: we can remove this function once the original replaceinds performance is improved.
-"""
+# Given an input tensor and a Dict (ind_to_newind), replace inds of tensor that are also
+# keys of ind_to_newind to the value of ind_to_newind.
+# Note that it is the same as
+# ITensors.replaceinds(tensor, collect(keys(ind_to_newind)) => collect(values(ind_to_newind))).
+# Based on benchmark, this implementation is more efficient when the size of ind_to_newind is large.
+# TODO: we can remove this function once the original replaceinds performance is improved.
 function ITensors.replaceinds(tensor::ITensor, ind_to_newind::Dict{<:Index, <:Index})
     subset_inds = intersect(inds(tensor), collect(keys(ind_to_newind)))
     if length(subset_inds) == 0
