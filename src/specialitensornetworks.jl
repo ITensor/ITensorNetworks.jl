@@ -4,10 +4,8 @@ using ITensors.NDTensors: dim
 using ITensors: delta
 using Random: Random, AbstractRNG
 
-"""
-RETURN A TENSOR NETWORK WITH COPY TENSORS ON EACH VERTEX.
-Note that passing a link_space will mean the indices of the resulting network don't match those of the input indsnetwork
-"""
+# Return a tensor network with copy tensors on each vertex.
+# Note that passing a link_space will mean the indices of the resulting network don't match those of the input indsnetwork
 function delta_network(eltype::Type, s::IndsNetwork; kwargs...)
     return ITensorNetwork(s; kwargs...) do v
         return inds -> delta(eltype, inds)
@@ -26,9 +24,7 @@ function delta_network(graph::AbstractNamedGraph; kwargs...)
     return delta_network(Float64, graph; kwargs...)
 end
 
-"""
-Build an ITensor network on a graph specified by the inds network s. Bond_dim is given by link_space and entries are randomised (normal distribution, mean 0 std 1)
-"""
+# Build an ITensor network on a graph specified by the inds network s. Bond_dim is given by link_space and entries are randomised (normal distribution, mean 0 std 1)
 function random_tensornetwork(
         rng::AbstractRNG, eltype::Type, s::IndsNetwork; link_space = 1, kwargs...
     )
@@ -67,11 +63,9 @@ end
     return random_tensornetwork(Random.default_rng(), g; kwargs...)
 end
 
-"""
-Build an ITensor network on a graph specified by the inds network s.
-Bond_dim is given by link_space and entries are randomized.
-The random distribution is based on the input argument `distribution`.
-"""
+# Build an ITensor network on a graph specified by the inds network s.
+# Bond_dim is given by link_space and entries are randomized.
+# The random distribution is based on the input argument `distribution`.
 function random_tensornetwork(
         rng::AbstractRNG, distribution::Distribution, s::IndsNetwork; kwargs...
     )

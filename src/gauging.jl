@@ -61,9 +61,7 @@ function ITensorNetwork(
     return ψ
 end
 
-"""
-Use an ITensorNetwork ψ, its bond tensors and belief propagation cache to put ψ into the vidal gauge, return the bond tensors and updated_ψ.
-"""
+# Use an ITensorNetwork ψ, its bond tensors and belief propagation cache to put ψ into the vidal gauge, return the bond tensors and updated_ψ.
 function vidalitensornetwork_preserve_cache(
         ψ::ITensorNetwork;
         cache = default_norm_cache(ψ),
@@ -151,9 +149,7 @@ function update(ψ::VidalITensorNetwork; kwargs...)
     return VidalITensorNetwork(ITensorNetwork(ψ; update_gauge = false); kwargs...)
 end
 
-"""
-Function to construct the 'isometry' of a state in the Vidal Gauge on the given edge
-"""
+# Function to construct the 'isometry' of a state in the Vidal Gauge on the given edge
 function vidal_gauge_isometry(ψ::VidalITensorNetwork, edge)
     vsrc, vdst = src(edge), dst(edge)
     ψ_vsrc = copy(ψ[vsrc])
@@ -179,9 +175,7 @@ function vidal_gauge_isometries(ψ::VidalITensorNetwork)
     )
 end
 
-"""
-Function to measure the 'distance' of a state from the Vidal Gauge
-"""
+# Function to measure the 'distance' of a state from the Vidal Gauge
 function gauge_error(ψ::VidalITensorNetwork)
     f = 0
     isometries = vidal_gauge_isometries(ψ)

@@ -896,9 +896,7 @@ function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
     return inds
 end
 
-"""
-Check if the edge of an itensornetwork has multiple indices
-"""
+# Check if the edge of an itensornetwork has multiple indices
 is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
 is_multi_edge(tn::AbstractITensorNetwork) = Base.Fix1(is_multi_edge, tn)
 
@@ -970,9 +968,7 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
     return tn12
 end
 
-"""
-Scale each tensor of the network via a function vertex -> Number
-"""
+# Scale each tensor of the network via a function vertex -> Number
 function scale!(
         weight_function::Function,
         tn::AbstractITensorNetwork;
@@ -981,9 +977,7 @@ function scale!(
     return map_vertices_preserve_graph!(v -> weight_function(v) * tn[v], tn; vertices)
 end
 
-"""
-Scale each tensor of the network by a scale factor for each vertex in the keys of the dictionary
-"""
+# Scale each tensor of the network by a scale factor for each vertex in the keys of the dictionary
 function scale!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
     return scale!(v -> vertices_weights[v], tn; vertices = keys(vertices_weights))
 end

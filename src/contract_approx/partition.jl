@@ -43,30 +43,22 @@ function _partition(g::AbstractGraph, subgraph_vertices)
     return partitioned_graph
 end
 
-"""
-Find all vertices `v` such that `f(graph[v]) == true`
-"""
+# Find all vertices `v` such that `f(graph[v]) == true`
 function findall_on_vertices(f::Function, graph::AbstractDataGraph)
     return findall(f, vertex_data(graph))
 end
 
-"""
-Find the vertex `v` such that `f(graph[v]) == true`
-"""
+# Find the vertex `v` such that `f(graph[v]) == true`
 function findfirst_on_vertices(f::Function, graph::AbstractDataGraph)
     return findfirst(f, vertex_data(graph))
 end
 
-"""
-Find all edges `e` such that `f(graph[e]) == true`
-"""
+# Find all edges `e` such that `f(graph[e]) == true`
 function findall_on_edges(f::Function, graph::AbstractDataGraph)
     return findall(f, edge_data(graph))
 end
 
-"""
-Find the edge `e` such that `f(graph[e]) == true`
-"""
+# Find the edge `e` such that `f(graph[e]) == true`
 function findfirst_on_edges(f::Function, graph::AbstractDataGraph)
     return findfirst(f, edge_data(graph))
 end

@@ -47,9 +47,7 @@ function tight_binding(g::AbstractGraph; t = 1, tp = 0, h = 0)
     return ℋ
 end
 
-"""
-t-t' Hubbard Model g,i,v
-"""
+# t-t' Hubbard model
 function hubbard(g::AbstractGraph; U = 0, t = 1, tp = 0, h = 0)
     (; U, t, tp, h) = map(to_callable, (; U, t, tp, h))
     ℋ = OpSum()
@@ -75,9 +73,7 @@ function hubbard(g::AbstractGraph; U = 0, t = 1, tp = 0, h = 0)
     return ℋ
 end
 
-"""
-Random field J1-J2 Heisenberg model on a general graph
-"""
+# J1-J2 Heisenberg model on a general graph
 function heisenberg(g::AbstractGraph; J1 = 1, J2 = 0, h = 0)
     (; J1, J2, h) = map(to_callable, (; J1, J2, h))
     ℋ = OpSum()
@@ -100,14 +96,10 @@ function heisenberg(g::AbstractGraph; J1 = 1, J2 = 0, h = 0)
     return ℋ
 end
 
-"""
-Random field J1-J2 Heisenberg model on a chain of length N
-"""
+# J1-J2 Heisenberg model on a chain of length N
 heisenberg(N::Integer; kwargs...) = heisenberg(path_graph(N); kwargs...)
 
-"""
-Next-to-nearest-neighbor Ising model (ZZX) on a general graph
-"""
+# Next-to-nearest-neighbor Ising model (ZZX) on a general graph
 function ising(g::AbstractGraph; J1 = -1, J2 = 0, h = 0)
     (; J1, J2, h) = map(to_callable, (; J1, J2, h))
     ℋ = OpSum()
@@ -133,8 +125,6 @@ function ising(g::AbstractGraph; J1 = -1, J2 = 0, h = 0)
     return ℋ
 end
 
-"""
-Next-to-nearest-neighbor Ising model (ZZX) on a chain of length N
-"""
+# Next-to-nearest-neighbor Ising model (ZZX) on a chain of length N
 ising(N::Integer; kwargs...) = ising(path_graph(N); kwargs...)
 end

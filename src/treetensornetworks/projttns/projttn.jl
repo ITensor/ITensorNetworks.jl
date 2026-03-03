@@ -5,9 +5,6 @@ using ITensors: ITensor
 using NamedGraphs.GraphsExtensions: incident_edges, is_leaf_vertex
 using NamedGraphs: NamedEdge
 
-"""
-ProjTTN
-"""
 struct ProjTTN{V, Pos <: Union{Indices{V}, NamedEdge{V}}} <: AbstractProjTTN{V}
     pos::Pos
     operator::TTN{V}
