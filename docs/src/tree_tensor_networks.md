@@ -18,26 +18,27 @@ and provides a convenient interface for 1D calculations.
 
 ### From an `IndsNetwork` or graph
 
-```julia
+```@example main
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
-using ITensorNetworks: mps, random_mps, random_ttn, siteinds, ttn
+using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, siteinds, ttn, random_ttn, mps, random_mps, orthogonalize, ortho_region, set_ortho_region, add
+import ITensors
+using Graphs: vertices, edges
+using LinearAlgebra: norm
 
-let
 # Comb-tree TTN (a popular tree topology for 2D-like systems)
-g = named_comb_tree((4, 3))
+g = named_comb_tree((3, 2))
 sites = siteinds("S=1/2", g)
 
 psi = ttn(sites)              # zero-initialised
 psi = ttn(v -> "Up", sites)   # product state
 
-# Random, normalised TTN
-psi = random_ttn(sites; link_space = 4)
+# Random TTN
+psi = random_ttn(sites; link_space = 2)
 
 # 1D MPS
-s1d = siteinds("S=1/2", 10)
+s1d = siteinds("S=1/2", 6)
 mps_state = mps(v -> "Up", s1d)   # product MPS
-mps_state  = random_mps(s1d; link_space = 4)
-end
+mps_state  = random_mps(s1d; link_space = 2)
 ```
 
 ```@docs; canonical=false
@@ -54,10 +55,9 @@ orthogonality region. Use the `TreeTensorNetwork` constructor to convert a plain
 `ITensorNetwork` with tree topology into a `TTN`, and `ITensorNetwork` to strip the
 gauge metadata when you need a plain network again.
 
-```julia
-itn = ITensorNetwork(sites; link_space = 2)
-psi = TreeTensorNetwork(itn)               # ITensorNetwork → TTN
+```@example main
 itn = ITensorNetwork(psi)                  # TTN → ITensorNetwork
+psi = TreeTensorNetwork(itn)               # ITensorNetwork → TTN
 ```
 
 ```@docs; canonical=false
@@ -71,10 +71,10 @@ A dense tensor can be decomposed into a TTN by successive QR/SVD factorisations 
 tree edges. Truncation parameters (e.g. `cutoff`, `maxdim`) are forwarded to the
 factorisation step.
 
-```julia
+```@example main
 g = named_comb_tree((3,1))
 sites = siteinds("S=1/2",g)
-A  = ITensors.random_itensor(sites[(1,1)], sites[(2,1)], sites[(3,1)])
+A  = ITensors.random_itensor(only(sites[(1,1)]), only(sites[(2,1)]), only(sites[(3,1)]))
 ttn_A = ttn(A, sites)
 ```
 
@@ -92,7 +92,11 @@ eigenvalue problems numerically efficient and stable.
 
 The current orthogonality center is tracked by the `ortho_region` field.
 
-```julia
+```@example main
+v  = collect(vertices(psi))[1]
+v1 = collect(vertices(psi))[1]
+v2 = collect(vertices(psi))[2]
+vs = [v]
 psi = orthogonalize(psi, v)         # QR-sweep to put ortho center at vertex v
 psi = orthogonalize(psi, [v1, v2])  # two-site center (for nsites=2 sweeps)
 
@@ -117,7 +121,7 @@ After algorithms that grow the bond dimension (e.g. addition, subspace expansion
 - **Single-bond truncation** (available for any `ITensorNetwork`): `truncate(tn, edge;
   kwargs...)` truncates one bond by SVD — see the [ITensor Networks](@ref) page.
 
-```julia
+```@example main
 psi = truncate(psi; cutoff = 1e-10, maxdim = 50)
 ```
 
@@ -134,7 +138,8 @@ Base.truncate(::ITensorNetworks.AbstractTreeTensorNetwork)
 Two TTNs with the same graph and site indices can be summed. The result has bond
 dimension equal to the **sum** of the two inputs, and can be recompressed with `truncate`.
 
-```julia
+```@example main
+psi1, psi2 = psi, psi
 psi3 = psi1 + psi2             # or add(psi1, psi2)
 psi3 = truncate(psi3; cutoff = 1e-10, maxdim = 50)
 

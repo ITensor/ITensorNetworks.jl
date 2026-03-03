@@ -15,35 +15,33 @@ eigenvector of an operator (e.g. a Hamiltonian) using a DMRG-like
 variational sweep algorithm.
 [`dmrg`](@ref ITensorNetworks.dmrg) is an alias for `eigsolve`.
 
-```julia
+```@example main
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using ITensors: OpSum
 using ITensorNetworks: dmrg, dst, edges, normalize, random_ttn, siteinds, src, ttn
-using TensorOperations
 
-let
 # Build a Heisenberg Hamiltonian on a comb tree
-g  = named_comb_tree((4, 3))
+g  = named_comb_tree((3, 2))
 s  = siteinds("S=1/2", g)
-h = OpSum()
-for e in edges(g)
-    h += 0.5, "S+", src(e), "S-", dst(e)
-    h += 0.5, "S-", src(e), "S+", dst(e)
-    h +=      "Sz", src(e), "Sz", dst(e)
+H = let h = OpSum()
+    for e in edges(g)
+        h += 0.5, "S+", src(e), "S-", dst(e)
+        h += 0.5, "S-", src(e), "S+", dst(e)
+        h +=      "Sz", src(e), "Sz", dst(e)
+    end
+    ttn(h, s)
 end
-H = ttn(h, s)
 
 # Random initial state (normalise first!)
-psi0 = normalize(random_ttn(s; link_space = 4))
+psi0 = normalize(random_ttn(s; link_space = 2))
 
 # Run DMRG
 energy, psi = dmrg(H, psi0;
-    nsweeps          = 10,
+    nsweeps          = 2,
     nsites           = 2,
-    factorize_kwargs = (; cutoff = 1e-10, maxdim = 50),
+    factorize_kwargs = (; cutoff = 1e-10, maxdim = 10),
     outputlevel      = 1,
 )
-end
 ```
 
 ```@docs

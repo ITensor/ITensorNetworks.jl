@@ -3,6 +3,8 @@ using Graphs: Graphs
 using ITensorNetworks: ITensorNetworks
 using ITensors: ITensors
 using LinearAlgebra: LinearAlgebra
+using OMEinsumContractionOrders
+using TensorOperations
 
 DocMeta.setdocmeta!(
     ITensorNetworks, :DocTestSetup, :(using ITensorNetworks); recursive = true
