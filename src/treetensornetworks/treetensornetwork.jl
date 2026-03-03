@@ -48,8 +48,21 @@ Throws an error if the underlying graph of `tn` is not a tree.
 
 # Example
 
-```julia
-ttn_state = TreeTensorNetwork(itn; ortho_region = [root_vertex])
+```jldoctest
+julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
+
+julia> using Graphs: vertices
+
+julia> g = named_comb_tree((2, 2));
+
+julia> s = siteinds("S=1/2", g);
+
+julia> itn = ITensorNetwork(s; link_space = 2);
+
+julia> root_vertex = first(vertices(itn));
+
+julia> ttn_state = TreeTensorNetwork(itn; ortho_region = [root_vertex]);
+
 ```
 
 See also: [`ttn`](@ref), [`ITensorNetwork`](@ref), [`orthogonalize`](@ref).
@@ -124,13 +137,15 @@ Call [`orthogonalize`](@ref) to impose a gauge.
 
 # Example
 
-```julia
-using ITensorNetworks, NamedGraphs.NamedGraphGenerators
+```jldoctest
+julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
 
-# Comb-tree TTN with random bond-dimension-2 tensors
-g = named_comb_tree((3, 4))
-s = siteinds("S=1/2", g)
-psi = ttn(v -> "Up", s)
+julia> g = named_comb_tree((2, 2));
+
+julia> s = siteinds("S=1/2", g);
+
+julia> psi = ttn(v -> "Up", s);
+
 ```
 
 See also: [`mps`](@ref), [`random_ttn`](@ref), [`TreeTensorNetwork`](@ref).
@@ -168,9 +183,11 @@ indices `is`. The indices are arranged on a 1D path graph automatically.
 
 # Example
 
-```julia
-s = siteinds("S=1/2", 10)
-psi = mps(v -> "Up", s)
+```jldoctest
+julia> s = siteinds("S=1/2", 6);
+
+julia> psi = mps(v -> "Up", s);
+
 ```
 """
 function mps(f, is::Vector{<:Index}; kwargs...)
@@ -189,11 +206,19 @@ Extra `kwargs` (e.g. `cutoff`, `maxdim`) are forwarded to the factorization.
 
 # Example
 
-```julia
-i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k")
-A = randomITensor(i, j, k)
-is = IndsNetwork(named_comb_tree((3,)); site_space = [i, j, k])
-ttn_A = ttn(A, is)
+```jldoctest
+julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
+
+julia> import ITensors
+
+julia> g = named_comb_tree((3, 1));
+
+julia> s = siteinds("S=1/2", g);
+
+julia> A = ITensors.random_itensor(only(s[(1, 1)]), only(s[(2, 1)]), only(s[(3, 1)]));
+
+julia> ttn_A = ttn(A, s);
+
 ```
 """
 function ttn(
@@ -228,10 +253,15 @@ Construct a random, unit-norm `TreeTensorNetwork`. Arguments are forwarded to
 
 # Example
 
-```julia
-g = named_comb_tree((3, 4))
-s = siteinds("S=1/2", g)
-psi = random_ttn(s; link_space = 4)
+```jldoctest
+julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
+
+julia> g = named_comb_tree((2, 2));
+
+julia> s = siteinds("S=1/2", g);
+
+julia> psi = random_ttn(s; link_space = 2);
+
 ```
 
 See also: [`ttn`](@ref), [`random_mps`](@ref).
@@ -249,9 +279,11 @@ Arguments are forwarded to [`random_ttn`](@ref).
 
 # Example
 
-```julia
-s = siteinds("S=1/2", 10)
-psi = random_mps(s; link_space = 4)
+```jldoctest
+julia> s = siteinds("S=1/2", 6);
+
+julia> psi = random_mps(s; link_space = 2);
+
 ```
 
 See also: [`mps`](@ref), [`random_ttn`](@ref).

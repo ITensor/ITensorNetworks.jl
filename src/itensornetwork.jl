@@ -55,20 +55,17 @@ Wraps the tensor in a single-vertex network.
 
 # Example
 
-```julia
-using ITensorNetworks, ITensors, NamedGraphs.NamedGraphGenerators
+```jldoctest
+julia> using NamedGraphs.NamedGraphGenerators: named_grid
 
-g = named_grid((4,))
-s = siteinds("S=1/2", g)
+julia> g = named_grid((4,));
 
-# Zero-initialized network with bond dimension 2
-tn = ITensorNetwork(s; link_space = 2)
+julia> s = siteinds("S=1/2", g);
 
-# Product state initialized to "Up" on every site
-tn = ITensorNetwork("Up", s)
+julia> tn = ITensorNetwork(s; link_space = 2);
 
-# Random state
-tn = ITensorNetwork(v -> randn, s; link_space = 4)
+julia> tn = ITensorNetwork("Up", s);
+
 ```
 
 See also: `IndsNetwork`, [`ttn`](@ref ITensorNetworks.ttn), [`TreeTensorNetwork`](@ref ITensorNetworks.TreeTensorNetwork).

@@ -50,8 +50,21 @@ multiplied by the same scalar factor).
 
 # Example
 
-```julia
-psi = normalize(psi)
+```jldoctest
+julia> using NamedGraphs.NamedGraphGenerators: named_grid
+
+julia> using LinearAlgebra: norm
+
+julia> g = named_grid((4,));
+
+julia> s = siteinds("S=1/2", g);
+
+julia> psi = random_ttn(s; link_space = 2);
+
+julia> psi = normalize(psi);
+
+julia> norm(psi) ≈ 1
+true
 ```
 
 See also: `norm`, [`inner`](@ref ITensorNetworks.inner).
