@@ -99,15 +99,12 @@ v2 = collect(vertices(psi))[2]
 vs = [v]
 psi = orthogonalize(psi, v)         # QR-sweep to put ortho center at vertex v
 psi = orthogonalize(psi, [v1, v2])  # two-site center (for nsites=2 sweeps)
-
 ortho_region(psi)                   # query current ortho region (returns an index set)
-psi = set_ortho_region(psi, vs)     # update metadata only, no tensor operations
 ```
 
 ```@docs; canonical=false
 ITensorNetworks.orthogonalize
 ITensorNetworks.ortho_region
-ITensorNetworks.set_ortho_region
 ```
 
 ## Bond Truncation

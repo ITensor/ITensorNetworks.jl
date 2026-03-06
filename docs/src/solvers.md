@@ -37,10 +37,10 @@ psi0 = normalize(random_ttn(s; link_space = 2))
 
 # Run DMRG
 energy, psi = dmrg(H, psi0;
-    nsweeps          = 2,
-    nsites           = 2,
+    nsweeps = 2,
+    nsites = 2,
     factorize_kwargs = (; cutoff = 1e-10, maxdim = 10),
-    outputlevel      = 1,
+    outputlevel = 1,
 )
 ```
 

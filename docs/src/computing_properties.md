@@ -84,13 +84,6 @@ sz = expect(psi, "Sz", [(1,), (3,)])
 sz = expect(psi, "Sz"; alg = "exact")
 ```
 
-When computing multiple operators on the same state, reuse the belief propagation cache
-to avoid redundant work:
-
-```@example main
-sz = expect(psi, Op("Sz", v))    # single-operator form
-```
-
 ```@docs; canonical=false
 ITensorNetworks.expect(::ITensorNetworks.AbstractITensorNetwork, ::String)
 ITensorNetworks.expect(::ITensorNetworks.AbstractITensorNetwork, ::String, ::Any)
