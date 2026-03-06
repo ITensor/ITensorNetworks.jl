@@ -43,7 +43,7 @@ jobs:
   tests-gate:
     name: "Tests"
     needs: "tests"
-    if: "${{ always() }}"
+    if: "${{ always() && needs.tests.result != 'skipped' }}"
     runs-on: "ubuntu-latest"
     steps:
       - name: "Fail if any matrix leg failed"

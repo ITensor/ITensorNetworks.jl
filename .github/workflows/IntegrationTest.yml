@@ -30,7 +30,7 @@ jobs:
   integration-gate:
     name: "IntegrationTest"
     needs: "integration-test"
-    if: "${{ always() }}"
+    if: "${{ always() && needs.integration-test.result != 'skipped' }}"
     runs-on: "ubuntu-latest"
     steps:
       - name: "Fail if any downstream integration test failed"
