@@ -209,7 +209,7 @@ Extra `kwargs` (e.g. `cutoff`, `maxdim`) are forwarded to the factorization.
 ```jldoctest
 julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
 
-julia> import ITensors
+julia> using ITensors: ITensors
 
 julia> g = named_comb_tree((3, 1));
 
