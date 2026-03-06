@@ -1,5 +1,6 @@
 using Documenter: Documenter, DocMeta, deploydocs, makedocs
 using Graphs: Graphs
+using ITensorFormatter: ITensorFormatter
 using ITensorNetworks: ITensorNetworks
 using ITensors: ITensors
 using LinearAlgebra: LinearAlgebra
@@ -22,7 +23,7 @@ DocMeta.setdocmeta!(
     recursive = true
 )
 
-include("make_index.jl")
+ITensorFormatter.make_index!(pkgdir(ITensorNetworks))
 
 makedocs(;
     modules = [ITensorNetworks],
