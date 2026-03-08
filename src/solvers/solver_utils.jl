@@ -2,16 +2,8 @@ using SerializedElementArrays: disk
 # Utilities for making it easier
 # to define solvers (like ODE solvers)
 # for TDVP
-"""
-    to_vec(x)
-
-Transform `x` into a `Vector`. Returns the vector and a closure which inverts the
-transformation.
-
-Modeled after `FiniteDifferences.to_vec`:
-
-https://github.com/JuliaDiff/FiniteDifferences.jl/blob/main/src/to_vec.jl
-"""
+# Transform `x` into a `Vector`. Returns the vector and a closure which inverts the
+# transformation. Modeled after `FiniteDifferences.to_vec`.
 to_vec(x) = error("Not implemented")
 
 function to_vec(x::ITensor)

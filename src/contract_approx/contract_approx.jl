@@ -1,11 +1,9 @@
 using NamedGraphs.GraphsExtensions: is_binary_arborescence, root_vertex
 
 # Density matrix algorithm and ttn_svd algorithm
-"""
-Approximate a `binary_tree_partition` into an output ITensorNetwork
-with the same binary tree structure. `root` is the root vertex of the
-pre-order depth-first-search traversal used to perform the truncations.
-"""
+# Approximate a `binary_tree_partition` into an output ITensorNetwork
+# with the same binary tree structure. `root` is the root vertex of the
+# pre-order depth-first-search traversal used to perform the truncations.
 function contract_approx(
         ::Algorithm"density_matrix",
         binary_tree_partition::DataGraph;
@@ -49,11 +47,9 @@ function contract_approx(
     )
 end
 
-"""
-Approximate a given ITensorNetwork `tn` into an output ITensorNetwork
-with a binary tree structure. The binary tree structure is defined based
-on `inds_btree`, which is a directed binary tree DataGraph of indices.
-"""
+# Approximate a given ITensorNetwork `tn` into an output ITensorNetwork
+# with a binary tree structure. The binary tree structure is defined based
+# on `inds_btree`, which is a directed binary tree DataGraph of indices.
 function contract_approx(
         alg::Union{Algorithm"density_matrix", Algorithm"ttn_svd"},
         tn::ITensorNetwork,
@@ -78,10 +74,8 @@ function contract_approx(
     return output_tn, log_root_norm
 end
 
-"""
-Approximate a given ITensorNetwork `tn` into an output ITensorNetwork with `output_structure`.
-`output_structure` outputs a directed binary tree DataGraph defining the desired graph structure.
-"""
+# Approximate a given ITensorNetwork `tn` into an output ITensorNetwork with `output_structure`.
+# `output_structure` outputs a directed binary tree DataGraph defining the desired graph structure.
 function contract_approx(
         alg::Union{Algorithm"density_matrix", Algorithm"ttn_svd"},
         tn::ITensorNetwork,
