@@ -2,7 +2,7 @@
 
 ```@setup main
 using NamedGraphs.NamedGraphGenerators: named_grid
-using ITensorNetworks: siteinds, random_ttn, normalize, loginner, expect, inner
+using ITensorNetworks: expect, inner, loginner, normalize, random_ttn, siteinds
 using ITensors: Op
 using Graphs: vertices
 using LinearAlgebra: norm

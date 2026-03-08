@@ -20,9 +20,9 @@ and provides a convenient interface for 1D calculations.
 
 ```@example main
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
-using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, siteinds, ttn, random_ttn, mps, random_mps, orthogonalize, ortho_region, add
+using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, add, mps, ortho_region, orthogonalize, random_mps, random_ttn, siteinds, ttn
 import ITensors
-using Graphs: vertices, edges
+using Graphs: edges, vertices
 using LinearAlgebra: norm
 
 # Comb-tree TTN (a popular tree topology for 2D-like systems)
