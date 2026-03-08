@@ -31,7 +31,7 @@ using NamedGraphs.NamedGraphGenerators: named_grid
 
 # 3×3 square-lattice tensor network
 g = named_grid((3, 3))
-s = siteinds("S=1/2", g)            # one spin-½ Index per vertex
+s = siteinds("S=1/2", g)  # one spin-½ Index per vertex
 
 # Zero-initialized, bond dimension 2
 ψ = ITensorNetwork(s; link_space = 2)
@@ -47,12 +47,12 @@ When you already have `ITensor`s in hand, edges are inferred automatically from 
 indices:
 
 ```@example main
-i, j, k = Index(2,"i"), Index(2,"j"), Index(2,"k")
-A, B, C  = ITensor(i,j), ITensor(j,k), ITensor(k)
+i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k")
+A, B, C = ITensor(i, j), ITensor(j, k), ITensor(k)
 
-tn = ITensorNetwork([A, B, C])                     # integer vertices 1, 2, 3
-tn = ITensorNetwork(["A","B","C"], [A, B, C])       # named vertices
-tn = ITensorNetwork(["A"=>A, "B"=>B, "C"=>C])       # from pairs
+tn = ITensorNetwork([A, B, C])  # integer vertices 1, 2, 3
+tn = ITensorNetwork(["A", "B", "C"], [A, B, C])  # named vertices
+tn = ITensorNetwork(["A" => A, "B" => B, "C" => C])  # from pairs
 ```
 
 ```@docs; canonical=false
@@ -63,14 +63,14 @@ ITensorNetworks.ITensorNetwork
 
 ```@example main
 v = (1, 2)
-T = ψ[v]                  # ITensor at vertex (1,2)
-ψ[v] = T                  # replace tensor at a vertex
-vertices(ψ)               # all vertex labels
-edges(ψ)                  # all edges
-neighbors(ψ, v)           # neighbouring vertices of v
-nv(ψ), ne(ψ)             # vertex / edge counts
-siteinds(ψ)               # IndsNetwork of site (physical) indices
-linkinds(ψ)               # IndsNetwork of bond (virtual) indices
+T = ψ[v]  # ITensor at vertex (1,2)
+ψ[v] = T  # replace tensor at a vertex
+vertices(ψ)  # all vertex labels
+edges(ψ)  # all edges
+neighbors(ψ, v)  # neighbouring vertices of v
+nv(ψ), ne(ψ)  # vertex / edge counts
+siteinds(ψ)  # IndsNetwork of site (physical) indices
+linkinds(ψ)  # IndsNetwork of bond (virtual) indices
 ```
 
 ## Adding Two `ITensorNetwork`s
@@ -96,9 +96,9 @@ ITensorNetworks.add(::ITensorNetworks.AbstractITensorNetwork, ::ITensorNetworks.
 A single bond (edge) of any `ITensorNetwork` can be truncated by SVD:
 
 ```@example main
-edge = (1,2) => (1,3)
-ψ12 = truncate(ψ12, (1,2) => (1,3))   # truncate the bond between vertices (1,2) and (1,3)
-ψ12 = truncate(ψ12, edge)              # or pass an AbstractEdge directly
+edge = (1, 2) => (1, 3)
+ψ12 = truncate(ψ12, (1, 2) => (1, 3))  # truncate the bond between vertices (1,2) and (1,3)
+ψ12 = truncate(ψ12, edge)  # or pass an AbstractEdge directly
 ```
 
 Truncation parameters (`cutoff`, `maxdim`, `mindim`, …) are forwarded to `ITensors.svd`.

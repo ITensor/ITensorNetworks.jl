@@ -21,13 +21,13 @@ using ITensors: OpSum
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 
 # Build a Heisenberg Hamiltonian on a comb tree
-g  = named_comb_tree((3, 2))
-s  = siteinds("S=1/2", g)
+g = named_comb_tree((3, 2))
+s = siteinds("S=1/2", g)
 H = let h = OpSum()
     for e in edges(g)
         h += 0.5, "S+", src(e), "S-", dst(e)
         h += 0.5, "S-", src(e), "S+", dst(e)
-        h +=      "Sz", src(e), "Sz", dst(e)
+        h += "Sz", src(e), "Sz", dst(e)
     end
     ttn(h, s)
 end

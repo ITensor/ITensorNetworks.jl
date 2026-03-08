@@ -29,16 +29,16 @@ using NamedGraphs.NamedGraphGenerators: named_comb_tree
 g = named_comb_tree((3, 2))
 sites = siteinds("S=1/2", g)
 
-psi = ttn(sites)              # zero-initialised
-psi = ttn(v -> "Up", sites)   # product state
+psi = ttn(sites)  # zero-initialised
+psi = ttn(v -> "Up", sites)  # product state
 
 # Random TTN
 psi = random_ttn(sites; link_space = 2)
 
 # 1D MPS
 s1d = siteinds("S=1/2", 6)
-mps_state = mps(v -> "Up", s1d)   # product MPS
-mps_state  = random_mps(s1d; link_space = 2)
+mps_state = mps(v -> "Up", s1d)  # product MPS
+mps_state = random_mps(s1d; link_space = 2)
 ```
 
 ```@docs; canonical=false
@@ -56,8 +56,8 @@ orthogonality region. Use the `TreeTensorNetwork` constructor to convert a plain
 gauge metadata when you need a plain network again.
 
 ```@example main
-itn = ITensorNetwork(psi)                  # TTN → ITensorNetwork
-psi = TreeTensorNetwork(itn)               # ITensorNetwork → TTN
+itn = ITensorNetwork(psi)  # TTN → ITensorNetwork
+psi = TreeTensorNetwork(itn)  # ITensorNetwork → TTN
 ```
 
 ```@docs; canonical=false
@@ -72,9 +72,9 @@ tree edges. Truncation parameters (e.g. `cutoff`, `maxdim`) are forwarded to the
 factorisation step.
 
 ```@example main
-g = named_comb_tree((3,1))
-sites = siteinds("S=1/2",g)
-A  = ITensors.random_itensor(only(sites[(1,1)]), only(sites[(2,1)]), only(sites[(3,1)]))
+g = named_comb_tree((3, 1))
+sites = siteinds("S=1/2", g)
+A = ITensors.random_itensor(only(sites[(1, 1)]), only(sites[(2, 1)]), only(sites[(3, 1)]))
 ttn_A = ttn(A, sites)
 ```
 
@@ -93,13 +93,13 @@ eigenvalue problems numerically efficient and stable.
 The current orthogonality center is tracked by the `ortho_region` field.
 
 ```@example main
-v  = collect(vertices(psi))[1]
+v = collect(vertices(psi))[1]
 v1 = collect(vertices(psi))[1]
 v2 = collect(vertices(psi))[2]
 vs = [v]
-psi = orthogonalize(psi, v)         # QR-sweep to put ortho center at vertex v
+psi = orthogonalize(psi, v)  # QR-sweep to put ortho center at vertex v
 psi = orthogonalize(psi, [v1, v2])  # two-site center (for nsites=2 sweeps)
-ortho_region(psi)                   # query current ortho region (returns an index set)
+ortho_region(psi)  # query current ortho region (returns an index set)
 ```
 
 ```@docs; canonical=false
@@ -137,11 +137,11 @@ dimension equal to the **sum** of the two inputs, and can be recompressed with `
 
 ```@example main
 psi1, psi2 = psi, psi
-psi3 = psi1 + psi2             # or add(psi1, psi2)
+psi3 = psi1 + psi2  # or add(psi1, psi2)
 psi3 = truncate(psi3; cutoff = 1e-10, maxdim = 50)
 
-2.0 * psi                      # scalar multiplication
-psi / norm(psi)                # manual normalisation
+2 * psi  # scalar multiplication
+psi / norm(psi)  # manual normalisation
 ```
 
 ```@docs; canonical=false
