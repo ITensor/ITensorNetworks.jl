@@ -387,7 +387,7 @@ function compress_ttn(
                     # we need to account for the direct product below ordering the physical indices as the last indices
                     # although they are in between incoming and outgoing indices in the canonical site-ordering
                     perm = (1, 3, 2)
-                    if ITensors.compute_permfactor(perm, (rq, sq, cq)) == -1
+                    if ITensors.compute_permfactor(perm, rq, sq, cq) == -1
                         Op .*= -1
                     end
                 end
