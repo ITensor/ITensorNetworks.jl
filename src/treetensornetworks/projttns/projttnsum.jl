@@ -3,9 +3,6 @@ using ITensors: ITensors, contract, product
 using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs: NamedGraphs
 
-"""
-ProjTTNSum
-"""
 struct ProjTTNSum{V, T <: AbstractProjTTN{V}, Z <: Number} <: AbstractProjTTN{V}
     terms::Vector{T}
     factors::Vector{Z}

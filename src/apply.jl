@@ -304,11 +304,9 @@ function _contract_gate(o::AbstractEdge, ψv1, Λ, ψv2)
     return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
 end
 
-#In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
-"""
-Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
-Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site
-"""
+# In the future we will try to unify this into apply() above but currently leave it mostly as a separate function
+# Apply() function for an ITN in the Vidal Gauge. Hence the bond tensors are required.
+# Gate does not necessarily need to be passed. Can supply an edge to do an identity update instead. Uses Simple Update procedure assuming gate is two-site
 function ITensors.apply(
         o::Union{NamedEdge, ITensor}, ψ::VidalITensorNetwork; normalize = false, apply_kwargs...
     )
@@ -382,9 +380,7 @@ end
 
 ### Full Update Routines ###
 
-"""
-Calculate the overlap of the gate acting on the previous p and q versus the new p and q in the presence of environments. This is the cost function that optimise_p_q will minimise
-"""
+# Calculate the overlap of the gate acting on the previous p and q versus the new p and q in the presence of environments. This is the cost function that optimise_p_q will minimise
 function fidelity(
         envs::Vector{ITensor},
         p_cur::ITensor,
@@ -429,10 +425,8 @@ function fidelity(
     return f * conj(f)
 end
 
-"""
-Do Full Update Sweeping, Optimising the tensors p and q in the presence of the environments envs,
-Specifically this functions find the p_cur and q_cur which optimise envs*gate*p*q*dag(prime(p_cur))*dag(prime(q_cur))
-"""
+# Do Full Update Sweeping, Optimising the tensors p and q in the presence of the environments envs,
+# Specifically this functions find the p_cur and q_cur which optimise envs*gate*p*q*dag(prime(p_cur))*dag(prime(q_cur))
 function optimise_p_q(
         p::ITensor,
         q::ITensor,

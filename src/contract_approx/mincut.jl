@@ -7,32 +7,24 @@ using NamedGraphs: NamedDiGraph
 # a large number to prevent this edge being a cut
 MAX_WEIGHT = 1.0e32
 
-"""
-Outputs a maximimally unbalanced directed binary tree DataGraph defining the desired graph structure
-"""
+# Outputs a maximimally unbalanced directed binary tree DataGraph defining the desired graph structure
 function path_graph_structure(tn::ITensorNetwork)
     return path_graph_structure(tn, flatten_siteinds(tn))
 end
 
-"""
-Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a maximimally unbalanced
-directed binary tree DataGraph of `outinds` defining the desired graph structure
-"""
+# Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a maximimally unbalanced
+# directed binary tree DataGraph of `outinds` defining the desired graph structure
 function path_graph_structure(tn::ITensorNetwork, outinds::Vector)
     return _binary_tree_structure(tn, outinds; maximally_unbalanced = true)
 end
 
-"""
-Outputs a directed binary tree DataGraph defining the desired graph structure
-"""
+# Outputs a directed binary tree DataGraph defining the desired graph structure
 function binary_tree_structure(tn::ITensorNetwork)
     return binary_tree_structure(tn, flatten_siteinds(tn))
 end
 
-"""
-Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a
-directed binary tree DataGraph of `outinds` defining the desired graph structure
-"""
+# Given a `tn` and `outinds` (a subset of noncommoninds of `tn`), outputs a
+# directed binary tree DataGraph of `outinds` defining the desired graph structure
 function binary_tree_structure(tn::ITensorNetwork, outinds::Vector)
     return _binary_tree_structure(tn, outinds; maximally_unbalanced = false)
 end
@@ -49,12 +41,10 @@ function mincut(
     return error("Backend `$backend` not implemented for `mincut`.")
 end
 
-"""
-Calculate the mincut between two subsets of the uncontracted inds
-(source_inds and terminal_inds) of the input tn.
-Mincut of two inds list is defined as the mincut of two newly added vertices,
-each one neighboring to one inds subset.
-"""
+# Calculate the mincut between two subsets of the uncontracted inds
+# (source_inds and terminal_inds) of the input tn.
+# Mincut of two inds list is defined as the mincut of two newly added vertices,
+# each one neighboring to one inds subset.
 function _mincut(tn::ITensorNetwork, source_inds::Vector, terminal_inds::Vector)
     @assert length(source_inds) >= 1
     @assert length(terminal_inds) >= 1
@@ -73,10 +63,8 @@ function _mincut(tn::ITensorNetwork, source_inds::Vector, terminal_inds::Vector)
     )
 end
 
-"""
-Calculate the mincut_partitions between two subsets of the uncontracted inds
-(source_inds and terminal_inds) of the input tn.
-"""
+# Calculate the mincut_partitions between two subsets of the uncontracted inds
+# (source_inds and terminal_inds) of the input tn.
 function _mincut_partitions(tn::ITensorNetwork, source_inds::Vector, terminal_inds::Vector)
     p1, p2, cut = _mincut(tn, source_inds, terminal_inds)
     p1 = [v[1] for v in p1 if v[2] == 2]
@@ -93,9 +81,7 @@ function _mincut_partition_maxweightoutinds(
     return _mincut_partitions(tn, source_inds, terminal_inds)
 end
 
-"""
-Sum of shortest path distances among all outinds.
-"""
+# Sum of shortest path distances among all outinds.
 function _distance(tn::ITensorNetwork, outinds::Vector)
     @assert length(outinds) >= 1
     @assert issubset(outinds, flatten_siteinds(tn))
@@ -114,11 +100,9 @@ function _distance(tn::ITensorNetwork, outinds::Vector)
     return distances
 end
 
-"""
-create a tn with empty ITensors whose outinds weights are MAX_WEIGHT
-The maxweight_tn is constructed so that only commoninds of the tn
-will be considered in mincut.
-"""
+# Create a tn with empty ITensors whose outinds weights are MAX_WEIGHT.
+# The maxweight_tn is constructed so that only commoninds of the tn
+# will be considered in mincut.
 function _maxweightoutinds_tn(tn::ITensorNetwork, outinds::Union{Nothing, Vector})
     @assert issubset(outinds, flatten_siteinds(tn))
     out_to_maxweight_ind = Dict{Index, Index}()
@@ -136,16 +120,10 @@ function _maxweightoutinds_tn(tn::ITensorNetwork, outinds::Union{Nothing, Vector
     return maxweight_tn, out_to_maxweight_ind
 end
 
-"""
-Given a tn and outinds (a subset of noncommoninds of tn), get a `DataGraph`
-with binary tree structure of outinds that will be used in the binary tree partition.
-If maximally_unbalanced=true, the binary tree will have a line/mps structure.
-The binary tree is recursively constructed from leaves to the root.
-
-Example:
-
-# TODO
-"""
+# Given a tn and outinds (a subset of noncommoninds of tn), get a `DataGraph`
+# with binary tree structure of outinds that will be used in the binary tree partition.
+# If maximally_unbalanced=true, the binary tree will have a line/mps structure.
+# The binary tree is recursively constructed from leaves to the root.
 function _binary_tree_structure(
         tn::ITensorNetwork, outinds::Vector; maximally_unbalanced::Bool = false
     )
@@ -196,9 +174,7 @@ function _nested_vector_to_directed_tree(inds_tree_vector::Vector)
     return graph
 end
 
-"""
-Given a tn and outinds, returns a vector of indices representing MPS inds ordering.
-"""
+# Given a tn and outinds, returns a vector of indices representing MPS inds ordering.
 function _mps_partition_inds_order(tn::ITensorNetwork, outinds::Union{Nothing, Vector})
     if outinds == nothing
         outinds = flatten_siteinds(tn)
@@ -256,21 +232,19 @@ function _binary_tree_partition_inds_mincut(
     return outinds
 end
 
-"""
-Find a vector of indices within sourceinds_list yielding the mincut of given tn_pair.
-Args:
-tn_pair: a pair of tns (tn1 => tn2), where tn2 is generated via _maxweightoutinds_tn(tn1)
-out_to_maxweight_ind: a dict mapping each out ind in tn1 to out ind in tn2
-sourceinds_list: a list of vector of indices to be considered
-Note:
-For each sourceinds in sourceinds_list, we consider its mincut within both tns (tn1, tn2) given in tn_pair.
-The mincut in tn1 represents the rank upper bound when splitting sourceinds with other inds in outinds.
-The mincut in tn2 represents the rank upper bound when the weights of outinds are very large.
-The first mincut upper_bounds the number of non-zero singular values, while the second empirically reveals the
-singular value decay.
-We output the sourceinds where the first mincut value is the minimum, the secound mincut value is also
-the minimum under the condition that the first mincut is optimal, and the sourceinds have the lowest all-pair shortest path.
-"""
+# Find a vector of indices within sourceinds_list yielding the mincut of given tn_pair.
+# Args:
+#   tn_pair: a pair of tns (tn1 => tn2), where tn2 is generated via _maxweightoutinds_tn(tn1)
+#   out_to_maxweight_ind: a dict mapping each out ind in tn1 to out ind in tn2
+#   sourceinds_list: a list of vector of indices to be considered
+# Note:
+# For each sourceinds in sourceinds_list, we consider its mincut within both tns (tn1, tn2) given in tn_pair.
+# The mincut in tn1 represents the rank upper bound when splitting sourceinds with other inds in outinds.
+# The mincut in tn2 represents the rank upper bound when the weights of outinds are very large.
+# The first mincut upper_bounds the number of non-zero singular values, while the second empirically reveals the
+# singular value decay.
+# We output the sourceinds where the first mincut value is the minimum, the second mincut value is also
+# the minimum under the condition that the first mincut is optimal, and the sourceinds have the lowest all-pair shortest path.
 function _mincut_inds(
         tn_pair::Pair{<:ITensorNetwork, <:ITensorNetwork},
         out_to_maxweight_ind::Dict{<:Index, <:Index},

@@ -3,12 +3,10 @@ using Graphs: add_vertex!, vertices
 using LinearAlgebra: norm
 using NamedGraphs.GraphsExtensions: vertextype
 
-"""
-Approximate a `partition` into an output ITensorNetwork
-with the binary tree structure defined by `out_tree` by
-first transforming the partition into a ttn, then truncating
-the ttn using a sequence of SVDs.
-"""
+# Approximate a `partition` into an output ITensorNetwork
+# with the binary tree structure defined by `out_tree` by
+# first transforming the partition into a ttn, then truncating
+# the ttn using a sequence of SVDs.
 function _approx_itensornetwork_ttn_svd!(
         input_partition::DataGraph;
         root = first(vertices(partition)),

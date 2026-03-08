@@ -121,14 +121,12 @@ function _DensityMatrixAlgCaches()
     return _DensityMatrixAlgCaches(e_to_dm, es_to_pdm)
 end
 
-"""
-The struct stores data used in the density matrix algorithm.
-partition: The given tn partition
-out_tree: the binary tree structure of the output ITensorNetwork
-root: root vertex of the bfs_tree for truncation
-innerinds_to_sim: mapping each inner index of the tn represented by `partition` to a sim index
-caches: all the cached density matrices
-"""
+# The struct stores data used in the density matrix algorithm.
+# partition: The given tn partition
+# out_tree: the binary tree structure of the output ITensorNetwork
+# root: root vertex of the bfs_tree for truncation
+# innerinds_to_sim: mapping each inner index of the tn represented by `partition` to a sim index
+# caches: all the cached density matrices
 struct _DensityMartrixAlgGraph
     partition::DataGraph
     out_tree::NamedGraph
@@ -155,9 +153,7 @@ function _get_low_rank_projector(tensor, inds1, inds2; cutoff, maxdim)
     return F.Vt
 end
 
-"""
-Returns a dict that maps the partition's outinds that are adjacent to `partition[root]` to siminds
-"""
+# Returns a dict that maps the partition's outinds that are adjacent to `partition[root]` to siminds
 function _densitymatrix_outinds_to_sim(partition, root)
     outinds = _noncommoninds(partition)
     outinds_root = intersect(outinds, flatten_siteinds(partition[root]))
@@ -165,11 +161,9 @@ function _densitymatrix_outinds_to_sim(partition, root)
     return outinds_root_to_sim
 end
 
-"""
-Replace the inds of partial_dm_tensor that are in keys of `inds_to_siminds` to the
-corresponding value, and replace the inds that are in values of `inds_to_siminds`
-to the corresponding key.
-"""
+# Replace the inds of partial_dm_tensor that are in keys of `inds_to_siminds` to the
+# corresponding value, and replace the inds that are in values of `inds_to_siminds`
+# to the corresponding key.
 function _sim(partial_dm_tensor::ITensor, inds_to_siminds)
     siminds_to_inds = Dict(zip(values(inds_to_siminds), keys(inds_to_siminds)))
     indices = keys(inds_to_siminds)
@@ -182,14 +176,12 @@ function _sim(partial_dm_tensor::ITensor, inds_to_siminds)
     return replaceinds(partial_dm_tensor, reorder_inds => reorder_siminds)
 end
 
-"""
-Update `caches.e_to_dm[e]` and `caches.es_to_pdm[es]`.
-caches: the caches of the density matrix algorithm.
-edge: the edge defining the density matrix
-children: the children vertices of `dst(edge)` in the dfs_tree
-network: the tensor network at vertex `dst(edge)`
-inds_to_sim: a dict mapping inds to sim inds
-"""
+# Update `caches.e_to_dm[e]` and `caches.es_to_pdm[es]`.
+# caches: the caches of the density matrix algorithm.
+# edge: the edge defining the density matrix
+# children: the children vertices of `dst(edge)` in the dfs_tree
+# network: the tensor network at vertex `dst(edge)`
+# inds_to_sim: a dict mapping inds to sim inds
 function _update!(
         caches::_DensityMatrixAlgCaches,
         edge::NamedEdge,
@@ -321,10 +313,8 @@ function _rem_vertex!(
     return U
 end
 
-"""
-Approximate a `partition` into an output ITensorNetwork
-with the binary tree structure defined by `out_tree`.
-"""
+# Approximate a `partition` into an output ITensorNetwork
+# with the binary tree structure defined by `out_tree`.
 function _approx_itensornetwork_density_matrix!(
         input_partition::DataGraph,
         out_tree::NamedGraph;

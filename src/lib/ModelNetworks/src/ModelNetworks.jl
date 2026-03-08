@@ -5,15 +5,14 @@ using ITensors: commoninds, diag_itensor, inds, noprime
 using LinearAlgebra: Diagonal, eigen
 using NamedGraphs: NamedGraph
 
-"""
-BUILD Z OF CLASSICAL ISING MODEL ON A GIVEN GRAPH AT INVERSE TEMP BETA
-H = -\\sum_{(v,v') \\in edges}\\sigma^{z}_{v}\\sigma^{z}_{v'}
-OPTIONAL ARGUMENT:
-h: EXTERNAL MAGNETIC FIELD
-szverts: A LIST OF VERTICES OVER WHICH TO APPLY A SZ.
-THE RESULTANT NETWORK CAN THEN BE CONTRACTED AND DIVIDED BY THE ACTUAL PARTITION FUNCTION TO GET THAT OBSERVABLE
-INDSNETWORK IS ASSUMED TO BE BUILT FROM A GRAPH (NO SITE INDS) AND OF LINK SPACE 2
-"""
+# Build Z of classical Ising model on a given graph at inverse temp beta.
+# H = -sum_{(v,v') in edges} sigma^z_v sigma^z_{v'}
+# Optional arguments:
+#   h: external magnetic field
+#   szverts: a list of vertices over which to apply Sz.
+#     The resultant network can then be contracted and divided by the actual
+#     partition function to get that observable.
+# IndsNetwork is assumed to be built from a graph (no site inds) and of link space 2.
 function ising_network(
         eltype::Type, s::IndsNetwork, beta::Number; h::Number = 0.0, szverts = nothing
     )
@@ -62,10 +61,8 @@ function ising_network(g::NamedGraph, beta::Number; h::Number = 0.0, szverts = n
     return ising_network(eltype(beta), g, beta; h, szverts)
 end
 
-"""
-Build the wavefunction whose norm is equal to Z of the classical ising model
-s needs to have site indices in this case!
-"""
+# Build the wavefunction whose norm is equal to Z of the classical Ising model.
+# s needs to have site indices in this case.
 function ising_network_state(eltype::Type, s::IndsNetwork, beta::Number; h::Number = 0.0)
     return ising_network(eltype, s, 0.5 * beta; h)
 end

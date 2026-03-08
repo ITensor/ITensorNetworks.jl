@@ -39,12 +39,8 @@ function determine_coefficient_type(terms)
     return typeof(coefficient(first(terms)))
 end
 
-"""
-    ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex, kwargs...)
-
-Construct a TreeTensorNetwork from a symbolic OpSum representation of a
-Hamiltonian, compressing shared interaction channels.
-"""
+# Construct a TreeTensorNetwork from a symbolic OpSum representation of a
+# Hamiltonian, compressing shared interaction channels.
 function ttn_svd(os::OpSum, sites::IndsNetwork, root_vertex; kwargs...)
     # Function barrier to improve type stability
     coefficient_type = determine_coefficient_type(terms(os))
