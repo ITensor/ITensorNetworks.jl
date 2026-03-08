@@ -1,6 +1,6 @@
 using Graphs: dst, edges, src, vertices
 using ITensorMPS: OpSum
-using ITensorNetworks: dmrg, siteinds, ttn
+using ITensorNetworks: SweepIterator, dmrg, siteinds, ttn
 using ITensors
 using Suppressor: @capture_out
 using TensorOperations: TensorOperations
@@ -72,6 +72,17 @@ include("utilities/tree_graphs.jl")
     E, psi = dmrg(H, psi0; factorize_kwargs, nsites, nsweeps, outputlevel = 0)
     (outputlevel >= 1) && println("2-site DMRG energy = ", E)
     @test E ≈ Ex atol = 1.0e-5
+
+    #
+    # Test ability to pass custom sweep_callback
+    # (Regression test for PR #304)
+    #
+    sweep_count = 0
+    function sweep_callback(sweep_iter::SweepIterator; kws...)
+        return sweep_count += 1
+    end
+    dmrg(H, psi0; factorize_kwargs, nsweeps, outputlevel, sweep_callback)
+    @test sweep_count == nsweeps
 
     #
     # Test that outputlevel > 0 generates output
