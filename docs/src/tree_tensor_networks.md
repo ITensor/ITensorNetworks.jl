@@ -19,11 +19,11 @@ and provides a convenient interface for 1D calculations.
 ### From an `IndsNetwork` or graph
 
 ```@example main
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using Graphs: edges, vertices
 using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, add, mps, ortho_region, orthogonalize, random_mps, random_ttn, siteinds, ttn
 import ITensors
-using Graphs: edges, vertices
 using LinearAlgebra: norm
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 
 # Comb-tree TTN (a popular tree topology for 2D-like systems)
 g = named_comb_tree((3, 2))

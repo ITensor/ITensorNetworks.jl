@@ -1,11 +1,11 @@
 # Computing Properties
 
 ```@setup main
-using NamedGraphs.NamedGraphGenerators: named_grid
+using Graphs: vertices
 using ITensorNetworks: expect, inner, loginner, normalize, random_ttn, siteinds
 using ITensors: Op
-using Graphs: vertices
 using LinearAlgebra: norm
+using NamedGraphs.NamedGraphGenerators: named_grid
 
 g   = named_grid((4,))
 s   = siteinds("S=1/2", g)

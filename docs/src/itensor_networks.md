@@ -24,10 +24,10 @@ generated from functions such as `named_grid`, `named_comb_tree`, etc. from the 
 `NamedGraphGenerators` module:
 
 ```@example main
-using NamedGraphs.NamedGraphGenerators: named_grid
-using ITensorNetworks: ITensorNetwork, add, linkinds, siteinds
-using ITensors: ITensor, Index
 using Graphs: edges, ne, neighbors, nv, vertices
+using ITensorNetworks: ITensorNetwork, add, linkinds, siteinds
+using ITensors: Index, ITensor
+using NamedGraphs.NamedGraphGenerators: named_grid
 
 # 3×3 square-lattice tensor network
 g = named_grid((3, 3))

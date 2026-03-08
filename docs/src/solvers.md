@@ -16,9 +16,9 @@ variational sweep algorithm.
 [`dmrg`](@ref ITensorNetworks.dmrg) is an alias for `eigsolve`.
 
 ```@example main
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
-using ITensors: OpSum
 using ITensorNetworks: dmrg, dst, edges, normalize, random_ttn, siteinds, src, ttn
+using ITensors: OpSum
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
 
 # Build a Heisenberg Hamiltonian on a comb tree
 g  = named_comb_tree((3, 2))
