@@ -3,7 +3,6 @@
 ```@setup main
 using Graphs: vertices
 using ITensorNetworks: expect, inner, loginner, normalize, random_ttn, siteinds
-using ITensors: Op
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_grid
 

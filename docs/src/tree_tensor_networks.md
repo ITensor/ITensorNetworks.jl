@@ -19,9 +19,10 @@ and provides a convenient interface for 1D calculations.
 ### From an `IndsNetwork` or graph
 
 ```@example main
-using Graphs: edges, vertices
-using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, add, mps, ortho_region, orthogonalize, random_mps, random_ttn, siteinds, ttn
-import ITensors
+using Graphs: vertices
+using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, mps, ortho_region, orthogonalize,
+    random_mps, random_ttn, siteinds, ttn
+using ITensors: ITensors
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 
