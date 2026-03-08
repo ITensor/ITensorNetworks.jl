@@ -92,7 +92,7 @@ ITensorNetwork(tn::TTN) = getfield(tn, :tensornetwork)
 
 Return the set of vertices that currently form the orthogonality center of `tn`.
 
-See also: [`orthogonalize`](@ref), [`set_ortho_region`](@ref).
+See also: [`orthogonalize`](@ref).
 """
 ortho_region(tn::TTN) = getfield(tn, :ortho_region)
 
@@ -111,17 +111,8 @@ end
 # Constructor
 #
 
-"""
-    set_ortho_region(tn::TreeTensorNetwork, ortho_region) -> TreeTensorNetwork
-
-Return a copy of `tn` with the `ortho_region` metadata updated to `ortho_region`,
-**without** performing any gauge transformations on the tensors.
-
-This is a low-level bookkeeping update. To actually move the orthogonality center by
-applying QR decompositions along the tree, use [`orthogonalize`](@ref).
-
-See also: [`ortho_region`](@ref), [`orthogonalize`](@ref).
-"""
+# set_ortho_region: low-level update of the ortho_region metadata only,
+# without any gauge transformations. To move the orthogonality center use orthogonalize.
 function set_ortho_region(tn::TTN, ortho_region)
     return ttn(ITensorNetwork(tn); ortho_region)
 end

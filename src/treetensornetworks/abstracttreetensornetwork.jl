@@ -69,7 +69,7 @@ julia> psi = orthogonalize(psi, [vs[1], vs[2]]);
 
 ```
 
-See also: [`set_ortho_region`](@ref), [`ortho_region`](@ref), [`truncate`](@ref).
+See also: [`ortho_region`](@ref), [`truncate`](@ref).
 """
 function orthogonalize(ttn::AbstractTTN, region; kwargs...)
     return gauge(Algorithm("orthogonalize"), ttn, region; kwargs...)
