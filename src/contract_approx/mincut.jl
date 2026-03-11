@@ -157,7 +157,7 @@ function _nested_vector_to_directed_tree(inds_tree_vector::Vector)
         return inds_btree
     end
     treenode_to_v = Dict{Union{Vector, Index}, Int}()
-    graph = DataGraph(NamedDiGraph(); edge_data_eltype = Index)
+    graph = DataGraph(NamedDiGraph(); edge_data_type = Index)
     v = 1
     for treenode in PostOrderDFS(inds_tree_vector)
         add_vertex!(graph, v)

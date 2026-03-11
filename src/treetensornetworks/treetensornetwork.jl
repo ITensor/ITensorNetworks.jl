@@ -2,7 +2,7 @@ using Dictionaries: Indices
 using Graphs: path_graph
 using ITensors: ITensor
 using LinearAlgebra: factorize, normalize
-using NamedGraphs.GraphsExtensions: GraphsExtensions, vertextype
+using NamedGraphs.GraphsExtensions: GraphsExtensions, similar_graph, vertextype
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
@@ -76,16 +76,20 @@ end
 
 const TTN = TreeTensorNetwork
 
+function GraphsExtensions.similar_graph(ttn::TTN, underlying_graph::AbstractGraph)
+    return TTN(similar_graph(ttn.tensornetwork, underlying_graph))
+end
+
 # Field access
 """
-    ITensorNetwork(tn::TreeTensorNetwork) -> ITensorNetwork
+    itensornetwork(tn::TreeTensorNetwork) -> ITensorNetwork
 
 Convert a `TreeTensorNetwork` to a plain `ITensorNetwork`, discarding orthogonality
 metadata. The returned network shares the same underlying tensor data.
 
 See also: [`TreeTensorNetwork`](@ref), [`ttn`](@ref).
 """
-ITensorNetwork(tn::TTN) = getfield(tn, :tensornetwork)
+itensornetwork(tn::TTN) = getfield(tn, :tensornetwork)
 
 """
     ortho_region(tn::TreeTensorNetwork) -> Indices
@@ -97,14 +101,14 @@ See also: [`orthogonalize`](@ref).
 ortho_region(tn::TTN) = getfield(tn, :ortho_region)
 
 # Required for `AbstractITensorNetwork` interface
-data_graph(tn::TTN) = data_graph(ITensorNetwork(tn))
+data_graph(tn::TTN) = data_graph(itensornetwork(tn))
 
 function data_graph_type(G::Type{<:TTN})
     return data_graph_type(fieldtype(G, :tensornetwork))
 end
 
 function Base.copy(tn::TTN)
-    return _TreeTensorNetwork(copy(ITensorNetwork(tn)), copy(ortho_region(tn)))
+    return _TreeTensorNetwork(copy(tn.tensornetwork), copy(tn.ortho_region))
 end
 
 #
@@ -114,7 +118,7 @@ end
 # set_ortho_region: low-level update of the ortho_region metadata only,
 # without any gauge transformations. To move the orthogonality center use orthogonalize.
 function set_ortho_region(tn::TTN, ortho_region)
-    return ttn(ITensorNetwork(tn); ortho_region)
+    return ttn(tn.tensornetwork; ortho_region)
 end
 
 """
@@ -301,3 +305,11 @@ Construct a random MPS from a flat vector of site indices `s`.
 function random_mps(s::Vector{<:Index}; kwargs...)
     return random_mps(path_indsnetwork(s); kwargs...)
 end
+
+# function NamedGraphs.namedgraph_steiner_tree(
+#         g::TreeTensorNetwork,
+#         term_vert,
+#         distmx = weights(g)
+#     )
+#     return TreeTensorNetwork(Graphs.steiner_tree(g.tensornetwork, term_vert, distmx))
+# end

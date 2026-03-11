@@ -1,4 +1,4 @@
-using DataGraphs: AbstractDataGraph, DataGraph, edge_data, edge_data_eltype, vertex_data
+using DataGraphs: AbstractDataGraph, DataGraph, edge_data, edge_data_type, vertex_data
 using Dictionaries: Dictionary
 using Graphs: AbstractGraph, add_edge!, dst, edges, edgetype, has_edge, src, vertices
 using ITensors: ITensor, noncommoninds
@@ -8,10 +8,10 @@ using SplitApplyCombine: flatten
 function _partition(g::AbstractGraph, subgraph_vertices)
     partitioned_graph = DataGraph(
         NamedGraph(eachindex(subgraph_vertices));
-        vertex_data_eltype = typeof(g),
-        edge_data_eltype = @NamedTuple{
+        vertex_data_type = typeof(g),
+        edge_data_type = @NamedTuple{
             edges::Vector{edgetype(g)},
-            edge_data::Dictionary{edgetype(g), edge_data_eltype(g)},
+            edge_data::Dictionary{edgetype(g), edge_data_type(g)},
         }
     )
     for v in vertices(partitioned_graph)
@@ -30,7 +30,7 @@ function _partition(g::AbstractGraph, subgraph_vertices)
             add_edge!(partitioned_graph, s1, s2)
             partitioned_graph[s1 => s2] = (;
                 edges = Vector{edgetype(g)}(),
-                edge_data = Dictionary{edgetype(g), edge_data_eltype(g)}(),
+                edge_data = Dictionary{edgetype(g), edge_data_type(g)}(),
             )
         end
         if has_edge(partitioned_graph, s1, s2)

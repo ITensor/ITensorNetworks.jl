@@ -1,4 +1,6 @@
+using Graphs: AbstractGraph
 using ITensors: ITensor, prime
+using NamedGraphs.GraphsExtensions: similar_graph
 
 default_dual_link_index_map = prime
 
@@ -36,6 +38,14 @@ bra_vertex_suffix(lf::LinearFormNetwork) = lf.bra_vertex_suffix
 ket_vertex_suffix(lf::LinearFormNetwork) = lf.ket_vertex_suffix
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 tensornetwork(lf::LinearFormNetwork) = lf.tensornetwork
+
+function GraphsExtensions.similar_graph(
+        lf::LinearFormNetwork,
+        underlying_graph::AbstractGraph
+    )
+    tn = similar_graph(tensornetwork(lf), underlying_graph)
+    return LinearFormNetwork(tn, bra_vertex_suffix(lf), ket_vertex_suffix(lf))
+end
 
 function Base.copy(lf::LinearFormNetwork)
     return LinearFormNetwork(

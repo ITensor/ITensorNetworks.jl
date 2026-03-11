@@ -1,7 +1,7 @@
 using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
 using Adapt: Adapt, adapt, adapt_structure
-using DataGraphs:
-    DataGraphs, edge_data, underlying_graph, underlying_graph_type, vertex_data
+using DataGraphs: DataGraphs, edge_data, get_vertex_data, is_vertex_assigned,
+    set_vertex_data!, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
     ne, neighbors, rem_edge!, src, vertices
@@ -13,7 +13,7 @@ using MacroTools: @capture
 using NDTensors: NDTensors, Algorithm, dim
 using NamedGraphs.GraphsExtensions:
     directed_graph, incident_edges, rename_vertices, vertextype, ⊔
-using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, steiner_tree
+using NamedGraphs: NamedGraphs, NamedGraph, Vertices, not_implemented, steiner_tree
 using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V, ITensor, ITensor} end
@@ -23,7 +23,7 @@ data_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
 data_graph(graph::AbstractITensorNetwork) = not_implemented()
 
 # TODO: Define a generic fallback for `AbstractDataGraph`?
-DataGraphs.edge_data_eltype(::Type{<:AbstractITensorNetwork}) = ITensor
+DataGraphs.edge_data_type(::Type{<:AbstractITensorNetwork}) = ITensor
 
 # Graphs.jl overloads
 function Graphs.weights(graph::AbstractITensorNetwork)
@@ -49,6 +49,7 @@ Base.eltype(tn::AbstractITensorNetwork) = eltype(vertex_data(tn))
 
 # Overload if needed
 Graphs.is_directed(::Type{<:AbstractITensorNetwork}) = false
+GraphsExtensions.directed_graph(is::AbstractITensorNetwork) = directed_graph(data_graph(is))
 
 # Derived interface, may need to be overloaded
 function DataGraphs.underlying_graph_type(G::Type{<:AbstractITensorNetwork})
@@ -59,15 +60,84 @@ function ITensors.datatype(tn::AbstractITensorNetwork)
     return mapreduce(v -> datatype(tn[v]), promote_type, vertices(tn))
 end
 
-# AbstractDataGraphs overloads
-function DataGraphs.vertex_data(graph::AbstractITensorNetwork, args...)
-    return vertex_data(data_graph(graph), args...)
+# TODO: Move to `BaseExtensions` module.
+function is_setindex!_expr(expr::Expr)
+    return is_assignment_expr(expr) && is_getindex_expr(first(expr.args))
 end
-function DataGraphs.edge_data(graph::AbstractITensorNetwork, args...)
-    return edge_data(data_graph(graph), args...)
+is_setindex!_expr(x) = false
+is_getindex_expr(expr::Expr) = (expr.head === :ref)
+is_getindex_expr(x) = false
+is_assignment_expr(expr::Expr) = (expr.head === :(=))
+is_assignment_expr(expr) = false
+
+# TODO: Define this in terms of a function mapping
+# preserve_graph_function(::typeof(setindex!)) = setindex!_preserve_graph
+# preserve_graph_function(::typeof(map_vertex_data)) = map_vertex_data_preserve_graph
+# Also allow annotating codeblocks like `@views`.
+macro preserve_graph(expr)
+    if !is_setindex!_expr(expr)
+        error(
+            "preserve_graph must be used with setindex! syntax (as @preserve_graph a[i,j,...] = value)"
+        )
+    end
+    @capture(expr, array_[indices__] = value_)
+    return :(setindex_preserve_graph!($(esc(array)), $(esc(value)), $(esc.(indices)...)))
 end
 
+function setindex_preserve_graph!(tn::AbstractITensorNetwork, value, vertex)
+    data_graph(tn)[vertex] = value
+    return tn
+end
+
+# AbstractDataGraphs overloads
+
 DataGraphs.underlying_graph(tn::AbstractITensorNetwork) = underlying_graph(data_graph(tn))
+
+function DataGraphs.is_vertex_assigned(is::AbstractITensorNetwork, v)
+    return is_vertex_assigned(data_graph(is), v)
+end
+
+function DataGraphs.is_edge_assigned(is::AbstractITensorNetwork, v)
+    return is_edge_assigned(data_graph(is), v)
+end
+
+function DataGraphs.get_vertex_data(is::AbstractITensorNetwork, v)
+    return get_vertex_data(data_graph(is), v)
+end
+
+function DataGraphs.set_vertex_data!(tn::AbstractITensorNetwork, value, v)
+    # v = to_vertex(tn, index...)
+    @preserve_graph tn[v] = value
+    fix_edges!(tn, v)
+    return tn
+end
+
+function DataGraphs.set_vertices_data!(tn::AbstractITensorNetwork, values, vertices)
+    # v = to_vertex(tn, index...)
+    for v in vertices
+        @preserve_graph tn[v] = values[v]
+    end
+    for v in vertices
+        fix_edges!(tn, v)
+    end
+    return tn
+end
+
+function fix_edges!(tn::AbstractITensorNetwork, v)
+    for edge in incident_edges(tn, v)
+        rem_edge!(tn, edge)
+    end
+    for vertex in vertices(tn)
+        if v ≠ vertex
+            edge = v => vertex
+            if hascommoninds(tn, edge)
+                add_edge!(tn, edge)
+            end
+        end
+    end
+    return tn
+end
+
 function NamedGraphs.vertex_positions(tn::AbstractITensorNetwork)
     return NamedGraphs.vertex_positions(underlying_graph(tn))
 end
@@ -119,58 +189,12 @@ end
 # Data modification
 #
 
-function setindex_preserve_graph!(tn::AbstractITensorNetwork, value, vertex)
-    data_graph(tn)[vertex] = value
-    return tn
-end
-
-# TODO: Move to `BaseExtensions` module.
-function is_setindex!_expr(expr::Expr)
-    return is_assignment_expr(expr) && is_getindex_expr(first(expr.args))
-end
-is_setindex!_expr(x) = false
-is_getindex_expr(expr::Expr) = (expr.head === :ref)
-is_getindex_expr(x) = false
-is_assignment_expr(expr::Expr) = (expr.head === :(=))
-is_assignment_expr(expr) = false
-
-# TODO: Define this in terms of a function mapping
-# preserve_graph_function(::typeof(setindex!)) = setindex!_preserve_graph
-# preserve_graph_function(::typeof(map_vertex_data)) = map_vertex_data_preserve_graph
-# Also allow annotating codeblocks like `@views`.
-macro preserve_graph(expr)
-    if !is_setindex!_expr(expr)
-        error(
-            "preserve_graph must be used with setindex! syntax (as @preserve_graph a[i,j,...] = value)"
-        )
-    end
-    @capture(expr, array_[indices__] = value_)
-    return :(setindex_preserve_graph!($(esc(array)), $(esc(value)), $(esc.(indices)...)))
-end
-
 function ITensors.hascommoninds(tn::AbstractITensorNetwork, edge::Pair)
     return hascommoninds(tn, edgetype(tn)(edge))
 end
 
 function ITensors.hascommoninds(tn::AbstractITensorNetwork, edge::AbstractEdge)
     return hascommoninds(tn[src(edge)], tn[dst(edge)])
-end
-
-function Base.setindex!(tn::AbstractITensorNetwork, value, v)
-    # v = to_vertex(tn, index...)
-    @preserve_graph tn[v] = value
-    for edge in incident_edges(tn, v)
-        rem_edge!(tn, edge)
-    end
-    for vertex in vertices(tn)
-        if v ≠ vertex
-            edge = v => vertex
-            if hascommoninds(tn, edge)
-                add_edge!(tn, edge)
-            end
-        end
-    end
-    return tn
 end
 
 # Convenience wrapper
@@ -725,8 +749,8 @@ end
 function linkinds_combiners(tn::AbstractITensorNetwork; edges = edges(tn))
     combiners = DataGraph(
         directed_graph(underlying_graph(tn));
-        vertex_data_eltype = ITensor,
-        edge_data_eltype = ITensor
+        vertex_data_type = ITensor,
+        edge_data_type = ITensor
     )
     for e in edges
         C = combiner(linkinds(tn, e); tags = edge_tag(e))
@@ -739,7 +763,7 @@ end
 function combine_linkinds(tn::AbstractITensorNetwork, combiners)
     combined_tn = copy(tn)
     for e in edges(tn)
-        if !isempty(linkinds(tn, e)) && haskey(edge_data(combiners), e)
+        if !isempty(linkinds(tn, e)) && isassigned(combiners, e)
             combined_tn[src(e)] = combined_tn[src(e)] * combiners[e]
             combined_tn[dst(e)] = combined_tn[dst(e)] * combiners[reverse(e)]
         end
@@ -845,7 +869,7 @@ end
 
 function linkdims(tn::AbstractITensorNetwork{V}) where {V}
     ld = DataGraph{V}(
-        copy(underlying_graph(tn)); vertex_data_eltype = Nothing, edge_data_eltype = Int
+        copy(underlying_graph(tn)); vertex_data_type = Nothing, edge_data_type = Int
     )
     for e in edges(ld)
         ld[e] = linkdim(tn, e)
@@ -995,3 +1019,15 @@ end
 Base.:+(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)
 
 ITensors.hasqns(tn::AbstractITensorNetwork) = any(v -> hasqns(tn[v]), vertices(tn))
+
+function NamedGraphs.induced_subgraph_from_vertices(
+        itn::AbstractITensorNetwork,
+        subvertices
+    )
+    subgraph, vlist = induced_subgraph(underlying_graph(itn), subvertices)
+    subitn = similar_graph(itn, subgraph)
+
+    subitn[Vertices(subvertices)] = vertex_data(itn)
+
+    return subitn, vlist
+end

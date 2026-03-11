@@ -18,7 +18,7 @@ end
 # Field access
 #
 
-ITensorNetwork(tn::AbstractTTN) = error("Not implemented")
+itensornetwork(tn::AbstractTTN) = error("Not implemented")
 ortho_region(tn::AbstractTTN) = error("Not implemented")
 
 #
@@ -130,7 +130,7 @@ end
 
 # For ambiguity error
 function Base.truncate(tn::AbstractTTN, edge::AbstractEdge; kwargs...)
-    return typeof(tn)(truncate(ITensorNetwork(tn), edge; kwargs...))
+    return typeof(tn)(truncate(itensornetwork(tn), edge; kwargs...))
 end
 
 #
@@ -144,7 +144,7 @@ function NDTensors.contract(
     tn = copy(tn)
     # reverse post order vertices
     traversal_order = reverse(post_order_dfs_vertices(tn, root_vertex))
-    return contract(ITensorNetwork(tn); sequence = traversal_order, kwargs...)
+    return contract(itensornetwork(tn); sequence = traversal_order, kwargs...)
     # # forward post order edges
     # tn = copy(tn)
     # for e in post_order_dfs_edges(tn, root_vertex)

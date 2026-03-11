@@ -1,5 +1,5 @@
 @eval module $(gensym())
-using DataGraphs: DataGraph, underlying_graph, vertex_data
+using DataGraphs: DataGraph, assigned_vertex_data, underlying_graph, vertex_data
 using Graphs: add_vertex!, vertices
 using GraphsFlows: GraphsFlows
 using ITensorNetworks: ITensorNetwork, IndsNetwork, _DensityMartrixAlgGraph,
@@ -26,10 +26,13 @@ using Test: @test, @testset
         tn[v...] = network[v...]
     end
     tn = ITensorNetwork(vec(tn[:, :, 1]))
-    for out in [binary_tree_structure(tn), path_graph_structure(tn)]
-        @test out isa DataGraph
-        @test is_binary_arborescence(out)
-        @test length(vertex_data(out).values) == 9
+    @testset "$f" for f in [binary_tree_structure, path_graph_structure]
+        begin
+            out = f(tn)
+            @test out isa DataGraph
+            @test is_binary_arborescence(out)
+            @test length(assigned_vertex_data(out)) == 9
+        end
     end
 end
 

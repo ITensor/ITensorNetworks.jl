@@ -39,6 +39,18 @@ function BilinearFormNetwork(
     )
 end
 
+function GraphsExtensions.similar_graph(
+        bf::BilinearFormNetwork,
+        underlying_graph::AbstractGraph
+    )
+    return BilinearFormNetwork(
+        similar_graph(bf.tensornetwork, underlying_graph),
+        operator_vertex_suffix(bf),
+        bra_vertex_suffix(bf),
+        ket_vertex_suffix(bf)
+    )
+end
+
 operator_vertex_suffix(blf::BilinearFormNetwork) = blf.operator_vertex_suffix
 bra_vertex_suffix(blf::BilinearFormNetwork) = blf.bra_vertex_suffix
 ket_vertex_suffix(blf::BilinearFormNetwork) = blf.ket_vertex_suffix

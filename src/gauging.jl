@@ -4,7 +4,7 @@ using NamedGraphs.PartitionedGraphs: quotientedge
 
 function default_bond_tensors(ψ::ITensorNetwork)
     return DataGraph(
-        underlying_graph(ψ); vertex_data_eltype = Nothing, edge_data_eltype = ITensor
+        underlying_graph(ψ); vertex_data_type = Nothing, edge_data_type = ITensor
     )
 end
 

@@ -1,5 +1,6 @@
 using .ITensorsExtensions: ITensorsExtensions, indtype
-using DataGraphs: DataGraphs, DataGraph, IsUnderlyingGraph, map_data, vertex_data
+using DataGraphs: DataGraphs, DataGraph, IsUnderlyingGraph, get_vertex_data,
+    is_vertex_assigned, map_data, set_vertex_data!, underlying_graph_type, vertex_data
 using Dictionaries: AbstractDictionary, Dictionary, Indices
 using Graphs.SimpleGraphs: AbstractSimpleGraph
 using Graphs: Graphs
@@ -18,10 +19,12 @@ end
 ITensorsExtensions.indtype(inds_network::IndsNetwork) = indtype(typeof(inds_network))
 ITensorsExtensions.indtype(::Type{<:IndsNetwork{V, I}}) where {V, I} = I
 data_graph(is::IndsNetwork) = is.data_graph
-DataGraphs.underlying_graph(is::IndsNetwork) = underlying_graph(data_graph(is))
 NamedGraphs.vertextype(::Type{<:IndsNetwork{V}}) where {V} = V
-DataGraphs.underlying_graph_type(G::Type{<:IndsNetwork}) = NamedGraph{vertextype(G)}
 Graphs.is_directed(::Type{<:IndsNetwork}) = false
+
+function DataGraphs.underlying_graph_type(G::Type{<:IndsNetwork})
+    return underlying_graph_type(fieldtype(G, :data_graph))
+end
 
 #
 # Constructor
@@ -84,7 +87,7 @@ function IndsNetwork{V, I}(
         link_space::Dictionary{<:Any, <:Vector{<:Index}},
         site_space::Dictionary{<:Any, <:Vector{<:Index}}
     ) where {V, I}
-    dg = DataGraph{V}(g; vertex_data_eltype = Vector{I}, edge_data_eltype = Vector{I})
+    dg = DataGraph{V}(g; vertex_data_type = Vector{I}, edge_data_type = Vector{I})
     for e in keys(link_space)
         dg[e] = link_space[e]
     end
@@ -309,5 +312,5 @@ end
 # based on `ITensorVisualizationCore`.).
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
 function ITensorVisualizationCore.visualize(is::IndsNetwork, args...; kwargs...)
-    return visualize(ITensorNetwork(is), args...; kwargs...)
+    return visualize(tensornetwork(is), args...; kwargs...)
 end

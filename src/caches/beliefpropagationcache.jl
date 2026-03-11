@@ -22,6 +22,15 @@ struct BeliefPropagationCache{V, PV, PTN <: AbstractPartitionedGraph{V, PV}, MTS
     messages::MTS
 end
 
+function GraphsExtensions.similar_graph(
+        bpc::BeliefPropagationCache,
+        underlying_graph::AbstractGraph
+    )
+    return BeliefPropagationCache(
+        similar_graph(bpc.underlying_graph, underlying_graph)
+    )
+end
+
 #Constructors...
 function BeliefPropagationCache(ptn::PartitionedGraph; messages = default_messages(ptn))
     return BeliefPropagationCache(ptn, messages)
