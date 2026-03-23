@@ -6,7 +6,7 @@ on:
     tags: "*"
     paths:
       - "Project.toml"
-  pull_request:
+  pull_request_target:
     types:
       - "opened"
       - "synchronize"
@@ -19,6 +19,7 @@ jobs:
   integration-test:
     name: "IntegrationTest"
     strategy:
+      fail-fast: false
       matrix:
         pkg:
           - "https://github.com/ITensor/Tennis.jl"
