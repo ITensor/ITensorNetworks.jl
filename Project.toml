@@ -1,6 +1,6 @@
 name = "ITensorNetworks"
 uuid = "2919e153-833c-4bdc-8836-1ea460a35fc7"
-version = "0.15.26"
+version = "0.15.27"
 authors = ["Matthew Fishman <mfishman@flatironinstitute.org>, Joseph Tindall <jtindall@flatironinstitute.org> and contributors"]
 
 [workspace]
@@ -73,7 +73,7 @@ IterTools = "1.4"
 KrylovKit = "0.6, 0.7, 0.8, 0.9, 0.10"
 MacroTools = "0.5"
 NDTensors = "0.3, 0.4"
-NamedGraphs = "0.8.2"
+NamedGraphs = "0.8.2, 0.11"
 OMEinsumContractionOrders = "0.8.3, 0.9, 1"
 Observers = "0.2.4"
 SerializedElementArrays = "0.1"
