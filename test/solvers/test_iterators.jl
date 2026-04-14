@@ -1,5 +1,6 @@
-using Test: @test, @testset, @test_throws
-using ITensorNetworks: SweepIterator, RegionIterator, islaststep, state, increment!, compute!, eachregion
+using ITensorNetworks:
+    RegionIterator, SweepIterator, compute!, eachregion, increment!, islaststep, state
+using Test: @test, @test_throws, @testset
 
 module TestIteratorUtils
 
@@ -47,7 +48,6 @@ end
     import .TestIteratorUtils
 
     @testset "`AbstractNetworkIterator` Interface" begin
-
         @testset "Edge cases" begin
             TI = TestIteratorUtils.TestIterator(1, 1, [])
             cb = []
@@ -184,7 +184,6 @@ end
             @test prob.data[1:2:end] == fill(1, 5)
             @test prob.data[2:2:end] == fill(2, 5)
 
-
             let i = 1, prob = TestIteratorUtils.TestProblem([])
                 SI = SweepIterator(prob, 1)
                 cb = []
@@ -194,7 +193,6 @@ end
                 end
                 @test length(cb) == 2
             end
-
         end
     end
 end
