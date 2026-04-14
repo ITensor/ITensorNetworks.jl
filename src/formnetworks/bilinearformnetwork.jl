@@ -39,7 +39,7 @@ function BilinearFormNetwork(
     )
 end
 
-function GraphsExtensions.similar_graph(
+function NamedGraphs.similar_graph(
         bf::BilinearFormNetwork,
         underlying_graph::AbstractGraph
     )

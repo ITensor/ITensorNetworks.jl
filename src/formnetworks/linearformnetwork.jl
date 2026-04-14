@@ -1,6 +1,6 @@
 using Graphs: AbstractGraph
 using ITensors: ITensor, prime
-using NamedGraphs.GraphsExtensions: similar_graph
+using NamedGraphs: similar_graph
 
 default_dual_link_index_map = prime
 
@@ -39,7 +39,7 @@ ket_vertex_suffix(lf::LinearFormNetwork) = lf.ket_vertex_suffix
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 tensornetwork(lf::LinearFormNetwork) = lf.tensornetwork
 
-function GraphsExtensions.similar_graph(
+function NamedGraphs.similar_graph(
         lf::LinearFormNetwork,
         underlying_graph::AbstractGraph
     )

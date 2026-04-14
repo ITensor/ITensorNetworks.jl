@@ -1,4 +1,4 @@
-using NamedGraphs.GraphsExtensions: GraphsExtensions, similar_graph
+using NamedGraphs: similar_graph
 
 default_index_map = prime
 default_inv_index_map = noprime
@@ -15,7 +15,7 @@ struct QuadraticFormNetwork{
     dual_inv_index_map::InvIndexMap
 end
 
-function GraphsExtensions.similar_graph(
+function NamedGraphs.similar_graph(
         qf::QuadraticFormNetwork,
         underlying_graph::AbstractGraph
     )

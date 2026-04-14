@@ -2,8 +2,7 @@ using .ITensorsExtensions: trivial_space
 using DataGraphs: DataGraphs, DataGraph
 using Dictionaries: Indices, dictionary
 using ITensors: ITensors, ITensor, op
-using NamedGraphs.GraphsExtensions: GraphsExtensions, similar_graph
-using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
+using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, similar_graph, vertextype
 
 struct Private end
 
@@ -78,7 +77,7 @@ struct ITensorNetwork{V} <: AbstractITensorNetwork{V}
     end
 end
 
-function GraphsExtensions.similar_graph(
+function NamedGraphs.similar_graph(
         tn::ITensorNetwork,
         underlying_graph::AbstractGraph
     )

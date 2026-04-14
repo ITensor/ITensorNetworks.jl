@@ -2,7 +2,8 @@ using Dictionaries: Indices
 using Graphs: path_graph
 using ITensors: ITensor
 using LinearAlgebra: factorize, normalize
-using NamedGraphs.GraphsExtensions: GraphsExtensions, similar_graph, vertextype
+using NamedGraphs.GraphsExtensions: GraphsExtensions, vertextype
+using NamedGraphs: similar_graph
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
@@ -76,7 +77,7 @@ end
 
 const TTN = TreeTensorNetwork
 
-function GraphsExtensions.similar_graph(ttn::TTN, underlying_graph::AbstractGraph)
+function NamedGraphs.similar_graph(ttn::TTN, underlying_graph::AbstractGraph)
     return TTN(similar_graph(ttn.tensornetwork, underlying_graph))
 end
 

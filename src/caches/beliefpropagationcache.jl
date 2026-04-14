@@ -22,7 +22,7 @@ struct BeliefPropagationCache{V, PV, PTN <: AbstractPartitionedGraph{V, PV}, MTS
     messages::MTS
 end
 
-function GraphsExtensions.similar_graph(
+function NamedGraphs.similar_graph(
         bpc::BeliefPropagationCache,
         underlying_graph::AbstractGraph
     )
