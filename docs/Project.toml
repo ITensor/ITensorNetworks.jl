@@ -14,11 +14,11 @@ path = ".."
 
 [compat]
 Documenter = "1.10"
-Graphs = "1"
+Graphs = "1.8 - 1.13"
 ITensorFormatter = "0.2.27"
 ITensorNetworks = "0.15"
 ITensors = "0.9"
 Literate = "2.20.1"
 NamedGraphs = "0.8.2"
-OMEinsumContractionOrders = "1.2.2"
+OMEinsumContractionOrders = "0.8.3, 0.9, 1 - 1.2.2"
 TensorOperations = "5.5"
