@@ -1,6 +1,7 @@
 using Adapt: adapt
 using ITensors.NDTensors: datatype, denseblocks
 using ITensors: ITensor, Op, prime, sim
+using NamedGraphs.GraphsExtensions: disjoint_union
 
 default_dual_site_index_map = prime
 default_dual_link_index_map = sim

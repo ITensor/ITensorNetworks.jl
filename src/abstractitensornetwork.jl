@@ -6,7 +6,7 @@ using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
     ne, neighbors, rem_edge!, src, vertices
 using ITensors: ITensors, @Algorithm_str, ITensor, addtags, combiner, commoninds,
-    commontags, contract, dag, hascommoninds, noprime, onehot, prime, replaceprime,
+    commontags, contract, dag, hascommoninds, inds, noprime, onehot, prime, replaceprime,
     replacetags, setprime, settags, sim, swaptags, unioninds, uniqueinds
 using LinearAlgebra: LinearAlgebra, factorize
 using MacroTools: @capture

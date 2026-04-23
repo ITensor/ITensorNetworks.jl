@@ -20,15 +20,6 @@ function NDTensors.contract(
     return contract(ts; sequence = sequence_linear_index, kwargs...)
 end
 
-function NDTensors.contract(
-        alg::Union{Algorithm"density_matrix", Algorithm"ttn_svd"},
-        tn::AbstractITensorNetwork;
-        output_structure::Function = path_graph_structure,
-        kwargs...
-    )
-    return contract_approx(alg, tn, output_structure; kwargs...)
-end
-
 function ITensors.scalar(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
     return contract(alg, tn; kwargs...)[]
 end

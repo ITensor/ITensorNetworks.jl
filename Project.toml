@@ -1,6 +1,6 @@
 name = "ITensorNetworks"
 uuid = "2919e153-833c-4bdc-8836-1ea460a35fc7"
-version = "0.16.0"
+version = "0.17.0"
 authors = ["Matthew Fishman <mfishman@flatironinstitute.org>, Joseph Tindall <jtindall@flatironinstitute.org> and contributors"]
 
 [workspace]
@@ -39,13 +39,11 @@ TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 TupleTools = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 
 [weakdeps]
-GraphsFlows = "06909019-6f44-4949-96fc-b9d9aaa02889"
 OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715"
 Observers = "338f10d5-c7f1-4033-a7d1-f9dec39bcaa0"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
 [extensions]
-ITensorNetworksGraphsFlowsExt = "GraphsFlows"
 ITensorNetworksOMEinsumContractionOrdersExt = "OMEinsumContractionOrders"
 ITensorNetworksObserversExt = "Observers"
 ITensorNetworksTensorOperationsExt = "TensorOperations"
@@ -63,7 +61,6 @@ Dictionaries = "0.4"
 Distributions = "0.25.86"
 DocStringExtensions = "0.9"
 Graphs = "1.8"
-GraphsFlows = "0.1.1"
 ITensors = "0.7, 0.8, 0.9"
 IsApprox = "0.1, 1, 2"
 IterTools = "1.4"
