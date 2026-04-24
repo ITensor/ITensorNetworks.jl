@@ -1,4 +1,5 @@
 using ITensors: ITensor, prime
+using NamedGraphs.GraphsExtensions: disjoint_union
 
 default_dual_link_index_map = prime
 

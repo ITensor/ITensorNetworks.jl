@@ -1,8 +1,8 @@
 using .BaseExtensions: maybe_real
 using Graphs: has_edge
 using ITensors: ITensors, ITensor, Index, Ops, apply, commonind, commoninds, contract, dag,
-    denseblocks, factorize, factorize_svd, hasqns, isdiag, noprime, prime, replaceind,
-    replaceinds, unioninds, uniqueinds
+    denseblocks, factorize, factorize_svd, hasqns, isdiag, noncommoninds, noprime, prime,
+    replaceind, replaceinds, unioninds, uniqueinds
 using KrylovKit: linsolve
 using LinearAlgebra: eigen, norm, qr, svd
 using NamedGraphs: NamedEdge, has_edge
