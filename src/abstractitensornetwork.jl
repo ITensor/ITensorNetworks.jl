@@ -7,10 +7,10 @@ using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edge
     ne, neighbors, rem_edge!, src, vertices
 using ITensors: ITensors, @Algorithm_str, ITensor, addtags, combiner, commoninds,
     commontags, contract, dag, hascommoninds, inds, noprime, onehot, prime, replaceprime,
-    replacetags, setprime, settags, sim, swaptags, unioninds, uniqueinds
+    replacetags, setprime, settags, sim, swaptags, tags, unioninds, uniqueinds
 using LinearAlgebra: LinearAlgebra, factorize
 using MacroTools: @capture
-using NDTensors: NDTensors, Algorithm, dim
+using NDTensors: NDTensors, Algorithm, dim, scalartype
 using NamedGraphs.GraphsExtensions:
     directed_graph, incident_edges, rename_vertices, vertextype, ⊔
 using NamedGraphs: NamedGraphs, NamedGraph, not_implemented, steiner_tree
