@@ -1,7 +1,7 @@
 using Graphs: dst, edges, src, vertices
-using ITensorMPS: OpSum
 using ITensorNetworks: SweepIterator, dmrg, siteinds, ttn
 using ITensors
+using ITensors.Ops: OpSum
 using Suppressor: @capture_out
 using TensorOperations: TensorOperations
 using Test: @test, @testset
