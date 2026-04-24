@@ -1,8 +1,8 @@
 using Graphs: add_edge!, add_vertex!, vertices
-using ITensorMPS: OpSum
 using ITensorNetworks:
     ITensorNetworks, applyexp, dmrg, maxlinkdim, siteinds, time_evolve, ttn
 using ITensors
+using ITensors.Ops: OpSum
 using NamedGraphs.NamedGraphGenerators: named_path_graph
 using NamedGraphs: NamedGraph
 using TensorOperations: TensorOperations
