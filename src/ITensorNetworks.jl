@@ -23,7 +23,6 @@ include("formnetworks/abstractformnetwork.jl")
 include("formnetworks/bilinearformnetwork.jl")
 include("formnetworks/linearformnetwork.jl")
 include("formnetworks/quadraticformnetwork.jl")
-include("gauging.jl")
 include("utils.jl")
 include("update_observer.jl")
 
