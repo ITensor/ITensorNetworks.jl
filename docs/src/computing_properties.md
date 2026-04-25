@@ -8,7 +8,7 @@ using LinearAlgebra: norm
 using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs.NamedGraphGenerators: named_grid
 
-function random_state(g, s; link_space = 2)
+function random_state(g, s; link_space)
     l = Dict(e => Index(link_space, "Link") for e in edges(g))
     l = merge(l, Dict(reverse(e) => l[e] for e in edges(g)))
     ts = Dict(
@@ -20,10 +20,10 @@ end
 
 g = named_grid((4,))
 s = siteinds("S=1/2", g)
-phi = normalize(ttn(random_state(g, s)))
-psi = normalize(ttn(random_state(g, s)))
-x = normalize(ttn(random_state(g, s)))
-y = normalize(ttn(random_state(g, s)))
+phi = normalize(ttn(random_state(g, s; link_space = 2)))
+psi = normalize(ttn(random_state(g, s; link_space = 2)))
+x = normalize(ttn(random_state(g, s; link_space = 2)))
+y = normalize(ttn(random_state(g, s; link_space = 2)))
 v = first(vertices(psi))
 ```
 

@@ -22,7 +22,7 @@ using ITensors: Index, OpSum, random_itensor
 using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 
-function random_state(g, s; link_space = 2)
+function random_state(g, s; link_space)
     l = Dict(e => Index(link_space, "Link") for e in edges(g))
     l = merge(l, Dict(reverse(e) => l[e] for e in edges(g)))
     ts = Dict(
@@ -45,7 +45,7 @@ H = let h = OpSum()
 end
 
 # Random initial state (normalise first!)
-psi0 = normalize(ttn(random_state(g, s)))
+psi0 = normalize(ttn(random_state(g, s; link_space = 2)))
 
 # Run DMRG
 energy, psi = dmrg(H, psi0;
