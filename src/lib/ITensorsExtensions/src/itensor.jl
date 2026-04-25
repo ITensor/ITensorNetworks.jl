@@ -64,21 +64,19 @@ function map_eigvals(f::Function, A::ITensor, Linds, Rinds; kws...)
     if fermionic_itensor
         A = make_bosonic(A::ITensor, Linds, Rinds)
         ordered_inds = inds(A)
-        ITensors.disable_auto_fermion()
     end
 
-    if isdiag(A)
-        mapped_A = map_diag(f, A)
-    else
+    body = function ()
+        isdiag(A) && return map_diag(f, A)
         Ul, D, Ur = eigendecomp(A, Linds, Rinds; kws...)
-        mapped_A = Ul * map_diag(f, D) * Ur
+        return Ul * map_diag(f, D) * Ur
     end
+    mapped_A = fermionic_itensor ? NDTensors.with_auto_fermion(body, false) : body()
 
     # <fermions>
     if fermionic_itensor
         # Ensure indices in "matrix" form before re-enabling fermion system
         mapped_A = permute(mapped_A, ordered_inds)
-        ITensors.enable_auto_fermion()
     end
 
     return mapped_A
