@@ -1,7 +1,7 @@
 @eval module $(gensym())
 using Graphs: SimpleGraph, uniform_tree
 using ITensorNetworks: BeliefPropagationCache, QuadraticFormNetwork, edge_scalars, messages,
-    norm_sqr_network, random_tensornetwork, rescale, scalartype, siteinds, vertex_scalars
+    norm_sqr_network, rescale, scalartype, siteinds, vertex_scalars
 using ITensors: dag, inner, scalar
 using LinearAlgebra: normalize
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
@@ -9,6 +9,7 @@ using NamedGraphs: NamedGraph
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset
+include("utils.jl")
 @testset "Normalize" begin
 
     #First lets do a flat tree

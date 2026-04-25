@@ -4,7 +4,6 @@ using Dictionaries: Dictionary
 using Graphs: add_edge!, add_vertex!, rem_edge!, vertices
 using ITensorMPS: ITensorMPS
 using ITensorNetworks.ITensorsExtensions: replace_vertices
-using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensorNetworks: ITensorNetworks, siteinds, ttn
 using ITensors.NDTensors: matrix
 using ITensors: ITensors, @disable_warn_order, ITensor, Index, combinedind, combiner,
@@ -13,6 +12,8 @@ using LinearAlgebra: norm
 using NamedGraphs.GraphsExtensions: leaf_vertices, post_order_dfs_vertices
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using Test: @test, @test_broken, @testset
+include("utils.jl")
+using .ModelHamiltonians: ModelHamiltonians
 
 # Cross-check the `ttn` construction from an `OpSum` against the `ITensorMPS.MPO`
 # construction on a linearized version of the same graph. Quarantined in its own

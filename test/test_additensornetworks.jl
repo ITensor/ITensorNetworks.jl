@@ -1,7 +1,6 @@
 @eval module $(gensym())
 using Graphs: rem_edge!, vertices
-using ITensorNetworks: ITensorNetwork, inner_network, orthogonalize, random_tensornetwork,
-    siteinds, truncate, ttn
+using ITensorNetworks: ITensorNetwork, inner_network, orthogonalize, siteinds, truncate, ttn
 using ITensors: ITensors, apply, inner, op, scalar
 using LinearAlgebra: norm_sqr
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
@@ -9,6 +8,7 @@ using NamedGraphs: NamedEdge
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset
+include("utils.jl")
 @testset "add_itensornetworks" begin
     g = named_grid((2, 2))
     s = siteinds("S=1/2", g)

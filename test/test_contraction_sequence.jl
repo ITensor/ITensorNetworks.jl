@@ -1,12 +1,12 @@
 @eval module $(gensym())
-using ITensorNetworks:
-    contraction_sequence, norm_sqr_network, random_tensornetwork, siteinds
+using ITensorNetworks: contraction_sequence, norm_sqr_network, siteinds
 using ITensors: ITensors, contract
 using NamedGraphs.NamedGraphGenerators: named_grid
 using OMEinsumContractionOrders: OMEinsumContractionOrders
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset
+include("utils.jl")
 @testset "contraction_sequence" begin
     ITensors.@disable_warn_order begin
         dims = (2, 3)
