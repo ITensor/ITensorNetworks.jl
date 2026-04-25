@@ -3,24 +3,45 @@
 # `test_*.jl`). Each test file that needs these does `include("utils.jl")`
 # inside its gensym module.
 
-using DataGraphs: IsUnderlyingGraph
+using DataGraphs: IsUnderlyingGraph, vertex_data
 using Distributions: Distribution
+using Graphs: edges, vertices
 using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork
 using ITensors.NDTensors: dim
-using ITensors: Index, itensor
+using ITensors: ITensor, Index, itensor
 using LinearAlgebra: normalize
+using NamedGraphs.GraphsExtensions: incident_edges
 using Random: Random, AbstractRNG
 using SimpleTraits: SimpleTraits, @traitfn
+
+# Build an `ITensorNetwork` on the graph backing the inds network `s` from a
+# user-supplied per-vertex tensor builder. Each vertex `v` is given a tensor
+# whose indices are `s[v]` (the site indices) followed by one fresh `Index` of
+# dimension `link_space` for each edge of the graph incident to `v`. The shared
+# link index is used on both endpoints so the resulting network's edges agree
+# with `edges(s)`.
+function _random_tensornetwork(s::IndsNetwork, build_tensor; link_space = 1)
+    l = Dict(e => Index(link_space, "Link") for e in edges(s))
+    l = merge(l, Dict(reverse(e) => l[e] for e in edges(s)))
+    vd = vertex_data(s)
+    ts = Dict{eltype(vertices(s)), ITensor}()
+    for v in vertices(s)
+        site_inds = haskey(vd, v) ? vd[v] : Index[]
+        is = (site_inds..., (l[e] for e in incident_edges(s, v))...)
+        ts[v] = build_tensor(is)
+    end
+    return ITensorNetwork(ts)
+end
 
 # Build an ITensor network on a graph specified by the inds network `s`.
 # `link_space` sets the bond dimension. Entries are drawn from a standard
 # normal distribution.
 function random_tensornetwork(
-        rng::AbstractRNG, eltype::Type, s::IndsNetwork; link_space = 1, kwargs...
+        rng::AbstractRNG, eltype::Type, s::IndsNetwork; kwargs...
     )
-    return ITensorNetwork(s; link_space, kwargs...) do v
-        return inds -> itensor(randn(rng, eltype, dim.(inds)...), inds)
-    end
+    return _random_tensornetwork(
+        s, is -> itensor(randn(rng, eltype, dim.(is)...), is...); kwargs...
+    )
 end
 
 function random_tensornetwork(eltype::Type, s::IndsNetwork; kwargs...)
@@ -58,9 +79,9 @@ end
 function random_tensornetwork(
         rng::AbstractRNG, distribution::Distribution, s::IndsNetwork; kwargs...
     )
-    return ITensorNetwork(s; kwargs...) do v
-        return inds -> itensor(rand(rng, distribution, dim.(inds)...), inds)
-    end
+    return _random_tensornetwork(
+        s, is -> itensor(rand(rng, distribution, dim.(is)...), is...); kwargs...
+    )
 end
 
 function random_tensornetwork(distribution::Distribution, s::IndsNetwork; kwargs...)
