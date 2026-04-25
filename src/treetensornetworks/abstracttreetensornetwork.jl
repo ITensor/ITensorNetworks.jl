@@ -48,27 +48,6 @@ QR decompositions are applied along the unique tree path from the current
 `ortho_region` to `region`, so that all tensors outside `region` are left- or
 right-orthogonal with respect to that path.
 
-# Example
-
-```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
-
-julia> using Graphs: vertices
-
-julia> g = named_comb_tree((2, 2));
-
-julia> s = siteinds("S=1/2", g);
-
-julia> psi = random_ttn(s; link_space = 2);
-
-julia> vs = collect(vertices(psi));
-
-julia> psi = orthogonalize(psi, vs[1]);
-
-julia> psi = orthogonalize(psi, [vs[1], vs[2]]);
-
-```
-
 See also: [`ortho_region`](@ref), [`truncate`](@ref).
 """
 function orthogonalize(ttn::AbstractTTN, region; kwargs...)
@@ -98,21 +77,6 @@ Truncation parameters are passed through `kwargs`.
   - `root_vertex`: Root of the DFS traversal. Defaults to `default_root_vertex(tn)`.
   - `cutoff`: Drop singular values smaller than this threshold (relative or absolute).
   - `maxdim`: Maximum number of singular values to retain on each bond.
-
-# Example
-
-```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
-
-julia> g = named_comb_tree((2, 2));
-
-julia> s = siteinds("S=1/2", g);
-
-julia> psi = random_ttn(s; link_space = 4);
-
-julia> psi_trunc = truncate(psi; cutoff = 1e-10, maxdim = 2);
-
-```
 
 See also: [`orthogonalize`](@ref).
 """

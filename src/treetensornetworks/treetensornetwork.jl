@@ -16,7 +16,7 @@ center of the network.
 Use [`ttn`](@ref) or [`mps`](@ref) to construct instances, and [`orthogonalize`](@ref) to
 bring the network into a canonical gauge.
 
-See also: [`ITensorNetwork`](@ref), [`ttn`](@ref), [`mps`](@ref), [`random_ttn`](@ref).
+See also: [`ITensorNetwork`](@ref), [`ttn`](@ref), [`mps`](@ref).
 """
 struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
     tensornetwork::ITensorNetwork{V}
@@ -139,7 +139,7 @@ julia> psi = ttn(v -> "Up", s);
 
 ```
 
-See also: [`mps`](@ref), [`random_ttn`](@ref), [`TreeTensorNetwork`](@ref).
+See also: [`mps`](@ref), [`TreeTensorNetwork`](@ref).
 """
 function ttn(args...; ortho_region = nothing)
     tn = ITensorNetwork(args...)
@@ -155,7 +155,7 @@ end
 Construct a matrix product state (MPS) as a `TreeTensorNetwork` on a 1D path graph.
 The interface is identical to [`ttn`](@ref) but is intended for 1D (chain) topologies.
 
-See also: [`ttn`](@ref), [`random_mps`](@ref).
+See also: [`ttn`](@ref).
 """
 function mps(args...; ortho_region = nothing)
     # TODO: Check it is a path graph.
@@ -234,70 +234,4 @@ function ttn(
     tn[ortho_center] = a
     ttn_a = ttn(tn)
     return orthogonalize(ttn_a, ortho_center)
-end
-
-"""
-    random_ttn(args...; kwargs...) -> TreeTensorNetwork
-
-Construct a random, unit-norm `TreeTensorNetwork`. Arguments are forwarded to
-`random_tensornetwork`, which accepts the same interface as [`ITensorNetwork`](@ref).
-
-# Example
-
-```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
-
-julia> g = named_comb_tree((2, 2));
-
-julia> s = siteinds("S=1/2", g);
-
-julia> psi = random_ttn(s; link_space = 2);
-
-```
-
-See also: [`ttn`](@ref), [`random_mps`](@ref).
-"""
-function random_ttn(args...; kwargs...)
-    # TODO: Check it is a tree graph.
-    return normalize(_TreeTensorNetwork(random_tensornetwork(args...; kwargs...)))
-end
-
-"""
-    random_mps(args...; kwargs...) -> TreeTensorNetwork
-
-Construct a random, unit-norm matrix product state (MPS) as a `TreeTensorNetwork`.
-Arguments are forwarded to [`random_ttn`](@ref).
-
-# Example
-
-```jldoctest
-julia> s = siteinds("S=1/2", 6);
-
-julia> psi = random_mps(s; link_space = 2);
-
-```
-
-See also: [`mps`](@ref), [`random_ttn`](@ref).
-"""
-function random_mps(args...; kwargs...)
-    # TODO: Check it is a path graph.
-    return random_ttn(args...; kwargs...)
-end
-
-"""
-    random_mps(f, is::Vector{<:Index}; kwargs...) -> TreeTensorNetwork
-
-Construct a random MPS from a function `f` and a flat vector of site indices `is`.
-"""
-function random_mps(f, is::Vector{<:Index}; kwargs...)
-    return random_mps(f, path_indsnetwork(is); kwargs...)
-end
-
-"""
-    random_mps(s::Vector{<:Index}; kwargs...) -> TreeTensorNetwork
-
-Construct a random MPS from a flat vector of site indices `s`.
-"""
-function random_mps(s::Vector{<:Index}; kwargs...)
-    return random_mps(path_indsnetwork(s); kwargs...)
 end

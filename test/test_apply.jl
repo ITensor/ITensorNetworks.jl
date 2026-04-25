@@ -1,14 +1,15 @@
 @eval module $(gensym())
 using Compat: Compat
 using Graphs: vertices
-using ITensorNetworks: BeliefPropagationCache, apply, environment, norm_sqr_network,
-    random_tensornetwork, siteinds, update
+using ITensorNetworks:
+    BeliefPropagationCache, apply, environment, norm_sqr_network, siteinds, update
 using ITensors: ITensors, Algorithm, ITensor, inner, op
 using NamedGraphs.NamedGraphGenerators: named_grid
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset
+include("utils.jl")
 @testset "apply" begin
     g_dims = (2, 2)
     n = prod(g_dims)

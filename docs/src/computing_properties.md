@@ -2,16 +2,22 @@
 
 ```@setup main
 using Graphs: vertices
-using ITensorNetworks: expect, inner, loginner, normalize, random_ttn, siteinds
+using ITensorNetworks: ITensorNetwork, expect, inner, loginner, normalize, siteinds, ttn
+using ITensors: itensor
+using ITensors.NDTensors: dim
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_grid
 
+random_state(s) = ITensorNetwork(s; link_space = 2) do v
+    return inds -> itensor(randn(Float64, dim.(inds)...), inds)
+end
+
 g = named_grid((4,))
 s = siteinds("S=1/2", g)
-phi = normalize(random_ttn(s; link_space = 2))
-psi = normalize(random_ttn(s; link_space = 2))
-x = normalize(random_ttn(s; link_space = 2))
-y = normalize(random_ttn(s; link_space = 2))
+phi = normalize(ttn(random_state(s)))
+psi = normalize(ttn(random_state(s)))
+x = normalize(ttn(random_state(s)))
+y = normalize(ttn(random_state(s)))
 v = first(vertices(psi))
 ```
 

@@ -1,9 +1,10 @@
 @eval module $(gensym())
 using Adapt: Adapt, adapt
-using ITensorNetworks: random_tensornetwork, siteinds
+using ITensorNetworks: siteinds
 using ITensors: ITensors
 using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @testset
+include("utils.jl")
 
 struct SinglePrecisionAdaptor end
 single_precision(::Type{<:AbstractFloat}) = Float32

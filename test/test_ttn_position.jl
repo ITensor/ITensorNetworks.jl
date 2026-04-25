@@ -1,12 +1,13 @@
 @eval module $(gensym())
 using Dictionaries: Dictionary, Indices
 using Graphs: vertices
-using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensorNetworks: ITensorNetwork, ProjTTN, environments, position, siteinds, ttn
 using ITensors: ITensors, ITensor
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_path_graph
 using NamedGraphs: NamedEdge
 using Test: @test, @testset
+include("utils.jl")
+using .ModelHamiltonians: ModelHamiltonians
 
 @testset "ProjTTN position" begin
     # make a nontrivial TTN state and TTN operator

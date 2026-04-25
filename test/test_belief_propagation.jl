@@ -1,12 +1,11 @@
 @eval module $(gensym())
 using Compat: Compat
 using Graphs: vertices
-using ITensorNetworks.ModelNetworks: ModelNetworks
 using ITensorNetworks: ITensorNetworks, @preserve_graph, BeliefPropagationCache,
     combine_linkinds, contract, contraction_sequence, eachtensor, environment,
     inner_network, linkinds_combiners, message, message_diff, partitioned_tensornetwork,
-    random_tensornetwork, scalar, siteinds, split_index, tensornetwork, update,
-    update_factor, updated_message, ⊗
+    scalar, siteinds, split_index, tensornetwork, update, update_factor, updated_message, ⊗
+include("utils.jl")
 using ITensors.NDTensors: array
 using ITensors:
     ITensors, Algorithm, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
