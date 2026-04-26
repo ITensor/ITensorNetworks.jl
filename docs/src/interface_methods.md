@@ -10,24 +10,24 @@
 - [X] apply.jl. Applying gates to ITensorNetworks.
 - [X] tebd.jl
 
+- [ ] inner.jl
+- [ ] expect.jl
+- [ ] normalize.jl
+
 - [X] indextags.jl
+- [X] sitetype.jl
 - [ ] abstractindsnetwork.jl
 - [ ] indsnetwork.jl
-- [ ] sitetype.jl
 
 - [ ] partitioneditensornetwork.jl
 - [ ] specialitensornetworks.jl
 
 - [ ] environment.jl
 
-- [ ] graphs.jl
+- [X] graphs.jl
 - [ ] edge\_sequences.jl
 - [ ] contract.jl
 - [ ] contraction\_sequences.jl
-
-- [ ] inner.jl
-- [ ] expect.jl
-- [ ] normalize.jl
 
 - [ ] opsum.jl
 
