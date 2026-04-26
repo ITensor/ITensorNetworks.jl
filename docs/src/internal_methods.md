@@ -216,3 +216,26 @@ that throw `not_implemented()` on `AbstractITensorNetwork`.
   ```julia
   edge_index(e, edge_space)
   ```
+
+## IndsNetwork Type and Methods
+
+* Build a single site `Index` for vertex `v`, tagged with `vertex_tag(v)` (`sitetype.jl`):
+  ```julia
+  ITensors.siteind(sitetype::String, v::Tuple; kwargs...)
+  ITensors.siteind(d::Integer, v; addtags = "", kwargs...)
+  ```
+
+* Convert a "value" into a callable `v -> value_for_v`, used by the value-based
+  `siteinds` form (`sitetype.jl`):
+  ```julia
+  to_siteinds_callable(x)
+  to_siteinds_callable(x::AbstractDictionary)
+  ```
+
+* Wrap the per-vertex result of `siteinds(f, g)` into a `Vector{Index}` for that
+  vertex, building a fresh `Index` when needed (`sitetype.jl`):
+  ```julia
+  to_siteind(x, vertex; kwargs...)
+  to_siteind(x::Index, vertex; kwargs...)
+  ```
+

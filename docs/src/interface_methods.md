@@ -287,7 +287,21 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
 
 ## IndsNetwork Type and Methods
 
+* Build an `IndsNetwork` of site indices on `g` from a value `x` — site-type string,
+  dimension, `Index`, or per-vertex dictionary (`sitetype.jl`):
+  ```julia
+  siteinds(x, g::AbstractGraph; kwargs...)
+  ```
 
+* Same, on a length-`nv` path graph (`sitetype.jl`):
+  ```julia
+  siteinds(x, nv::Int; kwargs...)
+  ```
+
+* Build an `IndsNetwork` by calling `f(v)` at each vertex (`sitetype.jl`):
+  ```julia
+  siteinds(f::Function, g::AbstractGraph; kwargs...)
+  ```
 
 ## TEBD and Apply Algorithms
 
