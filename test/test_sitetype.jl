@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using DataGraphs: vertex_data
 using Dictionaries: Dictionary
 using Graphs: nv, vertices
@@ -60,5 +59,4 @@ using Test: @test, @testset
     @test s_fs isa IndsNetwork
     @test all(dim(only(s_fs[v])) == fdim(v) for v in vertices(g))
     @test all(hastags.(vertex_data(s_fs), Ref("$testtag,Site")))
-end
 end

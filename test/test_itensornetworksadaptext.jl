@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Adapt: Adapt, adapt
 using ITensorNetworks: siteinds
 using ITensors: ITensors
@@ -20,5 +19,4 @@ Adapt.adapt_storage(::SinglePrecisionAdaptor, x) = single_precision(eltype(x)).(
     @test ITensors.scalartype(tn) === elt
     tn′ = adapt(SinglePrecisionAdaptor(), tn)
     @test ITensors.scalartype(tn′) === single_precision(elt)
-end
 end

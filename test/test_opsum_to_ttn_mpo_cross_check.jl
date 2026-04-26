@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using DataGraphs: vertex_data
 using Dictionaries: Dictionary
 using Graphs: add_edge!, add_vertex!, rem_edge!, vertices
@@ -230,5 +229,4 @@ end
             @test Tttno_lr ≈ Tmpo_lr rtol = 1.0e-6
         end
     end
-end
 end

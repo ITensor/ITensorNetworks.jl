@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using ITensorNetworks.ITensorsExtensions: eigendecomp, map_eigvals
 using ITensors.NDTensors: with_auto_fermion
 using ITensors: ITensor, Index, QN, apply, dag, delta, inds, mapprime, noprime, norm, op,
@@ -132,5 +131,4 @@ using Test: @test, @testset
             @test T ≈ apply(sqrtT, sqrtT)
         end
     end
-end
 end

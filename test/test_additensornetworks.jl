@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Graphs: rem_edge!, vertices
 using ITensorNetworks: ITensorNetwork, inner_network, orthogonalize, siteinds, truncate, ttn
 using ITensors: ITensors, apply, inner, op, scalar
@@ -85,5 +84,4 @@ end
     for v in vertices(g)
         @test ITensors.allfluxequal(ITensors.tensor(ϕ[v]))
     end
-end
 end

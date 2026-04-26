@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Dictionaries: Dictionary, Indices
 using Graphs: vertices
 using ITensorNetworks: ITensorNetwork, ProjTTN, environments, position, siteinds, ttn
@@ -51,5 +50,4 @@ end
     operator = ttn(ITensorNetwork{Any}(g))
     environments = Dictionary{NamedEdge{Any}, ITensor}()
     @test ProjTTN(pos, operator, environments) isa ProjTTN{Any, Indices{Any}}
-end
 end
