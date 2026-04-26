@@ -11,7 +11,7 @@
 - [X] tebd.jl
 
 - [X] inner.jl
-- [ ] expect.jl
+- [X] expect.jl
 - [ ] normalize.jl
 
 - [X] indextags.jl
@@ -282,6 +282,30 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ```julia
   norm_sqr(ψ::AbstractITensorNetwork; kwargs...)
   norm(ψ::AbstractITensorNetwork; kwargs...)
+  ```
+
+* Expectation value `⟨ψ|op|ψ⟩ / ⟨ψ|ψ⟩` for a single `Op` (`expect.jl`):
+  ```julia
+  expect(ψ::AbstractITensorNetwork, op::Op; alg, kwargs...)
+  ```
+
+* Local expectation values for the named operator `op` at the given vertices, or at every
+  vertex of `ψ`. Returns a `Dictionary` mapping vertex to expectation value (`expect.jl`):
+  ```julia
+  expect(ψ::AbstractITensorNetwork, op::String, vertices; alg, kwargs...)
+  expect(ψ::AbstractITensorNetwork, op::String; alg, kwargs...)
+  ```
+
+* Algorithm-specialized dispatches that build a `QuadraticFormNetwork` and either
+  share/update a BP cache or contract exactly (`expect.jl`):
+  ```julia
+  expect(alg::Algorithm, ψ::AbstractITensorNetwork, ops; cache!, update_cache, kwargs...)
+  expect(alg::Algorithm"exact", ψ::AbstractITensorNetwork, ops; kwargs...)
+  ```
+
+* Single-op evaluator on a pre-built form network, used by the dispatches above (`expect.jl`):
+  ```julia
+  expect(ψIψ::AbstractFormNetwork, op::Op; kwargs...)
   ```
 
 ## Index Manipulation
