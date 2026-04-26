@@ -66,12 +66,11 @@ function map_eigvals(f::Function, A::ITensor, Linds, Rinds; kws...)
         ordered_inds = inds(A)
     end
 
-    body = function ()
+    mapped_A = NDTensors.with_auto_fermion(!fermionic_itensor) do
         isdiag(A) && return map_diag(f, A)
         Ul, D, Ur = eigendecomp(A, Linds, Rinds; kws...)
         return Ul * map_diag(f, D) * Ur
     end
-    mapped_A = fermionic_itensor ? NDTensors.with_auto_fermion(body, false) : body()
 
     # <fermions>
     if fermionic_itensor
