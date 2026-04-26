@@ -57,8 +57,11 @@
 
 ## Miscellaneous Methods
 
-* Construct a `SimpleGraph` from ITensors (`graphs.jl`).
+* Methods in `graphs.jl`. 
+  Just one methods which constructs a `SimpleGraph` from ITensors (`graphs.jl`).
   ```julia
   SimpleGraphs.SimpleGraph(itensors::Vector{ITensor})
   ```
   Not used anywhere in library.
+
+* Methods in `update_observer.jl`. Not used anywhere in library.

@@ -12,7 +12,7 @@
 
 - [X] inner.jl
 - [X] expect.jl
-- [ ] normalize.jl
+- [X] normalize.jl
 
 - [X] indextags.jl
 - [X] sitetype.jl
@@ -31,19 +31,23 @@
 
 - [ ] opsum.jl
 
-- [ ] update\_observer.jl
-- [ ] utils.jl
-- [ ] visualize.jl
+- [X] update\_observer.jl
+- [X] utils.jl
+- [X] visualize.jl
+
 - [ ] caches/abstractbeliefpropagationcache.jl
 - [ ] caches/beliefpropagationcache.jl
+
 - [ ] formnetworks/abstractformnetwork.jl
 - [ ] formnetworks/bilinearformnetwork.jl
 - [ ] formnetworks/linearformnetwork.jl
 - [ ] formnetworks/quadraticformnetwork.jl
+
 - [ ] treetensornetworks/abstracttreetensornetwork.jl
 - [ ] treetensornetworks/treetensornetwork.jl
 - [ ] treetensornetworks/opsum\_to\_ttn/
 - [ ] treetensornetworks/projttns/
+
 - [ ] solvers/
 
 Recommended methods for building applications on top of ITensorNetworks.
@@ -306,6 +310,19 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
 * Single-op evaluator on a pre-built form network, used by the dispatches above (`expect.jl`):
   ```julia
   expect(ψIψ::AbstractFormNetwork, op::Op; kwargs...)
+  ```
+
+* Return a copy of `tn` rescaled so that `norm(tn) ≈ 1`, with the rescaling distributed
+  evenly across all vertex tensors (`normalize.jl`):
+  ```julia
+  normalize(tn::AbstractITensorNetwork; alg, kwargs...)
+  ```
+
+* Algorithm-specialized dispatches: `"exact"` contracts `⟨ψ|ψ⟩` directly; the generic
+  `Algorithm` form uses a cached contraction (e.g. BP) on the inner-product network (`normalize.jl`):
+  ```julia
+  normalize(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
+  normalize(alg::Algorithm, tn::AbstractITensorNetwork; cache!, update_cache, kwargs...)
   ```
 
 ## Index Manipulation
