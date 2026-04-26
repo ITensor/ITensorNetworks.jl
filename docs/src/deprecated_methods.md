@@ -28,5 +28,30 @@
 
 ## Local Operations on ITensorNetworks
 
+* Combine (fuse) every link index of a tensor network, or a chosen set of edges, into
+  a single index per edge using `combiner` tensors.
+  Not used anywhere in the library?
+  ```julia
+  linkinds_combiners(tn::AbstractITensorNetwork; edges = edges(tn))
+  combine_linkinds(tn::AbstractITensorNetwork, combiners)
+  combine_linkinds(tn::AbstractITensorNetwork; edges = edges(tn))
+  ```
+
+* Functions in `apply.jl` which are unused (even inside that file):
+  ```julia
+  _gate_vertices(o::ITensor, ψ)
+  _gate_vertices(o::AbstractEdge, ψ)
+  _contract_gate(o::ITensor, ψv1, Λ, ψv2)
+  _contract_gate(o::AbstractEdge, ψv1, Λ, ψv2)
+  ```
+
 ## Global Operations on ITensorNetworks
+
+* Scale tensors at chosen vertices by per-vertex weights, either out-of-place or in-place.
+  ```julia
+  scale(tn::AbstractITensorNetwork, vertices_weights::Dictionary; kwargs...)
+  scale(weight_function::Function, tn; kwargs...)
+  scale!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
+  scale!(weight_function::Function, tn::AbstractITensorNetwork; kwargs...)
+  ```
 
