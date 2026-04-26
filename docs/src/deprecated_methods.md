@@ -55,3 +55,10 @@
   scale!(weight_function::Function, tn::AbstractITensorNetwork; kwargs...)
   ```
 
+## Miscellaneous Methods
+
+* Construct a `SimpleGraph` from ITensors (`graphs.jl`).
+  ```julia
+  SimpleGraphs.SimpleGraph(itensors::Vector{ITensor})
+  ```
+  Not used anywhere in library.
