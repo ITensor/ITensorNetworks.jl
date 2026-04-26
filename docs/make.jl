@@ -44,7 +44,6 @@ makedocs(;
         ],
         "Developer Reference" => [
             "Interface Methods" => "interface_methods.md",
-            "Internal Methods" => "internal_methods.md",
             "Deprecated Methods" => "deprecated_methods.md",
            ],
         "API Reference" => "reference.md",
