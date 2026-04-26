@@ -1,8 +1,5 @@
 # Interface Methods
 
-## To Do Items
-
-
 ## Files to Review
 
 - [X] itensornetwork.jl
@@ -23,15 +20,14 @@
 - [X] abstractindsnetwork.jl
 - [X] indsnetwork.jl
 
+- [X] graphs.jl
+- [X] contract.jl
+- [X] contraction\_sequences.jl
 
 - [ ] partitioneditensornetwork.jl
 - [ ] specialitensornetworks.jl
 
 - [ ] environment.jl
-
-- [X] graphs.jl
-- [ ] contract.jl
-- [ ] contraction\_sequences.jl
 
 - [ ] opsum.jl
 
@@ -215,6 +211,38 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ```julia
   ⊗(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
+  ```
+
+* Contract every tensor in the network into a single `ITensor`. Default `alg = "exact"`
+  contracts via a contraction sequence (built from the network if not given) (`contract.jl`):
+  ```julia
+  contract(tn::AbstractITensorNetwork; alg, kwargs...)
+  contract(alg::Algorithm"exact", tn::AbstractITensorNetwork; sequence, contraction_sequence_kwargs, kwargs...)
+  ```
+
+* Scalar value of a fully-contracted network. The `Algorithm"exact"` form contracts and
+  unwraps; the generic `Algorithm` form goes through `logscalar`/`exp` for stability (`contract.jl`):
+  ```julia
+  scalar(tn::AbstractITensorNetwork; alg, kwargs...)
+  scalar(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
+  scalar(alg::Algorithm, tn::AbstractITensorNetwork; kwargs...)
+  ```
+
+* `log` of the network scalar. The `Algorithm"exact"` form contracts and takes a log
+  (promoting to complex when negative); the generic `Algorithm` form goes through a
+  cache (e.g. BP) using `cache!` / `update_cache` (`contract.jl`):
+  ```julia
+  logscalar(tn::AbstractITensorNetwork; alg, kwargs...)
+  logscalar(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
+  logscalar(alg::Algorithm, tn::AbstractITensorNetwork; cache!, update_cache, kwargs...)
+  ```
+
+* Obtain contraction sequence for a tensor network (`contraction_sequences.jl`).
+  Can offer different backends through package extensions.
+  ```julia
+  contraction_sequence(tn::ITensorList; alg = "optimal", kwargs...)
+  contraction_sequence(alg::Algorithm, tn::ITensorList)
+  contraction_sequence(tn::AbstractITensorNetwork; kwargs...)
   ```
 
 * Elementwise complex conjugation of every tensor in the network (`abstractitensornetwork.jl`):
