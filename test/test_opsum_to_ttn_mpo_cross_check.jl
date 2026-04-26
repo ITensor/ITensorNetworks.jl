@@ -5,9 +5,9 @@ using Graphs: add_edge!, add_vertex!, rem_edge!, vertices
 using ITensorMPS: ITensorMPS
 using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks: ITensorNetworks, siteinds, ttn
-using ITensors.NDTensors: matrix
-using ITensors: ITensors, @disable_warn_order, ITensor, Index, combinedind, combiner,
-    contract, dag, inds, removeqns
+using ITensors.NDTensors: matrix, with_auto_fermion
+using ITensors: @disable_warn_order, ITensor, Index, combinedind, combiner, contract, dag,
+    inds, removeqns
 using LinearAlgebra: norm
 using NamedGraphs.GraphsExtensions: leaf_vertices, post_order_dfs_vertices
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
@@ -30,7 +30,6 @@ end
 @testset "OpSum to TTN vs ITensorMPS.MPO" begin
     @testset "OpSum to TTN" begin
         # small comb tree
-        auto_fermion_enabled = ITensors.using_auto_fermion()
         tooth_lengths = fill(2, 3)
         c = named_comb_tree(tooth_lengths)
 
@@ -72,9 +71,6 @@ end
                 Tmpo_lr = contract(Hsvd_lr)
             end
             @test Tttno_lr ≈ Tmpo_lr rtol = 1.0e-6
-        end
-        if auto_fermion_enabled
-            ITensors.enable_auto_fermion()
         end
     end
 
@@ -129,54 +125,50 @@ end
     end
 
     @testset "OpSum to TTN Fermions" begin
-        # small comb tree
-        auto_fermion_enabled = ITensors.using_auto_fermion()
-        if !auto_fermion_enabled
-            ITensors.enable_auto_fermion()
-        end
-        tooth_lengths = fill(2, 3)
-        c = named_comb_tree(tooth_lengths)
-        is = siteinds("Fermion", c; conserve_nf = true)
+        with_auto_fermion() do
+            # small comb tree
+            tooth_lengths = fill(2, 3)
+            c = named_comb_tree(tooth_lengths)
+            is = siteinds("Fermion", c; conserve_nf = true)
 
-        # test with next-nearest neighbor tight-binding model
-        t = 1.0
-        tp = 0.4
-        U = 0.0
-        h = 0.5
-        H = ModelHamiltonians.tight_binding(c; t, tp, h)
+            # test with next-nearest neighbor tight-binding model
+            t = 1.0
+            tp = 0.4
+            U = 0.0
+            h = 0.5
+            H = ModelHamiltonians.tight_binding(c; t, tp, h)
 
-        # add combination of longer range interactions
-        Hlr = copy(H)
+            # add combination of longer range interactions
+            Hlr = copy(H)
 
-        @testset "Svd approach" for root_vertex in leaf_vertices(is)
-            # get TTN Hamiltonian directly
-            Hsvd = ttn(H, is; root_vertex, cutoff = 1.0e-10)
-            # get corresponding MPO Hamiltonian
-            sites = [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
-            vmap = Dictionary(
-                reverse(post_order_dfs_vertices(c, root_vertex)),
-                1:length(sites)
-            )
-            Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
-            @disable_warn_order begin
-                Tmpo = prod(Hline)
-                Tttno = contract(Hsvd)
+            @testset "Svd approach" for root_vertex in leaf_vertices(is)
+                # get TTN Hamiltonian directly
+                Hsvd = ttn(H, is; root_vertex, cutoff = 1.0e-10)
+                # get corresponding MPO Hamiltonian
+                sites =
+                    [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
+                vmap = Dictionary(
+                    reverse(post_order_dfs_vertices(c, root_vertex)),
+                    1:length(sites)
+                )
+                Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
+                @disable_warn_order begin
+                    Tmpo = prod(Hline)
+                    Tttno = contract(Hsvd)
+                end
+
+                # verify that the norm isn't 0 and thus the same (which would indicate a problem with the autofermion system
+                @test norm(Tmpo) > 0
+                @test norm(Tttno) > 0
+                @test norm(Tmpo) ≈ norm(Tttno) rtol = 1.0e-6
+
+                # TODO: fix comparison for fermionic tensors
+                @test_broken Tmpo ≈ Tttno
+                # In the meantime: matricize tensors and convert to dense Matrix to compare element by element
+                dTmm = to_matrix(Tmpo)
+                dTtm = to_matrix(Tttno)
+                @test any(>(1.0e-14), dTmm - dTtm)
             end
-
-            # verify that the norm isn't 0 and thus the same (which would indicate a problem with the autofermion system
-            @test norm(Tmpo) > 0
-            @test norm(Tttno) > 0
-            @test norm(Tmpo) ≈ norm(Tttno) rtol = 1.0e-6
-
-            # TODO: fix comparison for fermionic tensors
-            @test_broken Tmpo ≈ Tttno
-            # In the meantime: matricize tensors and convert to dense Matrix to compare element by element
-            dTmm = to_matrix(Tmpo)
-            dTtm = to_matrix(Tttno)
-            @test any(>(1.0e-14), dTmm - dTtm)
-        end
-        if !auto_fermion_enabled
-            ITensors.disable_auto_fermion()
         end
     end
 
