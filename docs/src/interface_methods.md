@@ -8,9 +8,9 @@
 - [X] itensornetwork.jl
 - [X] abstractitensornetwork.jl
 - [X] apply.jl. Applying gates to ITensorNetworks.
-- [ ] tebd.jl
+- [X] tebd.jl
 
-- [ ] indextags.jl
+- [X] indextags.jl
 - [ ] abstractindsnetwork.jl
 - [ ] indsnetwork.jl
 - [ ] sitetype.jl
@@ -52,13 +52,13 @@ Recommended methods for building applications on top of ITensorNetworks.
 
 These ITensorNetwork constructor interfaces are foundational to other constructors:
 
-* Default constructor and copy constructor.
+* Default constructor and copy constructor (`itensornetwork.jl`):
   ```julia
   ITensorNetwork{V}()
   ITensorNetwork{V}(tn::ITensorNetwork)
   ```
 
-* From vertex-tensor pairings.
+* From vertex-tensor pairings (`itensornetwork.jl`):
   ```julia
   # Dictionary of vertices => tensors
   ITensorNetwork(ts::AbstractDictionary{<:Any, ITensor})
@@ -71,24 +71,24 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ITensorNetwork(vertices::AbstractVector, tensors::AbstractVector{ITensor})
   ```
 
-* From a collection of ITensorNetworks. Merges (Kronecker or tensor product) of input networks.
+* From a collection of ITensorNetworks. Merges (Kronecker or tensor product) of input networks (`itensornetwork.jl`):
   ```julia
   ITensorNetwork(itns::Vector{ITensorNetwork})
   ```
 
 * From a vector of `ITensor`s, with vertex labels auto-assigned to `eachindex(ts)`.
-  Edges are inferred from shared indices.
+  Edges are inferred from shared indices (`itensornetwork.jl`):
   ```julia
   ITensorNetwork(ts::AbstractVector{ITensor})
   ```
 
-* From a single `ITensor`. Wraps the tensor in a single-vertex network.
+* From a single `ITensor`. Wraps the tensor in a single-vertex network (`itensornetwork.jl`):
   ```julia
   ITensorNetwork(t::ITensor)
   ```
 
 * From `IndsNetwork`. Initializes ITensors with `undef` storage on each vertex
-  of the `IndsNetwork` with the corresponding indices.
+  of the `IndsNetwork` with the corresponding indices (`itensornetwork.jl`):
   ```julia
   ITensorNetwork(eltype::Type, undef::UndefInitializer, is::IndsNetwork; kwargs...)
   ITensorNetwork(eltype::Type, is::IndsNetwork; kwargs...)
@@ -98,13 +98,13 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
 
 ## Analyzing ITensorNetworks
 
-* Indices common to the ITensors on the vertices connected by the edge.
+* Indices common to the ITensors on the vertices connected by the edge (`abstractitensornetwork.jl`):
   ```julia
   commoninds(tn::AbstractITensorNetwork, edge)
   linkinds(tn::AbstractITensorNetwork, edge)
   ```
 
-* Collection of tensors neighboring the given vertex.
+* Collection of tensors neighboring the given vertex (`abstractitensornetwork.jl`):
   ```julia
   neighbor_tensors(tn::AbstractITensorNetwork, vertex)
   ```
@@ -112,7 +112,7 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
 * Indices on the source tensor of `edge` that are not shared with the destination tensor.
   For `edge = (v1 => v2)`, returns every index of `tn[v1]` except the bond(s) to `tn[v2]`, that is,
   `v1`'s site index plus its link indices to all of `v1`'s other neighbors. Useful for QR/SVD
-  across that bond: these are the indices you keep on the `v1` side.
+  across that bond: these are the indices you keep on the `v1` side (`abstractitensornetwork.jl`):
   ```julia
   uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
   uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
@@ -121,43 +121,43 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ```
 
 * Indices on `tn[vertex]` that aren't shared with any neighbor, i.e. the external/site
-  indices of that vertex.
+  indices of that vertex (`abstractitensornetwork.jl`):
   ```julia
   uniqueinds(tn::AbstractITensorNetwork, vertex)
   # Alias for `uniqueinds`.
   siteinds(tn::AbstractITensorNetwork, vertex)
   ```
 
-* Tags on the link index (or indices) associated with `edge`.
+* Tags on the link index (or indices) associated with `edge` (`abstractitensornetwork.jl`):
   ```julia
   tags(tn::AbstractITensorNetwork, edge)
   ```
 
-* Iterate over the tensors at the given vertices (default: all vertices).
+* Iterate over the tensors at the given vertices, default all vertices (`abstractitensornetwork.jl`):
   ```julia
   eachtensor(tn::AbstractITensorNetwork, vertices = vertices(tn))
   ```
 
 * Extract the `IndsNetwork` of a tensor network — site indices per vertex and link
-  indices per edge.
+  indices per edge (`abstractitensornetwork.jl`):
   ```julia
   IndsNetwork(tn::AbstractITensorNetwork)
   ```
 
-* Collect all site indices (per-vertex) of a network as an `IndsNetwork` or as a flat vector.
+* Collect all site indices (per-vertex) of a network as an `IndsNetwork` or as a flat vector (`abstractitensornetwork.jl`):
   ```julia
   siteinds(tn::AbstractITensorNetwork)
   flatten_siteinds(tn::AbstractITensorNetwork)
   ```
 
-* Collect all link indices (per-edge) of a network as an `IndsNetwork` or as a flat vector.
+* Collect all link indices (per-edge) of a network as an `IndsNetwork` or as a flat vector (`abstractitensornetwork.jl`):
   ```julia
   linkinds(tn::AbstractITensorNetwork)
   flatten_linkinds(tn::AbstractITensorNetwork)
   ```
 
 * Bond dimension of a single edge, of every edge (as a `DataGraph`), and the maximum
-  bond dimension over all edges.
+  bond dimension over all edges (`abstractitensornetwork.jl`):
   ```julia
   linkdim(tn::AbstractITensorNetwork{V}, edge::AbstractEdge{V}) where {V}
   linkdims(tn::AbstractITensorNetwork{V}) where {V}
@@ -167,87 +167,87 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
 ## Local Operations on ITensorNetworks
 
 * Contract the tensors at vertices `src(edge)` and `dst(edge)` and store the result in
-  `merged_vertex` (which defaults to `dst(edge)`), removing the other vertex (defaults to `src(edge)`).
+  `merged_vertex` (which defaults to `dst(edge)`), removing the other vertex (defaults to `src(edge)`) (`abstractitensornetwork.jl`):
   ```julia
   contract(tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex = dst(edge))
   contract(tn::AbstractITensorNetwork, edge::Pair; kws...)
   ```
 
 * "Split" an edge index by applying a map to each copy of it on the adjacent ITensors.
-  By default the `dst(edge)` copy is primed and the `src(edge)` copy is unchanged.
+  By default the `dst(edge)` copy is primed and the `src(edge)` copy is unchanged (`abstractitensornetwork.jl`):
   ```julia
   split_index(tn::AbstractITensorNetwork, edges_to_split; 
               src_ind_map::Function = identity,
               dst_ind_map::Function = prime)
   ```
 
-* Factorize the bond on `edge` using the default factorization.
+* Factorize the bond on `edge` using the default factorization (`abstractitensornetwork.jl`):
   ```julia
   factorize(tn::AbstractITensorNetwork, edge::AbstractEdge; kws...)
   factorize(tn::AbstractITensorNetwork, edge::Pair; kws...)
   ```
 
 * QR-factorize across `edge`, placing the orthogonal factor on `src(edge)` and the remainder
-  on `dst(edge)`.
+  on `dst(edge)` (`abstractitensornetwork.jl`):
   ```julia
   qr(tn::AbstractITensorNetwork, edge::AbstractEdge; kws...)
   ```
 
-* SVD-factorize across `edge`.
+* SVD-factorize across `edge` (`abstractitensornetwork.jl`):
   ```julia
   svd(tn::AbstractITensorNetwork, edge::AbstractEdge; kws...)
   ```
 
-* Truncate the bond on `edge` via SVD; forwards `cutoff`, `maxdim`, `mindim` kwargs.
+* Truncate the bond on `edge` via SVD; forwards `cutoff`, `maxdim`, `mindim` kwargs (`abstractitensornetwork.jl`):
   ```julia
   truncate(tn::AbstractITensorNetwork, edge::AbstractEdge; kws...)
   ```
 
 ## Global Operations on ITensorNetworks
 
-* Tensor product (disjoint union) of two ITensorNetworks.
+* Tensor product (disjoint union) of two ITensorNetworks (`abstractitensornetwork.jl`):
   ```julia
   ⊗(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
   ```
 
-* Elementwise complex conjugation of every tensor in the network.
+* Elementwise complex conjugation of every tensor in the network (`abstractitensornetwork.jl`):
   ```julia
   conj(tn::AbstractITensorNetwork)
   ```
 
-* Dagger: conjugate every tensor and prime the appropriate indices.
+* Dagger: conjugate every tensor and prime the appropriate indices (`abstractitensornetwork.jl`):
   ```julia
   dag(tn::AbstractITensorNetwork)
   ```
 
-* Approximate equality of two ITensorNetworks.
+* Approximate equality of two ITensorNetworks (`abstractitensornetwork.jl`):
   ```julia
   isapprox(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kws...)
   ```
 
-* Multiply every-vertex tensors by a scalar (multiplied into the first vertex).
+* Multiply every-vertex tensors by a scalar, multiplied into the first vertex (`abstractitensornetwork.jl`):
   ```julia
   *(c::Number, ψ::AbstractITensorNetwork)
   ```
 
-* Add two ITensorNetworks defined over the same graph; result has summed bond dimensions.
+* Add two ITensorNetworks defined over the same graph; result has summed bond dimensions (`abstractitensornetwork.jl`):
   ```julia
   +(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
   ```
 
-* Adjoint: prime all indices of the network.
+* Adjoint: prime all indices of the network (`abstractitensornetwork.jl`):
   ```julia
   adjoint(tn::AbstractITensorNetwork)
   ```
 
-* Rename every vertex `v` of `tn` to `f(v)`.
+* Rename every vertex `v` of `tn` to `f(v)` (`abstractitensornetwork.jl`):
   ```julia
   rename_vertices(f::Function, tn::AbstractITensorNetwork)
   ```
 
-* Element-type queries and conversions over the whole network.
+* Element-type queries and conversions over the whole network (`abstractitensornetwork.jl`):
   ```julia
   scalartype(tn::AbstractITensorNetwork)
   convert_scalartype(eltype::Type{<:Number}, tn::AbstractITensorNetwork)
@@ -258,19 +258,19 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
 
 * Rewrite every index of a network according to a structural mapping `IndsNetwork => IndsNetwork`
   (site indices per vertex, link indices per edge). The two `IndsNetwork`s must share the
-  same underlying graph.
+  same underlying graph (`abstractitensornetwork.jl`):
   ```julia
   replaceinds(tn::AbstractITensorNetwork, is_is′::Pair{<:IndsNetwork, <:IndsNetwork})
   ```
 
 * Apply an index-label transformation `f` to every index in the network. Used to implement
-  the prime/tag family below.
+  the prime/tag family below (`abstractitensornetwork.jl`):
   ```julia
   map_inds(f, tn::AbstractITensorNetwork, args...; kwargs...)
   ```
 
 * Prime/tag family — apply the corresponding ITensors index-label operation to every
-  index of the network.
+  index of the network (`abstractitensornetwork.jl`):
   ```julia
   prime(tn::AbstractITensorNetwork, args...; kwargs...)
   setprime(tn::AbstractITensorNetwork, args...; kwargs...)
@@ -284,6 +284,10 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   swaptags(tn::AbstractITensorNetwork, args...; kwargs...)
   sim(tn::AbstractITensorNetwork, args...; kwargs...)
   ```
+
+## IndsNetwork Type and Methods
+
+
 
 ## TEBD and Apply Algorithms
 
@@ -313,7 +317,7 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
 
 ## Visualization System
 
-* Visualization of an ITensorNetwork via `ITensorVisualizationCore`.
+* Visualization of an ITensorNetwork via `ITensorVisualizationCore` (`abstractitensornetwork.jl`):
   ```julia
   visualize(tn::AbstractITensorNetwork, args...; kwargs...)
   ```
