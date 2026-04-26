@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Graphs: SimpleGraph, uniform_tree
 using ITensorNetworks: BeliefPropagationCache, QuadraticFormNetwork, edge_scalars, messages,
     norm_sqr_network, rescale, scalartype, siteinds, vertex_scalars
@@ -52,5 +51,4 @@ include("utils.jl")
         alg = "bp",
         cache_update_kwargs = (; maxiter = 20)
     ) ≈ 1.0
-end
 end

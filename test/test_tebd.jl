@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Graphs: vertices
 using ITensorNetworks.ITensorsExtensions: group_terms
 using ITensorNetworks: ITensorNetwork, cartesian_to_linear, dmrg, expect, siteinds, tebd
@@ -54,5 +53,4 @@ ITensors.disable_warn_order()
     #E2 = expect(ℋ, ψ)
     #@show E0, E1, E2, E_dmrg
     @test_broken (((abs((E2 - E1) / E2) < 1.0e-3) && (E1 < E0)) || (E2 < E1 < E0))
-end
 end

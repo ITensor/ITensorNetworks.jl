@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using ITensorNetworks: ITensorNetworks
 using Suppressor: @suppress
 using Test: @testset
@@ -8,5 +7,4 @@ using Test: @testset
     @testset "Test $example_file" for example_file in example_files
         @suppress include(joinpath(pkgdir(ITensorNetworks), "examples", example_file))
     end
-end
 end

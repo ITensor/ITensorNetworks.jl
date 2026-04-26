@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Graphs: vertices
 using ITensorNetworks: ITensorNetworks, OpSum, siteinds, ttn
 using ITensors.NDTensors: with_auto_fermion
@@ -23,5 +22,4 @@ using Test: @test, @testset
             @test H1 + H2 ≈ H3 rtol = 1.0e-6
         end
     end
-end
 end

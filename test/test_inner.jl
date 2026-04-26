@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Graphs: SimpleGraph, uniform_tree
 using ITensorNetworks: ITensorNetwork, inner, inner_network, loginner, logscalar, scalar,
     siteinds, ttn, underlying_graph
@@ -47,5 +46,4 @@ using .ModelHamiltonians: heisenberg
     @test xAy_scalar ≈ xAy_scalar_bp
     @test xAy_scalar_bp ≈ xAy_scalar_logbp
     @test xAy_scalar ≈ xAy_scalar_logbp
-end
 end

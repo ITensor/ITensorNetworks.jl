@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Compat: Compat
 using Graphs: vertices
 using ITensorNetworks:
@@ -73,5 +72,4 @@ include("utils.jl")
         @test !iszero(truncerr)
         @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
     end
-end
 end
