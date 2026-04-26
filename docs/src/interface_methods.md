@@ -10,7 +10,7 @@
 - [X] apply.jl. Applying gates to ITensorNetworks.
 - [X] tebd.jl
 
-- [ ] inner.jl
+- [X] inner.jl
 - [ ] expect.jl
 - [ ] normalize.jl
 
@@ -252,6 +252,36 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   scalartype(tn::AbstractITensorNetwork)
   convert_scalartype(eltype::Type{<:Number}, tn::AbstractITensorNetwork)
   complex(tn::AbstractITensorNetwork)
+  ```
+
+* Inner product `⟨ϕ|ψ⟩`. Default `alg = "bp"`; `"exact"` builds the bra-ket network and contracts via a sequence (`inner.jl`):
+  ```julia
+  inner(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; alg, kwargs...)
+  inner(alg::Algorithm, ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...)
+  inner(alg::Algorithm"exact", ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; sequence, kwargs...)
+  ```
+
+* Matrix element `⟨ϕ|A|ψ⟩` for an operator network `A` (`inner.jl`):
+  ```julia
+  inner(ϕ::AbstractITensorNetwork, A::AbstractITensorNetwork, ψ::AbstractITensorNetwork; alg, kwargs...)
+  inner(alg::Algorithm, ϕ::AbstractITensorNetwork, A::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...)
+  inner(alg::Algorithm"exact", ϕ::AbstractITensorNetwork, A::AbstractITensorNetwork, ψ::AbstractITensorNetwork; sequence, kwargs...)
+  ```
+
+* Numerically-stable `log(⟨ϕ|ψ⟩)` and `log(⟨ϕ|A|ψ⟩)` (`inner.jl`):
+  ```julia
+  loginner(ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; alg, kwargs...)
+  loginner(ϕ::AbstractITensorNetwork, A::AbstractITensorNetwork, ψ::AbstractITensorNetwork; alg, kwargs...)
+  loginner(alg::Algorithm, ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...)
+  loginner(alg::Algorithm, ϕ::AbstractITensorNetwork, A::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...)
+  loginner(alg::Algorithm"exact", ϕ::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...)
+  loginner(alg::Algorithm"exact", ϕ::AbstractITensorNetwork, A::AbstractITensorNetwork, ψ::AbstractITensorNetwork; kwargs...)
+  ```
+
+* Squared norm `⟨ψ|ψ⟩` and norm `√|⟨ψ|ψ⟩|` (`inner.jl`):
+  ```julia
+  norm_sqr(ψ::AbstractITensorNetwork; kwargs...)
+  norm(ψ::AbstractITensorNetwork; kwargs...)
   ```
 
 ## Index Manipulation
