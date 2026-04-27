@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using DataGraphs: assigned_edge_data, assigned_vertex_data, edge_data, vertex_data
 using Dictionaries: Dictionary
 using Graphs: edges, ne, nv, vertices
@@ -180,5 +179,4 @@ end
     is_m = union_all_inds(is1, is2)
     @test all(issetequal(is_m[v], union(is1[v], is2[v])) for v in vertices(c))
     @test all(issetequal(is_m[e], union(is1[e], is2[e])) for e in edges(c))
-end
 end

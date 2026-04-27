@@ -1,12 +1,12 @@
-@eval module $(gensym())
 using Graphs: vertices
 using ITensorNetworks.ITensorsExtensions: group_terms
-using ITensorNetworks.ModelHamiltonians: ModelHamiltonians
 using ITensorNetworks: ITensorNetwork, cartesian_to_linear, dmrg, expect, siteinds, tebd
 using ITensors: ITensors
 using NamedGraphs.GraphsExtensions: rename_vertices
 using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @test_broken, @testset
+include("utils.jl")
+using .ModelHamiltonians: ModelHamiltonians
 
 ITensors.disable_warn_order()
 
@@ -53,5 +53,4 @@ ITensors.disable_warn_order()
     #E2 = expect(ℋ, ψ)
     #@show E0, E1, E2, E_dmrg
     @test_broken (((abs((E2 - E1) / E2) < 1.0e-3) && (E1 < E0)) || (E2 < E1 < E0))
-end
 end

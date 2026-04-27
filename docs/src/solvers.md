@@ -16,9 +16,21 @@ variational sweep algorithm.
 [`dmrg`](@ref ITensorNetworks.dmrg) is an alias for `eigsolve`.
 
 ```@example main
-using ITensorNetworks: dmrg, dst, edges, normalize, random_ttn, siteinds, src, ttn
-using ITensors: OpSum
+using Graphs: vertices
+using ITensorNetworks: ITensorNetwork, dmrg, dst, edges, normalize, siteinds, src, ttn
+using ITensors: Index, OpSum, random_itensor
+using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
+
+function random_state(g, s; link_space)
+    l = Dict(e => Index(link_space, "Link") for e in edges(g))
+    l = merge(l, Dict(reverse(e) => l[e] for e in edges(g)))
+    ts = Dict(
+        v => random_itensor(only(s[v]), (l[e] for e in incident_edges(g, v))...)
+            for v in vertices(g)
+    )
+    return ITensorNetwork(ts)
+end
 
 # Build a Heisenberg Hamiltonian on a comb tree
 g = named_comb_tree((3, 2))
@@ -33,7 +45,7 @@ H = let h = OpSum()
 end
 
 # Random initial state (normalise first!)
-psi0 = normalize(random_ttn(s; link_space = 2))
+psi0 = normalize(ttn(random_state(g, s; link_space = 2)))
 
 # Run DMRG
 energy, psi = dmrg(H, psi0;

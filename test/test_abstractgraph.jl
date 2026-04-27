@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Graphs: add_edge!, add_vertex!
 using NamedGraphs.GraphsExtensions: is_binary_arborescence, is_rooted, root_vertex
 using NamedGraphs: NamedDiGraph
@@ -15,5 +14,4 @@ using Test: @test, @testset
     add_vertex!(g, 4)
     add_edge!(g, 1, 4)
     @test !is_binary_arborescence(g)
-end
 end

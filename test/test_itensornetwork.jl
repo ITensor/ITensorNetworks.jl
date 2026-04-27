@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Dictionaries: Dictionary
 using Distributions: Uniform
 using Graphs: degree, dijkstra_shortest_paths, edges, grid, has_vertex, ne, neighbors, nv,
@@ -6,8 +5,7 @@ using Graphs: degree, dijkstra_shortest_paths, edges, grid, has_vertex, ne, neig
 using GraphsFlows: GraphsFlows
 using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork, contraction_sequence,
     flatten_linkinds, flatten_siteinds, inner_network, linkinds, neighbor_tensors, norm_sqr,
-    norm_sqr_network, orthogonalize, random_tensornetwork, siteinds, tree_orthogonalize,
-    ttn, ⊗
+    norm_sqr_network, orthogonalize, siteinds, tree_orthogonalize, ttn, ⊗
 using ITensors.NDTensors: NDTensors, dim
 using ITensors: ITensors, ITensor, Index, Op, commonind, commoninds, contract, dag,
     hascommoninds, hasinds, inds, inner, itensor, onehot, order, prime, random_itensor,
@@ -21,6 +19,7 @@ using Random: randn!
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @test_broken, @testset
+include("utils.jl")
 const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 @testset "ITensorNetwork tests" begin
     @testset "ITensorNetwork Basics" begin
@@ -358,5 +357,4 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         tn = random_tensornetwork(rng, is; link_space = 3)
         @test_broken swapprime(tn, 0, 2)
     end
-end
 end

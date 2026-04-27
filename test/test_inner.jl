@@ -1,14 +1,14 @@
-@eval module $(gensym())
 using Graphs: SimpleGraph, uniform_tree
-using ITensorNetworks.ModelHamiltonians: heisenberg
-using ITensorNetworks: ITensorNetwork, inner, inner_network, loginner, logscalar,
-    random_tensornetwork, scalar, siteinds, ttn, underlying_graph
+using ITensorNetworks: ITensorNetwork, inner, inner_network, loginner, logscalar, scalar,
+    siteinds, ttn, underlying_graph
 using ITensors: dag
 using NamedGraphs: NamedGraph
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset
+include("utils.jl")
+using .ModelHamiltonians: heisenberg
 @testset "Inner products, BP vs exact comparison" begin
     L = 4
     χ = 2
@@ -46,5 +46,4 @@ using Test: @test, @testset
     @test xAy_scalar ≈ xAy_scalar_bp
     @test xAy_scalar_bp ≈ xAy_scalar_logbp
     @test xAy_scalar ≈ xAy_scalar_logbp
-end
 end

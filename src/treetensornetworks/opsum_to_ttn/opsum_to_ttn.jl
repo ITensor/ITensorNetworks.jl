@@ -1,6 +1,6 @@
 #using FillArrays: OneElement
 #using DataGraphs: DataGraph
-using Graphs: degree, is_tree
+using Graphs: degree, is_tree, rem_vertex!
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks, truncate!
 using ITensors.Ops: Op, OpSum, argument, coefficient, name, params, site, terms, which_op

@@ -12,3 +12,4 @@ jobs:
     uses: "ITensor/ITensorActions/.github/workflows/CompatHelper.yml@main"
     with:
       localregistry: "https://github.com/ITensor/ITensorRegistry.git"
+    secrets: "inherit"

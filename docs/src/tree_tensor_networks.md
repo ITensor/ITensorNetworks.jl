@@ -21,7 +21,7 @@ and provides a convenient interface for 1D calculations.
 ```@example main
 using Graphs: vertices
 using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, mps, ortho_region, orthogonalize,
-    random_mps, random_ttn, siteinds, ttn
+    siteinds, ttn
 using ITensors: ITensors
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
@@ -33,20 +33,14 @@ sites = siteinds("S=1/2", g)
 psi = ttn(sites)  # zero-initialised
 psi = ttn(v -> "Up", sites)  # product state
 
-# Random TTN
-psi = random_ttn(sites; link_space = 2)
-
 # 1D MPS
 s1d = siteinds("S=1/2", 6)
 mps_state = mps(v -> "Up", s1d)  # product MPS
-mps_state = random_mps(s1d; link_space = 2)
 ```
 
 ```@docs; canonical=false
 ITensorNetworks.ttn
 ITensorNetworks.mps
-ITensorNetworks.random_ttn
-ITensorNetworks.random_mps
 ```
 
 ### The `TreeTensorNetwork` type and conversion

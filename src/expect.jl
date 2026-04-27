@@ -97,23 +97,6 @@ vertex of `ψ`.
 
 A `Dictionary` mapping each vertex of `ψ` to its expectation value.
 
-# Example
-
-```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_grid
-
-julia> g = named_grid((4,));
-
-julia> s = siteinds("S=1/2", g);
-
-julia> psi = random_ttn(s; link_space = 2);
-
-julia> sz = expect(psi, "Sz");
-
-julia> sz_exact = expect(psi, "Sz"; alg = "exact");
-
-```
-
 See also: [`expect(ψ, op::String, vertices)`](@ref),
 [`expect(operator, state::AbstractTreeTensorNetwork)`](@ref).
 """

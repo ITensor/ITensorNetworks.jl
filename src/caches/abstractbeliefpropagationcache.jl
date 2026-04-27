@@ -1,6 +1,6 @@
 using Adapt: Adapt, adapt, adapt_structure
 using Graphs: Graphs, IsDirected
-using ITensors: dir
+using ITensors: delta, dir
 using LinearAlgebra: diag, dot
 using NDTensors: NDTensors
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, PartitionedGraphs, QuotientVertex,

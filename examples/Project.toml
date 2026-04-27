@@ -5,4 +5,4 @@ ITensorNetworks = "2919e153-833c-4bdc-8836-1ea460a35fc7"
 path = ".."
 
 [compat]
-ITensorNetworks = "0.15"
+ITensorNetworks = "0.19"

@@ -1,14 +1,14 @@
-@eval module $(gensym())
 using Compat: Compat
 using Graphs: vertices
-using ITensorNetworks: BeliefPropagationCache, ITensorNetwork, VidalITensorNetwork, apply,
-    environment, norm_sqr_network, random_tensornetwork, siteinds, update
+using ITensorNetworks:
+    BeliefPropagationCache, apply, environment, norm_sqr_network, siteinds, update
 using ITensors: ITensors, Algorithm, ITensor, inner, op
 using NamedGraphs.NamedGraphGenerators: named_grid
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset
+include("utils.jl")
 @testset "apply" begin
     g_dims = (2, 2)
     n = prod(g_dims)
@@ -23,7 +23,6 @@ using Test: @test, @testset
     bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
     bp_cache = update(bp_cache; maxiter = 20)
     envsSBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
-    ψv = VidalITensorNetwork(ψ; cache_update_kwargs = (; maxiter = 20))
     #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
     bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
     bp_cache = update(bp_cache; maxiter = 20)
@@ -49,8 +48,6 @@ using Test: @test, @testset
             envisposdef = true,
             callback
         )
-        ψOv = apply(o, ψv; maxdim = χ, normalize = true)
-        ψOVidal_symm = ITensorNetwork(ψOv)
         ψOGBP = apply(
             o,
             ψ;
@@ -66,11 +63,6 @@ using Test: @test, @testset
             inner(ψOexact, ψOexact; alg = inner_alg) *
                 inner(ψOSBP, ψOSBP; alg = inner_alg)
         )
-        fVidal =
-            inner(ψOVidal_symm, ψOexact; alg = inner_alg) / sqrt(
-            inner(ψOexact, ψOexact; alg = inner_alg) *
-                inner(ψOVidal_symm, ψOVidal_symm; alg = inner_alg)
-        )
         fGBP =
             inner(ψOGBP, ψOexact; alg = inner_alg) /
             sqrt(
@@ -79,7 +71,5 @@ using Test: @test, @testset
         )
         @test !iszero(truncerr)
         @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
-        @test isapprox(real(fSBP * conj(fSBP)), real(fVidal * conj(fVidal)); atol = 1.0e-3)
     end
-end
 end

@@ -1,6 +1,5 @@
-@eval module $(gensym())
 using Graphs: vertices
-using ITensorNetworks: expect, random_mps, siteinds, ttn
+using ITensorNetworks: expect, siteinds, ttn
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using StableRNGs: StableRNG
@@ -19,5 +18,4 @@ using Test: @test, @testset
     state = ttn(states, s)
     res = expect("Sz", state)
     @test all([isapprox(res[v], magnetization[v]; atol = 1.0e-8) for v in vertices(s)])
-end
 end

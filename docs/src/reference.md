@@ -1,8 +1,7 @@
 # API Reference
 
-Complete listing of all documented public functions and types in ITensorNetworks.jl,
-ITensorNetworks.ModelNetworks, and ITensorNetworks.ModelHamiltonians.
+Complete listing of all documented public functions and types in ITensorNetworks.jl.
 
 ```@autodocs
-Modules = [ITensorNetworks, ITensorNetworks.ModelNetworks, ITensorNetworks.ModelHamiltonians]
+Modules = [ITensorNetworks]
 ```
