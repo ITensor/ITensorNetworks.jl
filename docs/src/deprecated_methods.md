@@ -28,6 +28,11 @@ Suggestions of methods which could be deleted.
   ITensorNetwork(itensor_constructor::Function, is::IndsNetwork; link_space = trivial_space(is), kwargs...)
   ```
 
+* From a single `ITensor`. Wraps the tensor in a single-vertex network (`itensornetwork.jl`):
+  ```julia
+  ITensorNetwork(t::ITensor)
+  ```
+
 ## Local Operations on ITensorNetworks
 
 * Combine (fuse) every link index of a tensor network, or a chosen set of edges, into
