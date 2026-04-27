@@ -1,7 +1,7 @@
 using Graphs: AbstractGraph
 using ITensors: ITensor, prime
-using NamedGraphs: similar_graph
 using NamedGraphs.GraphsExtensions: disjoint_union
+using NamedGraphs: similar_graph
 
 default_dual_link_index_map = prime
 
