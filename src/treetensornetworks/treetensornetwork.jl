@@ -83,14 +83,14 @@ end
 
 # Field access
 """
-    itensornetwork(tn::TreeTensorNetwork) -> ITensorNetwork
+    ITensorNetwork(tn::TreeTensorNetwork) -> ITensorNetwork
 
 Convert a `TreeTensorNetwork` to a plain `ITensorNetwork`, discarding orthogonality
 metadata. The returned network shares the same underlying tensor data.
 
 See also: [`TreeTensorNetwork`](@ref), [`ttn`](@ref).
 """
-itensornetwork(tn::TTN) = getfield(tn, :tensornetwork)
+ITensorNetwork(tn::TTN) = copy(tn.tensornetwork)
 
 """
     ortho_region(tn::TreeTensorNetwork) -> Indices
@@ -99,10 +99,10 @@ Return the set of vertices that currently form the orthogonality center of `tn`.
 
 See also: [`orthogonalize`](@ref).
 """
-ortho_region(tn::TTN) = getfield(tn, :ortho_region)
+ortho_region(tn::TTN) = tn.ortho_region
 
 # Required for `AbstractITensorNetwork` interface
-data_graph(tn::TTN) = data_graph(itensornetwork(tn))
+data_graph(tn::TTN) = data_graph(tn.tensornetwork)
 
 function data_graph_type(G::Type{<:TTN})
     return data_graph_type(fieldtype(G, :tensornetwork))
