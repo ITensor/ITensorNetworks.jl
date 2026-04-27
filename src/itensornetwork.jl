@@ -81,7 +81,7 @@ function NamedGraphs.similar_graph(
         tn::ITensorNetwork,
         underlying_graph::AbstractGraph
     )
-    dg = similar_graph(DataGraph, underlying_graph, ITensor, ITensor)
+    dg = DataGraph(underlying_graph; vertex_data_type = ITensor, edge_data_type = ITensor)
     return _ITensorNetwork(dg)
 end
 
