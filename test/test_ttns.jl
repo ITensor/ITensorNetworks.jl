@@ -41,9 +41,9 @@ using Test: @test, @testset
         psi = ttn(v -> "Up", sites)  # product state
 
         itn = ITensorNetwork(psi)  # TTN → ITensorNetwork
-        new_psi = TreeTensorNetwork(itn)  # ITensorNetwork → TTN
-
-        @test !(new_psi === itn) # test we make a copy
+        @test vertex_data(itn) == vertex_data(psi.tensornetwork)
+        @test !(itn === psi.tensornetwork)
+        @test vertex_data(TreeTensorNetwork(itn)) == vertex_data(psi)
     end
 
     @testset "Ortho" begin
