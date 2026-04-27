@@ -43,6 +43,7 @@ makedocs(;
             "Solvers" => "solvers.md",
         ],
         "Developer Reference" => [
+            "Organization of Library" => "organization_of_library.md",
             "Interface Methods" => "interface_methods.md",
             "Deprecated Methods" => "deprecated_methods.md",
            ],

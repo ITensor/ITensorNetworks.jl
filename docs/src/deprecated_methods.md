@@ -1,5 +1,7 @@
 # Deprecated Methods
 
+Suggestions of methods which could be deleted.
+
 ## ITensorNetwork Constructors
 
 * From a named graph, forwards to construction from `IndsNetwork` (`itensornetwork.jl`):
@@ -29,8 +31,7 @@
 ## Local Operations on ITensorNetworks
 
 * Combine (fuse) every link index of a tensor network, or a chosen set of edges, into
-  a single index per edge using `combiner` tensors.
-  Not used anywhere in the library? (`abstractitensornetwork.jl`):
+  a single index per edge using `combiner` tensors. (`abstractitensornetwork.jl`):
   ```julia
   linkinds_combiners(tn::AbstractITensorNetwork; edges = edges(tn))
   combine_linkinds(tn::AbstractITensorNetwork, combiners)
@@ -55,7 +56,27 @@
   scale!(weight_function::Function, tn::AbstractITensorNetwork; kwargs...)
   ```
 
+## TreeTensorNetwork Constructors
+
+* From `Op` and related types (`opsum_to_ttn.jl`):
+  ```julia
+  mpo(os::OpSum, external_inds::Vector; kws...)
+  mpo(os::OpSum, s::IndsNetwork; kws...)
+  ttn(o::Op, s::IndsNetwork; kws...)
+  ttn(o::Scaled{C, Op}, s::IndsNetwork; kws...)
+  ttn(o::Sum{Op}, s::IndsNetwork; kws...)
+  ttn(o::Prod{Op}, s::IndsNetwork; kws...)
+  ttn(o::Scaled{C, Prod{Op}}, s::IndsNetwork; kws...)
+  ttn(o::Sum{Scaled{C, Op}}, s::IndsNetwork; kws...)
+  ```
+
 ## Miscellaneous Methods
+
+* Methods in `partitioneditensornetwork.jl`.
+  ```julia
+  linkinds(pitn::PartitionedGraph, edge::QuotientEdge)
+  ```
+  To be revisited after Jack's work on NamedGraphs.
 
 * Methods in `graphs.jl`. 
   Just one methods which constructs a `SimpleGraph` from ITensors (`graphs.jl`).

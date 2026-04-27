@@ -1,53 +1,5 @@
 # Interface Methods
 
-## Files to Review
-
-- [X] itensornetwork.jl
-- [X] abstractitensornetwork.jl
-- [X] apply.jl. Applying gates to ITensorNetworks.
-- [X] tebd.jl
-
-- [X] inner.jl
-- [X] expect.jl
-- [X] normalize.jl
-
-- [X] edge\_sequences.jl
-- [X] caches/abstractbeliefpropagationcache.jl
-- [X] caches/beliefpropagationcache.jl
-
-- [X] indextags.jl
-- [X] sitetype.jl
-- [X] abstractindsnetwork.jl
-- [X] indsnetwork.jl
-
-- [X] graphs.jl
-- [X] contract.jl
-- [X] contraction\_sequences.jl
-
-- [ ] partitioneditensornetwork.jl
-- [ ] specialitensornetworks.jl
-
-- [ ] environment.jl
-
-- [ ] opsum.jl
-
-- [X] update\_observer.jl
-- [X] utils.jl
-- [X] visualize.jl
-
-
-- [ ] formnetworks/abstractformnetwork.jl
-- [ ] formnetworks/bilinearformnetwork.jl
-- [ ] formnetworks/linearformnetwork.jl
-- [ ] formnetworks/quadraticformnetwork.jl
-
-- [ ] treetensornetworks/abstracttreetensornetwork.jl
-- [ ] treetensornetworks/treetensornetwork.jl
-- [ ] treetensornetworks/opsum\_to\_ttn/
-- [ ] treetensornetworks/projttns/
-
-- [ ] solvers/
-
 Recommended methods for building applications on top of ITensorNetworks.
 
 ## ITensorNetwork Constructors
@@ -97,6 +49,7 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ITensorNetwork(undef::UndefInitializer, is::IndsNetwork; kwargs...)
   ITensorNetwork(is::IndsNetwork; kwargs...)
   ```
+
 
 ## Analyzing ITensorNetworks
 
@@ -355,6 +308,20 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   normalize(alg::Algorithm, tn::AbstractITensorNetwork; cache!, update_cache, kwargs...)
   ```
 
+* Tensors making up the environment of `vertices` in `tn`. Default `alg = "bp"` (`environment.jl`):
+  ```julia
+  environment(tn::AbstractITensorNetwork, vertices::Vector; alg, kwargs...)
+  ```
+
+* Algorithm-specialized dispatches: `"exact"` returns the single ITensor obtained by
+  contracting all other vertices; the generic `Algorithm` form partitions the network
+  (or accepts a `PartitionedGraph`) and pulls the environment from a BP-style cache (`environment.jl`):
+  ```julia
+  environment(::Algorithm"exact", tn::AbstractITensorNetwork, verts::Vector; kwargs...)
+  environment(alg::Algorithm, tn::AbstractITensorNetwork, vertices::Vector; partitioned_vertices, kwargs...)
+  environment(alg::Algorithm, ptn::PartitionedGraph, vertices::Vector; cache!, update_cache, kwargs...)
+  ```
+
 ## Index Manipulation
 
 * Rewrite every index of a network according to a structural mapping `IndsNetwork => IndsNetwork`
@@ -385,6 +352,301 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   swaptags(tn::AbstractITensorNetwork, args...; kwargs...)
   sim(tn::AbstractITensorNetwork, args...; kwargs...)
   ```
+
+
+## Form Networks
+
+#### AbstractFormNetwork
+
+* Required-to-implement abstract interface — each concrete `AbstractFormNetwork` subtype
+  defines these (`formnetworks/abstractformnetwork.jl`):
+  ```julia
+  dual_index_map(f::AbstractFormNetwork)
+  tensornetwork(f::AbstractFormNetwork)
+  copy(f::AbstractFormNetwork)
+  operator_vertex_suffix(f::AbstractFormNetwork)
+  bra_vertex_suffix(f::AbstractFormNetwork)
+  ket_vertex_suffix(f::AbstractFormNetwork)
+  ```
+
+* Graph plumbing forwarded to the underlying tensor network (`formnetworks/abstractformnetwork.jl`):
+  ```julia
+  data_graph(f::AbstractFormNetwork)
+  data_graph_type(f::AbstractFormNetwork)
+  ```
+
+* Lists of vertices in each role: those tagged with the operator/bra/ket suffix (`formnetworks/abstractformnetwork.jl`):
+  ```julia
+  operator_vertices(f::AbstractFormNetwork)
+  bra_vertices(f::AbstractFormNetwork)
+  ket_vertices(f::AbstractFormNetwork)
+  ```
+
+* Vertex-renaming functions: closures `v -> (v, suffix)` that map an original-state
+  vertex to its operator/bra/ket-tagged counterpart (`formnetworks/abstractformnetwork.jl`):
+  ```julia
+  operator_vertex_map(f::AbstractFormNetwork)
+  bra_vertex_map(f::AbstractFormNetwork)
+  ket_vertex_map(f::AbstractFormNetwork)
+  ```
+
+* Apply the corresponding vertex map to a single vertex `v` (`formnetworks/abstractformnetwork.jl`):
+  ```julia
+  operator_vertex(f::AbstractFormNetwork, v)
+  bra_vertex(f::AbstractFormNetwork, v)
+  ket_vertex(f::AbstractFormNetwork, v)
+  ```
+
+#### LinearFormNetwork
+
+* Construct a `LinearFormNetwork` representing `⟨bra|ket⟩`. Optional suffix kwargs and
+  a `dual_link_index_map` (default `prime`) control how bra link indices are made
+  distinct from ket link indices (`formnetworks/linearformnetwork.jl`):
+  ```julia
+  LinearFormNetwork(bra::AbstractITensorNetwork, ket::AbstractITensorNetwork; bra_vertex_suffix, ket_vertex_suffix, dual_link_index_map)
+  ```
+
+* Construct a `LinearFormNetwork` from an existing `BilinearFormNetwork` by absorbing
+  the operator into the bra side (`formnetworks/linearformnetwork.jl`):
+  ```julia
+  LinearFormNetwork(blf::BilinearFormNetwork)
+  ```
+
+* Suffix and tensor-network accessors (`formnetworks/linearformnetwork.jl`):
+  ```julia
+  bra_vertex_suffix(lf::LinearFormNetwork)
+  ket_vertex_suffix(lf::LinearFormNetwork)
+  tensornetwork(lf::LinearFormNetwork)
+  ```
+
+* Copy a `LinearFormNetwork` (deep-copies the underlying tensor network) (`formnetworks/linearformnetwork.jl`):
+  ```julia
+  copy(lf::LinearFormNetwork)
+  ```
+
+* Replace the ket-side tensor at the original vertex `original_ket_state_vertex` with
+  `ket_state` (graph-preserving update) (`formnetworks/linearformnetwork.jl`):
+  ```julia
+  update(lf::LinearFormNetwork, original_ket_state_vertex, ket_state::ITensor)
+  ```
+
+#### BilinearFormNetwork
+
+* Construct a `BilinearFormNetwork` representing `⟨bra|operator|ket⟩`. Optional suffix
+  kwargs and `dual_site_index_map` (default `prime`) / `dual_link_index_map` (default
+  `sim`) control how bra indices are distinguished from ket indices (`formnetworks/bilinearformnetwork.jl`):
+  ```julia
+  BilinearFormNetwork(operator::AbstractITensorNetwork, bra::AbstractITensorNetwork, ket::AbstractITensorNetwork; operator_vertex_suffix, bra_vertex_suffix, ket_vertex_suffix, dual_site_index_map, dual_link_index_map)
+  ```
+
+* Construct from `bra` and `ket` only — the operator network is built automatically
+  as a per-vertex identity from `siteinds(ket)` to `dual_site_index_map(siteinds(ket))` (`formnetworks/bilinearformnetwork.jl`):
+  ```julia
+  BilinearFormNetwork(bra::AbstractITensorNetwork, ket::AbstractITensorNetwork; dual_site_index_map, kwargs...)
+  ```
+
+* Build the identity ITensor mapping `first(i_pair) → last(i_pair)` for each pair, used
+  to assemble the auto-generated operator network (`formnetworks/bilinearformnetwork.jl`):
+  ```julia
+  itensor_identity_map(elt::Type, i_pairs::Vector)
+  itensor_identity_map(i_pairs::Vector)
+  ```
+
+* Suffix and tensor-network accessors (`formnetworks/bilinearformnetwork.jl`):
+  ```julia
+  operator_vertex_suffix(blf::BilinearFormNetwork)
+  bra_vertex_suffix(blf::BilinearFormNetwork)
+  ket_vertex_suffix(blf::BilinearFormNetwork)
+  tensornetwork(blf::BilinearFormNetwork)
+  ```
+
+* Copy a `BilinearFormNetwork` (`formnetworks/bilinearformnetwork.jl`):
+  ```julia
+  copy(blf::BilinearFormNetwork)
+  ```
+
+* Replace the bra and ket tensors at the original vertices with `bra_state` and
+  `ket_state` (graph-preserving update) (`formnetworks/bilinearformnetwork.jl`):
+  ```julia
+  update(blf::BilinearFormNetwork, original_bra_state_vertex, original_ket_state_vertex, bra_state::ITensor, ket_state::ITensor)
+  ```
+
+#### QuadraticFormNetwork
+
+* Construct a `QuadraticFormNetwork` representing `⟨ψ|operator|ψ⟩` (or `⟨ψ|ψ⟩` if the
+  operator is omitted). Internally wraps a `BilinearFormNetwork` whose bra is the dual
+  of `ket`. `dual_index_map` (default `prime`) / `dual_inv_index_map` (default `noprime`)
+  control how bra indices are produced from ket indices (`formnetworks/quadraticformnetwork.jl`):
+  ```julia
+  QuadraticFormNetwork(operator::AbstractITensorNetwork, ket::AbstractITensorNetwork; dual_index_map, dual_inv_index_map, kwargs...)
+  QuadraticFormNetwork(ket::AbstractITensorNetwork; dual_index_map, dual_inv_index_map, kwargs...)
+  ```
+
+* Access the underlying `BilinearFormNetwork` and the index-map functions (`formnetworks/quadraticformnetwork.jl`):
+  ```julia
+  bilinear_formnetwork(qf::QuadraticFormNetwork)
+  dual_index_map(qf::QuadraticFormNetwork)
+  dual_inv_index_map(qf::QuadraticFormNetwork)
+  ```
+
+* Forwarded accessors — these queries are answered by the inner `BilinearFormNetwork` (`formnetworks/quadraticformnetwork.jl`):
+  ```julia
+  operator_vertex_suffix(qf::QuadraticFormNetwork)
+  bra_vertex_suffix(qf::QuadraticFormNetwork)
+  ket_vertex_suffix(qf::QuadraticFormNetwork)
+  tensornetwork(qf::QuadraticFormNetwork)
+  data_graph(qf::QuadraticFormNetwork)
+  data_graph_type(qf::QuadraticFormNetwork)
+  ```
+
+* Copy a `QuadraticFormNetwork` (deep-copies the inner bilinear form) (`formnetworks/quadraticformnetwork.jl`):
+  ```julia
+  copy(qf::QuadraticFormNetwork)
+  ```
+
+* Replace the tensor at the original vertex with `ket_state` — the bra-side tensor is
+  generated automatically by applying `dual_index_map` to the dag of `ket_state` (`formnetworks/quadraticformnetwork.jl`):
+  ```julia
+  update(qf::QuadraticFormNetwork, original_state_vertex, ket_state::ITensor)
+  ```
+
+## TreeTensorNetwork Types
+
+#### OpSum Constructors
+
+* From an `OpSum`, using `opsum_to_ttn.jl` code:
+  ```julia
+  ttn(os::OpSum,sites::IndsNetwork; kws...)
+  ```
+
+* From `OpSum`, assuming path graph (`opsum_to_ttn.jl`):
+  ```julia
+  mpo(os::OpSum, external_inds::Vector; kws...)
+  mpo(os::OpSum, s::IndsNetwork; kws...)
+  ```
+
+#### AbstractTreeTensorNetwork Type
+
+* Required-to-implement abstract interface — `TreeTensorNetwork` provides all three (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  ITensorNetwork(tn::AbstractTTN)
+  ortho_region(tn::AbstractTTN)
+  set_ortho_region(tn::AbstractTTN, new_region)
+  ```
+
+* Underlying-graph type forwarded to `data_graph_type` (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  underlying_graph_type(G::Type{<:AbstractTTN})
+  ```
+
+* Gauge `tn` so its orthogonality center sits at `region`. `gauge` does the underlying
+  tree-traversal QRs; `orthogonalize` is the user-facing wrapper, with `tree_orthogonalize`
+  as an alias (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  gauge(alg::Algorithm, ttn::AbstractTTN, region::Vector; kwargs...)
+  gauge(alg::Algorithm, ttn::AbstractTTN, region; kwargs...)
+  orthogonalize(ttn::AbstractTTN, region; kwargs...)
+  tree_orthogonalize(ttn::AbstractTTN, args...; kwargs...)
+  ```
+
+* Sweep-based truncation. The whole-TTN form orthogonalizes towards `src(e)` before
+  each bond truncation; the edge form lifts `truncate` from the underlying `ITensorNetwork` (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  truncate(tn::AbstractTTN; root_vertex = GraphsExtensions.default_root_vertex(tn), kwargs...)
+  truncate(tn::AbstractTTN, edge::AbstractEdge; kwargs...)
+  ```
+
+* Contract the whole tree into a single `ITensor` via a reverse post-order DFS sequence (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  contract(tn::AbstractTTN, root_vertex = GraphsExtensions.default_root_vertex(tn); kwargs...)
+  ```
+
+* Inner product `⟨x|y⟩`, matrix element `⟨y|A|x⟩`, and four-network form `⟨B|y|A|x⟩`,
+  each contracted along a post-order DFS rooted at `root_vertex` (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  inner(x::AbstractTTN, y::AbstractTTN; root_vertex)
+  inner(y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex)
+  inner(B::AbstractTTN, y::AbstractTTN, A::AbstractTTN, x::AbstractTTN; root_vertex)
+  ```
+
+* Norm and `log(norm)` — fast paths when the gauge center is a single vertex (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  norm(tn::AbstractTTN)
+  lognorm(tn::AbstractTTN)
+  ```
+
+* In-place and out-of-place normalization, distributing the norm across the gauge
+  center (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  normalize!(tn::AbstractTTN)
+  normalize(tn::AbstractTTN)
+  ```
+
+* Numerically-stable `log(⟨tn1|tn2⟩)` along a post-order DFS, accumulating per-step
+  log-norms; `logdot` is an alias (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  loginner(tn1::AbstractTTN, tn2::AbstractTTN; root_vertex)
+  logdot(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
+  ```
+
+* Scalar arithmetic — multiplies/divides the gauge-center tensor by `α`, with `rmul!`
+  as the in-place form (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  *(tn::AbstractTTN, α::Number)
+  *(α::Number, tn::AbstractTTN)
+  /(tn::AbstractTTN, α::Number)
+  -(tn::AbstractTTN)
+  rmul!(tn::AbstractTTN, α::Number)
+  ```
+
+* Add (or subtract) tree tensor networks by direct-summing bond indices. The result's
+  bond dimension is the sum of the inputs'; the `Algorithm"directsum"` form is the
+  current implementation. Use `truncate` afterward to compress (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  +(::Algorithm"directsum", tns::AbstractTTN...; root_vertex)
+  +(tns::AbstractTTN...; alg = Algorithm"directsum"(), kwargs...)
+  +(tn::AbstractTTN)
+  -(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
+  add(tns::AbstractTTN...; kwargs...)
+  add(tn1::AbstractTTN, tn2::AbstractTTN; kwargs...)
+  ```
+
+* Approximate equality via `norm(x - y) ≤ max(atol, rtol * max(norm(x), norm(y)))` (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  isapprox(x::AbstractTTN, y::AbstractTTN; atol, rtol)
+  ```
+
+* Local expectation values for a named operator at the given vertices (default all
+  vertices), evaluated by successive orthogonalization (`treetensornetworks/abstracttreetensornetwork.jl`):
+  ```julia
+  expect(operator::String, state::AbstractTTN; vertices, root_vertex)
+  ```
+
+#### TreeTensorNetwork Type
+
+* Get the underlying `ITensorNetwork` of a `TTN` (drops orthogonality metadata) (`treetensornetworks/treetensornetwork.jl`):
+  ```julia
+  ITensorNetwork(tn::TTN)
+  ```
+
+* Get the current orthogonality region — the set of vertices forming the gauge center (`treetensornetworks/treetensornetwork.jl`):
+  ```julia
+  ortho_region(tn::TTN)
+  ```
+
+* `AbstractITensorNetwork` interface, forwarded to the wrapped `ITensorNetwork` (`treetensornetworks/treetensornetwork.jl`):
+  ```julia
+  data_graph(tn::TTN)
+  data_graph_type(G::Type{<:TTN})
+  copy(tn::TTN)
+  ```
+
+* Low-level `ortho_region` update — only changes the metadata, performs no gauge
+  transformations (use `orthogonalize` to actually move the gauge center) (`treetensornetworks/treetensornetwork.jl`):
+  ```julia
+  set_ortho_region(tn::TTN, ortho_region)
+  ```
+
 
 ## IndsNetwork Type and Methods
 
@@ -815,3 +1077,252 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ```julia
   rescale_messages(bp_cache::BeliefPropagationCache, pes)
   ```
+
+
+## ProjTTN System
+
+#### AbstractProjTTN
+
+* Required-to-implement abstract interface — each concrete `AbstractProjTTN` subtype
+  defines these (`treetensornetworks/projttns/abstractprojttn.jl`):
+  ```julia
+  environments(::AbstractProjTTN)
+  operator(::AbstractProjTTN)
+  pos(::AbstractProjTTN)
+  underlying_graph(P::AbstractProjTTN)
+  copy(::AbstractProjTTN)
+  set_nsite(::AbstractProjTTN, nsite)
+  shift_position(::AbstractProjTTN, pos)
+  set_environments(p::AbstractProjTTN, environments)
+  set_environment(p::AbstractProjTTN, edge, environment)
+  make_environment!(P::AbstractProjTTN, psi, e)
+  make_environment(P::AbstractProjTTN, psi, e)
+  projected_operator_tensors(P::AbstractProjTTN)
+  ```
+
+* Position queries — whether the projection currently sits on an edge, the number
+  and list of "sites" of the projection, and the corresponding incident / internal
+  edges of the underlying graph (`treetensornetworks/projttns/abstractprojttn.jl`):
+  ```julia
+  edgetype(P::AbstractProjTTN)
+  on_edge(P::AbstractProjTTN)
+  nsite(P::AbstractProjTTN)
+  sites(P::AbstractProjTTN)
+  incident_edges(P::AbstractProjTTN)
+  internal_edges(P::AbstractProjTTN)
+  ```
+
+* Look up a single environment tensor by edge (`treetensornetworks/projttns/abstractprojttn.jl`):
+  ```julia
+  environment(P::AbstractProjTTN, edge::AbstractEdge)
+  environment(P::AbstractProjTTN, edge::Pair)
+  ```
+
+* Apply the projection to a vector — `contract(P, v)` does this in a literal way; 
+   `product(P, v)` adds a `noprime` and an order check;
+  `(P)(v)` is the callable form (`treetensornetworks/projttns/abstractprojttn.jl`):
+  ```julia
+  contract(P::AbstractProjTTN, v::ITensor)
+  product(P::AbstractProjTTN, v::ITensor)
+  (P::AbstractProjTTN)(v::ITensor)
+  ```
+
+* Eltype / vertextype / dim queries — `size` returns `(d, d)` from primed indices
+  on environments and operator tensors (`treetensornetworks/projttns/abstractprojttn.jl`):
+  ```julia
+  eltype(P::AbstractProjTTN)
+  vertextype(::Type{<:AbstractProjTTN{V}}) where {V}
+  vertextype(p::AbstractProjTTN)
+  size(P::AbstractProjTTN)
+  ```
+
+* Move the projection to a new `pos`: shifts position, drops now-internal-edge
+  environments, and rebuilds the missing ones from `psi` (`treetensornetworks/projttns/abstractprojttn.jl`):
+  ```julia
+  position(P::AbstractProjTTN, psi::AbstractTTN, pos)
+  ```
+
+* Drop one or all internal-edge environments after a position change, and rebuild
+  every incident-edge environment from `psi` (`treetensornetworks/projttns/abstractprojttn.jl`):
+  ```julia
+  invalidate_environment(P::AbstractProjTTN, e::AbstractEdge)
+  invalidate_environments(P::AbstractProjTTN)
+  make_environments(P::AbstractProjTTN, psi::AbstractTTN)
+  ```
+
+#### ProjTTN
+
+* Construct a `ProjTTN` from an operator `TTN`. The two-argument form lets you specify
+  position and pre-built environments; the one-argument form starts with empty
+  environments and `pos = vertices(operator)` (`treetensornetworks/projttns/projttn.jl`):
+  ```julia
+  ProjTTN(pos, operator::TTN, environments::Dictionary)
+  ProjTTN(operator::TTN)
+  ```
+
+* Field accessors and `copy` (`treetensornetworks/projttns/projttn.jl`):
+  ```julia
+  environments(p::ProjTTN)
+  operator(p::ProjTTN)
+  underlying_graph(P::ProjTTN)
+  pos(P::ProjTTN)
+  copy(P::ProjTTN)
+  ```
+
+* Position-management interface (`set_nsite` is a no-op for trees) (`treetensornetworks/projttns/projttn.jl`):
+  ```julia
+  set_nsite(P::ProjTTN, nsite)
+  shift_position(P::ProjTTN, pos)
+  ```
+
+* Environment dictionary updates — out-of-place `set_environment` returns a copy
+  with the bond's environment replaced; `set_environment!` is the in-place form (`treetensornetworks/projttns/projttn.jl`):
+  ```julia
+  set_environments(p::ProjTTN, environments)
+  set_environment(p::ProjTTN, edge, env)
+  set_environment!(p::ProjTTN, edge, env)
+  ```
+
+* Build the environment on edge `e` from `state` (`treetensornetworks/projttns/projttn.jl`):
+  ```julia
+  make_environment(P::ProjTTN, state::AbstractTTN, e::AbstractEdge)
+  ```
+
+* Assemble the ITensor list that defines the projection: incident-edge environments
+  plus operator tensors at each site (`treetensornetworks/projttns/projttn.jl`):
+  ```julia
+  projected_operator_tensors(P::ProjTTN)
+  ```
+
+#### ProjTTNSum
+
+* Construct a weighted sum of `AbstractProjTTN` terms, or a sum of `AbstractTTN`
+  operators (which are wrapped via `ProjTTN.(operators)`). The two-argument form lets
+  you specify per-term scalar factors (`treetensornetworks/projttns/projttnsum.jl`):
+  ```julia
+  ProjTTNSum(terms::Vector{<:AbstractProjTTN}, factors::Vector{<:Number})
+  ProjTTNSum(operators::Vector{<:AbstractProjTTN})
+  ProjTTNSum(operators::Vector{<:AbstractTTN})
+  ```
+
+* Field accessors and `copy` (`treetensornetworks/projttns/projttnsum.jl`):
+  ```julia
+  terms(P::ProjTTNSum)
+  factors(P::ProjTTNSum)
+  copy(P::ProjTTNSum)
+  ```
+
+* Position queries forwarded to the first term (`treetensornetworks/projttns/projttnsum.jl`):
+  ```julia
+  on_edge(P::ProjTTNSum)
+  nsite(P::ProjTTNSum)
+  underlying_graph(P::ProjTTNSum)
+  length(P::ProjTTNSum)
+  sites(P::ProjTTNSum)
+  incident_edges(P::ProjTTNSum)
+  internal_edges(P::ProjTTNSum)
+  ```
+
+* Update the position parameter on every term while preserving the factors (`treetensornetworks/projttns/projttnsum.jl`):
+  ```julia
+  set_nsite(Ps::ProjTTNSum, nsite)
+  ```
+
+* Apply the sum to a vector — `contract` builds `Σ fᵢ·contract(termᵢ, v)`,
+  `product` adds the standard `noprime`, and `(P)(v)` is the callable form (`treetensornetworks/projttns/projttnsum.jl`):
+  ```julia
+  contract(P::ProjTTNSum, v::ITensor)
+  product(P::ProjTTNSum, v::ITensor)
+  (P::ProjTTNSum)(v::ITensor)
+  ```
+
+* Apply the sum without the bra side, used by ket-only projections like outer products (`treetensornetworks/projttns/projttnsum.jl`):
+  ```julia
+  contract_ket(P::ProjTTNSum, v::ITensor)
+  ```
+
+* Element type (promoted across terms) and `size` (taken from the first term) (`treetensornetworks/projttns/projttnsum.jl`):
+  ```julia
+  eltype(P::ProjTTNSum)
+  size(P::ProjTTNSum)
+  ```
+
+* Move every term to a new `pos`, returning a fresh `ProjTTNSum` (`treetensornetworks/projttns/projttnsum.jl`):
+  ```julia
+  position(P::ProjTTNSum, psi::AbstractTTN, pos)
+  ```
+
+#### ProjOuterProdTTN
+
+* Construct a `ProjOuterProdTTN` from an internal-state `TTN` and an operator `TTN`,
+  starting at empty position with empty environments (`treetensornetworks/projttns/projouterprodttn.jl`):
+  ```julia
+  ProjOuterProdTTN(internal_state::AbstractTTN, operator::AbstractTTN)
+  ```
+
+* Field accessors and `copy` (`treetensornetworks/projttns/projouterprodttn.jl`):
+  ```julia
+  environments(p::ProjOuterProdTTN)
+  operator(p::ProjOuterProdTTN)
+  underlying_graph(p::ProjOuterProdTTN)
+  pos(p::ProjOuterProdTTN)
+  internal_state(p::ProjOuterProdTTN)
+  copy(P::ProjOuterProdTTN)
+  ```
+
+* Position-management interface (`set_nsite` is a no-op) (`treetensornetworks/projttns/projouterprodttn.jl`):
+  ```julia
+  set_nsite(P::ProjOuterProdTTN, nsite)
+  shift_position(P::ProjOuterProdTTN, pos)
+  ```
+
+* Environment dictionary updates — same pattern as `ProjTTN` (`treetensornetworks/projttns/projouterprodttn.jl`):
+  ```julia
+  set_environments(p::ProjOuterProdTTN, environments)
+  set_environment(p::ProjOuterProdTTN, edge, env)
+  set_environment!(p::ProjOuterProdTTN, edge, env)
+  ```
+
+* Build the environment on edge `e` from `state` — like `ProjTTN`'s version but
+  uses the unprimed `internal_state` instead of priming `state` (`treetensornetworks/projttns/projouterprodttn.jl`):
+  ```julia
+  make_environment(P::ProjOuterProdTTN, state::AbstractTTN, e::AbstractEdge)
+  ```
+
+* Assemble the ITensor list that defines the projection — interleaves
+  `internal_state`, operator, and environment tensors (`treetensornetworks/projttns/projouterprodttn.jl`):
+  ```julia
+  projected_operator_tensors(P::ProjOuterProdTTN)
+  ```
+
+* Apply the operator-with-internal-state combination to a vector. `contract_ket`
+  performs the half-contraction with `internal_state`; `contract` returns
+  `(dag(ket) · x) · ket` for outer-product evaluation (`treetensornetworks/projttns/projouterprodttn.jl`):
+  ```julia
+  contract_ket(P::ProjOuterProdTTN, v::ITensor)
+  contract(P::ProjOuterProdTTN, x::ITensor)
+  ```
+
+## Solvers System
+
+* Find the lowest eigenvalue / eigenvector of `operator` via a DMRG-style sweep on a
+  `TreeTensorNetwork`. `dmrg` is an alias for `eigsolve` (`solvers/eigsolve.jl`):
+  ```julia
+  eigsolve(operator, init_state; nsweeps, nsites = 1, factorize_kwargs, sweep_callback, sweep_kwargs...)
+  dmrg(operator, init_state; kwargs...)
+  ```
+
+* Apply `exp(exponents[i])·operator` to `init_state` along a sequence of exponent
+  values, using a sweep-based local solver (Runge–Kutta by default). The
+  pre-built-problem form lets a caller drive `applyexp` from a custom `AbstractProblem` (`solvers/applyexp.jl`):
+  ```julia
+  applyexp(operator, exponents, init_state; sweep_callback, order, nsites, sweep_kwargs...)
+  applyexp(init_prob::AbstractProblem, exponents; sweep_callback, order, nsites, sweep_kwargs...)
+  ```
+
+* Time-evolve `init_state` under `operator` using TDVP — wraps `applyexp` with
+  `exponents = -im .* time_points`. Supports real and complex `time_points` (`solvers/applyexp.jl`):
+  ```julia
+  time_evolve(operator, time_points, init_state; sweep_kwargs...)
+  ```
+
