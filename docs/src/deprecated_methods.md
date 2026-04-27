@@ -2,7 +2,14 @@
 
 Suggestions of methods which could be deleted.
 
-## ITensorNetwork Constructors
+## ITensorNetwork Methods
+
+#### ITensorNetwork Constructors
+
+* Default constructor (`itensornetwork.jl`).
+  ```julia
+  ITensorNetwork{V}()
+  ```
 
 * From a named graph, forwards to construction from `IndsNetwork` (`itensornetwork.jl`):
   ```julia
@@ -33,15 +40,14 @@ Suggestions of methods which could be deleted.
   ITensorNetwork(t::ITensor)
   ```
 
-## Local Operations on ITensorNetworks
+#### Local Operations on ITensorNetworks
 
-* Combine (fuse) every link index of a tensor network, or a chosen set of edges, into
-  a single index per edge using `combiner` tensors. (`abstractitensornetwork.jl`):
+* Versions of `siteinds` taking a `vertex` argument. Each of these is just an alias for `uniqueinds`. Possibly the wrong design / implementation. (`abstractitensornetwork.jl`).
   ```julia
-  linkinds_combiners(tn::AbstractITensorNetwork; edges = edges(tn))
-  combine_linkinds(tn::AbstractITensorNetwork, combiners)
-  combine_linkinds(tn::AbstractITensorNetwork; edges = edges(tn))
+  siteinds(tn::AbstractITensorNetwork, vertex) # abstractitensornetwork.jl:288
+  siteinds(tn::AbstractITensorNetwork, vertex::Int) # abstractitensornetwork.jl:292
   ```
+
 
 * Functions in `apply.jl` which are unused, even inside that file (`apply.jl`):
   ```julia
@@ -51,22 +57,23 @@ Suggestions of methods which could be deleted.
   _contract_gate(o::AbstractEdge, ψv1, Λ, ψv2)
   ```
 
+* Collection of tensors neighboring the given vertex (`abstractitensornetwork.jl`):
+  ```julia
+  neighbor_tensors(tn::AbstractITensorNetwork, vertex)
+  ```
+
+* Iterate over the tensors at the given vertices, default all vertices (`abstractitensornetwork.jl`):
+  ```julia
+  eachtensor(tn::AbstractITensorNetwork, vertices = vertices(tn))
+  ```
+
 ## Global Operations on ITensorNetworks
 
-* Scale tensors at chosen vertices by per-vertex weights, either out-of-place or in-place (`abstractitensornetwork.jl`):
-  ```julia
-  scale(tn::AbstractITensorNetwork, vertices_weights::Dictionary; kwargs...)
-  scale(weight_function::Function, tn; kwargs...)
-  scale!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
-  scale!(weight_function::Function, tn::AbstractITensorNetwork; kwargs...)
-  ```
 
 ## TreeTensorNetwork Constructors
 
 * From `Op` and related types (`opsum_to_ttn.jl`):
   ```julia
-  mpo(os::OpSum, external_inds::Vector; kws...)
-  mpo(os::OpSum, s::IndsNetwork; kws...)
   ttn(o::Op, s::IndsNetwork; kws...)
   ttn(o::Scaled{C, Op}, s::IndsNetwork; kws...)
   ttn(o::Sum{Op}, s::IndsNetwork; kws...)

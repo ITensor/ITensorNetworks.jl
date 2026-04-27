@@ -45,6 +45,8 @@ makedocs(;
         "Developer Reference" => [
             "Organization of Library" => "organization_of_library.md",
             "Interface Methods" => "interface_methods.md",
+            "Developer Methods" => "developer_methods.md",
+            "Experimental Methods" => "experimental_methods.md",
             "Deprecated Methods" => "deprecated_methods.md",
            ],
         "API Reference" => "reference.md",
