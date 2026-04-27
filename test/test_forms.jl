@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using DataGraphs: underlying_graph
 using Graphs: nv
 using ITensorNetworks: BeliefPropagationCache, BilinearFormNetwork, LinearFormNetwork,
@@ -90,5 +89,4 @@ include("utils.jl")
 
     qf = QuadraticFormNetwork(ψket)
     @test scalar(qf; alg = "exact") ≈ inner(ψket, ψket; alg = "exact")
-end
 end

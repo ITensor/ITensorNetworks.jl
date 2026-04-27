@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using ITensorNetworks: contraction_sequence, norm_sqr_network, siteinds
 using ITensors: ITensors, contract
 using NamedGraphs.NamedGraphGenerators: named_grid
@@ -42,5 +41,4 @@ include("utils.jl")
             @test res_optimal ≈ res_kahypar_bipartite
         end
     end
-end
 end

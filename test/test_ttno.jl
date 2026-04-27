@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Graphs: vertices
 using ITensorNetworks: contract, ortho_region, siteinds, ttn, union_all_inds
 using ITensors: @disable_warn_order, prime, random_itensor
@@ -36,5 +35,4 @@ using Test: @test, @testset
     @testset "Ortho" begin
         # TODO
     end
-end
 end

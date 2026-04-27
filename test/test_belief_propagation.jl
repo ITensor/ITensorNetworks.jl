@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Compat: Compat
 using Graphs: vertices
 using ITensorNetworks: ITensorNetworks, @preserve_graph, BeliefPropagationCache,
@@ -85,5 +84,4 @@ using Test: @test, @testset
         ψ[(1, 1)] = 0 * ψ[(1, 1)]
         @test iszero(scalar(ψ; alg = "bp"))
     end
-end
 end

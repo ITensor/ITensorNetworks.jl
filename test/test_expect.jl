@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Graphs: SimpleGraph, uniform_tree
 using ITensorNetworks:
     BeliefPropagationCache, ITensorNetwork, expect, original_state_vertex, siteinds
@@ -49,5 +48,4 @@ include("utils.jl")
     sz_bp = expect(ψ, "Sz"; alg = "bp", cache_update_kwargs = (; maxiter = 20))
     sz_exact = expect(ψ, "Sz"; alg = "exact")
     @test sz_bp ≈ sz_exact
-end
 end

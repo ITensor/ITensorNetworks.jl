@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using DataGraphs: vertex_data
 using Graphs: vertices
 using ITensorNetworks: contract, ortho_region, siteinds, ttn
@@ -36,5 +35,4 @@ using Test: @test, @testset
     @testset "Ortho" begin
         # TODO
     end
-end
 end

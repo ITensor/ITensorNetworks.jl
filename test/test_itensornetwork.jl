@@ -1,4 +1,3 @@
-@eval module $(gensym())
 using Dictionaries: Dictionary
 using Distributions: Uniform
 using Graphs: degree, dijkstra_shortest_paths, edges, grid, has_vertex, ne, neighbors, nv,
@@ -358,5 +357,4 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         tn = random_tensornetwork(rng, is; link_space = 3)
         @test_broken swapprime(tn, 0, 2)
     end
-end
 end
