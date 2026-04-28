@@ -14,11 +14,12 @@ function DataGraphs.underlying_graph_type(G::Type{<:AbstractTTN})
     return underlying_graph_type(data_graph_type(G))
 end
 
+ITensorNetwork(tn::AbstractTTN) = error("Not implemented")
+
 #
 # Field access
 #
 
-itensornetwork(tn::AbstractTTN) = error("Not implemented")
 ortho_region(tn::AbstractTTN) = error("Not implemented")
 
 #
