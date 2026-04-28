@@ -1,8 +1,11 @@
 using .ITensorsExtensions: ITensorsExtensions, promote_indtype
-using DataGraphs: DataGraphs, AbstractDataGraph, edge_data, vertex_data
+using DataGraphs: DataGraphs, AbstractDataGraph, DataGraph, IsUnderlyingGraph, edge_data,
+    get_edge_data, get_vertex_data, is_edge_assigned, is_vertex_assigned, map_data,
+    set_edge_data!, set_vertex_data!, underlying_graph_type, vertex_data
 using Graphs: Graphs, AbstractEdge
 using ITensors: ITensors, IndexSet, unioninds, uniqueinds
-using NamedGraphs.GraphsExtensions: incident_edges, rename_vertices
+using NamedGraphs.GraphsExtensions:
+    GraphsExtensions, directed_graph, incident_edges, rename_vertices
 using NamedGraphs: NamedGraphs
 
 abstract type AbstractIndsNetwork{V, I} <: AbstractDataGraph{V, Vector{I}, Vector{I}} end
@@ -12,59 +15,36 @@ data_graph(graph::AbstractIndsNetwork) = not_implemented()
 
 # Overload if needed
 Graphs.is_directed(::Type{<:AbstractIndsNetwork}) = false
+GraphsExtensions.directed_graph(is::AbstractIndsNetwork) = directed_graph(data_graph(is))
 
 # AbstractDataGraphs overloads
-function DataGraphs.vertex_data(graph::AbstractIndsNetwork, args...)
-    return vertex_data(data_graph(graph), args...)
-end
-function DataGraphs.edge_data(graph::AbstractIndsNetwork, args...)
-    return edge_data(data_graph(graph), args...)
-end
+DataGraphs.underlying_graph(is::AbstractIndsNetwork) = underlying_graph(data_graph(is))
 
 # TODO: Define a generic fallback for `AbstractDataGraph`?
-DataGraphs.edge_data_eltype(::Type{<:AbstractIndsNetwork{V, I}}) where {V, I} = Vector{I}
+DataGraphs.edge_data_type(::Type{<:AbstractIndsNetwork{V, I}}) where {V, I} = Vector{I}
+DataGraphs.vertex_data_type(::Type{<:AbstractIndsNetwork{V, I}}) where {V, I} = Vector{I}
 
-## TODO: Bring these back.
-## function indsnetwork_getindex(is::AbstractIndsNetwork, index)
-##   return get(data_graph(is), index, indtype(is)[])
-## end
-##
-## function Base.getindex(is::AbstractIndsNetwork, index)
-##   return indsnetwork_getindex(is, index)
-## end
-##
-## function Base.getindex(is::AbstractIndsNetwork, index::Pair)
-##   return indsnetwork_getindex(is, index)
-## end
-##
-## function Base.getindex(is::AbstractIndsNetwork, index::AbstractEdge)
-##   return indsnetwork_getindex(is, index)
-## end
-##
-## function indsnetwork_setindex!(is::AbstractIndsNetwork, value, index)
-##   data_graph(is)[index] = value
-##   return is
-## end
-##
-## function Base.setindex!(is::AbstractIndsNetwork, value, index)
-##   indsnetwork_setindex!(is, value, index)
-##   return is
-## end
-##
-## function Base.setindex!(is::AbstractIndsNetwork, value, index::Pair)
-##   indsnetwork_setindex!(is, value, index)
-##   return is
-## end
-##
-## function Base.setindex!(is::AbstractIndsNetwork, value, index::AbstractEdge)
-##   indsnetwork_setindex!(is, value, index)
-##   return is
-## end
-##
-## function Base.setindex!(is::AbstractIndsNetwork, value::Index, index)
-##   indsnetwork_setindex!(is, value, index)
-##   return is
-## end
+function DataGraphs.is_vertex_assigned(is::AbstractIndsNetwork, v)
+    return is_vertex_assigned(data_graph(is), v)
+end
+
+function DataGraphs.set_vertex_data!(is::AbstractIndsNetwork, v, data)
+    return set_vertex_data!(data_graph(is), v, data)
+end
+function DataGraphs.get_vertex_data(is::AbstractIndsNetwork, v)
+    return get_vertex_data(data_graph(is), v)
+end
+
+function DataGraphs.is_edge_assigned(is::AbstractIndsNetwork, v)
+    return is_edge_assigned(data_graph(is), v)
+end
+
+function DataGraphs.set_edge_data!(is::AbstractIndsNetwork, v, data)
+    return set_edge_data!(data_graph(is), v, data)
+end
+function DataGraphs.get_edge_data(is::AbstractIndsNetwork, v)
+    return get_edge_data(data_graph(is), v)
+end
 
 #
 # Index access

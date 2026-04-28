@@ -26,7 +26,7 @@ function _random_tensornetwork(s::IndsNetwork, build_tensor; link_space = 1)
     vd = vertex_data(s)
     ts = Dict{eltype(vertices(s)), ITensor}()
     for v in vertices(s)
-        site_inds = haskey(vd, v) ? vd[v] : Index[]
+        site_inds = isassigned(vd, v) ? vd[v] : Index[]
         is = (site_inds..., (l[e] for e in incident_edges(s, v))...)
         ts[v] = build_tensor(is)
     end

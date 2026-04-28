@@ -6,6 +6,7 @@ using NDTensors: NDTensors
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, PartitionedGraphs, QuotientVertex,
     boundary_quotientedges, quotientedges, quotientvertices, unpartitioned_graph
 using NamedGraphs.SimilarType: SimilarType
+using NamedGraphs: to_graph_index
 using SimpleTraits: SimpleTraits, @traitfn, Not
 using SplitApplyCombine: group
 
@@ -14,6 +15,7 @@ abstract type AbstractBeliefPropagationCache{V, PV} <: AbstractITensorNetwork{V}
 function SimilarType.similar_type(bpc::AbstractBeliefPropagationCache)
     return typeof(tensornetwork(bpc))
 end
+
 function data_graph_type(bpc::AbstractBeliefPropagationCache)
     return data_graph_type(tensornetwork(bpc))
 end
@@ -84,14 +86,8 @@ function factors(bpc::AbstractBeliefPropagationCache, verts::Vector)
     return ITensor[bpc[v] for v in verts]
 end
 
-function factors(
-        bpc::AbstractBeliefPropagationCache, partition_verts::Vector{<:QuotientVertex}
-    )
+function factors(bpc::AbstractBeliefPropagationCache, partition_verts)
     return factors(bpc, vertices(bpc, partition_verts))
-end
-
-function factors(bpc::AbstractBeliefPropagationCache, partition_vertex::QuotientVertex)
-    return factors(bpc, [partition_vertex])
 end
 
 function vertex_scalars(
@@ -112,18 +108,12 @@ end
 
 function incoming_messages(
         bpc::AbstractBeliefPropagationCache,
-        partition_vertices::Vector{<:QuotientVertex};
+        partition_vertices;
         ignore_edges = ()
     )
     bpes = boundary_quotientedges(bpc, partition_vertices; dir = :in)
     ms = messages(bpc, setdiff(bpes, ignore_edges))
     return reduce(vcat, ms; init = ITensor[])
-end
-
-function incoming_messages(
-        bpc::AbstractBeliefPropagationCache, partition_vertex::QuotientVertex; kwargs...
-    )
-    return incoming_messages(bpc, [partition_vertex]; kwargs...)
 end
 
 #Adapt interface for changing device
@@ -168,26 +158,6 @@ function PartitionedGraphs.quotientedge(
         bpc::AbstractBeliefPropagationCache, edge::AbstractEdge
     )
     return PartitionedGraphs.quotientedge(partitioned_tensornetwork(bpc), edge)
-end
-function PartitionedGraphs.quotientvertices(bpc::AbstractBeliefPropagationCache)
-    return PartitionedGraphs.quotientvertices(partitioned_tensornetwork(bpc))
-end
-function PartitionedGraphs.quotientvertices(bpc::AbstractBeliefPropagationCache, vs)
-    return PartitionedGraphs.quotientvertices(partitioned_tensornetwork(bpc), vs)
-end
-function PartitionedGraphs.boundary_quotientedges(
-        bpc::AbstractBeliefPropagationCache, quotientvertices; kwargs...
-    )
-    return PartitionedGraphs.boundary_quotientedges(
-        partitioned_tensornetwork(bpc), quotientvertices; kwargs...
-    )
-end
-function PartitionedGraphs.boundary_quotientedges(
-        bpc::AbstractBeliefPropagationCache, quotientvertex::QuotientVertex; kwargs...
-    )
-    return PartitionedGraphs.boundary_quotientedges(
-        partitioned_tensornetwork(bpc), quotientvertex; kwargs...
-    )
 end
 
 function linkinds(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge)
@@ -393,8 +363,8 @@ end
 
 function rescale_partitions(
         bpc::AbstractBeliefPropagationCache,
-        partitions::Vector;
-        verts::Vector = vertices(bpc, partitions)
+        partitions;
+        verts = vertices(bpc, partitions)
     )
     bpc = copy(bpc)
     tn = tensornetwork(bpc)
@@ -420,19 +390,19 @@ function rescale_partitions(
     return bpc
 end
 
-function rescale_partitions(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
-    return rescale_partitions(bpc, collect(partitions(bpc)), args...; kwargs...)
+function rescale_partitions(bpc::AbstractBeliefPropagationCache; kwargs...)
+    return rescale_partitions(bpc, partitions(bpc); kwargs...)
 end
 
 function rescale_partition(
-        bpc::AbstractBeliefPropagationCache, partition, args...; kwargs...
+        bpc::AbstractBeliefPropagationCache, partition; kwargs...
     )
-    return rescale_partitions(bpc, [partition], args...; kwargs...)
+    return rescale_partitions(bpc, [partition]; kwargs...)
 end
 
-function rescale(bpc::AbstractBeliefPropagationCache, args...; kwargs...)
+function rescale(bpc::AbstractBeliefPropagationCache; kwargs...)
     bpc = rescale_messages(bpc)
-    bpc = rescale_partitions(bpc, args...; kwargs...)
+    bpc = rescale_partitions(bpc; kwargs...)
     return bpc
 end
 

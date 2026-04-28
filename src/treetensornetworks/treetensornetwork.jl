@@ -3,6 +3,7 @@ using Graphs: path_graph
 using ITensors: ITensor
 using LinearAlgebra: factorize, normalize
 using NamedGraphs.GraphsExtensions: GraphsExtensions, vertextype
+using NamedGraphs: similar_graph
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
@@ -76,6 +77,10 @@ end
 
 const TTN = TreeTensorNetwork
 
+function NamedGraphs.similar_graph(ttn::TTN, underlying_graph::AbstractGraph)
+    return TTN(similar_graph(ttn.tensornetwork, underlying_graph))
+end
+
 # Field access
 """
     ITensorNetwork(tn::TreeTensorNetwork) -> ITensorNetwork
@@ -85,7 +90,7 @@ metadata. The returned network shares the same underlying tensor data.
 
 See also: [`TreeTensorNetwork`](@ref), [`ttn`](@ref).
 """
-ITensorNetwork(tn::TTN) = getfield(tn, :tensornetwork)
+ITensorNetwork(tn::TTN) = copy(tn.tensornetwork)
 
 """
     ortho_region(tn::TreeTensorNetwork) -> Indices
@@ -94,17 +99,17 @@ Return the set of vertices that currently form the orthogonality center of `tn`.
 
 See also: [`orthogonalize`](@ref).
 """
-ortho_region(tn::TTN) = getfield(tn, :ortho_region)
+ortho_region(tn::TTN) = tn.ortho_region
 
 # Required for `AbstractITensorNetwork` interface
-data_graph(tn::TTN) = data_graph(ITensorNetwork(tn))
+data_graph(tn::TTN) = data_graph(tn.tensornetwork)
 
 function data_graph_type(G::Type{<:TTN})
     return data_graph_type(fieldtype(G, :tensornetwork))
 end
 
 function Base.copy(tn::TTN)
-    return _TreeTensorNetwork(copy(ITensorNetwork(tn)), copy(ortho_region(tn)))
+    return _TreeTensorNetwork(copy(tn.tensornetwork), copy(tn.ortho_region))
 end
 
 #
@@ -114,7 +119,7 @@ end
 # set_ortho_region: low-level update of the ortho_region metadata only,
 # without any gauge transformations. To move the orthogonality center use orthogonalize.
 function set_ortho_region(tn::TTN, ortho_region)
-    return ttn(ITensorNetwork(tn); ortho_region)
+    return ttn(tn.tensornetwork; ortho_region)
 end
 
 """
