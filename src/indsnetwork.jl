@@ -312,5 +312,5 @@ end
 # based on `ITensorVisualizationCore`.).
 using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
 function ITensorVisualizationCore.visualize(is::IndsNetwork, args...; kwargs...)
-    return visualize(tensornetwork(is), args...; kwargs...)
+    return visualize(ITensorNetwork(is), args...; kwargs...)
 end
