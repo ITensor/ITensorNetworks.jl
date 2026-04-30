@@ -2,7 +2,7 @@ using .ITensorsExtensions: trivial_space
 using DataGraphs: DataGraphs, DataGraph
 using Dictionaries: Indices, dictionary
 using ITensors: ITensors, ITensor, op
-using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
+using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, similar_graph, vertextype
 
 struct Private end
 
@@ -75,6 +75,14 @@ struct ITensorNetwork{V} <: AbstractITensorNetwork{V}
     global function _ITensorNetwork(data_graph::DataGraph)
         return new{vertextype(data_graph)}(data_graph)
     end
+end
+
+function NamedGraphs.similar_graph(
+        tn::ITensorNetwork,
+        underlying_graph::AbstractGraph
+    )
+    dg = DataGraph(underlying_graph; vertex_data_type = ITensor, edge_data_type = ITensor)
+    return _ITensorNetwork(dg)
 end
 
 #

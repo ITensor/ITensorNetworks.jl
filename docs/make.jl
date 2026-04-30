@@ -13,8 +13,8 @@ DocMeta.setdocmeta!(
     quote
         using Graphs: dst, edges, src, vertices
         using ITensorNetworks
-        using ITensorNetworks: TreeTensorNetwork, expect, loginner, mps, orthogonalize,
-            random_mps, random_ttn, siteinds, truncate, ttn
+        using ITensorNetworks:
+            TreeTensorNetwork, expect, loginner, mps, orthogonalize, siteinds, truncate, ttn
         using ITensors: inner
         using LinearAlgebra: norm, normalize
         using OMEinsumContractionOrders

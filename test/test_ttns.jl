@@ -1,6 +1,7 @@
 using DataGraphs: vertex_data
 using Graphs: vertices
-using ITensorNetworks: contract, ortho_region, siteinds, ttn
+using ITensorNetworks:
+    ITensorNetwork, TreeTensorNetwork, contract, ortho_region, orthogonalize, siteinds, ttn
 using ITensors: @disable_warn_order, random_itensor
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
@@ -32,7 +33,30 @@ using Test: @test, @testset
         @test norm(S - S1) < 1.0e2 * cutoff
     end
 
+    @testset "Convert ITN <-> TTN" begin
+        g = named_comb_tree((3, 2))
+        sites = siteinds("S=1/2", g)
+
+        psi = ttn(sites)  # zero-initialised
+        psi = ttn(v -> "Up", sites)  # product state
+
+        itn = ITensorNetwork(psi)  # TTN → ITensorNetwork
+        @test vertex_data(itn) == vertex_data(psi.tensornetwork)
+        @test !(itn === psi.tensornetwork)
+        @test vertex_data(TreeTensorNetwork(itn)) == vertex_data(psi)
+    end
+
     @testset "Ortho" begin
-        # TODO
+        g = named_comb_tree((3, 2))
+        sites = siteinds("S=1/2", g)
+
+        psi = ttn(sites)  # zero-initialised
+        psi = ttn(v -> "Up", sites)  # product state
+
+        v1 = collect(vertices(psi))[1]
+        v2 = collect(vertices(psi))[2]
+
+        @test collect(ortho_region(orthogonalize(psi, v1))) == [v1]
+        @test collect(ortho_region(orthogonalize(psi, [v1, v2]))) == [v1, v2]
     end
 end

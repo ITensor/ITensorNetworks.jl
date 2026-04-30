@@ -1,6 +1,7 @@
 using Graphs: IsDirected, connected_components, edges, edgetype
 using ITensors.NDTensors: @Algorithm_str, Algorithm
-using NamedGraphs.GraphsExtensions: GraphsExtensions, forest_cover, undirected_graph
+using NamedGraphs.GraphsExtensions:
+    GraphsExtensions, forest_cover, subgraph, undirected_graph
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, QuotientEdge, quotient_graph
 using NamedGraphs: NamedGraphs
 using SimpleTraits: SimpleTraits, @traitfn, Not
@@ -36,7 +37,7 @@ end
     forests = forest_cover(g)
     edges = edgetype(g)[]
     for forest in forests
-        trees = [forest[vs] for vs in connected_components(forest)]
+        trees = [subgraph(forest, vs) for vs in connected_components(forest)]
         for tree in trees
             tree_edges = post_order_dfs_edges(tree, root_vertex(tree))
             push!(edges, vcat(tree_edges, reverse(reverse.(tree_edges)))...)
