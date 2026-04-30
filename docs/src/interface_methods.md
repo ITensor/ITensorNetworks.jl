@@ -51,16 +51,12 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ```julia
   uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
   uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
-  # Alias for `uniqueinds`.
-  siteinds(tn::AbstractITensorNetwork, edge)
   ```
 
 * Indices on `tn[vertex]` that aren't shared with any neighbor, i.e. the external/site
   indices of that vertex (`abstractitensornetwork.jl`):
   ```julia
   uniqueinds(tn::AbstractITensorNetwork, vertex)
-  # Alias for `uniqueinds`.
-  siteinds(tn::AbstractITensorNetwork, vertex)
   ```
 
 * Tags on the link index (or indices) associated with `edge` (`abstractitensornetwork.jl`):
@@ -68,15 +64,6 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   tags(tn::AbstractITensorNetwork, edge)
   ```
 
-* Collect all site indices (per-vertex) of a network as a flat vector (`abstractitensornetwork.jl`):
-  ```julia
-  flatten_siteinds(tn::AbstractITensorNetwork)
-  ```
-
-* Collect all link indices (per-edge) of a network as a flat vector (`abstractitensornetwork.jl`):
-  ```julia
-  flatten_linkinds(tn::AbstractITensorNetwork)
-  ```
 
 * Bond dimension of a single edge, of every edge (as a `DataGraph`), and the maximum
   bond dimension over all edges (`abstractitensornetwork.jl`):
@@ -93,14 +80,6 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ```julia
   contract(tn::AbstractITensorNetwork, edge::AbstractEdge; merged_vertex = dst(edge))
   contract(tn::AbstractITensorNetwork, edge::Pair; kws...)
-  ```
-
-* "Split" an edge index by applying a map to each copy of it on the adjacent ITensors.
-  By default the `dst(edge)` copy is primed and the `src(edge)` copy is unchanged (`abstractitensornetwork.jl`):
-  ```julia
-  split_index(tn::AbstractITensorNetwork, edges_to_split; 
-              src_ind_map::Function = identity,
-              dst_ind_map::Function = prime)
   ```
 
 * Factorize the bond on `edge` using the default factorization (`abstractitensornetwork.jl`):

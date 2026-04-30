@@ -67,6 +67,12 @@ Suggestions of methods which could be deleted.
   eachtensor(tn::AbstractITensorNetwork, vertices = vertices(tn))
   ```
 
+* Alias for `uniqueinds` (`abstractitensornetwork.jl`):
+  ```julia
+  siteinds(tn::AbstractITensorNetwork, vertex)
+  siteinds(tn::AbstractITensorNetwork, vertex::Int)
+  ```
+
 ## Global Operations on ITensorNetworks
 
 

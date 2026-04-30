@@ -45,6 +45,25 @@ Methods which still need to be discussed, modified, or deprecated.
   replaceinds(tn::AbstractITensorNetwork, is_is′::Pair{<:IndsNetwork, <:IndsNetwork})
   ```
 
+* "Split" an edge index by applying a map to each copy of it on the adjacent ITensors.
+  By default the `dst(edge)` copy is primed and the `src(edge)` copy is unchanged (`abstractitensornetwork.jl`):
+  ```julia
+  split_index(tn::AbstractITensorNetwork, edges_to_split; 
+              src_ind_map::Function = identity,
+              dst_ind_map::Function = prime)
+  ```
+
+* Collect all site indices (per-vertex) of a network as a flat vector (`abstractitensornetwork.jl`):
+  ```julia
+  flatten_siteinds(tn::AbstractITensorNetwork)
+  ```
+
+* Collect all link indices (per-edge) of a network as a flat vector (`abstractitensornetwork.jl`):
+  ```julia
+  flatten_linkinds(tn::AbstractITensorNetwork)
+  ```
+
+
 ## TreeTensorNetwork Types
 
 #### OpSum Constructors
