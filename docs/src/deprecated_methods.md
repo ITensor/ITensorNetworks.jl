@@ -40,6 +40,15 @@ Suggestions of methods which could be deleted.
   ITensorNetwork(t::ITensor)
   ```
 
+* Construct an `ITensorNetwork` from an `IndsNetwork`. Initializes ITensors with `undef` storage on each vertex
+  of the `IndsNetwork` with the corresponding indices (`itensornetwork.jl`):
+  ```julia
+  ITensorNetwork(eltype::Type, undef::UndefInitializer, is::IndsNetwork; kwargs...)
+  ITensorNetwork(eltype::Type, is::IndsNetwork; kwargs...)
+  ITensorNetwork(undef::UndefInitializer, is::IndsNetwork; kwargs...)
+  ITensorNetwork(is::IndsNetwork; kwargs...)
+  ```
+
 #### Local Operations on ITensorNetworks
 
 * Versions of `siteinds` taking a `vertex` argument. Each of these is just an alias for `uniqueinds`. Possibly the wrong design / implementation. (`abstractitensornetwork.jl`).

@@ -13,15 +13,6 @@ Methods which still need to be discussed, modified, or deprecated.
   combine_linkinds(tn::AbstractITensorNetwork; edges = edges(tn))
   ```
 
-* Construct an `ITensorNetwork` from an `IndsNetwork`. Initializes ITensors with `undef` storage on each vertex
-  of the `IndsNetwork` with the corresponding indices (`itensornetwork.jl`):
-  ```julia
-  ITensorNetwork(eltype::Type, undef::UndefInitializer, is::IndsNetwork; kwargs...)
-  ITensorNetwork(eltype::Type, is::IndsNetwork; kwargs...)
-  ITensorNetwork(undef::UndefInitializer, is::IndsNetwork; kwargs...)
-  ITensorNetwork(is::IndsNetwork; kwargs...)
-  ```
-
 * Extract the `IndsNetwork` of a tensor network — site indices per vertex and link
   indices per edge (`abstractitensornetwork.jl`):
   ```julia
