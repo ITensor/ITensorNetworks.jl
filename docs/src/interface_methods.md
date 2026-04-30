@@ -38,32 +38,11 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
 
 ## Analyzing ITensorNetworks
 
-* Indices common to the ITensors on the vertices connected by the edge (`abstractitensornetwork.jl`):
-  ```julia
-  commoninds(tn::AbstractITensorNetwork, edge)
-  linkinds(tn::AbstractITensorNetwork, edge)
-  ```
-
-* Indices on the source tensor of `edge` that are not shared with the destination tensor.
-  For `edge = (v1 => v2)`, returns every index of `tn[v1]` except the bond(s) to `tn[v2]`, that is,
-  `v1`'s site index plus its link indices to all of `v1`'s other neighbors. Useful for QR/SVD
-  across that bond: these are the indices you keep on the `v1` side (`abstractitensornetwork.jl`):
-  ```julia
-  uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
-  uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
-  ```
-
-* Indices on `tn[vertex]` that aren't shared with any neighbor, i.e. the external/site
-  indices of that vertex (`abstractitensornetwork.jl`):
-  ```julia
-  uniqueinds(tn::AbstractITensorNetwork, vertex)
-  ```
 
 * Tags on the link index (or indices) associated with `edge` (`abstractitensornetwork.jl`):
   ```julia
   tags(tn::AbstractITensorNetwork, edge)
   ```
-
 
 * Bond dimension of a single edge, of every edge (as a `DataGraph`), and the maximum
   bond dimension over all edges (`abstractitensornetwork.jl`):

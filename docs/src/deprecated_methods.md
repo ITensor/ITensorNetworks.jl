@@ -67,10 +67,31 @@ Suggestions of methods which could be deleted.
   eachtensor(tn::AbstractITensorNetwork, vertices = vertices(tn))
   ```
 
+* Indices on the source tensor of `edge` that are not shared with the destination tensor.
+  (`abstractitensornetwork.jl`):
+  ```julia
+  uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
+  uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
+  ```
+
 * Alias for `uniqueinds` (`abstractitensornetwork.jl`):
   ```julia
   siteinds(tn::AbstractITensorNetwork, vertex)
   siteinds(tn::AbstractITensorNetwork, vertex::Int)
+  ```
+
+* Indices common to the ITensors on the vertices connected by the edge (`abstractitensornetwork.jl`):
+  (Use a set function like `intersection` instead.)
+  ```julia
+  commoninds(tn::AbstractITensorNetwork, edge)
+  linkinds(tn::AbstractITensorNetwork, edge)
+  ```
+
+* Indices on `tn[vertex]` that aren't shared with any neighbor, i.e. the external/site
+  indices of that vertex (`abstractitensornetwork.jl`).
+  (Use a set function like `setdiff` instead.)
+  ```julia
+  uniqueinds(tn::AbstractITensorNetwork, vertex)
   ```
 
 ## Global Operations on ITensorNetworks
