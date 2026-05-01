@@ -16,7 +16,7 @@ permissions:
   issues: "write"
 jobs:
   Register:
-    uses: "ITensor/ITensorActions/.github/workflows/Registrator.yml@main"
+    uses: "ITensor/ITensorActions/.github/workflows/Registrator.yml@v1"
     with:
       localregistry: "ITensor/ITensorRegistry"
     secrets: "inherit"
