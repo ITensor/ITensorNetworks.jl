@@ -4,6 +4,6 @@ on:
 jobs:
   check-compat-bounds:
     name: "Check Compat Bounds"
-    uses: "ITensor/ITensorActions/.github/workflows/CheckCompatBounds.yml@main"
+    uses: "ITensor/ITensorActions/.github/workflows/CheckCompatBounds.yml@v1"
     with:
       localregistry: "https://github.com/ITensor/ITensorRegistry.git"
