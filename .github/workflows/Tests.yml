@@ -19,6 +19,8 @@ on:
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: "${{ startsWith(github.ref, 'refs/pull/') }}"
+permissions:
+  contents: "read"
 jobs:
   tests:
     name: "Tests"
@@ -32,7 +34,7 @@ jobs:
           - "ubuntu-latest"
           - "macOS-latest"
           - "windows-latest"
-    uses: "ITensor/ITensorActions/.github/workflows/Tests.yml@v1"
+    uses: "ITensor/ITensorActions/.github/workflows/Tests.yml@v2"
     with:
       group: "${{ matrix.group }}"
       julia-version: "${{ matrix.version }}"

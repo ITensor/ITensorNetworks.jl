@@ -1,4 +1,4 @@
-name: "Register Package"
+name: "Registrator"
 on:
   workflow_dispatch: ~
   push:
@@ -15,8 +15,9 @@ permissions:
   pull-requests: "write"
   issues: "write"
 jobs:
-  Register:
-    uses: "ITensor/ITensorActions/.github/workflows/Registrator.yml@v1"
+  registrator:
+    name: "Registrator"
+    uses: "ITensor/ITensorActions/.github/workflows/Registrator.yml@v2"
     with:
       localregistry: "ITensor/ITensorRegistry"
     secrets: "inherit"
