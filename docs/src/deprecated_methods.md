@@ -11,6 +11,11 @@ Suggestions of methods which could be deleted.
   ITensorNetwork{V}()
   ```
 
+* From a collection of ITensorNetworks. Merges (Kronecker or tensor product) of input networks (`itensornetwork.jl`):
+  ```julia
+  ITensorNetwork(itns::Vector{ITensorNetwork})
+  ```
+
 * From a named graph, forwards to construction from `IndsNetwork` (`itensornetwork.jl`):
   ```julia
   ITensorNetwork{V}(g::NamedGraph)

@@ -6,27 +6,18 @@ Recommended methods for building applications on top of ITensorNetworks.
 
 These ITensorNetwork constructor interfaces are foundational to other constructors:
 
-* Copy constructor (`itensornetwork.jl`):
+* From dictionary-like objects, including other `ITensorNetwork` objects, or a `Dict`
+  from vertices to `ITensor`.
   ```julia
-  ITensorNetwork{V}(tn::ITensorNetwork)
+  # `keys(tensors)` are vertices, `values(tensors)` are tensors on those vertices
+  ITensorNetwork(tensors)
+  ITensorNetwork{V}(tensors)
   ```
 
-* From vertex-tensor pairings (`itensornetwork.jl`):
+* From collections of vertices and tensors. E.g. a `Vector{Int}` and a `Vector{ITensor}`.
   ```julia
-  # Dictionary of vertices => tensors
-  ITensorNetwork(ts::AbstractDictionary{<:Any, ITensor})
-  ITensorNetwork(ts::AbstractDict{<:Any, ITensor})
-
-  # Vector of `vertex => ITensor` pairs
-  ITensorNetwork(ts::AbstractVector{<:Pair{<:Any, ITensor}})
-
-  # Vector of vertices, vector of ITensors
-  ITensorNetwork(vertices::AbstractVector, tensors::AbstractVector{ITensor})
-  ```
-
-* From a collection of ITensorNetworks. Merges (Kronecker or tensor product) of input networks (`itensornetwork.jl`):
-  ```julia
-  ITensorNetwork(itns::Vector{ITensorNetwork})
+  ITensorNetwork(vertices, tensors)
+  ITensorNetwork{V}(vertices, tensors)
   ```
 
 * From a vector of `ITensor`s, with vertex labels auto-assigned to `eachindex(ts)`.
@@ -34,7 +25,6 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ```julia
   ITensorNetwork(ts::AbstractVector{ITensor})
   ```
-
 
 ## Analyzing ITensorNetworks
 
