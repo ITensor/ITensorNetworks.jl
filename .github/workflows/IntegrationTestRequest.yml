@@ -1,14 +1,20 @@
-name: "Integration Test Request"
+name: "IntegrationTestRequest"
 on:
   issue_comment:
     types:
       - "created"
+permissions:
+  actions: "read"
+  contents: "read"
+  checks: "write"
+  pull-requests: "write"
 jobs:
-  integrationrequest:
+  integration-test-request:
+    name: "IntegrationTestRequest"
     if: |
       github.event.issue.pull_request &&
       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association)
-      
-    uses: "ITensor/ITensorActions/.github/workflows/IntegrationTestRequest.yml@main"
+    uses: "ITensor/ITensorActions/.github/workflows/IntegrationTestRequest.yml@v2"
+    secrets: "inherit"
     with:
       localregistry: "https://github.com/ITensor/ITensorRegistry.git"

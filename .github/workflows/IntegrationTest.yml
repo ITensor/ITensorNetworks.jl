@@ -3,34 +3,28 @@ on:
   push:
     branches:
       - "main"
-  pull_request_target:
+    tags: "*"
+  pull_request:
     types:
       - "opened"
       - "synchronize"
       - "reopened"
       - "ready_for_review"
       - "converted_to_draft"
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: "${{ startsWith(github.ref, 'refs/pull/') }}"
+permissions:
+  actions: "read"
+  contents: "read"
 jobs:
   integration-test:
     name: "IntegrationTest"
-    strategy:
-      fail-fast: false
-      matrix:
-        pkg:
-          - "https://github.com/ITensor/Tennis.jl"
-    uses: "ITensor/ITensorActions/.github/workflows/IntegrationTest.yml@main"
+    uses: "ITensor/ITensorActions/.github/workflows/IntegrationTest.yml@v2"
     secrets: "inherit"
     with:
       localregistry: "https://github.com/ITensor/ITensorRegistry.git"
-      pkg: "${{ matrix.pkg }}"
-  integration-gate:
-    name: "IntegrationTest"
-    needs: "integration-test"
-    if: "${{ always() && needs.integration-test.result != 'skipped' }}"
-    runs-on: "ubuntu-latest"
-    steps:
-      - name: "Fail if any downstream integration test failed"
-        run: |
-          echo "integration-test.result = ${{ needs.integration-test.result }}"
-          test "${{ needs.integration-test.result }}" = "success"
-          
+      pkgs: |
+        [
+              "https://github.com/ITensor/Tennis.jl"
+            ]

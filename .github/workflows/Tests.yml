@@ -5,6 +5,7 @@ on:
       - "master"
       - "main"
       - "release-"
+    tags: "*"
     paths-ignore:
       - "docs/**"
   pull_request:
@@ -18,6 +19,8 @@ on:
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: "${{ startsWith(github.ref, 'refs/pull/') }}"
+permissions:
+  contents: "read"
 jobs:
   tests:
     name: "Tests"
@@ -31,7 +34,7 @@ jobs:
           - "ubuntu-latest"
           - "macOS-latest"
           - "windows-latest"
-    uses: "ITensor/ITensorActions/.github/workflows/Tests.yml@main"
+    uses: "ITensor/ITensorActions/.github/workflows/Tests.yml@v2"
     with:
       group: "${{ matrix.group }}"
       julia-version: "${{ matrix.version }}"

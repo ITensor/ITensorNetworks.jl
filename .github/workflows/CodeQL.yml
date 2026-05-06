@@ -1,0 +1,16 @@
+name: "CodeQL"
+on:
+  pull_request:
+    branches:
+      - "main"
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: "${{ startsWith(github.ref, 'refs/pull/') }}"
+permissions:
+  contents: "read"
+  security-events: "write"
+  actions: "read"
+jobs:
+  codeql:
+    name: "CodeQL"
+    uses: "ITensor/ITensorActions/.github/workflows/CodeQL.yml@v2"

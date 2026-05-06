@@ -1,9 +1,15 @@
-name: "Version Check"
+name: "VersionCheck"
 on:
   pull_request: ~
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: "${{ startsWith(github.ref, 'refs/pull/') }}"
+permissions:
+  contents: "read"
+  pull-requests: "read"
 jobs:
   version-check:
-    name: "Version Check"
-    uses: "ITensor/ITensorActions/.github/workflows/VersionCheck.yml@main"
+    name: "VersionCheck"
+    uses: "ITensor/ITensorActions/.github/workflows/VersionCheck.yml@v2"
     with:
       localregistry: "https://github.com/ITensor/ITensorRegistry.git"
