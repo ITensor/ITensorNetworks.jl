@@ -42,6 +42,12 @@ makedocs(;
             "Computing Properties" => "computing_properties.md",
             "Solvers" => "solvers.md",
         ],
+        "Developer Reference" => [
+            "Interface Methods" => "interface_methods.md",
+            "Developer Methods" => "developer_methods.md",
+            "Experimental Methods" => "experimental_methods.md",
+            "Deprecated Methods" => "deprecated_methods.md",
+        ],
         "API Reference" => "reference.md",
     ]
 )
