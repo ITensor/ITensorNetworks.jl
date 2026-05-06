@@ -7,7 +7,9 @@ Recommended methods for building applications on top of ITensorNetworks.
 These ITensorNetwork constructor interfaces are foundational to other constructors:
 
 * From dictionary-like objects, including other `ITensorNetwork` objects, or a `Dict`
-  from vertices to `ITensor`.
+  from vertices to `ITensor`. The `tensors` can be a collection of `ITensor`s in which case
+  the vertex labels are auto-assigned to `eachindex(tensors)` and edges are inferred
+  from shared indices between the `ITensor`s.
   ```julia
   # `keys(tensors)` are vertices, `values(tensors)` are tensors on those vertices
   ITensorNetwork(tensors)
@@ -20,11 +22,6 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ITensorNetwork{V}(vertices, tensors)
   ```
 
-* From a vector of `ITensor`s, with vertex labels auto-assigned to `eachindex(ts)`.
-  Edges are inferred from shared indices (`itensornetwork.jl`):
-  ```julia
-  ITensorNetwork(ts::AbstractVector{ITensor})
-  ```
 
 ## Analyzing ITensorNetworks
 

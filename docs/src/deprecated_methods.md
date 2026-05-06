@@ -11,6 +11,13 @@ Suggestions of methods which could be deleted.
   ITensorNetwork{V}()
   ```
 
+* (Only actually deprecate / delete this function if the more generic constructor `ITensorNetwork(tensors)` can also handle this case.) 
+  From a vector of `ITensor`s, with vertex labels auto-assigned to `eachindex(ts)`.
+  Edges are inferred from shared indices (`itensornetwork.jl`):
+  ```julia
+  ITensorNetwork(ts::AbstractVector{ITensor})
+  ```
+
 * From a collection of ITensorNetworks. Merges (Kronecker or tensor product) of input networks (`itensornetwork.jl`):
   ```julia
   ITensorNetwork(itns::Vector{ITensorNetwork})
