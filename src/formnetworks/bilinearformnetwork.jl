@@ -84,14 +84,16 @@ function BilinearFormNetwork(
     bra_site_inds = mapreduce(v -> siteinds(bra, v), vcat, vertices(bra); init = Index[])
     ket_site_inds = mapreduce(v -> siteinds(ket, v), vcat, vertices(ket); init = Index[])
     @assert issetequal(bra_site_inds, ket_site_inds)
-    link_space = isempty(bra_site_inds) ? 1 : nothing
     s = siteinds(ket)
     s_mapped = dual_site_index_map(s)
     operator_inds = union_all_inds(s, s_mapped)
 
-    O = ITensorNetwork(operator_inds; link_space) do v
-        return inds -> itensor_identity_map(scalartype(ket), s[v] .=> s_mapped[v])
+    g = NamedGraph(underlying_graph(operator_inds))
+    ts = Dict{vertextype(g), ITensor}()
+    for v in vertices(operator_inds)
+        ts[v] = itensor_identity_map(scalartype(ket), s[v] .=> s_mapped[v])
     end
+    O = ITensorNetwork(ts, g)
     O = adapt(promote_type(datatype(bra), datatype(ket)), O)
     return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end

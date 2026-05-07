@@ -1,9 +1,11 @@
+using DataGraphs: underlying_graph
 using Graphs: has_vertex
-using ITensors: ITensors, @Algorithm_str, Algorithm, directsum, hasinds, permute, plev
+using ITensors:
+    ITensors, @Algorithm_str, Algorithm, ITensor, directsum, hasinds, permute, plev
 using IsApprox: IsApprox, Approx
 using NamedGraphs.GraphsExtensions: GraphsExtensions, a_star, edge_path, leaf_vertices,
-    post_order_dfs_edges, post_order_dfs_vertices
-using NamedGraphs: namedgraph_a_star, steiner_tree
+    post_order_dfs_edges, post_order_dfs_vertices, vertextype
+using NamedGraphs: NamedGraph, namedgraph_a_star, steiner_tree
 using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
@@ -271,8 +273,13 @@ function Base.:+(
         tns[j] = orthogonalize(tns[j], root_vertex)
     end
 
-    # Output state
-    tn = ttn(siteinds(tns[1]))
+    # Output state: empty TTN over the same graph as the inputs.
+    # Tensor data and link indices are filled in by the directsum loop below.
+    g_out = NamedGraph(underlying_graph(siteinds(tns[1])))
+    tensors_out = Dict{vertextype(g_out), ITensor}(
+        v => ITensor() for v in vertices(g_out)
+    )
+    tn = TreeTensorNetwork(ITensorNetwork(tensors_out, g_out))
 
     vs = post_order_dfs_vertices(tn, root_vertex)
     es = post_order_dfs_edges(tn, root_vertex)

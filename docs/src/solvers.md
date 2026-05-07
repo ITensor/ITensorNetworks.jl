@@ -17,7 +17,8 @@ variational sweep algorithm.
 
 ```@example main
 using Graphs: vertices
-using ITensorNetworks: ITensorNetwork, dmrg, dst, edges, normalize, siteinds, src, ttn
+using ITensorNetworks:
+    ITensorNetwork, TreeTensorNetwork, dmrg, dst, edges, normalize, siteinds, src, ttn
 using ITensors: Index, OpSum, random_itensor
 using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
@@ -45,7 +46,7 @@ H = let h = OpSum()
 end
 
 # Random initial state (normalise first!)
-psi0 = normalize(ttn(random_state(g, s; link_space = 2)))
+psi0 = normalize(TreeTensorNetwork(random_state(g, s; link_space = 2)))
 
 # Run DMRG
 energy, psi = dmrg(H, psi0;

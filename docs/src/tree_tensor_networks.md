@@ -11,39 +11,20 @@ records which vertices currently form the orthogonality center of the network. A
 update this field as the gauge changes.
 
 **MPS** (matrix product states) are the special case of a `TreeTensorNetwork` on a
-1D path graph. The [`mps`](@ref ITensorNetworks.mps) constructor enforces this topology
-and provides a convenient interface for 1D calculations.
+1D path graph.
 
 ## Construction
 
-### From an `IndsNetwork` or graph
+### From an `OpSum` (Hamiltonian)
 
-```@example main
-using Graphs: vertices
-using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, mps, ortho_region, orthogonalize,
-    siteinds, ttn
-using ITensors: ITensors
-using LinearAlgebra: norm
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
-
-# Comb-tree TTN (a popular tree topology for 2D-like systems)
-g = named_comb_tree((3, 2))
-sites = siteinds("S=1/2", g)
-
-psi = ttn(sites)  # zero-initialised
-psi = ttn(v -> "Up", sites)  # product state
-
-# 1D MPS
-s1d = siteinds("S=1/2", 6)
-mps_state = mps(v -> "Up", s1d)  # product MPS
-```
+A common way to obtain a Hamiltonian-shaped TTN is to convert an `OpSum` over an
+`IndsNetwork` of site indices.
 
 ```@docs; canonical=false
-ITensorNetworks.ttn
-ITensorNetworks.mps
+ITensorNetworks.ttn(::ITensors.Ops.OpSum, ::ITensorNetworks.IndsNetwork)
 ```
 
-### The `TreeTensorNetwork` type and conversion
+### From an existing `ITensorNetwork`
 
 The `TreeTensorNetwork` struct wraps an `ITensorNetwork` and records the current
 orthogonality region. Use the `TreeTensorNetwork` constructor to convert a plain
@@ -51,8 +32,28 @@ orthogonality region. Use the `TreeTensorNetwork` constructor to convert a plain
 gauge metadata when you need a plain network again.
 
 ```@example main
-itn = ITensorNetwork(psi)  # TTN → ITensorNetwork
-psi = TreeTensorNetwork(itn)  # ITensorNetwork → TTN
+using Graphs: vertices
+using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, ortho_region, orthogonalize,
+    siteinds, ttn
+using ITensors: ITensors, ITensor
+using LinearAlgebra: norm
+using NamedGraphs: NamedGraph
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
+
+# Comb-tree TTN (a popular tree topology for 2D-like systems)
+g = named_comb_tree((3, 2))
+sites = siteinds("S=1/2", g)
+
+# Build an `ITensorNetwork` from explicit per-vertex tensors and wrap as a TTN
+tensors = Dict(v => ITensor(sites[v]...) for v in vertices(g))
+itn = ITensorNetwork(tensors, NamedGraph(g))
+psi = TreeTensorNetwork(itn)
+```
+
+To strip the gauge metadata back to a plain `ITensorNetwork`:
+
+```@example main
+itn_again = ITensorNetwork(psi)  # TTN → ITensorNetwork
 ```
 
 ```@docs; canonical=false

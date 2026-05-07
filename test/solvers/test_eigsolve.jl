@@ -1,11 +1,12 @@
 using Graphs: dst, edges, src, vertices
-using ITensorNetworks: SweepIterator, dmrg, siteinds, ttn
+using ITensorNetworks: SweepIterator, TreeTensorNetwork, dmrg, siteinds, ttn
 using ITensors
 using ITensors.Ops: OpSum
 using Suppressor: @capture_out
 using TensorOperations: TensorOperations
 using Test: @test, @testset
 
+include(joinpath(@__DIR__, "..", "utils.jl"))
 include("utilities/simple_ed_methods.jl")
 include("utilities/tree_graphs.jl")
 
@@ -31,7 +32,7 @@ include("utilities/tree_graphs.jl")
     for (j, v) in enumerate(vertices(sites))
         state[v] = iseven(j) ? "Up" : "Dn"
     end
-    psi0 = ttn(state, sites)
+    psi0 = TreeTensorNetwork(tensornetworkstate(state, sites))
 
     (outputlevel >= 1) && println("Computing exact ground state")
     Ex, psix = ed_ground_state(H, psi0)

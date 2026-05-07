@@ -6,20 +6,20 @@ Recommended methods for building applications on top of ITensorNetworks.
 
 These ITensorNetwork constructor interfaces are foundational to other constructors:
 
-* From dictionary-like objects, including other `ITensorNetwork` objects, or a `Dict`
-  from vertices to `ITensor`. The `tensors` can be a collection of `ITensor`s in which case
-  the vertex labels are auto-assigned to `eachindex(tensors)` and edges are inferred
-  from shared indices between the `ITensor`s.
+* From a collection of `ITensor`s indexed by vertex (a `Dict`, `Dictionary`, or
+  `Vector{ITensor}` with linear-index vertex labels). Edges are inferred from shared
+  `Index` objects between the tensors.
   ```julia
   # `keys(tensors)` are vertices, `values(tensors)` are tensors on those vertices
   ITensorNetwork(tensors)
   ITensorNetwork{V}(tensors)
   ```
 
-* From collections of vertices and tensors. E.g. a `Vector{Int}` and a `Vector{ITensor}`.
+* From a collection of `ITensor`s placed at the vertices of a given `NamedGraph`. No
+  edge inference; the graph's edges are used as-is.
   ```julia
-  ITensorNetwork(vertices, tensors)
-  ITensorNetwork{V}(vertices, tensors)
+  ITensorNetwork(tensors, graph::NamedGraph)
+  ITensorNetwork{V}(tensors, graph::NamedGraph)
   ```
 
 

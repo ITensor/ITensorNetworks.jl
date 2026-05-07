@@ -1,12 +1,13 @@
 #using FillArrays: OneElement
-#using DataGraphs: DataGraph
+using DataGraphs: underlying_graph
 using Graphs: degree, is_tree, rem_vertex!
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks, truncate!
 using ITensors.Ops: Op, OpSum, argument, coefficient, name, params, site, terms, which_op
-using ITensors: flux, has_fermion_string, itensor, removeqns, space
+using ITensors: ITensor, flux, has_fermion_string, itensor, removeqns, space
 using NamedGraphs.GraphsExtensions:
-    GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
+    GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path, vertextype
+using NamedGraphs: NamedGraph
 using StaticArrays: MVector
 
 #
@@ -289,7 +290,10 @@ function compress_ttn(
         )
     end
 
-    H = ttn(sites0)   # initialize TTN without the dummy indices added
+    # initialize TTN without the dummy indices added; tensors are filled in below
+    g0 = NamedGraph(underlying_graph(sites0))
+    tensors0 = Dict{vertextype(g0), ITensor}(v => ITensor() for v in vertices(g0))
+    H = TreeTensorNetwork(ITensorNetwork(tensors0, g0))
     function qnblock(i::Index, q::QN)
         for b in 2:(nblocks(i) - 1)
             flux(i, Block(b)) == q && return b

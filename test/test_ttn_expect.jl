@@ -1,9 +1,10 @@
 using Graphs: vertices
-using ITensorNetworks: expect, siteinds, ttn
+using ITensorNetworks: TreeTensorNetwork, expect, siteinds
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 using StableRNGs: StableRNG
 using Test: @test, @testset
+include("utils.jl")
 @testset "TTN expect" begin
     tooth_lengths = fill(2, 2)
     c = named_comb_tree(tooth_lengths)
@@ -15,7 +16,7 @@ using Test: @test, @testset
         magnetization[v] = isodd(i) ? 0.5 : -0.5
     end
     states = v -> d[v]
-    state = ttn(states, s)
+    state = TreeTensorNetwork(tensornetworkstate(states, s))
     res = expect("Sz", state)
     @test all([isapprox(res[v], magnetization[v]; atol = 1.0e-8) for v in vertices(s)])
 end

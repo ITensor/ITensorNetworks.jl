@@ -1,12 +1,13 @@
 using Graphs: add_edge!, add_vertex!, vertices
-using ITensorNetworks:
-    ITensorNetworks, applyexp, dmrg, maxlinkdim, siteinds, time_evolve, ttn
+using ITensorNetworks: ITensorNetworks, TreeTensorNetwork, applyexp, dmrg, maxlinkdim,
+    siteinds, time_evolve, ttn
 using ITensors
 using ITensors.Ops: OpSum
 using NamedGraphs.NamedGraphGenerators: named_path_graph
 using NamedGraphs: NamedGraph
 using TensorOperations: TensorOperations
 using Test: @test, @testset #For contraction order finding
+include(joinpath(@__DIR__, "..", "utils.jl"))
 
 function chain_plus_ancilla(; nchain)
     g = NamedGraph()
@@ -45,7 +46,7 @@ end
         for (j, v) in enumerate(vertices(sites))
             state[v] = iseven(j) ? "Up" : "Dn"
         end
-        psi0 = ttn(state, sites)
+        psi0 = TreeTensorNetwork(tensornetworkstate(state, sites))
 
         cutoff = 1.0e-10
         maxdim = 100
@@ -96,7 +97,7 @@ end
         for (j, v) in enumerate(vertices(sites))
             state[v] = iseven(j) ? "Up" : "Dn"
         end
-        psi0 = ttn(state, sites)
+        psi0 = TreeTensorNetwork(tensornetworkstate(state, sites))
 
         nsites = 2
         factorize_kwargs = (; cutoff = 1.0e-8, maxdim = 100)

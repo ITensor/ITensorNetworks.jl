@@ -302,15 +302,3 @@ Base.copy(is::IndsNetwork) = IndsNetwork(copy(data_graph(is)))
 function map_inds(f, is::IndsNetwork, args...; sites = nothing, links = nothing, kwargs...)
     return map_data(i -> f(i, args...; kwargs...), is; vertices = sites, edges = links)
 end
-
-#
-# Visualization
-#
-
-# TODO: Move to an `ITensorNetworksVisualizationInterfaceExt`
-# package extension (and define a `VisualizationInterface` package
-# based on `ITensorVisualizationCore`.).
-using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-function ITensorVisualizationCore.visualize(is::IndsNetwork, args...; kwargs...)
-    return visualize(ITensorNetwork(is), args...; kwargs...)
-end

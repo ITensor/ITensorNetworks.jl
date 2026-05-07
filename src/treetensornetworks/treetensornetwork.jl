@@ -119,75 +119,7 @@ end
 # set_ortho_region: low-level update of the ortho_region metadata only,
 # without any gauge transformations. To move the orthogonality center use orthogonalize.
 function set_ortho_region(tn::TTN, ortho_region)
-    return ttn(tn.tensornetwork; ortho_region)
-end
-
-"""
-    ttn(args...; ortho_region=nothing) -> TreeTensorNetwork
-
-Construct a `TreeTensorNetwork` (TTN) using the same interface as [`ITensorNetwork`](@ref).
-All positional and keyword arguments are forwarded to the `ITensorNetwork` constructor.
-
-If `ortho_region` is not specified, no particular gauge is assumed.
-Call [`orthogonalize`](@ref) to impose a gauge.
-
-# Example
-
-```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
-
-julia> g = named_comb_tree((2, 2));
-
-julia> s = siteinds("S=1/2", g);
-
-julia> psi = ttn(v -> "Up", s);
-
-```
-
-See also: [`mps`](@ref), [`TreeTensorNetwork`](@ref).
-"""
-function ttn(args...; ortho_region = nothing)
-    tn = ITensorNetwork(args...)
-    if isnothing(ortho_region)
-        ortho_region = vertices(tn)
-    end
-    return _TreeTensorNetwork(tn, ortho_region)
-end
-
-"""
-    mps(args...; ortho_region=nothing) -> TreeTensorNetwork
-
-Construct a matrix product state (MPS) as a `TreeTensorNetwork` on a 1D path graph.
-The interface is identical to [`ttn`](@ref) but is intended for 1D (chain) topologies.
-
-See also: [`ttn`](@ref).
-"""
-function mps(args...; ortho_region = nothing)
-    # TODO: Check it is a path graph.
-    tn = ITensorNetwork(args...)
-    if isnothing(ortho_region)
-        ortho_region = vertices(tn)
-    end
-    return _TreeTensorNetwork(tn, ortho_region)
-end
-
-"""
-    mps(f, is::Vector{<:Index}; kwargs...) -> TreeTensorNetwork
-
-Construct a matrix product state (MPS) from a function `f` and a flat vector of site
-indices `is`. The indices are arranged on a 1D path graph automatically.
-
-# Example
-
-```jldoctest
-julia> s = siteinds("S=1/2", 6);
-
-julia> psi = mps(v -> "Up", s);
-
-```
-"""
-function mps(f, is::Vector{<:Index}; kwargs...)
-    return mps(f, path_indsnetwork(is); kwargs...)
+    return TreeTensorNetwork(tn.tensornetwork; ortho_region)
 end
 
 """
@@ -227,7 +159,15 @@ function ttn(
         @assert hasinds(a, is[v])
     end
     @assert ortho_region ⊆ vertices(is)
-    tn = ITensorNetwork(is)
+    is = insert_linkinds(is)
+    ts = Dict{vertextype(is), ITensor}()
+    for v in vertices(is)
+        site_inds = get(is, v, Index[])
+        edges_v = [edgetype(is)(v, nv) for nv in neighbors(is, v)]
+        link_inds = reduce(vcat, (is[e] for e in edges_v); init = Index[])
+        ts[v] = ITensor(site_inds..., link_inds...)
+    end
+    tn = ITensorNetwork(ts)
     ortho_center = first(ortho_region)
     for e in post_order_dfs_edges(tn, ortho_center)
         left_inds = setdiff(inds(a), inds(tn[dst(e)]))
@@ -237,6 +177,6 @@ function ttn(
         a = a_r
     end
     tn[ortho_center] = a
-    ttn_a = ttn(tn)
+    ttn_a = TreeTensorNetwork(tn)
     return orthogonalize(ttn_a, ortho_center)
 end

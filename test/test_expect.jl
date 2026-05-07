@@ -43,7 +43,7 @@ include("utils.jl")
     g = named_grid((L, L))
     s = siteinds("S=1/2", g; conserve_qns = true)
 
-    ψ = ITensorNetwork(v -> isodd(sum(v)) ? "↑" : "↓", s)
+    ψ = tensornetworkstate(v -> isodd(sum(v)) ? "↑" : "↓", s)
 
     sz_bp = expect(ψ, "Sz"; alg = "bp", cache_update_kwargs = (; maxiter = 20))
     sz_exact = expect(ψ, "Sz"; alg = "exact")

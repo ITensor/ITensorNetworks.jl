@@ -1,10 +1,11 @@
 using Dictionaries: Dictionary, Indices
 using Graphs: vertices
-using ITensorNetworks: ITensorNetwork, ProjTTN, environments, position, siteinds, ttn
+using ITensorNetworks:
+    ITensorNetwork, ProjTTN, TreeTensorNetwork, environments, position, siteinds, ttn
 using ITensors.NDTensors: with_auto_fermion
 using ITensors: ITensor
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_path_graph
-using NamedGraphs: NamedEdge
+using NamedGraphs: NamedEdge, NamedGraph
 using Test: @test, @testset
 include("utils.jl")
 using .ModelHamiltonians: ModelHamiltonians
@@ -31,7 +32,7 @@ using .ModelHamiltonians: ModelHamiltonians
             d[v] = isodd(i) ? "Up" : "Dn"
         end
         states = v -> d[v]
-        psi = ttn(states, s)
+        psi = TreeTensorNetwork(tensornetworkstate(states, s))
 
         # actual test, verifies that position is out of place
         vs = collect(vertices(s))
@@ -46,8 +47,9 @@ using .ModelHamiltonians: ModelHamiltonians
 end
 @testset "ProjTTN construction regression test" begin
     pos = Indices{Tuple{String, Int}}()
-    g = named_path_graph(2)
-    operator = ttn(ITensorNetwork{Any}(g))
+    g = NamedGraph{Any}(named_path_graph(2))
+    tensors = Dict{Any, ITensor}(v => ITensor() for v in vertices(g))
+    operator = TreeTensorNetwork(ITensorNetwork{Any}(tensors, g))
     environments = Dictionary{NamedEdge{Any}, ITensor}()
     @test ProjTTN(pos, operator, environments) isa ProjTTN{Any, Indices{Any}}
 end

@@ -1,4 +1,4 @@
-using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
+using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype, trivial_space
 using Adapt: Adapt, adapt, adapt_structure
 using DataGraphs: DataGraphs, edge_data, get_vertex_data, is_vertex_assigned,
     set_vertex_data!, underlying_graph, underlying_graph_type, vertex_data

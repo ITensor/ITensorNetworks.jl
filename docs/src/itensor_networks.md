@@ -11,17 +11,13 @@ Key facts:
 - The underlying graph is a [`NamedGraph`](https://github.com/ITensor/NamedGraphs.jl), so
   vertices can be any hashable Julia value: integers, tuples, strings, etc.
 - Each vertex holds exactly one `ITensor`.
-- Edges and link indices are either inferred from shared `Index` objects (when constructing
-  from a collection of `ITensor`s) or inserted automatically (when constructing from an
-  `IndsNetwork`).
+- Edges are either inferred from shared `Index` objects (when constructing from a
+  collection of `ITensor`s) or taken from a graph passed explicitly alongside the tensors.
 
 ## Construction
 
-The most common entry point is an `IndsNetwork` — a graph whose vertices and edges carry
-`Index` objects.  Generate site indices with the `siteinds` function which takes a site
-type string (such as "S=1/2" or "Electron") and a NamedGraph. The NamedGraph can be 
-generated from functions such as `named_grid`, `named_comb_tree`, etc. from the NamedGraphs.jl
-`NamedGraphGenerators` module:
+When you already have `ITensor`s in hand, edges are inferred automatically from shared
+indices:
 
 ```@example main
 using Graphs: edges, ne, neighbors, nv, vertices
@@ -29,30 +25,29 @@ using ITensorNetworks: ITensorNetwork, add, linkinds, siteinds
 using ITensors: Index, ITensor
 using NamedGraphs.NamedGraphGenerators: named_grid
 
-# 3×3 square-lattice tensor network
-g = named_grid((3, 3))
-s = siteinds("S=1/2", g)  # one spin-½ Index per vertex
-
-# Zero-initialized, bond dimension 2
-ψ = ITensorNetwork(s; link_space = 2)
-
-# Product state — every site in the |↑⟩ state
-ψ = ITensorNetwork("Up", s)
-
-# Staggered initialization with a vertex-dependent function
-ψ = ITensorNetwork(v -> isodd(sum(v)) ? "Up" : "Dn", s)
-```
-
-When you already have `ITensor`s in hand, edges are inferred automatically from shared
-indices:
-
-```@example main
 i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k")
 A, B, C = ITensor(i, j), ITensor(j, k), ITensor(k)
 
 tn = ITensorNetwork([A, B, C])  # integer vertices 1, 2, 3
 tn = ITensorNetwork(Dict("A" => A, "B" => B, "C" => C))  # named vertices via a Dict
 ```
+
+If you want to control edges directly — for example to build an empty network on a
+prescribed lattice and fill in tensors later — pass a `NamedGraph` along with a
+collection of `ITensor`s indexed by vertex:
+
+```@example main
+g = named_grid((3, 3))
+s = siteinds("S=1/2", g)  # one spin-½ Index per vertex
+
+# Build site tensors on the 3×3 lattice with one (placeholder) site index each
+tensors = Dict(v => ITensor(s[v]...) for v in vertices(g))
+ψ = ITensorNetwork(tensors, g)
+```
+
+Higher-level construction routines (random networks, product states, OpSum-derived
+TTNs, etc.) are provided by sibling functions like `ttn(opsum, sites)` and the test-only
+helpers in `test/utils.jl`.
 
 ```@docs; canonical=false
 ITensorNetworks.ITensorNetwork
