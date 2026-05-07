@@ -44,11 +44,6 @@ Methods which still need to be discussed, modified, or deprecated.
               dst_ind_map::Function = prime)
   ```
 
-* Collect all site indices (per-vertex) of a network as a flat vector (`abstractitensornetwork.jl`):
-  ```julia
-  flatten_siteinds(tn::AbstractITensorNetwork)
-  ```
-
 ## TreeTensorNetwork Types
 
 #### OpSum Constructors

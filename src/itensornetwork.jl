@@ -109,7 +109,7 @@ end
 # Without the reverse index map, edge inference is O(n²).
 function ITensorNetwork{V}(tensors::_ITensorCollection) where {V}
     g = NamedGraph{V}(collect(keys(tensors)))
-    default = Dict(v => ITensor() for v in vertices(g))
+    default = Dict{V, ITensor}(v => ITensor() for v in vertices(g))
     tn = ITensorNetwork{V}(default, g)
     for v in vertices(g)
         tn[v] = tensors[v]
@@ -131,7 +131,7 @@ end
 
 function ITensorNetwork{V}(tn::ITensorNetwork) where {V}
     g = NamedGraph{V}(underlying_graph(tn))
-    tensors = Dict(v => tn[v] for v in vertices(tn))
+    tensors = Dict{V, ITensor}(v => tn[v] for v in vertices(tn))
     return ITensorNetwork{V}(tensors, g)
 end
 function ITensorNetwork{V}(g::NamedGraph) where {V}
@@ -145,14 +145,15 @@ NamedGraphs.convert_vertextype(V::Type, tn::ITensorNetwork) = ITensorNetwork{V}(
 
 function Base.copy(tn::ITensorNetwork{V}) where {V}
     g = copy(underlying_graph(tn))
-    tensors = Dict(v => copy(tn[v]) for v in vertices(g))
+    tensors = Dict{V, ITensor}(v => copy(tn[v]) for v in vertices(g))
     return ITensorNetwork{V}(tensors, g)
 end
 
 function NamedGraphs.similar_graph(tn::ITensorNetwork, underlying_graph::AbstractGraph)
     g = NamedGraph(underlying_graph)
-    default = Dict(v => ITensor() for v in vertices(g))
-    return ITensorNetwork{vertextype(g)}(default, g)
+    V = vertextype(g)
+    default = Dict{V, ITensor}(v => ITensor() for v in vertices(g))
+    return ITensorNetwork{V}(default, g)
 end
 
 #

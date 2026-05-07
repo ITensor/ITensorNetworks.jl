@@ -43,6 +43,11 @@ Base.copy(tn::AbstractITensorNetwork) = not_implemented()
 # Iteration
 Base.iterate(tn::AbstractITensorNetwork, args...) = iterate(vertex_data(tn), args...)
 
+# Vertex-keyed access: `keys(tn)` returns the vertex set, `tn[v]` returns the
+# tensor at vertex `v`. Together with `Base.iterate` above, this lets `tn`
+# stand in as a `keys`/`values`-style collection of tensors keyed by vertex.
+Base.keys(tn::AbstractITensorNetwork) = vertices(tn)
+
 # TODO: This contrasts with the `DataGraphs.AbstractDataGraph` definition,
 # where it is defined as the `vertextype`. Does that cause problems or should it be changed?
 Base.eltype(tn::AbstractITensorNetwork) = eltype(vertex_data(tn))
@@ -168,10 +173,11 @@ end
 
 function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
     g = union(underlying_graph(tn1), underlying_graph(tn2); kwargs...)
-    tensors = Dict(
+    V = vertextype(g)
+    tensors = Dict{V, ITensor}(
         (v => (v in vertices(tn1) ? tn1[v] : tn2[v])) for v in vertices(g)
     )
-    tn = ITensorNetwork{vertextype(g)}(tensors, g)
+    tn = ITensorNetwork{V}(tensors, g)
     # Add any new edges that are introduced during the union
     for v1 in vertices(tn1)
         for v2 in vertices(tn2)
@@ -185,8 +191,9 @@ end
 
 function NamedGraphs.rename_vertices(f::Function, tn::AbstractITensorNetwork)
     new_g = NamedGraphs.rename_vertices(f, underlying_graph(tn))
-    tensors = Dict(f(v) => tn[v] for v in vertices(tn))
-    return ITensorNetwork{vertextype(new_g)}(tensors, new_g)
+    V = vertextype(new_g)
+    tensors = Dict{V, ITensor}(f(v) => tn[v] for v in vertices(tn))
+    return ITensorNetwork{V}(tensors, new_g)
 end
 
 #
@@ -268,10 +275,6 @@ function siteinds(tn::AbstractITensorNetwork)
         is[v] = siteinds(tn, v)
     end
     return is
-end
-
-function flatten_siteinds(tn::AbstractITensorNetwork)
-    return mapreduce(v -> siteinds(tn, v), vcat, vertices(tn))
 end
 
 function linkinds(tn::AbstractITensorNetwork)
