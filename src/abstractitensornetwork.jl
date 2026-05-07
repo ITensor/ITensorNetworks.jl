@@ -167,8 +167,11 @@ end
 # TODO: broadcasting
 
 function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
-    # TODO: Use a different constructor call here?
-    tn = _ITensorNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
+    g = union(underlying_graph(tn1), underlying_graph(tn2); kwargs...)
+    tensors = Dict(
+        (v => (v in vertices(tn1) ? tn1[v] : tn2[v])) for v in vertices(g)
+    )
+    tn = ITensorNetwork{vertextype(g)}(tensors, g)
     # Add any new edges that are introduced during the union
     for v1 in vertices(tn1)
         for v2 in vertices(tn2)
@@ -181,8 +184,9 @@ function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kw
 end
 
 function NamedGraphs.rename_vertices(f::Function, tn::AbstractITensorNetwork)
-    # TODO: Use a different constructor call here?
-    return _ITensorNetwork(rename_vertices(f, data_graph(tn)))
+    new_g = NamedGraphs.rename_vertices(f, underlying_graph(tn))
+    tensors = Dict(f(v) => tn[v] for v in vertices(tn))
+    return ITensorNetwork{vertextype(new_g)}(tensors, new_g)
 end
 
 #
@@ -197,9 +201,8 @@ function ITensors.hascommoninds(tn::AbstractITensorNetwork, edge::AbstractEdge)
     return hascommoninds(tn[src(edge)], tn[dst(edge)])
 end
 
-# Convenience wrapper
-function eachtensor(tn::AbstractITensorNetwork, vertices = vertices(tn))
-    return map(v -> tn[v], vertices)
+function eachtensor(tn::AbstractITensorNetwork)
+    return map(v -> tn[v], vertices(tn))
 end
 
 #
@@ -249,7 +252,7 @@ end
 function IndsNetwork(tn::AbstractITensorNetwork)
     is = IndsNetwork(underlying_graph(tn))
     for v in vertices(tn)
-        is[v] = uniqueinds(tn, v)
+        is[v] = siteinds(tn, v)
     end
     for e in edges(tn)
         is[e] = commoninds(tn, e)
@@ -265,14 +268,13 @@ indsnetwork(tn::AbstractITensorNetwork) = IndsNetwork(tn)
 function siteinds(tn::AbstractITensorNetwork)
     is = IndsNetwork(underlying_graph(tn))
     for v in vertices(tn)
-        is[v] = uniqueinds(tn, v)
+        is[v] = siteinds(tn, v)
     end
     return is
 end
 
 function flatten_siteinds(tn::AbstractITensorNetwork)
-    # `identity.(...)` narrows the type, maybe there is a better way.
-    return identity.(flatten(map(v -> siteinds(tn, v), vertices(tn))))
+    return mapreduce(v -> siteinds(tn, v), vcat, vertices(tn))
 end
 
 function linkinds(tn::AbstractITensorNetwork)
@@ -292,14 +294,16 @@ end
 # Index access
 #
 
-function neighbor_tensors(tn::AbstractITensorNetwork, vertex)
-    return eachtensor(tn, neighbors(tn, vertex))
+function _siteinds(tn::AbstractITensorNetwork, vertex)
+    s = inds(tn[vertex])
+    for v in neighbors(tn, vertex)
+        s = setdiff(s, inds(tn[v]))
+    end
+    return s
 end
-
-function ITensors.uniqueinds(tn::AbstractITensorNetwork, vertex)
-    tn_vertex = [tn[vertex]; collect(neighbor_tensors(tn, vertex))]
-    return reduce(setdiff, inds.(tn_vertex))
-end
+siteinds(tn::AbstractITensorNetwork, vertex) = _siteinds(tn, vertex)
+# Fix ambiguity with `siteinds(::Type, ::Int)` from `sitetype.jl`.
+siteinds(tn::AbstractITensorNetwork, vertex::Int) = _siteinds(tn, vertex)
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
     return uniqueinds(tn[src(edge)], tn[dst(edge)])
@@ -307,14 +311,6 @@ end
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
     return uniqueinds(tn, edgetype(tn)(edge))
-end
-
-function siteinds(tn::AbstractITensorNetwork, vertex)
-    return uniqueinds(tn, vertex)
-end
-# Fix ambiguity error with IndsNetwork constructor.
-function siteinds(tn::AbstractITensorNetwork, vertex::Int)
-    return uniqueinds(tn, vertex)
 end
 
 function ITensors.commoninds(tn::AbstractITensorNetwork, edge)
@@ -875,20 +871,6 @@ function linkdims(tn::AbstractITensorNetwork{V}) where {V}
         ld[e] = linkdim(tn, e)
     end
     return ld
-end
-
-#
-# Site combiners
-#
-
-# TODO: will be broken, fix this
-function site_combiners(tn::AbstractITensorNetwork{V}) where {V}
-    Cs = DataGraph{V, ITensor}(copy(underlying_graph(tn)))
-    for v in vertices(tn)
-        s = siteinds(tn, v)
-        Cs[v] = combiner(s; tags = commontags(s))
-    end
-    return Cs
 end
 
 function insert_linkinds(

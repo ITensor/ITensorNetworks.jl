@@ -286,25 +286,6 @@ function ITensors.apply(
     return apply(ITensor(o, siteinds(ψ)), ψ; normalize, ortho, apply_kwargs...)
 end
 
-_gate_vertices(o::ITensor, ψ) = neighbor_vertices(ψ, o)
-_gate_vertices(o::AbstractEdge, ψ) = [src(o), dst(o)]
-
-function _contract_gate(o::ITensor, ψv1, Λ, ψv2)
-    indsᵥ₁ = noprime(noncommoninds(ψv1, Λ))
-    Qᵥ₁, Rᵥ₁ = qr(ψv1, setdiff(uniqueinds(indsᵥ₁, ψv2), commoninds(indsᵥ₁, o)))
-    Qᵥ₂, Rᵥ₂ = qr(ψv2, setdiff(uniqueinds(ψv2, indsᵥ₁), commoninds(ψv2, o)))
-    theta = noprime(noprime(Rᵥ₁ * Λ) * Rᵥ₂ * o)
-    return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
-end
-
-function _contract_gate(o::AbstractEdge, ψv1, Λ, ψv2)
-    indsᵥ₁ = noprime(noncommoninds(ψv1, Λ))
-    Qᵥ₁, Rᵥ₁ = qr(ψv1, uniqueinds(indsᵥ₁, ψv2))
-    Qᵥ₂, Rᵥ₂ = qr(ψv2, uniqueinds(ψv2, indsᵥ₁))
-    theta = noprime(Rᵥ₁ * Λ) * Rᵥ₂
-    return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
-end
-
 ### Full Update Routines ###
 
 # Calculate the overlap of the gate acting on the previous p and q versus the new p and q in the presence of environments. This is the cost function that optimise_p_q will minimise
