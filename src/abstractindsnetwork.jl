@@ -3,7 +3,7 @@ using DataGraphs: DataGraphs, AbstractDataGraph, DataGraph, IsUnderlyingGraph, e
     get_edge_data, get_vertex_data, is_edge_assigned, is_vertex_assigned, map_data,
     set_edge_data!, set_vertex_data!, underlying_graph_type, vertex_data
 using Graphs: Graphs, AbstractEdge
-using ITensors: unioninds
+using ITensors: ITensors, unioninds
 using NamedGraphs.GraphsExtensions:
     GraphsExtensions, directed_graph, incident_edges, rename_vertices
 using NamedGraphs: NamedGraphs
