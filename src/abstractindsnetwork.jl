@@ -3,7 +3,7 @@ using DataGraphs: DataGraphs, AbstractDataGraph, DataGraph, IsUnderlyingGraph, e
     get_edge_data, get_vertex_data, is_edge_assigned, is_vertex_assigned, map_data,
     set_edge_data!, set_vertex_data!, underlying_graph_type, vertex_data
 using Graphs: Graphs, AbstractEdge
-using ITensors: ITensors, IndexSet, unioninds, uniqueinds
+using ITensors: ITensors, unioninds
 using NamedGraphs.GraphsExtensions:
     GraphsExtensions, directed_graph, incident_edges, rename_vertices
 using NamedGraphs: NamedGraphs
@@ -49,20 +49,6 @@ end
 #
 # Index access
 #
-
-function ITensors.uniqueinds(is::AbstractIndsNetwork, edge::AbstractEdge)
-    # TODO: Replace with `is[v]` once `getindex(::IndsNetwork, ...)` is smarter.
-    inds = IndexSet(get(is, src(edge), Index[]))
-    for ei in setdiff(incident_edges(is, src(edge)), [edge])
-        # TODO: Replace with `is[v]` once `getindex(::IndsNetwork, ...)` is smarter.
-        inds = unioninds(inds, get(is, ei, Index[]))
-    end
-    return inds
-end
-
-function ITensors.uniqueinds(is::AbstractIndsNetwork, edge::Pair)
-    return uniqueinds(is, edgetype(is)(edge))
-end
 
 function Base.union(is1::AbstractIndsNetwork, is2::AbstractIndsNetwork; kwargs...)
     return IndsNetwork(union(data_graph(is1), data_graph(is2); kwargs...))

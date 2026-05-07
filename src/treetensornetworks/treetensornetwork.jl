@@ -230,7 +230,7 @@ function ttn(
     tn = ITensorNetwork(is)
     ortho_center = first(ortho_region)
     for e in post_order_dfs_edges(tn, ortho_center)
-        left_inds = uniqueinds(is, e)
+        left_inds = setdiff(inds(a), inds(tn[dst(e)]))
         a_l, a_r = factorize(a, left_inds; tags = edge_tag(e), ortho = "left", kwargs...)
         tn[src(e)] = a_l
         is[e] = commoninds(a_l, a_r)

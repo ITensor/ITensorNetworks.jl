@@ -9,7 +9,7 @@ function rescale(alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...)
     vs = collect(vertices(tn))
     c = inv(exp(logn / length(vs)))
     vertices_weights = Dictionary(vs, [c for v in vs])
-    return scale(tn, vertices_weights)
+    return scale_tensors(tn, vertices_weights)
 end
 
 function rescale(
@@ -61,7 +61,7 @@ function LinearAlgebra.normalize(
     vs = collect(vertices(tn))
     c = inv(exp(logn / (2 * length(vs))))
     vertices_weights = Dictionary(vs, [c for v in vs])
-    return scale(tn, vertices_weights)
+    return scale_tensors(tn, vertices_weights)
 end
 
 function LinearAlgebra.normalize(

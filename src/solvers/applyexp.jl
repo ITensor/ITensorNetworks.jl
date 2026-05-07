@@ -1,3 +1,4 @@
+using ITensors: uniqueinds
 using Printf: @printf
 
 @kwdef mutable struct ApplyExpProblem{State} <: AbstractProblem

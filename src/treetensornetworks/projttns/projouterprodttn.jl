@@ -1,6 +1,6 @@
 using DataGraphs: DataGraphs
 using Dictionaries: set!
-using ITensors: ITensor
+using ITensors: ITensor, hascommoninds
 using NamedGraphs.GraphsExtensions: incident_edges, is_leaf_vertex
 
 struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}

@@ -369,7 +369,7 @@ function rescale_partitions(
     bpc = copy(bpc)
     tn = tensornetwork(bpc)
     norms = map(v -> inv(norm(tn[v])), verts)
-    scale!(bpc, Dictionary(verts, norms))
+    scale_tensors!(bpc, Dictionary(verts, norms))
 
     vertices_weights = Dictionary()
     for pv in partitions
@@ -385,7 +385,7 @@ function rescale_partitions(
         end
     end
 
-    scale!(bpc, vertices_weights)
+    scale_tensors!(bpc, vertices_weights)
 
     return bpc
 end
