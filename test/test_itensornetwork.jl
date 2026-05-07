@@ -4,8 +4,8 @@ using Graphs: degree, dijkstra_shortest_paths, edges, grid, has_vertex, ne, neig
     rem_vertex!, vertices, weights
 using GraphsFlows: GraphsFlows
 using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork, contraction_sequence,
-    flatten_linkinds, flatten_siteinds, inner_network, linkinds, neighbor_tensors, norm_sqr,
-    norm_sqr_network, orthogonalize, siteinds, tree_orthogonalize, ttn, ⊗
+    inner_network, linkinds, norm_sqr, norm_sqr_network, orthogonalize, siteinds,
+    tree_orthogonalize, ttn, ⊗
 using ITensors.NDTensors: NDTensors, dim
 using ITensors: ITensors, ITensor, Index, Op, commonind, commoninds, contract, dag,
     hascommoninds, hasinds, inds, inner, itensor, onehot, order, prime, random_itensor,
@@ -84,11 +84,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         @test issetequal(vertices(tn), [1, 2, 3])
         @test issetequal(edges(tn), NamedEdge.([1 => 2, 2 => 3]))
 
-        tn = ITensorNetwork(["A", "B", "C"], [A, B, C])
-        @test issetequal(vertices(tn), ["A", "B", "C"])
-        @test issetequal(edges(tn), NamedEdge.(["A" => "B", "B" => "C"]))
-
-        tn = ITensorNetwork(["A" => A, "B" => B, "C" => C])
+        tn = ITensorNetwork(Dictionary(["A", "B", "C"], [A, B, C]))
         @test issetequal(vertices(tn), ["A", "B", "C"])
         @test issetequal(edges(tn), NamedEdge.(["A" => "B", "B" => "C"]))
     end
@@ -293,16 +289,10 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         s = siteinds("S=1/2", g)
         ψ = ITensorNetwork(s; link_space = 2)
 
-        nt = neighbor_tensors(ψ, (1, 1))
-        @test length(nt) == 2
-        @test all(map(hascommoninds(ψ[1, 1]), nt))
-
-        @test all(map(t -> isempty(commoninds(inds(t), uniqueinds(ψ, (1, 1)))), nt))
-
         e = (1, 1) => (2, 1)
         uie = uniqueinds(ψ, e)
         @test isempty(commoninds(uie, inds(ψ[2, 1])))
-        @test issetequal(uie, union(commoninds(ψ[1, 1], ψ[1, 2]), uniqueinds(ψ, (1, 1))))
+        @test issetequal(uie, union(commoninds(ψ[1, 1], ψ[1, 2]), siteinds(ψ, (1, 1))))
 
         @test siteinds(ψ, (1, 1)) == s[1, 1]
 
@@ -312,8 +302,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 
         @test linkinds(ψ, e) == commoninds(ψ[1, 1], ψ[2, 1])
 
-        @test length(flatten_siteinds(ψ)) == length(vertices(g))
-        @test length(flatten_linkinds(ψ)) == length(edges(g))
+        @test length(mapreduce(v -> siteinds(ψ, v), vcat, vertices(ψ))) ==
+            length(vertices(g))
     end
 
     @testset "eltype conversion, $new_eltype" for new_eltype in (Float32, ComplexF64)

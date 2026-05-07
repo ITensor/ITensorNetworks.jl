@@ -1,9 +1,9 @@
 using DataGraphs: underlying_graph
-using Graphs: nv
+using Graphs: nv, vertices
 using ITensorNetworks: BeliefPropagationCache, BilinearFormNetwork, LinearFormNetwork,
-    QuadraticFormNetwork, bra_network, bra_vertex, dual_index_map, environment,
-    flatten_siteinds, inner, ket_network, ket_vertex, operator_network, scalar, siteinds,
-    state_vertices, tensornetwork, union_all_inds, update
+    QuadraticFormNetwork, bra_network, bra_vertex, dual_index_map, environment, inner,
+    ket_network, ket_vertex, operator_network, scalar, siteinds, state_vertices,
+    tensornetwork, union_all_inds, update
 using ITensors: Index, contract, dag, inds, prime, random_itensor, sim
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
@@ -23,11 +23,11 @@ include("utils.jl")
 
     lf = LinearFormNetwork(ψbra, ψket)
     @test nv(lf) == nv(ψket) + nv(ψbra)
-    @test isempty(flatten_siteinds(lf))
+    @test all(v -> isempty(siteinds(lf, v)), vertices(lf))
 
     blf = BilinearFormNetwork(A, ψbra, ψket)
     @test nv(blf) == nv(ψket) + nv(ψbra) + nv(A)
-    @test isempty(flatten_siteinds(blf))
+    @test all(v -> isempty(siteinds(blf, v)), vertices(blf))
 
     @test underlying_graph(ket_network(blf)) == underlying_graph(ψket)
     @test underlying_graph(operator_network(blf)) == underlying_graph(A)
@@ -38,11 +38,11 @@ include("utils.jl")
 
     qf = QuadraticFormNetwork(ψket)
     @test nv(qf) == 3 * nv(ψket)
-    @test isempty(flatten_siteinds(qf))
+    @test all(v -> isempty(siteinds(qf, v)), vertices(qf))
 
     qf = QuadraticFormNetwork(A, ψket)
     @test nv(qf) == 2 * nv(ψket) + nv(A)
-    @test isempty(flatten_siteinds(qf))
+    @test all(v -> isempty(siteinds(qf, v)), vertices(qf))
 
     v = (1, 1)
     rng = StableRNG(1234)

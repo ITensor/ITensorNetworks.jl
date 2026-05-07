@@ -1,10 +1,8 @@
 using .ITensorsExtensions: trivial_space
 using DataGraphs: DataGraphs, DataGraph
-using Dictionaries: Indices, dictionary
+using Dictionaries: Indices
 using ITensors: ITensors, ITensor, op
 using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, similar_graph, vertextype
-
-struct Private end
 
 """
     ITensorNetwork{V}
@@ -14,7 +12,24 @@ A tensor network where each vertex holds an `ITensor`. The network graph is a
 
 # Constructors
 
-**From an `IndsNetwork` (most common):**
+**From a collection of `ITensor`s** (edges inferred from shared indices):
+
+```julia
+ITensorNetwork(tensors)
+```
+
+`tensors` is any collection where `keys(tensors)` are vertex labels and
+`values(tensors)` are the `ITensor`s at those vertices (e.g. a `Dict`, a
+`Dictionary`, or a `Vector{ITensor}` with linear-index vertex labels).
+
+**From a collection of `ITensor`s placed at the vertices of a given graph**
+(no edge inference; the caller is responsible for the edges):
+
+```julia
+ITensorNetwork(tensors, graph::NamedGraph)
+```
+
+**From an `IndsNetwork`** (most common in legacy code):
 
 ```julia
 ITensorNetwork(is::IndsNetwork; link_space = 1)
@@ -34,25 +49,6 @@ ITensorNetwork(graph::AbstractNamedGraph; link_space = 1)
 ITensorNetwork(f, graph::AbstractNamedGraph; link_space = 1)
 ```
 
-**From a collection of `ITensor`s:**
-
-```julia
-ITensorNetwork(ts::AbstractVector{ITensor})
-ITensorNetwork(vs, ts::AbstractVector{ITensor})
-ITensorNetwork(ts::AbstractVector{<:Pair{<:Any, ITensor}})
-ITensorNetwork(ts::AbstractDict{<:Any, ITensor})
-```
-
-Edges are inferred from shared indices between tensors.
-
-**From a single `ITensor`:**
-
-```julia
-ITensorNetwork(t::ITensor)
-```
-
-Wraps the tensor in a single-vertex network.
-
 # Example
 
 ```jldoctest
@@ -70,19 +66,28 @@ julia> tn = ITensorNetwork("Up", s);
 
 See also: `IndsNetwork`, [`ttn`](@ref ITensorNetworks.ttn), [`TreeTensorNetwork`](@ref ITensorNetworks.TreeTensorNetwork).
 """
+const _ITensorCollection = Union{
+    AbstractVector{<:ITensor},
+    AbstractDict{<:Any, <:ITensor},
+    AbstractDictionary{<:Any, <:ITensor},
+}
+
 struct ITensorNetwork{V} <: AbstractITensorNetwork{V}
     data_graph::DataGraph{V, ITensor, ITensor, NamedGraph{V}, NamedEdge{V}}
-    global function _ITensorNetwork(data_graph::DataGraph)
-        return new{vertextype(data_graph)}(data_graph)
-    end
-end
 
-function NamedGraphs.similar_graph(
-        tn::ITensorNetwork,
-        underlying_graph::AbstractGraph
-    )
-    dg = DataGraph(underlying_graph; vertex_data_type = ITensor, edge_data_type = ITensor)
-    return _ITensorNetwork(dg)
+    # Sole inner ctor: place `tensors` at the vertices of `graph`. No checks —
+    # `tensors` must be indexable at every vertex, the graph's edges are
+    # taken at face value.
+    function ITensorNetwork{V}(
+            tensors::_ITensorCollection, graph::NamedGraph
+        ) where {V}
+        g = NamedGraph{V}(graph)
+        dg = DataGraph(g; vertex_data_type = ITensor, edge_data_type = ITensor)
+        for v in vertices(g)
+            dg[v] = tensors[v]
+        end
+        return new{V}(dg)
+    end
 end
 
 #
@@ -96,66 +101,71 @@ function DataGraphs.underlying_graph_type(TN::Type{<:ITensorNetwork})
     return fieldtype(data_graph_type(TN), :underlying_graph)
 end
 
-# Versions taking vertex types.
-function ITensorNetwork{V}() where {V}
-    # TODO: Is there a better way to write this?
-    # Try using `convert_vertextype`.
-    new_data_graph_type = data_graph_type(ITensorNetwork{V})
-    new_underlying_graph_type = underlying_graph_type(new_data_graph_type)
-    return _ITensorNetwork(new_data_graph_type(new_underlying_graph_type()))
+#
+# Construction from collections of ITensors
+#
+
+# Tensors only: derive graph from `keys(tensors)`, then run edge inference.
+# Without the reverse index map, edge inference is O(n²).
+function ITensorNetwork{V}(tensors::_ITensorCollection) where {V}
+    # Build the vertex list with element type `V` so that an empty `tensors`
+    # input doesn't get the graph's vertex type inferred to whatever
+    # `keys(tensors)` happens to give (e.g. `Int` for an empty `Vector{ITensor}`).
+    g = NamedGraph(V[v for v in keys(tensors)])
+    # Annotate the default Dict's element type explicitly: when the
+    # comprehension is empty (e.g. constructing an empty `ITensorNetwork{V}`
+    # via the bootstrap call inside the IndsNetwork function-callback ctor)
+    # type inference can give `Dict{Any, Any}` for `V = Any`, which then
+    # falls outside `_ITensorCollection` and routes the next dispatch
+    # through the wrong path (function-callback Group C) — infinite
+    # recursion. Locking the value type to `ITensor` avoids that.
+    default = Dict{V, ITensor}(v => ITensor() for v in vertices(g))
+    tn = ITensorNetwork(default, g)
+    for v in vertices(g)
+        tn[v] = tensors[v]
+    end
+    return tn
 end
+
+# Non-parametric delegates: extract `V` via `keytype` / `vertextype`.
+function ITensorNetwork(tensors::_ITensorCollection)
+    return ITensorNetwork{keytype(tensors)}(tensors)
+end
+function ITensorNetwork(tensors::_ITensorCollection, graph::NamedGraph)
+    return ITensorNetwork{vertextype(graph)}(tensors, graph)
+end
+
+#
+# Vertex-type conversion and copy
+#
+
 function ITensorNetwork{V}(tn::ITensorNetwork) where {V}
-    # TODO: Is there a better way to write this?
-    # Try using `convert_vertextype`.
-    return _ITensorNetwork(DataGraph{V}(data_graph(tn)))
+    g = NamedGraph{V}(underlying_graph(tn))
+    # Type-annotated so empty-`tn` + `V = Any` doesn't drop us out of
+    # `_ITensorCollection` and into the wrong dispatch (see the parametric
+    # `(tensors)` form above for the same gotcha).
+    tensors = Dict{V, ITensor}(v => tn[v] for v in vertices(tn))
+    return ITensorNetwork(tensors, g)
 end
 function ITensorNetwork{V}(g::NamedGraph) where {V}
-    # TODO: Is there a better way to write this?
-    # Try using `convert_vertextype`.
     return ITensorNetwork(NamedGraph{V}(g))
 end
 
-ITensorNetwork() = ITensorNetwork{Any}()
-
-# Conversion
-# TODO: Copy or not?
 ITensorNetwork(tn::ITensorNetwork) = copy(tn)
 
 NamedGraphs.convert_vertextype(::Type{V}, tn::ITensorNetwork{V}) where {V} = tn
 NamedGraphs.convert_vertextype(V::Type, tn::ITensorNetwork) = ITensorNetwork{V}(tn)
 
-Base.copy(tn::ITensorNetwork) = _ITensorNetwork(copy(data_graph(tn)))
+function Base.copy(tn::ITensorNetwork{V}) where {V}
+    g = copy(underlying_graph(tn))
+    tensors = Dict{V, ITensor}(v => copy(tn[v]) for v in vertices(g))
+    return ITensorNetwork(tensors, g)
+end
 
-#
-# Construction from collections of ITensors
-#
-
-function itensors_to_itensornetwork(ts)
-    g = NamedGraph(collect(eachindex(ts)))
-    tn = ITensorNetwork(g)
-    for v in vertices(g)
-        tn[v] = ts[v]
-    end
-    return tn
-end
-function ITensorNetwork(ts::AbstractVector{ITensor})
-    return itensors_to_itensornetwork(ts)
-end
-function ITensorNetwork(ts::AbstractDictionary{<:Any, ITensor})
-    return itensors_to_itensornetwork(ts)
-end
-function ITensorNetwork(ts::AbstractDict{<:Any, ITensor})
-    return itensors_to_itensornetwork(ts)
-end
-function ITensorNetwork(vs::AbstractVector, ts::AbstractVector{ITensor})
-    return itensors_to_itensornetwork(Dictionary(vs, ts))
-end
-function ITensorNetwork(ts::AbstractVector{<:Pair{<:Any, ITensor}})
-    return itensors_to_itensornetwork(dictionary(ts))
-end
-# TODO: Decide what this should do, maybe it should factorize?
-function ITensorNetwork(t::ITensor)
-    return itensors_to_itensornetwork([t])
+function NamedGraphs.similar_graph(tn::ITensorNetwork, underlying_graph::AbstractGraph)
+    g = NamedGraph(underlying_graph)
+    default = Dict{vertextype(g), ITensor}(v => ITensor() for v in vertices(g))
+    return ITensorNetwork(default, g)
 end
 
 #
@@ -290,7 +300,7 @@ function ITensorNetwork(
         kwargs...
     )
     is = insert_linkinds(is; link_space)
-    tn = ITensorNetwork{vertextype(is)}()
+    tn = ITensorNetwork{vertextype(is)}(ITensor[])
     for v in vertices(is)
         add_vertex!(tn, v)
     end
@@ -306,14 +316,4 @@ function ITensorNetwork(
         setindex_preserve_graph!(tn, tensor_v, v)
     end
     return tn
-end
-
-ITensorNetwork(itns::Vector{ITensorNetwork}) = reduce(⊗, itns)
-
-# TODO: Use `vertex_data` here?
-function eachtensor(ψ::ITensorNetwork)
-    # This type declaration is needed to narrow
-    # the element type of the resulting `Dictionary`,
-    # raise and issue with `Dictionaries.jl`.
-    return map(v -> ψ[v]::ITensor, vertices(ψ))
 end

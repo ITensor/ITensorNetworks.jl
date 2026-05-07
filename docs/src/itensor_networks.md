@@ -51,8 +51,7 @@ i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k")
 A, B, C = ITensor(i, j), ITensor(j, k), ITensor(k)
 
 tn = ITensorNetwork([A, B, C])  # integer vertices 1, 2, 3
-tn = ITensorNetwork(["A", "B", "C"], [A, B, C])  # named vertices
-tn = ITensorNetwork(["A" => A, "B" => B, "C" => C])  # from pairs
+tn = ITensorNetwork(Dict("A" => A, "B" => B, "C" => C))  # named vertices via a Dict
 ```
 
 ```@docs; canonical=false

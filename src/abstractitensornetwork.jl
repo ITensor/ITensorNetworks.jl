@@ -43,6 +43,11 @@ Base.copy(tn::AbstractITensorNetwork) = not_implemented()
 # Iteration
 Base.iterate(tn::AbstractITensorNetwork, args...) = iterate(vertex_data(tn), args...)
 
+# Vertex-keyed access: `keys(tn)` returns the vertex set, `tn[v]` returns the
+# tensor at vertex `v`. Together with `Base.iterate` above, this lets `tn`
+# stand in as a `keys`/`values`-style collection of tensors keyed by vertex.
+Base.keys(tn::AbstractITensorNetwork) = vertices(tn)
+
 # TODO: This contrasts with the `DataGraphs.AbstractDataGraph` definition,
 # where it is defined as the `vertextype`. Does that cause problems or should it be changed?
 Base.eltype(tn::AbstractITensorNetwork) = eltype(vertex_data(tn))
@@ -167,8 +172,11 @@ end
 # TODO: broadcasting
 
 function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
-    # TODO: Use a different constructor call here?
-    tn = _ITensorNetwork(union(data_graph(tn1), data_graph(tn2)); kwargs...)
+    g = union(underlying_graph(tn1), underlying_graph(tn2); kwargs...)
+    tensors = Dict{vertextype(g), ITensor}(
+        v => (v in vertices(tn1) ? tn1[v] : tn2[v]) for v in vertices(g)
+    )
+    tn = ITensorNetwork(tensors, g)
     # Add any new edges that are introduced during the union
     for v1 in vertices(tn1)
         for v2 in vertices(tn2)
@@ -181,8 +189,9 @@ function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kw
 end
 
 function NamedGraphs.rename_vertices(f::Function, tn::AbstractITensorNetwork)
-    # TODO: Use a different constructor call here?
-    return _ITensorNetwork(rename_vertices(f, data_graph(tn)))
+    new_g = NamedGraphs.rename_vertices(f, underlying_graph(tn))
+    tensors = Dict{vertextype(new_g), ITensor}(f(v) => tn[v] for v in vertices(tn))
+    return ITensorNetwork(tensors, new_g)
 end
 
 #
@@ -197,23 +206,16 @@ function ITensors.hascommoninds(tn::AbstractITensorNetwork, edge::AbstractEdge)
     return hascommoninds(tn[src(edge)], tn[dst(edge)])
 end
 
-# Convenience wrapper
-function eachtensor(tn::AbstractITensorNetwork, vertices = vertices(tn))
-    return map(v -> tn[v], vertices)
-end
-
 #
 # Promotion and conversion
 #
 
 function ITensorsExtensions.promote_indtypeof(tn::AbstractITensorNetwork)
-    return mapreduce(promote_indtype, eachtensor(tn)) do t
-        return indtype(t)
-    end
+    return mapreduce(v -> indtype(tn[v]), promote_indtype, vertices(tn))
 end
 
 function NDTensors.scalartype(tn::AbstractITensorNetwork)
-    return mapreduce(eltype, promote_type, eachtensor(tn); init = Bool)
+    return mapreduce(v -> eltype(tn[v]), promote_type, vertices(tn); init = Bool)
 end
 
 # TODO: Define `eltype(::AbstractITensorNetwork)` as `ITensor`?
@@ -249,7 +251,7 @@ end
 function IndsNetwork(tn::AbstractITensorNetwork)
     is = IndsNetwork(underlying_graph(tn))
     for v in vertices(tn)
-        is[v] = uniqueinds(tn, v)
+        is[v] = siteinds(tn, v)
     end
     for e in edges(tn)
         is[e] = commoninds(tn, e)
@@ -257,22 +259,14 @@ function IndsNetwork(tn::AbstractITensorNetwork)
     return is
 end
 
-# Alias
-indsnetwork(tn::AbstractITensorNetwork) = IndsNetwork(tn)
-
 # TODO: Output a `VertexDataGraph`? Unfortunately
 # `IndsNetwork` doesn't allow iterating over vertex data.
 function siteinds(tn::AbstractITensorNetwork)
     is = IndsNetwork(underlying_graph(tn))
     for v in vertices(tn)
-        is[v] = uniqueinds(tn, v)
+        is[v] = siteinds(tn, v)
     end
     return is
-end
-
-function flatten_siteinds(tn::AbstractITensorNetwork)
-    # `identity.(...)` narrows the type, maybe there is a better way.
-    return identity.(flatten(map(v -> siteinds(tn, v), vertices(tn))))
 end
 
 function linkinds(tn::AbstractITensorNetwork)
@@ -283,23 +277,20 @@ function linkinds(tn::AbstractITensorNetwork)
     return is
 end
 
-function flatten_linkinds(tn::AbstractITensorNetwork)
-    # `identity.(...)` narrows the type, maybe there is a better way.
-    return identity.(flatten(map(e -> linkinds(tn, e), edges(tn))))
-end
-
 #
 # Index access
 #
 
-function neighbor_tensors(tn::AbstractITensorNetwork, vertex)
-    return eachtensor(tn, neighbors(tn, vertex))
+function _siteinds(tn::AbstractITensorNetwork, vertex)
+    s = inds(tn[vertex])
+    for v in neighbors(tn, vertex)
+        s = setdiff(s, inds(tn[v]))
+    end
+    return s
 end
-
-function ITensors.uniqueinds(tn::AbstractITensorNetwork, vertex)
-    tn_vertex = [tn[vertex]; collect(neighbor_tensors(tn, vertex))]
-    return reduce(setdiff, inds.(tn_vertex))
-end
+siteinds(tn::AbstractITensorNetwork, vertex) = _siteinds(tn, vertex)
+# Fix ambiguity with `siteinds(::Type, ::Int)` from `sitetype.jl`.
+siteinds(tn::AbstractITensorNetwork, vertex::Int) = _siteinds(tn, vertex)
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
     return uniqueinds(tn[src(edge)], tn[dst(edge)])
@@ -307,14 +298,6 @@ end
 
 function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
     return uniqueinds(tn, edgetype(tn)(edge))
-end
-
-function siteinds(tn::AbstractITensorNetwork, vertex)
-    return uniqueinds(tn, vertex)
-end
-# Fix ambiguity error with IndsNetwork constructor.
-function siteinds(tn::AbstractITensorNetwork, vertex::Int)
-    return uniqueinds(tn, vertex)
 end
 
 function ITensors.commoninds(tn::AbstractITensorNetwork, edge)
@@ -843,7 +826,7 @@ function ITensorVisualizationCore.visualize(
         vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
     end
     # TODO: Use `tokenize_vertex`.
-    return visualize(collect(eachtensor(tn)), args...; vertex_labels, kwargs...)
+    return visualize([tn[v] for v in vertices(tn)], args...; vertex_labels, kwargs...)
 end
 
 #
@@ -875,20 +858,6 @@ function linkdims(tn::AbstractITensorNetwork{V}) where {V}
         ld[e] = linkdim(tn, e)
     end
     return ld
-end
-
-#
-# Site combiners
-#
-
-# TODO: will be broken, fix this
-function site_combiners(tn::AbstractITensorNetwork{V}) where {V}
-    Cs = DataGraph{V, ITensor}(copy(underlying_graph(tn)))
-    for v in vertices(tn)
-        s = siteinds(tn, v)
-        Cs[v] = combiner(s; tags = commontags(s))
-    end
-    return Cs
 end
 
 function insert_linkinds(

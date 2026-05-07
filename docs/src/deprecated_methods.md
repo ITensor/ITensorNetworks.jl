@@ -6,23 +6,6 @@ Suggestions of methods which could be deleted.
 
 #### ITensorNetwork Constructors
 
-* Default constructor (`itensornetwork.jl`).
-  ```julia
-  ITensorNetwork{V}()
-  ```
-
-* (Only actually deprecate / delete this function if the more generic constructor `ITensorNetwork(tensors)` can also handle this case.) 
-  From a vector of `ITensor`s, with vertex labels auto-assigned to `eachindex(ts)`.
-  Edges are inferred from shared indices (`itensornetwork.jl`):
-  ```julia
-  ITensorNetwork(ts::AbstractVector{ITensor})
-  ```
-
-* From a collection of ITensorNetworks. Merges (Kronecker or tensor product) of input networks (`itensornetwork.jl`):
-  ```julia
-  ITensorNetwork(itns::Vector{ITensorNetwork})
-  ```
-
 * From a named graph, forwards to construction from `IndsNetwork` (`itensornetwork.jl`):
   ```julia
   ITensorNetwork{V}(g::NamedGraph)
@@ -47,11 +30,6 @@ Suggestions of methods which could be deleted.
   ITensorNetwork(itensor_constructor::Function, is::IndsNetwork; link_space = trivial_space(is), kwargs...)
   ```
 
-* From a single `ITensor`. Wraps the tensor in a single-vertex network (`itensornetwork.jl`):
-  ```julia
-  ITensorNetwork(t::ITensor)
-  ```
-
 * Construct an `ITensorNetwork` from an `IndsNetwork`. Initializes ITensors with `undef` storage on each vertex
   of the `IndsNetwork` with the corresponding indices (`itensornetwork.jl`):
   ```julia
@@ -63,31 +41,6 @@ Suggestions of methods which could be deleted.
 
 #### Local Operations on ITensorNetworks
 
-* Versions of `siteinds` taking a `vertex` argument. Each of these is just an alias for `uniqueinds`. Possibly the wrong design / implementation. (`abstractitensornetwork.jl`).
-  ```julia
-  siteinds(tn::AbstractITensorNetwork, vertex) # abstractitensornetwork.jl:288
-  siteinds(tn::AbstractITensorNetwork, vertex::Int) # abstractitensornetwork.jl:292
-  ```
-
-
-* Functions in `apply.jl` which are unused, even inside that file (`apply.jl`):
-  ```julia
-  _gate_vertices(o::ITensor, ψ)
-  _gate_vertices(o::AbstractEdge, ψ)
-  _contract_gate(o::ITensor, ψv1, Λ, ψv2)
-  _contract_gate(o::AbstractEdge, ψv1, Λ, ψv2)
-  ```
-
-* Collection of tensors neighboring the given vertex (`abstractitensornetwork.jl`):
-  ```julia
-  neighbor_tensors(tn::AbstractITensorNetwork, vertex)
-  ```
-
-* Iterate over the tensors at the given vertices, default all vertices (`abstractitensornetwork.jl`):
-  ```julia
-  eachtensor(tn::AbstractITensorNetwork, vertices = vertices(tn))
-  ```
-
 * Indices on the source tensor of `edge` that are not shared with the destination tensor.
   (`abstractitensornetwork.jl`):
   ```julia
@@ -95,24 +48,11 @@ Suggestions of methods which could be deleted.
   uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
   ```
 
-* Alias for `uniqueinds` (`abstractitensornetwork.jl`):
-  ```julia
-  siteinds(tn::AbstractITensorNetwork, vertex)
-  siteinds(tn::AbstractITensorNetwork, vertex::Int)
-  ```
-
 * Indices common to the ITensors on the vertices connected by the edge (`abstractitensornetwork.jl`):
   (Use a set function like `intersection` instead.)
   ```julia
   commoninds(tn::AbstractITensorNetwork, edge)
   linkinds(tn::AbstractITensorNetwork, edge)
-  ```
-
-* Indices on `tn[vertex]` that aren't shared with any neighbor, i.e. the external/site
-  indices of that vertex (`abstractitensornetwork.jl`).
-  (Use a set function like `setdiff` instead.)
-  ```julia
-  uniqueinds(tn::AbstractITensorNetwork, vertex)
   ```
 
 ## Global Operations on ITensorNetworks
@@ -138,11 +78,3 @@ Suggestions of methods which could be deleted.
   ```
   To be revisited after Jack's work on NamedGraphs.
 
-* Methods in `graphs.jl`. 
-  Just one methods which constructs a `SimpleGraph` from ITensors (`graphs.jl`).
-  ```julia
-  SimpleGraphs.SimpleGraph(itensors::Vector{ITensor})
-  ```
-  Not used anywhere in library.
-
-* Methods in `update_observer.jl`. Not used anywhere in library.

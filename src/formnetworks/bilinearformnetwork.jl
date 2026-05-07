@@ -81,8 +81,10 @@ function BilinearFormNetwork(
         dual_site_index_map = default_dual_site_index_map,
         kwargs...
     )
-    @assert issetequal(flatten_siteinds(bra), flatten_siteinds(ket))
-    link_space = isempty(flatten_siteinds(bra)) ? 1 : nothing
+    bra_site_inds = mapreduce(v -> siteinds(bra, v), vcat, vertices(bra); init = Index[])
+    ket_site_inds = mapreduce(v -> siteinds(ket, v), vcat, vertices(ket); init = Index[])
+    @assert issetequal(bra_site_inds, ket_site_inds)
+    link_space = isempty(bra_site_inds) ? 1 : nothing
     s = siteinds(ket)
     s_mapped = dual_site_index_map(s)
     operator_inds = union_all_inds(s, s_mapped)

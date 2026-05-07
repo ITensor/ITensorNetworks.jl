@@ -29,10 +29,12 @@ function full_update_bp(
         Qᵥ₂, Rᵥ₂ = ITensor(true), copy(ψ[v⃗[2]])
     else
         Qᵥ₁, Rᵥ₁ = factorize(
-            ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), uniqueinds(ψ, v⃗[1]))
+            ψ[v⃗[1]],
+            setdiff(setdiff(inds(ψ[v⃗[1]]), inds(ψ[v⃗[2]])), siteinds(ψ, v⃗[1]))
         )
         Qᵥ₂, Rᵥ₂ = factorize(
-            ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), uniqueinds(ψ, v⃗[2]))
+            ψ[v⃗[2]],
+            setdiff(setdiff(inds(ψ[v⃗[2]]), inds(ψ[v⃗[1]])), siteinds(ψ, v⃗[2]))
         )
     end
     extended_envs = vcat(envs, Qᵥ₁, prime(dag(Qᵥ₁)), Qᵥ₂, prime(dag(Qᵥ₂)))
@@ -284,25 +286,6 @@ function ITensors.apply(
         o::Op, ψ::AbstractITensorNetwork; normalize = false, ortho = false, apply_kwargs...
     )
     return apply(ITensor(o, siteinds(ψ)), ψ; normalize, ortho, apply_kwargs...)
-end
-
-_gate_vertices(o::ITensor, ψ) = neighbor_vertices(ψ, o)
-_gate_vertices(o::AbstractEdge, ψ) = [src(o), dst(o)]
-
-function _contract_gate(o::ITensor, ψv1, Λ, ψv2)
-    indsᵥ₁ = noprime(noncommoninds(ψv1, Λ))
-    Qᵥ₁, Rᵥ₁ = qr(ψv1, setdiff(uniqueinds(indsᵥ₁, ψv2), commoninds(indsᵥ₁, o)))
-    Qᵥ₂, Rᵥ₂ = qr(ψv2, setdiff(uniqueinds(ψv2, indsᵥ₁), commoninds(ψv2, o)))
-    theta = noprime(noprime(Rᵥ₁ * Λ) * Rᵥ₂ * o)
-    return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
-end
-
-function _contract_gate(o::AbstractEdge, ψv1, Λ, ψv2)
-    indsᵥ₁ = noprime(noncommoninds(ψv1, Λ))
-    Qᵥ₁, Rᵥ₁ = qr(ψv1, uniqueinds(indsᵥ₁, ψv2))
-    Qᵥ₂, Rᵥ₂ = qr(ψv2, uniqueinds(ψv2, indsᵥ₁))
-    theta = noprime(Rᵥ₁ * Λ) * Rᵥ₂
-    return Qᵥ₁, Rᵥ₁, Qᵥ₂, Rᵥ₂, theta
 end
 
 ### Full Update Routines ###
