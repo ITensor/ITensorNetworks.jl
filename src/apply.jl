@@ -29,10 +29,10 @@ function full_update_bp(
         Qᵥ₂, Rᵥ₂ = ITensor(true), copy(ψ[v⃗[2]])
     else
         Qᵥ₁, Rᵥ₁ = factorize(
-            ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), uniqueinds(ψ, v⃗[1]))
+            ψ[v⃗[1]], uniqueinds(uniqueinds(ψ[v⃗[1]], ψ[v⃗[2]]), siteinds(ψ, v⃗[1]))
         )
         Qᵥ₂, Rᵥ₂ = factorize(
-            ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), uniqueinds(ψ, v⃗[2]))
+            ψ[v⃗[2]], uniqueinds(uniqueinds(ψ[v⃗[2]], ψ[v⃗[1]]), siteinds(ψ, v⃗[2]))
         )
     end
     extended_envs = vcat(envs, Qᵥ₁, prime(dag(Qᵥ₁)), Qᵥ₂, prime(dag(Qᵥ₂)))
