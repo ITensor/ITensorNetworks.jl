@@ -112,7 +112,14 @@ function ITensorNetwork{V}(tensors::_ITensorCollection) where {V}
     # input doesn't get the graph's vertex type inferred to whatever
     # `keys(tensors)` happens to give (e.g. `Int` for an empty `Vector{ITensor}`).
     g = NamedGraph(V[v for v in keys(tensors)])
-    default = Dict(v => ITensor() for v in vertices(g))
+    # Annotate the default Dict's element type explicitly: when the
+    # comprehension is empty (e.g. constructing an empty `ITensorNetwork{V}`
+    # via the bootstrap call inside the IndsNetwork function-callback ctor)
+    # type inference can give `Dict{Any, Any}` for `V = Any`, which then
+    # falls outside `_ITensorCollection` and routes the next dispatch
+    # through the wrong path (function-callback Group C) — infinite
+    # recursion. Locking the value type to `ITensor` avoids that.
+    default = Dict{V, ITensor}(v => ITensor() for v in vertices(g))
     tn = ITensorNetwork(default, g)
     for v in vertices(g)
         tn[v] = tensors[v]
@@ -134,7 +141,10 @@ end
 
 function ITensorNetwork{V}(tn::ITensorNetwork) where {V}
     g = NamedGraph{V}(underlying_graph(tn))
-    tensors = Dict(v => tn[v] for v in vertices(tn))
+    # Type-annotated so empty-`tn` + `V = Any` doesn't drop us out of
+    # `_ITensorCollection` and into the wrong dispatch (see the parametric
+    # `(tensors)` form above for the same gotcha).
+    tensors = Dict{V, ITensor}(v => tn[v] for v in vertices(tn))
     return ITensorNetwork(tensors, g)
 end
 function ITensorNetwork{V}(g::NamedGraph) where {V}
@@ -146,15 +156,15 @@ ITensorNetwork(tn::ITensorNetwork) = copy(tn)
 NamedGraphs.convert_vertextype(::Type{V}, tn::ITensorNetwork{V}) where {V} = tn
 NamedGraphs.convert_vertextype(V::Type, tn::ITensorNetwork) = ITensorNetwork{V}(tn)
 
-function Base.copy(tn::ITensorNetwork)
+function Base.copy(tn::ITensorNetwork{V}) where {V}
     g = copy(underlying_graph(tn))
-    tensors = Dict(v => copy(tn[v]) for v in vertices(g))
+    tensors = Dict{V, ITensor}(v => copy(tn[v]) for v in vertices(g))
     return ITensorNetwork(tensors, g)
 end
 
 function NamedGraphs.similar_graph(tn::ITensorNetwork, underlying_graph::AbstractGraph)
     g = NamedGraph(underlying_graph)
-    default = Dict(v => ITensor() for v in vertices(g))
+    default = Dict{vertextype(g), ITensor}(v => ITensor() for v in vertices(g))
     return ITensorNetwork(default, g)
 end
 

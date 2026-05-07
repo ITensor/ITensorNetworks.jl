@@ -47,12 +47,14 @@ When you already have `ITensor`s in hand, edges are inferred automatically from 
 indices:
 
 ```@example main
+using Dictionaries: Dictionary
+
 i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k")
 A, B, C = ITensor(i, j), ITensor(j, k), ITensor(k)
 
 tn = ITensorNetwork([A, B, C])  # integer vertices 1, 2, 3
-tn = ITensorNetwork(["A", "B", "C"], [A, B, C])  # named vertices
-tn = ITensorNetwork(["A" => A, "B" => B, "C" => C])  # from pairs
+tn = ITensorNetwork(Dict("A" => A, "B" => B, "C" => C))  # named vertices via a Dict
+tn = ITensorNetwork(Dictionary(["A", "B", "C"], [A, B, C]))  # via an ordered Dictionary
 ```
 
 ```@docs; canonical=false

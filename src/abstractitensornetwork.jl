@@ -173,7 +173,9 @@ end
 
 function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
     g = union(underlying_graph(tn1), underlying_graph(tn2); kwargs...)
-    tensors = Dict(v => (v in vertices(tn1) ? tn1[v] : tn2[v]) for v in vertices(g))
+    tensors = Dict{vertextype(g), ITensor}(
+        v => (v in vertices(tn1) ? tn1[v] : tn2[v]) for v in vertices(g)
+    )
     tn = ITensorNetwork(tensors, g)
     # Add any new edges that are introduced during the union
     for v1 in vertices(tn1)
@@ -188,7 +190,7 @@ end
 
 function NamedGraphs.rename_vertices(f::Function, tn::AbstractITensorNetwork)
     new_g = NamedGraphs.rename_vertices(f, underlying_graph(tn))
-    tensors = Dict(f(v) => tn[v] for v in vertices(tn))
+    tensors = Dict{vertextype(new_g), ITensor}(f(v) => tn[v] for v in vertices(tn))
     return ITensorNetwork(tensors, new_g)
 end
 
