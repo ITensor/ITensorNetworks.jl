@@ -49,12 +49,6 @@ Methods which still need to be discussed, modified, or deprecated.
   flatten_siteinds(tn::AbstractITensorNetwork)
   ```
 
-* Collect all link indices (per-edge) of a network as a flat vector (`abstractitensornetwork.jl`):
-  ```julia
-  flatten_linkinds(tn::AbstractITensorNetwork)
-  ```
-
-
 ## TreeTensorNetwork Types
 
 #### OpSum Constructors

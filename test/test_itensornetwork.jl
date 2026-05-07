@@ -4,8 +4,8 @@ using Graphs: degree, dijkstra_shortest_paths, edges, grid, has_vertex, ne, neig
     rem_vertex!, vertices, weights
 using GraphsFlows: GraphsFlows
 using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork, contraction_sequence,
-    flatten_linkinds, flatten_siteinds, inner_network, linkinds, norm_sqr, norm_sqr_network,
-    orthogonalize, siteinds, tree_orthogonalize, ttn, ⊗
+    flatten_siteinds, inner_network, linkinds, norm_sqr, norm_sqr_network, orthogonalize,
+    siteinds, tree_orthogonalize, ttn, ⊗
 using ITensors.NDTensors: NDTensors, dim
 using ITensors: ITensors, ITensor, Index, Op, commonind, commoninds, contract, dag,
     hascommoninds, hasinds, inds, inner, itensor, onehot, order, prime, random_itensor,
@@ -303,7 +303,6 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         @test linkinds(ψ, e) == commoninds(ψ[1, 1], ψ[2, 1])
 
         @test length(flatten_siteinds(ψ)) == length(vertices(g))
-        @test length(flatten_linkinds(ψ)) == length(edges(g))
     end
 
     @testset "eltype conversion, $new_eltype" for new_eltype in (Float32, ComplexF64)

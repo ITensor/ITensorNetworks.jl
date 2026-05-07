@@ -260,9 +260,6 @@ function IndsNetwork(tn::AbstractITensorNetwork)
     return is
 end
 
-# Alias
-indsnetwork(tn::AbstractITensorNetwork) = IndsNetwork(tn)
-
 # TODO: Output a `VertexDataGraph`? Unfortunately
 # `IndsNetwork` doesn't allow iterating over vertex data.
 function siteinds(tn::AbstractITensorNetwork)
@@ -283,11 +280,6 @@ function linkinds(tn::AbstractITensorNetwork)
         is[e] = commoninds(tn, e)
     end
     return is
-end
-
-function flatten_linkinds(tn::AbstractITensorNetwork)
-    # `identity.(...)` narrows the type, maybe there is a better way.
-    return identity.(flatten(map(e -> linkinds(tn, e), edges(tn))))
 end
 
 #
