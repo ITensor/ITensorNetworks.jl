@@ -1,9 +1,9 @@
 using Compat: Compat
 using Graphs: vertices
-using ITensorNetworks: ITensorNetworks, @preserve_graph, BeliefPropagationCache,
-    combine_linkinds, contract, contraction_sequence, environment, inner_network,
-    linkinds_combiners, message, message_diff, partitioned_tensornetwork, scalar, siteinds,
-    split_index, tensornetwork, update, update_factor, updated_message, ⊗
+using ITensorNetworks: ITensorNetworks, @preserve_graph, BeliefPropagationCache, contract,
+    contraction_sequence, environment, inner_network, message, message_diff,
+    partitioned_tensornetwork, scalar, siteinds, split_index, tensornetwork, update,
+    update_factor, updated_message, ⊗
 include("utils.jl")
 using ITensors.NDTensors: array
 using ITensors:
