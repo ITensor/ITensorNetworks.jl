@@ -108,9 +108,12 @@ end
 # Tensors only: derive graph from `keys(tensors)`, then run edge inference.
 # Without the reverse index map, edge inference is O(n²).
 function ITensorNetwork{V}(tensors::_ITensorCollection) where {V}
-    g = NamedGraph{V}(collect(keys(tensors)))
-    default = Dict{V, ITensor}(v => ITensor() for v in vertices(g))
-    tn = ITensorNetwork{V}(default, g)
+    # Build the vertex list with element type `V` so that an empty `tensors`
+    # input doesn't get the graph's vertex type inferred to whatever
+    # `keys(tensors)` happens to give (e.g. `Int` for an empty `Vector{ITensor}`).
+    g = NamedGraph(V[v for v in keys(tensors)])
+    default = Dict(v => ITensor() for v in vertices(g))
+    tn = ITensorNetwork(default, g)
     for v in vertices(g)
         tn[v] = tensors[v]
     end
@@ -131,8 +134,8 @@ end
 
 function ITensorNetwork{V}(tn::ITensorNetwork) where {V}
     g = NamedGraph{V}(underlying_graph(tn))
-    tensors = Dict{V, ITensor}(v => tn[v] for v in vertices(tn))
-    return ITensorNetwork{V}(tensors, g)
+    tensors = Dict(v => tn[v] for v in vertices(tn))
+    return ITensorNetwork(tensors, g)
 end
 function ITensorNetwork{V}(g::NamedGraph) where {V}
     return ITensorNetwork(NamedGraph{V}(g))
@@ -143,17 +146,16 @@ ITensorNetwork(tn::ITensorNetwork) = copy(tn)
 NamedGraphs.convert_vertextype(::Type{V}, tn::ITensorNetwork{V}) where {V} = tn
 NamedGraphs.convert_vertextype(V::Type, tn::ITensorNetwork) = ITensorNetwork{V}(tn)
 
-function Base.copy(tn::ITensorNetwork{V}) where {V}
+function Base.copy(tn::ITensorNetwork)
     g = copy(underlying_graph(tn))
-    tensors = Dict{V, ITensor}(v => copy(tn[v]) for v in vertices(g))
-    return ITensorNetwork{V}(tensors, g)
+    tensors = Dict(v => copy(tn[v]) for v in vertices(g))
+    return ITensorNetwork(tensors, g)
 end
 
 function NamedGraphs.similar_graph(tn::ITensorNetwork, underlying_graph::AbstractGraph)
     g = NamedGraph(underlying_graph)
-    V = vertextype(g)
-    default = Dict{V, ITensor}(v => ITensor() for v in vertices(g))
-    return ITensorNetwork{V}(default, g)
+    default = Dict(v => ITensor() for v in vertices(g))
+    return ITensorNetwork(default, g)
 end
 
 #
@@ -304,12 +306,4 @@ function ITensorNetwork(
         setindex_preserve_graph!(tn, tensor_v, v)
     end
     return tn
-end
-
-# TODO: Use `vertex_data` here?
-function eachtensor(ψ::ITensorNetwork)
-    # This type declaration is needed to narrow
-    # the element type of the resulting `Dictionary`,
-    # raise and issue with `Dictionaries.jl`.
-    return map(v -> ψ[v]::ITensor, vertices(ψ))
 end

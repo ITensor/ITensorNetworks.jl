@@ -173,11 +173,8 @@ end
 
 function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kwargs...)
     g = union(underlying_graph(tn1), underlying_graph(tn2); kwargs...)
-    V = vertextype(g)
-    tensors = Dict{V, ITensor}(
-        (v => (v in vertices(tn1) ? tn1[v] : tn2[v])) for v in vertices(g)
-    )
-    tn = ITensorNetwork{V}(tensors, g)
+    tensors = Dict(v => (v in vertices(tn1) ? tn1[v] : tn2[v]) for v in vertices(g))
+    tn = ITensorNetwork(tensors, g)
     # Add any new edges that are introduced during the union
     for v1 in vertices(tn1)
         for v2 in vertices(tn2)
@@ -191,9 +188,8 @@ end
 
 function NamedGraphs.rename_vertices(f::Function, tn::AbstractITensorNetwork)
     new_g = NamedGraphs.rename_vertices(f, underlying_graph(tn))
-    V = vertextype(new_g)
-    tensors = Dict{V, ITensor}(f(v) => tn[v] for v in vertices(tn))
-    return ITensorNetwork{V}(tensors, new_g)
+    tensors = Dict(f(v) => tn[v] for v in vertices(tn))
+    return ITensorNetwork(tensors, new_g)
 end
 
 #
@@ -208,22 +204,16 @@ function ITensors.hascommoninds(tn::AbstractITensorNetwork, edge::AbstractEdge)
     return hascommoninds(tn[src(edge)], tn[dst(edge)])
 end
 
-function eachtensor(tn::AbstractITensorNetwork)
-    return map(v -> tn[v], vertices(tn))
-end
-
 #
 # Promotion and conversion
 #
 
 function ITensorsExtensions.promote_indtypeof(tn::AbstractITensorNetwork)
-    return mapreduce(promote_indtype, eachtensor(tn)) do t
-        return indtype(t)
-    end
+    return mapreduce(v -> indtype(tn[v]), promote_indtype, vertices(tn))
 end
 
 function NDTensors.scalartype(tn::AbstractITensorNetwork)
-    return mapreduce(eltype, promote_type, eachtensor(tn); init = Bool)
+    return mapreduce(v -> eltype(tn[v]), promote_type, vertices(tn); init = Bool)
 end
 
 # TODO: Define `eltype(::AbstractITensorNetwork)` as `ITensor`?
@@ -834,7 +824,7 @@ function ITensorVisualizationCore.visualize(
         vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
     end
     # TODO: Use `tokenize_vertex`.
-    return visualize(collect(eachtensor(tn)), args...; vertex_labels, kwargs...)
+    return visualize([tn[v] for v in vertices(tn)], args...; vertex_labels, kwargs...)
 end
 
 #
