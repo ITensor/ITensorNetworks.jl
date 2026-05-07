@@ -942,7 +942,7 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
 end
 
 # Scale each tensor of the network via a function vertex -> Number
-function scale!(
+function scale_tensors!(
         weight_function::Function,
         tn::AbstractITensorNetwork;
         vertices = collect(Graphs.vertices(tn))
@@ -951,18 +951,18 @@ function scale!(
 end
 
 # Scale each tensor of the network by a scale factor for each vertex in the keys of the dictionary
-function scale!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
-    return scale!(v -> vertices_weights[v], tn; vertices = keys(vertices_weights))
+function scale_tensors!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
+    return scale_tensors!(v -> vertices_weights[v], tn; vertices = keys(vertices_weights))
 end
 
-function scale(weight_function::Function, tn; kwargs...)
+function scale_tensors(weight_function::Function, tn; kwargs...)
     tn = copy(tn)
-    return scale!(weight_function, tn; kwargs...)
+    return scale_tensors!(weight_function, tn; kwargs...)
 end
 
-function scale(tn::AbstractITensorNetwork, vertices_weights::Dictionary; kwargs...)
+function scale_tensors(tn::AbstractITensorNetwork, vertices_weights::Dictionary; kwargs...)
     tn = copy(tn)
-    return scale!(tn, vertices_weights; kwargs...)
+    return scale_tensors!(tn, vertices_weights; kwargs...)
 end
 
 Base.:+(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) = add(tn1, tn2)

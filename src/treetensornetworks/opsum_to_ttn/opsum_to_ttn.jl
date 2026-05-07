@@ -661,31 +661,6 @@ function mpo(os::OpSum, s::IndsNetwork; kwargs...)
     return ttn(os, s; kwargs...)
 end
 
-# Conversion from other formats
-function ttn(o::Op, s::IndsNetwork; kwargs...)
-    return ttn(OpSum{Float64}() + o, s; kwargs...)
-end
-
-function ttn(o::Scaled{C, Op}, s::IndsNetwork; kwargs...) where {C}
-    return ttn(OpSum{C}() + o, s; kwargs...)
-end
-
-function ttn(o::Sum{Op}, s::IndsNetwork; kwargs...)
-    return ttn(OpSum{Float64}() + o, s; kwargs...)
-end
-
-function ttn(o::Prod{Op}, s::IndsNetwork; kwargs...)
-    return ttn(OpSum{Float64}() + o, s; kwargs...)
-end
-
-function ttn(o::Scaled{C, Prod{Op}}, s::IndsNetwork; kwargs...) where {C}
-    return ttn(OpSum{C}() + o, s; kwargs...)
-end
-
-function ttn(o::Sum{Scaled{C, Op}}, s::IndsNetwork; kwargs...) where {C}
-    return ttn(OpSum{C}() + o, s; kwargs...)
-end
-
 # Catch-all for leaf eltype specification
 function ttn(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
     return NDTensors.convert_scalartype(eltype, ttn(os, sites; kwargs...))

@@ -42,18 +42,6 @@ Suggestions of methods which could be deleted.
 ## Global Operations on ITensorNetworks
 
 
-## TreeTensorNetwork Constructors
-
-* From `Op` and related types (`opsum_to_ttn.jl`):
-  ```julia
-  ttn(o::Op, s::IndsNetwork; kws...)
-  ttn(o::Scaled{C, Op}, s::IndsNetwork; kws...)
-  ttn(o::Sum{Op}, s::IndsNetwork; kws...)
-  ttn(o::Prod{Op}, s::IndsNetwork; kws...)
-  ttn(o::Scaled{C, Prod{Op}}, s::IndsNetwork; kws...)
-  ttn(o::Sum{Scaled{C, Op}}, s::IndsNetwork; kws...)
-  ```
-
 ## Miscellaneous Methods
 
 * Methods in `partitioneditensornetwork.jl`.
