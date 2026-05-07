@@ -6,8 +6,8 @@ using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
     ne, neighbors, rem_edge!, src, vertices
 using ITensors: ITensors, @Algorithm_str, ITensor, addtags, combiner, commoninds,
-    commontags, contract, dag, hascommoninds, inds, noprime, onehot, prime, replaceprime,
-    replacetags, setprime, settags, sim, swaptags, tags, unioninds, uniqueinds
+    commontags, contract, dag, inds, noprime, onehot, prime, replaceprime, replacetags,
+    setprime, settags, sim, swaptags, tags
 using LinearAlgebra: LinearAlgebra, factorize
 using MacroTools: @capture
 using NDTensors: NDTensors, Algorithm, dim, scalartype
@@ -31,7 +31,7 @@ function Graphs.weights(graph::AbstractITensorNetwork)
     es = Tuple.(edges(graph))
     ws = Dictionary{Tuple{V, V}, Float64}(es, undef)
     for e in edges(graph)
-        w = log2(dim(commoninds(graph, e)))
+        w = log2(dim(linkinds(graph, e)))
         ws[(src(e), dst(e))] = w
     end
     return ws
@@ -135,7 +135,7 @@ function fix_edges!(tn::AbstractITensorNetwork, v)
     for vertex in vertices(tn)
         if v ≠ vertex
             edge = v => vertex
-            if hascommoninds(tn, edge)
+            if !isempty(linkinds(tn, edge))
                 add_edge!(tn, edge)
             end
         end
@@ -180,7 +180,7 @@ function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kw
     # Add any new edges that are introduced during the union
     for v1 in vertices(tn1)
         for v2 in vertices(tn2)
-            if hascommoninds(tn, v1 => v2)
+            if !isempty(linkinds(tn, v1 => v2))
                 add_edge!(tn, v1 => v2)
             end
         end
@@ -197,14 +197,6 @@ end
 #
 # Data modification
 #
-
-function ITensors.hascommoninds(tn::AbstractITensorNetwork, edge::Pair)
-    return hascommoninds(tn, edgetype(tn)(edge))
-end
-
-function ITensors.hascommoninds(tn::AbstractITensorNetwork, edge::AbstractEdge)
-    return hascommoninds(tn[src(edge)], tn[dst(edge)])
-end
 
 #
 # Promotion and conversion
@@ -254,7 +246,7 @@ function IndsNetwork(tn::AbstractITensorNetwork)
         is[v] = siteinds(tn, v)
     end
     for e in edges(tn)
-        is[e] = commoninds(tn, e)
+        is[e] = linkinds(tn, e)
     end
     return is
 end
@@ -272,7 +264,7 @@ end
 function linkinds(tn::AbstractITensorNetwork)
     is = IndsNetwork(underlying_graph(tn))
     for e in edges(tn)
-        is[e] = commoninds(tn, e)
+        is[e] = linkinds(tn, e)
     end
     return is
 end
@@ -292,21 +284,9 @@ siteinds(tn::AbstractITensorNetwork, vertex) = _siteinds(tn, vertex)
 # Fix ambiguity with `siteinds(::Type, ::Int)` from `sitetype.jl`.
 siteinds(tn::AbstractITensorNetwork, vertex::Int) = _siteinds(tn, vertex)
 
-function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
-    return uniqueinds(tn[src(edge)], tn[dst(edge)])
-end
-
-function ITensors.uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
-    return uniqueinds(tn, edgetype(tn)(edge))
-end
-
-function ITensors.commoninds(tn::AbstractITensorNetwork, edge)
-    e = edgetype(tn)(edge)
-    return commoninds(tn[src(e)], tn[dst(e)])
-end
-
 function linkinds(tn::AbstractITensorNetwork, edge)
-    return commoninds(tn, edge)
+    e = edgetype(tn)(edge)
+    return intersect(inds(tn[src(e)]), inds(tn[dst(e)]))
 end
 
 # Priming and tagging (changing Index identifiers)
@@ -520,7 +500,7 @@ function LinearAlgebra.svd(
         kwargs...
     )
     tn = copy(tn)
-    left_inds = uniqueinds(tn, edge)
+    left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
     U, S, V =
         svd(tn[src(edge)], left_inds; lefttags = u_tags, righttags = v_tags, kwargs...)
 
@@ -546,7 +526,7 @@ function LinearAlgebra.qr(
         kwargs...
     )
     tn = copy(tn)
-    left_inds = uniqueinds(tn, edge)
+    left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
     Q, R = factorize(tn[src(edge)], left_inds; tags, kwargs...)
 
     rem_vertex!(tn, src(edge))
@@ -574,7 +554,7 @@ function LinearAlgebra.factorize(
     tn = ITensorNetwork{V}(copy(tn))
 
     neighbors_X = setdiff(neighbors(tn, src(edge)), [dst(edge)])
-    left_inds = uniqueinds(tn, edge)
+    left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
     X, Y = factorize(tn[src(edge)], left_inds; tags, kwargs...)
 
     rem_vertex!(tn, src(edge))
@@ -605,7 +585,7 @@ function gauge_edge(
     # return contract(tn, new_vertex => dst(edge))
     !has_edge(tn, edge) && throw(ArgumentError("Edge not in graph."))
     tn = copy(tn)
-    left_inds = uniqueinds(tn, edge)
+    left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
     ltags = tags(tn, edge)
     X, Y = factorize(tn[src(edge)], left_inds; tags = ltags, ortho = "left", kwargs...)
     @preserve_graph tn[src(edge)] = X
@@ -680,7 +660,7 @@ end
 function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
     !has_edge(tn, edge) && throw(ArgumentError("Edge not in graph."))
     tn = copy(tn)
-    left_inds = uniqueinds(tn, edge)
+    left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
     ltags = tags(tn, edge)
     U, S, V = svd(tn[src(edge)], left_inds; lefttags = ltags, kwargs...)
     @preserve_graph tn[src(edge)] = U
@@ -865,7 +845,7 @@ function insert_linkinds(
     )
     tn = copy(tn)
     for e in edges
-        if !hascommoninds(tn, e)
+        if isempty(linkinds(tn, e))
             iₑ = Index(link_space, edge_tag(e))
             X = onehot(iₑ => 1)
             tn[src(e)] *= X

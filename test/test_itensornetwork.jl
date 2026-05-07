@@ -7,9 +7,8 @@ using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork, contraction
     inner_network, linkinds, norm_sqr, norm_sqr_network, orthogonalize, siteinds,
     tree_orthogonalize, ttn, ⊗
 using ITensors.NDTensors: NDTensors, dim
-using ITensors: ITensors, ITensor, Index, Op, commonind, commoninds, contract, dag,
-    hascommoninds, hasinds, inds, inner, itensor, onehot, order, prime, random_itensor,
-    scalartype, sim, uniqueinds
+using ITensors: ITensors, ITensor, Index, Op, commonind, commoninds, contract, dag, hasinds,
+    inds, inner, itensor, onehot, order, prime, random_itensor, scalartype, sim
 using LinearAlgebra: factorize
 using NDTensors: NDTensors, dim
 using NamedGraphs.GraphsExtensions: disjoint_union, incident_edges
@@ -290,13 +289,13 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         ψ = ITensorNetwork(s; link_space = 2)
 
         e = (1, 1) => (2, 1)
-        uie = uniqueinds(ψ, e)
+        uie = setdiff(inds(ψ[1, 1]), inds(ψ[2, 1]))
         @test isempty(commoninds(uie, inds(ψ[2, 1])))
         @test issetequal(uie, union(commoninds(ψ[1, 1], ψ[1, 2]), siteinds(ψ, (1, 1))))
 
         @test siteinds(ψ, (1, 1)) == s[1, 1]
 
-        cie = commoninds(ψ, e)
+        cie = linkinds(ψ, e)
         @test hasinds(ψ[1, 1], cie) && hasinds(ψ[2, 1], cie)
         @test isempty(commoninds(uie, cie))
 

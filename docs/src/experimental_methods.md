@@ -218,13 +218,6 @@ Methods which still need to be discussed, modified, or deprecated.
   edge_data_eltype(::Type{<:AbstractIndsNetwork{V, I}}) where {V, I}
   ```
 
-* Indices "unique" to one side of an edge — for `edge`, returns the indices on
-  `src(edge)` together with all of its other incident-edge link indices (`abstractindsnetwork.jl`):
-  ```julia
-  uniqueinds(is::AbstractIndsNetwork, edge::AbstractEdge)
-  uniqueinds(is::AbstractIndsNetwork, edge::Pair)
-  ```
-
 * Merge two `AbstractIndsNetwork`s, returning an `IndsNetwork` over the merged graph (`abstractindsnetwork.jl`):
   ```julia
   union(is1::AbstractIndsNetwork, is2::AbstractIndsNetwork; kwargs...)

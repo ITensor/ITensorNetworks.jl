@@ -39,22 +39,6 @@ Suggestions of methods which could be deleted.
   ITensorNetwork(is::IndsNetwork; kwargs...)
   ```
 
-#### Local Operations on ITensorNetworks
-
-* Indices on the source tensor of `edge` that are not shared with the destination tensor.
-  (`abstractitensornetwork.jl`):
-  ```julia
-  uniqueinds(tn::AbstractITensorNetwork, edge::AbstractEdge)
-  uniqueinds(tn::AbstractITensorNetwork, edge::Pair)
-  ```
-
-* Indices common to the ITensors on the vertices connected by the edge (`abstractitensornetwork.jl`):
-  (Use a set function like `intersection` instead.)
-  ```julia
-  commoninds(tn::AbstractITensorNetwork, edge)
-  linkinds(tn::AbstractITensorNetwork, edge)
-  ```
-
 ## Global Operations on ITensorNetworks
 
 
