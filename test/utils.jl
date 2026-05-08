@@ -15,43 +15,59 @@ using Random: Random, AbstractRNG
 
 # --- random_tensornetwork ----------------------------------------------------
 
-# At each vertex of `s`'s graph, place an `itensor(randn(rng, eltype, ...), inds_v)`
-# whose inds are the site inds at that vertex (from `s[v]`, or empty if unassigned)
-# concatenated with one fresh `Index(link_space, "Link")` per incident edge, shared
-# with the other endpoint.
+# Core: at each vertex of `graph`, place an `itensor(randn(rng, eltype, ...), inds_v)`
+# whose inds are `siteinds[v]` concatenated with one fresh `Index(link_space, "Link")`
+# per incident edge, shared with the other endpoint. `siteinds` is anything indexable
+# by vertex (`keys(siteinds)` matches `vertices(graph)`); use `Index[]` per vertex for
+# no site inds.
 function random_tensornetwork(
-        rng::AbstractRNG, eltype::Type, s::IndsNetwork; link_space = 1
+        rng::AbstractRNG, eltype::Type, graph::AbstractGraph, siteinds; link_space = 1
     )
-    g = NamedGraph(underlying_graph(s))
+    g = NamedGraph(graph)
     links = Dict(e => Index(link_space, "Link") for e in edges(g))
+    links = merge(links, Dict(reverse(e) => links[e] for e in edges(g)))
     tensors = Dict(
         map(collect(vertices(g))) do v
-            site_v = isassigned(vertex_data(s), v) ? s[v] : Index[]
-            link_v = [
-                haskey(links, e) ? links[e] : links[reverse(e)]
-                    for e in incident_edges(g, v)
-            ]
-            inds_v = [site_v; link_v]
+            link_v = [links[e] for e in incident_edges(g, v)]
+            inds_v = [siteinds[v]; link_v]
             return v => itensor(randn(rng, eltype, dim.(inds_v)...), inds_v)
         end
     )
     return ITensorNetwork(tensors, g)
 end
+
+# `IndsNetwork`: extract site inds (`Index[]` where unassigned).
+function random_tensornetwork(
+        rng::AbstractRNG, eltype::Type, s::IndsNetwork; kwargs...
+    )
+    siteinds = Dict(
+        v => isassigned(vertex_data(s), v) ? s[v] : Index[] for v in vertices(s)
+    )
+    return random_tensornetwork(rng, eltype, underlying_graph(s), siteinds; kwargs...)
+end
+
+# Plain graph: no site inds.
 function random_tensornetwork(
         rng::AbstractRNG, eltype::Type, g::AbstractGraph; kwargs...
     )
-    return random_tensornetwork(rng, eltype, IndsNetwork(g); kwargs...)
+    return random_tensornetwork(
+        rng,
+        eltype,
+        g,
+        Dict(v => Index[] for v in vertices(g));
+        kwargs...
+    )
 end
 
 # RNG / eltype / both defaults
-function random_tensornetwork(rng::AbstractRNG, sites_or_graph; kwargs...)
-    return random_tensornetwork(rng, Float64, sites_or_graph; kwargs...)
+function random_tensornetwork(rng::AbstractRNG, sites; kwargs...)
+    return random_tensornetwork(rng, Float64, sites; kwargs...)
 end
-function random_tensornetwork(eltype::Type, sites_or_graph; kwargs...)
-    return random_tensornetwork(Random.default_rng(), eltype, sites_or_graph; kwargs...)
+function random_tensornetwork(eltype::Type, sites; kwargs...)
+    return random_tensornetwork(Random.default_rng(), eltype, sites; kwargs...)
 end
-function random_tensornetwork(sites_or_graph; kwargs...)
-    return random_tensornetwork(Random.default_rng(), Float64, sites_or_graph; kwargs...)
+function random_tensornetwork(sites; kwargs...)
+    return random_tensornetwork(Random.default_rng(), Float64, sites; kwargs...)
 end
 
 # --- productstate -------------------------------------------------------------
@@ -80,17 +96,16 @@ function productstate(elt::Type, state::Function, s::IndsNetwork)
     return productstate(elt, Dict(v => state(v) for v in vertices(s)), s)
 end
 function productstate(elt::Type, state, s::IndsNetwork)
-    g_full = NamedGraph(underlying_graph(s))
-    g_empty = NamedGraph(collect(vertices(g_full)))
+    g = NamedGraph(collect(vertices(s)))
     tensors = Dict(
-        map(collect(vertices(g_empty))) do v
+        map(collect(vertices(s))) do v
             site_v = isassigned(vertex_data(s), v) ? s[v] : Index[]
             t = ITensors.state(state[v], only(site_v))
             return v => ITensors.convert_eltype(elt, t)
         end
     )
-    tn = ITensorNetwork(tensors, g_empty)
-    for e in edges(g_full)
+    tn = ITensorNetwork(tensors, g)
+    for e in edges(s)
         _add_edge!(elt, tn, e)
     end
     return tn
