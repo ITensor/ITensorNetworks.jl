@@ -4,11 +4,11 @@
 # inside its gensym module.
 
 using DataGraphs: underlying_graph, vertex_data
-using Dictionaries: AbstractDictionary
-using Graphs: AbstractGraph, edges, vertices
-using ITensorNetworks: ITensorNetwork, IndsNetwork, insert_linkinds
+using Graphs: AbstractGraph, dst, edges, src, vertices
+using ITensorNetworks.ITensorsExtensions: trivial_space
+using ITensorNetworks: ITensorNetwork, IndsNetwork
 using ITensors.NDTensors: dim
-using ITensors: ITensors, ITensor, Index, contract, itensor, onehot
+using ITensors: ITensors, ITensor, Index, dag, itensor, onehot
 using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs: NamedGraph
 using Random: Random, AbstractRNG
@@ -56,38 +56,46 @@ end
 
 # --- productstate -------------------------------------------------------------
 
-# Convert a state spec (string / dict / dictionary / array / function) into a
-# callable mapping vertex -> state-spec-for-that-vertex.
-_to_callable(value::Function) = value
-_to_callable(value::AbstractDict) = Base.Fix1(getindex, value) ∘ keytype(value)
-_to_callable(value::AbstractDictionary) = Base.Fix1(getindex, value) ∘ keytype(value)
-_to_callable(value::AbstractArray) = Base.Fix1(getindex, value) ∘ CartesianIndex
-_to_callable(value) = Returns(value)
+# Thread a fresh trivial-QN dim-1 link Index between `src(edge)` and `dst(edge)`
+# by outer-producting `onehot` basis vectors into each endpoint tensor. This is
+# the productstate-specific analog of `ITensorNetworks.add_edge!` — the latter
+# uses QR, which would push site-state QN flux into the link and leave BP's
+# `default_message` (single-index `delta`) with no compatible block. `onehot`
+# defaults to `Float64`, so we typecast it to `elt` to keep `productstate(elt,
+# ...)` element-type-preserving.
+function _add_edge!(elt::Type, tn, edge)
+    iₑ = Index(trivial_space(tn), "Link")
+    X = ITensors.convert_eltype(elt, onehot(iₑ => 1))
+    tn[src(edge)] *= X
+    tn[dst(edge)] *= dag(X)
+    return tn
+end
 
-# Build a product-state ITensorNetwork: at each vertex, the on-site state
-# vector (looked up via `ITensors.state(name, site_index)`) is contracted with
-# `onehot` vectors on each incident link Index. Link inds are filled in by
-# `insert_linkinds`, which picks the right `trivial_space` (plain `1` or
-# `[QN() => 1]`) to match the site indices' QN structure.
-function productstate(elt::Type, state, s::IndsNetwork; kwargs...)
-    state_at = _to_callable(state)
-    s = insert_linkinds(s; kwargs...)
-    g = NamedGraph(underlying_graph(s))
+# Build a product-state ITensorNetwork: start from a site-only TN (one tensor
+# per vertex with just the on-site state vector, looked up via
+# `ITensors.state(name, site_index)`), then add each edge from the original
+# IndsNetwork via `_add_edge!`. `state` is anything indexable by vertex (dict,
+# dictionary, array, ...); the `Function` method just materializes a Dict first.
+function productstate(elt::Type, state::Function, s::IndsNetwork)
+    return productstate(elt, Dict(v => state(v) for v in vertices(s)), s)
+end
+function productstate(elt::Type, state, s::IndsNetwork)
+    g_full = NamedGraph(underlying_graph(s))
+    g_empty = NamedGraph(collect(vertices(g_full)))
     tensors = Dict(
-        map(collect(vertices(g))) do v
+        map(collect(vertices(g_empty))) do v
             site_v = isassigned(vertex_data(s), v) ? s[v] : Index[]
-            link_v = reduce(vcat, (s[e] for e in incident_edges(s, v)); init = Index[])
-            site_t = ITensors.state(state_at(v), only(site_v))
-            t = contract([site_t; (onehot(i => 1) for i in link_v)...])
+            t = ITensors.state(state[v], only(site_v))
             return v => ITensors.convert_eltype(elt, t)
         end
     )
-    return ITensorNetwork(tensors, g)
+    tn = ITensorNetwork(tensors, g_empty)
+    for e in edges(g_full)
+        _add_edge!(elt, tn, e)
+    end
+    return tn
 end
-
-function productstate(state, s::IndsNetwork; kwargs...)
-    return productstate(Float64, state, s; kwargs...)
-end
+productstate(state, s::IndsNetwork) = productstate(Float64, state, s)
 
 # --- ModelHamiltonians --------------------------------------------------------
 
