@@ -1,5 +1,4 @@
 using Dictionaries: Dictionary
-using Distributions: Uniform
 using Graphs: degree, dijkstra_shortest_paths, edges, grid, has_vertex, ne, neighbors, nv,
     rem_vertex!, vertices, weights
 using GraphsFlows: GraphsFlows
@@ -141,14 +140,6 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         @test eltype(ψ[first(vertices(ψ))]) == Float64
     end
 
-    @testset "random_tensornetwork with custom distributions" begin
-        distribution = Uniform(-1.0, 1.0)
-        rng = StableRNG(1234)
-        tn = random_tensornetwork(rng, distribution, named_grid(4); link_space = 2)
-        # Note: distributions in package `Distributions` currently doesn't support customized
-        # eltype, and all elements have type `Float64`
-        @test eltype(tn[first(vertices(tn))]) == Float64
-    end
     @testset "orthogonalize" begin
         rng = StableRNG(1234)
         tn = random_tensornetwork(rng, named_grid(4); link_space = 2)

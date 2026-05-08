@@ -5,7 +5,6 @@
 
 using DataGraphs: underlying_graph, vertex_data
 using Dictionaries: AbstractDictionary
-using Distributions: Distribution
 using Graphs: AbstractGraph, edges, vertices
 using ITensorNetworks: ITensorNetwork, IndsNetwork, insert_linkinds
 using ITensors.NDTensors: dim
@@ -14,54 +13,34 @@ using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs: NamedGraph
 using Random: Random, AbstractRNG
 
-# Build an `ITensorNetwork` on `graph` by calling
-# `tensor_at(v, site_inds, link_inds) -> ITensor` at each vertex.
-# `site_inds_at(v) -> Vector{<:Index}` provides the per-vertex site inds.
-# Link inds of bond dimension `link_space` are generated once per edge of
-# `graph` and shared by both endpoints.
-function _build_tensornetwork(tensor_at, graph::NamedGraph, site_inds_at; link_space)
-    links = Dict(e => Index(link_space, "Link") for e in edges(graph))
-    tensors = Dict(
-        map(collect(vertices(graph))) do v
-            link_v = [
-                haskey(links, e) ? links[e] : links[reverse(e)]
-                    for e in incident_edges(graph, v)
-            ]
-            return v => tensor_at(v, site_inds_at(v), link_v)
-        end
-    )
-    return ITensorNetwork(tensors, graph)
-end
-
-# Standardize input to a `(graph::NamedGraph, site_inds_at::v -> Vector{<:Index})` pair.
-function _graph_and_sites(s::IndsNetwork)
-    return (
-        NamedGraph(underlying_graph(s)),
-        v -> isassigned(vertex_data(s), v) ? s[v] : Index[],
-    )
-end
-_graph_and_sites(g::AbstractGraph) = (NamedGraph(g), Returns(Index[]))
-
 # --- random_tensornetwork ----------------------------------------------------
 
+# At each vertex of `s`'s graph, place an `itensor(randn(rng, eltype, ...), inds_v)`
+# whose inds are the site inds at that vertex (from `s[v]`, or empty if unassigned)
+# concatenated with one fresh `Index(link_space, "Link")` per incident edge, shared
+# with the other endpoint.
 function random_tensornetwork(
-        rng::AbstractRNG, eltype::Type, sites_or_graph; link_space = 1
+        rng::AbstractRNG, eltype::Type, s::IndsNetwork; link_space = 1
     )
-    g, site_inds_at = _graph_and_sites(sites_or_graph)
-    return _build_tensornetwork(g, site_inds_at; link_space) do _, site_inds, link_inds
-        all_inds = [site_inds; link_inds]
-        return itensor(randn(rng, eltype, dim.(all_inds)...), all_inds)
-    end
+    g = NamedGraph(underlying_graph(s))
+    links = Dict(e => Index(link_space, "Link") for e in edges(g))
+    tensors = Dict(
+        map(collect(vertices(g))) do v
+            site_v = isassigned(vertex_data(s), v) ? s[v] : Index[]
+            link_v = [
+                haskey(links, e) ? links[e] : links[reverse(e)]
+                    for e in incident_edges(g, v)
+            ]
+            inds_v = [site_v; link_v]
+            return v => itensor(randn(rng, eltype, dim.(inds_v)...), inds_v)
+        end
+    )
+    return ITensorNetwork(tensors, g)
 end
-
 function random_tensornetwork(
-        rng::AbstractRNG, distribution::Distribution, sites_or_graph; link_space = 1
+        rng::AbstractRNG, eltype::Type, g::AbstractGraph; kwargs...
     )
-    g, site_inds_at = _graph_and_sites(sites_or_graph)
-    return _build_tensornetwork(g, site_inds_at; link_space) do _, site_inds, link_inds
-        all_inds = [site_inds; link_inds]
-        return itensor(rand(rng, distribution, dim.(all_inds)...), all_inds)
-    end
+    return random_tensornetwork(rng, eltype, IndsNetwork(g); kwargs...)
 end
 
 # RNG / eltype / both defaults
@@ -90,7 +69,7 @@ _to_callable(value) = Returns(value)
 # `onehot` vectors on each incident link Index. Link inds are filled in by
 # `insert_linkinds`, which picks the right `trivial_space` (plain `1` or
 # `[QN() => 1]`) to match the site indices' QN structure.
-function productstate(state, s::IndsNetwork; kwargs...)
+function productstate(elt::Type, state, s::IndsNetwork; kwargs...)
     state_at = _to_callable(state)
     s = insert_linkinds(s; kwargs...)
     g = NamedGraph(underlying_graph(s))
@@ -99,18 +78,15 @@ function productstate(state, s::IndsNetwork; kwargs...)
             site_v = isassigned(vertex_data(s), v) ? s[v] : Index[]
             link_v = reduce(vcat, (s[e] for e in incident_edges(s, v)); init = Index[])
             site_t = ITensors.state(state_at(v), only(site_v))
-            return v => contract([site_t; (onehot(i => 1) for i in link_v)...])
+            t = contract([site_t; (onehot(i => 1) for i in link_v)...])
+            return v => ITensors.convert_eltype(elt, t)
         end
     )
     return ITensorNetwork(tensors, g)
 end
 
-function productstate(elt::Type, state, s::IndsNetwork; kwargs...)
-    tn = productstate(state, s; kwargs...)
-    for v in vertices(tn)
-        tn[v] = ITensors.convert_eltype(elt, tn[v])
-    end
-    return tn
+function productstate(state, s::IndsNetwork; kwargs...)
+    return productstate(Float64, state, s; kwargs...)
 end
 
 # --- ModelHamiltonians --------------------------------------------------------
