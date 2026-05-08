@@ -1,9 +1,10 @@
+using DataGraphs: underlying_graph
 using Dictionaries: Indices
 using Graphs: path_graph
 using ITensors: ITensor
 using LinearAlgebra: factorize, normalize
 using NamedGraphs.GraphsExtensions: GraphsExtensions, vertextype
-using NamedGraphs: similar_graph
+using NamedGraphs: NamedGraph, similar_graph
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
@@ -14,10 +15,10 @@ center of the network.
 
 `TTN` is an alias for `TreeTensorNetwork`.
 
-Use [`ttn`](@ref) or [`mps`](@ref) to construct instances, and [`orthogonalize`](@ref) to
-bring the network into a canonical gauge.
+Use the [`TreeTensorNetwork`](@ref) constructors to build instances, and
+[`orthogonalize`](@ref) to bring the network into a canonical gauge.
 
-See also: [`ITensorNetwork`](@ref), [`ttn`](@ref), [`mps`](@ref).
+See also: [`ITensorNetwork`](@ref).
 """
 struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
     tensornetwork::ITensorNetwork{V}
@@ -52,21 +53,25 @@ Throws an error if the underlying graph of `tn` is not a tree.
 ```jldoctest
 julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
 
+julia> using NamedGraphs: NamedGraph
+
 julia> using Graphs: vertices
+
+julia> using ITensors: ITensor
 
 julia> g = named_comb_tree((2, 2));
 
 julia> s = siteinds("S=1/2", g);
 
-julia> itn = ITensorNetwork(s; link_space = 2);
+julia> tensors = Dict(v => ITensor(s[v]...) for v in vertices(g));
 
-julia> root_vertex = first(vertices(itn));
+julia> itn = ITensorNetwork(tensors, NamedGraph(g));
 
-julia> ttn_state = TreeTensorNetwork(itn; ortho_region = [root_vertex]);
+julia> ttn_state = TreeTensorNetwork(itn; ortho_region = [first(vertices(itn))]);
 
 ```
 
-See also: [`ttn`](@ref), [`ITensorNetwork`](@ref), [`orthogonalize`](@ref).
+See also: [`ITensorNetwork`](@ref), [`orthogonalize`](@ref).
 """
 function TreeTensorNetwork(tn::ITensorNetwork; ortho_region = vertices(tn))
     return _TreeTensorNetwork(tn, ortho_region)
@@ -88,7 +93,7 @@ end
 Convert a `TreeTensorNetwork` to a plain `ITensorNetwork`, discarding orthogonality
 metadata. The returned network shares the same underlying tensor data.
 
-See also: [`TreeTensorNetwork`](@ref), [`ttn`](@ref).
+See also: [`TreeTensorNetwork`](@ref).
 """
 ITensorNetwork(tn::TTN) = copy(tn.tensornetwork)
 
@@ -123,7 +128,7 @@ function set_ortho_region(tn::TTN, ortho_region)
 end
 
 """
-    ttn(a::ITensor, is::IndsNetwork; ortho_region=..., kwargs...) -> TreeTensorNetwork
+    TreeTensorNetwork(a::ITensor, is::IndsNetwork; ortho_region=..., kwargs...) -> TreeTensorNetwork
 
 Decompose a dense `ITensor` `a` into a `TreeTensorNetwork` with the tree structure
 described by the `IndsNetwork` `is`.
@@ -131,25 +136,8 @@ described by the `IndsNetwork` `is`.
 Successive QR/SVD factorizations are applied following a post-order DFS traversal from the
 root vertex, then the network is orthogonalized to `ortho_region` (defaults to the root).
 Extra `kwargs` (e.g. `cutoff`, `maxdim`) are forwarded to the factorization.
-
-# Example
-
-```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
-
-julia> using ITensors: ITensors
-
-julia> g = named_comb_tree((3, 1));
-
-julia> s = siteinds("S=1/2", g);
-
-julia> A = ITensors.random_itensor(only(s[(1, 1)]), only(s[(2, 1)]), only(s[(3, 1)]));
-
-julia> ttn_A = ttn(A, s);
-
-```
 """
-function ttn(
+function TreeTensorNetwork(
         a::ITensor,
         is::IndsNetwork;
         ortho_region = Indices([GraphsExtensions.default_root_vertex(is)]),
@@ -160,14 +148,15 @@ function ttn(
     end
     @assert ortho_region ⊆ vertices(is)
     is = insert_linkinds(is)
-    ts = Dict{vertextype(is), ITensor}()
-    for v in vertices(is)
+    g = NamedGraph(underlying_graph(is))
+    ts = Dict{vertextype(g), ITensor}()
+    for v in vertices(g)
         site_inds = get(is, v, Index[])
         edges_v = [edgetype(is)(v, nv) for nv in neighbors(is, v)]
         link_inds = reduce(vcat, (is[e] for e in edges_v); init = Index[])
         ts[v] = ITensor(site_inds..., link_inds...)
     end
-    tn = ITensorNetwork(ts)
+    tn = ITensorNetwork(ts, g)
     ortho_center = first(ortho_region)
     for e in post_order_dfs_edges(tn, ortho_center)
         left_inds = setdiff(inds(a), inds(tn[dst(e)]))

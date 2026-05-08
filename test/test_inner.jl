@@ -1,6 +1,6 @@
 using Graphs: SimpleGraph, uniform_tree
-using ITensorNetworks: ITensorNetwork, inner, inner_network, loginner, logscalar, scalar,
-    siteinds, ttn, underlying_graph
+using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, inner, inner_network, loginner,
+    logscalar, scalar, siteinds, underlying_graph
 using ITensors: dag
 using NamedGraphs: NamedGraph
 using SplitApplyCombine: group
@@ -38,7 +38,7 @@ using .ModelHamiltonians: heisenberg
     @test xy_scalar ≈ xy_scalar_logbp
 
     #test contraction of three layers for expectation values
-    A = ITensorNetwork(ttn(heisenberg(g), s))
+    A = ITensorNetwork(TreeTensorNetwork(heisenberg(g), s))
     xAy_scalar = inner(x, A, y; alg = "exact")
     xAy_scalar_bp = inner(x, A, y; alg = "bp")
     xAy_scalar_logbp = exp(loginner(x, A, y; alg = "bp"))

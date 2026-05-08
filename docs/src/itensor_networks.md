@@ -32,22 +32,36 @@ tn = ITensorNetwork([A, B, C])  # integer vertices 1, 2, 3
 tn = ITensorNetwork(Dict("A" => A, "B" => B, "C" => C))  # named vertices via a Dict
 ```
 
-If you want to control edges directly — for example to build an empty network on a
+If you want to control edges directly — for example to build a structured network on a
 prescribed lattice and fill in tensors later — pass a `NamedGraph` along with a
-collection of `ITensor`s indexed by vertex:
+collection of `ITensor`s indexed by vertex. To create a tensor network with shared link
+indices on each edge, build the indices once per edge and reuse them at both endpoints:
 
 ```@example main
-g = named_grid((3, 3))
-s = siteinds("S=1/2", g)  # one spin-½ Index per vertex
+using ITensors: random_itensor
+using NamedGraphs: NamedGraph
+using NamedGraphs.GraphsExtensions: edgetype, incident_edges
 
-# Build site tensors on the 3×3 lattice with one (placeholder) site index each
-tensors = Dict(v => ITensor(s[v]...) for v in vertices(g))
+g = NamedGraph(named_grid((3, 3)))
+s = siteinds("S=1/2", g)  # one spin-½ site Index per vertex
+
+# One shared link Index per edge; bond dimension χ
+χ = 2
+links = Dict(e => Index(χ, "Link") for e in edges(g))
+
+# Per-vertex tensor: the site Index plus the link Index of every incident edge
+tensors = Dict(map(collect(vertices(g))) do v
+    site_v = s[v]
+    link_v = [haskey(links, e) ? links[e] : links[reverse(e)] for e in incident_edges(g, v)]
+    return v => random_itensor(site_v..., link_v...)
+end)
+
 ψ = ITensorNetwork(tensors, g)
 ```
 
 Higher-level construction routines (random networks, product states, OpSum-derived
-TTNs, etc.) are provided by sibling functions like `ttn(opsum, sites)` and the test-only
-helpers in `test/utils.jl`.
+TTNs, etc.) are provided by sibling functions like `TreeTensorNetwork(opsum, sites)`
+and the test-only helpers in `test/utils.jl`.
 
 ```@docs; canonical=false
 ITensorNetworks.ITensorNetwork
@@ -72,7 +86,7 @@ linkinds(ψ)  # IndsNetwork of bond (virtual) indices
 Two networks with the same graph and site indices can be added. The result represents the
 tensor network `ψ₁ + ψ₂` and has bond dimension equal to the **sum** of the two input bond
 dimensions. Individual bonds of the result can be recompressed with `truncate(tn, edge)`.
-For `TreeTensorNetwork`, the no-argument form `truncate(ttn; kwargs...)` sweeps and
+For `TreeTensorNetwork`, the no-argument form `truncate(tn; kwargs...)` sweeps and
 recompresses all bonds at once.
 
 ```@example main
@@ -96,7 +110,7 @@ edge = (1, 2) => (1, 3)
 ```
 
 Truncation parameters (`cutoff`, `maxdim`, `mindim`, …) are forwarded to `ITensors.svd`.
-For a `TreeTensorNetwork`, the sweep-based `truncate(ttn; kwargs...)` is usually more
+For a `TreeTensorNetwork`, the sweep-based `truncate(tn; kwargs...)` is usually more
 convenient because it recompresses the entire network at once with controlled errors;
 see the [Tree Tensor Networks](@ref) page.
 

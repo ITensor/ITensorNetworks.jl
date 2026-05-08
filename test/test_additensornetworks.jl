@@ -12,8 +12,8 @@ include("utils.jl")
 @testset "add_itensornetworks" begin
     g = named_grid((2, 2))
     s = siteinds("S=1/2", g)
-    ψ1 = tensornetworkstate(v -> "↑", s)
-    ψ2 = tensornetworkstate(v -> "↓", s)
+    ψ1 = productstate(v -> "↑", s)
+    ψ2 = productstate(v -> "↓", s)
 
     ψ_GHZ = ψ1 + ψ2
 
@@ -72,13 +72,13 @@ end
     for (j, v) in enumerate(verts)
         state1[v] = isodd(j) ? "Up" : "Dn"
     end
-    ψ1 = TreeTensorNetwork(tensornetworkstate(state1, sites))
+    ψ1 = TreeTensorNetwork(productstate(state1, sites))
 
     state2 = Dict{Tuple, String}()
     for (j, v) in enumerate(vertices(g))
         state2[v] = isodd(j) ? "Dn" : "Up"
     end
-    ψ2 = TreeTensorNetwork(tensornetworkstate(state2, sites))
+    ψ2 = TreeTensorNetwork(productstate(state2, sites))
 
     ϕ = ψ1 + ψ2
 

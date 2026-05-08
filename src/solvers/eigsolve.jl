@@ -70,7 +70,7 @@ DMRG-like sweep algorithm on a `TreeTensorNetwork`.
 # Arguments
 
   - `operator`: The operator to diagonalize, typically a `TreeTensorNetwork` representing a
-    Hamiltonian constructed from an `OpSum` (e.g. via `ttn(opsum, sites)`).
+    Hamiltonian constructed from an `OpSum` (e.g. via `TreeTensorNetwork(opsum, sites)`).
   - `init_state`: Initial guess for the eigenvector as a `TreeTensorNetwork`.
   - `nsweeps`: Number of sweeps over the network.
   - `nsites=1`: Number of sites optimized simultaneously per local update step (1 or 2).

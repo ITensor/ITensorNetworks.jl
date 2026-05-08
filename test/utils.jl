@@ -3,216 +3,117 @@
 # `test_*.jl`). Each test file that needs these does `include("utils.jl")`
 # inside its gensym module.
 
-using DataGraphs: IsUnderlyingGraph, underlying_graph, vertex_data
-using Dictionaries: AbstractDictionary, Indices
+using DataGraphs: underlying_graph, vertex_data
+using Dictionaries: AbstractDictionary
 using Distributions: Distribution
-using Graphs: AbstractGraph, edges, neighbors, vertices
-using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork, insert_linkinds
+using Graphs: AbstractGraph, edges, vertices
+using ITensorNetworks: ITensorNetwork, IndsNetwork, insert_linkinds
 using ITensors.NDTensors: dim
-using ITensors.Ops: Op
-using ITensors: ITensors, ITensor, Index, contract, itensor, onehot, plev
-using LinearAlgebra: normalize
-using NamedGraphs.GraphsExtensions: edgetype, incident_edges, vertextype
+using ITensors: ITensors, ITensor, Index, contract, itensor, onehot
+using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs: NamedGraph
 using Random: Random, AbstractRNG
-using SimpleTraits: SimpleTraits, @traitfn
 
-# Build an `ITensorNetwork` on the graph backing the inds network `s` from a
-# user-supplied per-vertex tensor builder. Each vertex `v` is given a tensor
-# whose indices are `s[v]` (the site indices) followed by one fresh `Index` of
-# dimension `link_space` for each edge of the graph incident to `v`. The shared
-# link index is used on both endpoints so the resulting network's edges agree
-# with `edges(s)`.
-function _random_tensornetwork(s::IndsNetwork, build_tensor; link_space = 1)
-    l = Dict(e => Index(link_space, "Link") for e in edges(s))
-    l = merge(l, Dict(reverse(e) => l[e] for e in edges(s)))
-    vd = vertex_data(s)
-    g = NamedGraph(underlying_graph(s))
-    ts = Dict{vertextype(g), ITensor}()
-    for v in vertices(g)
-        site_inds = isassigned(vd, v) ? vd[v] : Index[]
-        is = (site_inds..., (l[e] for e in incident_edges(s, v))...)
-        ts[v] = build_tensor(is)
-    end
-    return ITensorNetwork(ts, g)
+# Build an `ITensorNetwork` on `graph` by calling
+# `tensor_at(v, site_inds, link_inds) -> ITensor` at each vertex.
+# `site_inds_at(v) -> Vector{<:Index}` provides the per-vertex site inds.
+# Link inds of bond dimension `link_space` are generated once per edge of
+# `graph` and shared by both endpoints.
+function _build_tensornetwork(tensor_at, graph::NamedGraph, site_inds_at; link_space)
+    links = Dict(e => Index(link_space, "Link") for e in edges(graph))
+    tensors = Dict(
+        map(collect(vertices(graph))) do v
+            link_v = [
+                haskey(links, e) ? links[e] : links[reverse(e)]
+                    for e in incident_edges(graph, v)
+            ]
+            return v => tensor_at(v, site_inds_at(v), link_v)
+        end
+    )
+    return ITensorNetwork(tensors, graph)
 end
 
-# Build an ITensor network on a graph specified by the inds network `s`.
-# `link_space` sets the bond dimension. Entries are drawn from a standard
-# normal distribution.
+# Standardize input to a `(graph::NamedGraph, site_inds_at::v -> Vector{<:Index})` pair.
+function _graph_and_sites(s::IndsNetwork)
+    return (
+        NamedGraph(underlying_graph(s)),
+        v -> isassigned(vertex_data(s), v) ? s[v] : Index[],
+    )
+end
+_graph_and_sites(g::AbstractGraph) = (NamedGraph(g), Returns(Index[]))
+
+# --- random_tensornetwork ----------------------------------------------------
+
 function random_tensornetwork(
-        rng::AbstractRNG, eltype::Type, s::IndsNetwork; kwargs...
+        rng::AbstractRNG, eltype::Type, sites_or_graph; link_space = 1
     )
-    return _random_tensornetwork(
-        s, is -> itensor(randn(rng, eltype, dim.(is)...), is...); kwargs...
-    )
-end
-
-function random_tensornetwork(eltype::Type, s::IndsNetwork; kwargs...)
-    return random_tensornetwork(Random.default_rng(), eltype, s; kwargs...)
-end
-
-function random_tensornetwork(rng::AbstractRNG, s::IndsNetwork; kwargs...)
-    return random_tensornetwork(rng, Float64, s; kwargs...)
-end
-
-function random_tensornetwork(s::IndsNetwork; kwargs...)
-    return random_tensornetwork(Random.default_rng(), s; kwargs...)
-end
-
-#
-# State / default tensornetwork builders. Replace deleted
-# `ITensorNetwork(state, ::IndsNetwork)` / `ITensorNetwork(::Function, ::IndsNetwork)`
-# / `ITensorNetwork(::IndsNetwork)` / `ITensorNetwork(::AbstractGraph)` ctor surface.
-#
-
-# Convert a state spec into a callable mapping vertex -> state-spec-for-that-vertex.
-to_callable(value::Type) = value
-to_callable(value::Function) = value
-function to_callable(value::AbstractDict)
-    return Base.Fix1(getindex, value) ∘ keytype(value)
-end
-function to_callable(value::AbstractDictionary)
-    return Base.Fix1(getindex, value) ∘ keytype(value)
-end
-function to_callable(value::AbstractArray{<:Any, N}) where {N}
-    return Base.Fix1(getindex, value) ∘ CartesianIndex
-end
-to_callable(value) = Returns(value)
-
-# Build the actual ITensor at a vertex from a state spec and the (site, link) inds.
-generic_state(f, inds::Vector) = f(inds)
-generic_state(a::AbstractArray, inds::Vector) = itensor(a, inds)
-function generic_state(f, inds::NamedTuple)
-    return generic_state(f, reduce(vcat, inds.linkinds; init = inds.siteinds))
-end
-function generic_state(x::Op, inds::NamedTuple)
-    if !isempty(inds.siteinds)
-        @assert length(inds.siteinds) == 2
-        i = inds.siteinds[findfirst(i -> plev(i) == 0, inds.siteinds)]
-        @assert i' ∈ inds.siteinds
-        site_tensors = [ITensors.op(x.which_op, i)]
-    else
-        site_tensors = ITensor[]
+    g, site_inds_at = _graph_and_sites(sites_or_graph)
+    return _build_tensornetwork(g, site_inds_at; link_space) do _, site_inds, link_inds
+        all_inds = [site_inds; link_inds]
+        return itensor(randn(rng, eltype, dim.(all_inds)...), all_inds)
     end
-    link_tensors = [
-        [onehot(i => 1) for i in inds.linkinds[e]] for e in keys(inds.linkinds)
-    ]
-    return contract(reduce(vcat, link_tensors; init = site_tensors))
-end
-function generic_state(s::AbstractString, inds::NamedTuple)
-    site_tensors = [ITensors.state(s, only(inds.siteinds))]
-    link_tensors = [
-        [onehot(i => 1) for i in inds.linkinds[e]] for e in keys(inds.linkinds)
-    ]
-    return contract(reduce(vcat, link_tensors; init = site_tensors))
 end
 
-# Lowest-level: function-callback form. `itensor_constructor(v)` returns a
-# state spec for vertex `v`, which is then expanded into an actual `ITensor`
-# via `generic_state`.
-function tensornetworkstate(itensor_constructor::Function, s::IndsNetwork; kwargs...)
+function random_tensornetwork(
+        rng::AbstractRNG, distribution::Distribution, sites_or_graph; link_space = 1
+    )
+    g, site_inds_at = _graph_and_sites(sites_or_graph)
+    return _build_tensornetwork(g, site_inds_at; link_space) do _, site_inds, link_inds
+        all_inds = [site_inds; link_inds]
+        return itensor(rand(rng, distribution, dim.(all_inds)...), all_inds)
+    end
+end
+
+# RNG / eltype / both defaults
+function random_tensornetwork(rng::AbstractRNG, sites_or_graph; kwargs...)
+    return random_tensornetwork(rng, Float64, sites_or_graph; kwargs...)
+end
+function random_tensornetwork(eltype::Type, sites_or_graph; kwargs...)
+    return random_tensornetwork(Random.default_rng(), eltype, sites_or_graph; kwargs...)
+end
+function random_tensornetwork(sites_or_graph; kwargs...)
+    return random_tensornetwork(Random.default_rng(), Float64, sites_or_graph; kwargs...)
+end
+
+# --- productstate -------------------------------------------------------------
+
+# Convert a state spec (string / dict / dictionary / array / function) into a
+# callable mapping vertex -> state-spec-for-that-vertex.
+_to_callable(value::Function) = value
+_to_callable(value::AbstractDict) = Base.Fix1(getindex, value) ∘ keytype(value)
+_to_callable(value::AbstractDictionary) = Base.Fix1(getindex, value) ∘ keytype(value)
+_to_callable(value::AbstractArray) = Base.Fix1(getindex, value) ∘ CartesianIndex
+_to_callable(value) = Returns(value)
+
+# Build a product-state ITensorNetwork: at each vertex, the on-site state
+# vector (looked up via `ITensors.state(name, site_index)`) is contracted with
+# `onehot` vectors on each incident link Index. Link inds are filled in by
+# `insert_linkinds`, which picks the right `trivial_space` (plain `1` or
+# `[QN() => 1]`) to match the site indices' QN structure.
+function productstate(state, s::IndsNetwork; kwargs...)
+    state_at = _to_callable(state)
     s = insert_linkinds(s; kwargs...)
     g = NamedGraph(underlying_graph(s))
-    ts = Dict{vertextype(g), ITensor}()
-    for v in vertices(g)
-        site_inds = get(s, v, Index[])
-        edges = [edgetype(s)(v, nv) for nv in neighbors(s, v)]
-        link_inds = map(e -> s[e], Indices(edges))
-        ts[v] = generic_state(
-            itensor_constructor(v), (; siteinds = site_inds, linkinds = link_inds)
-        )
-    end
-    return ITensorNetwork(ts, g)
+    tensors = Dict(
+        map(collect(vertices(g))) do v
+            site_v = isassigned(vertex_data(s), v) ? s[v] : Index[]
+            link_v = reduce(vcat, (s[e] for e in incident_edges(s, v)); init = Index[])
+            site_t = ITensors.state(state_at(v), only(site_v))
+            return v => contract([site_t; (onehot(i => 1) for i in link_v)...])
+        end
+    )
+    return ITensorNetwork(tensors, g)
 end
 
-# Convenience: convert a value (string, dict, function, etc.) to a per-vertex
-# callable, then build.
-function tensornetworkstate(value, s::IndsNetwork; kwargs...)
-    return tensornetworkstate(to_callable(value), s; kwargs...)
-end
-
-# Eltype-converting variant: build, then convert each tensor to `elt`.
-function tensornetworkstate(elt::Type, value, s::IndsNetwork; kwargs...)
-    tn = tensornetworkstate(to_callable(value), s; kwargs...)
+function productstate(elt::Type, state, s::IndsNetwork; kwargs...)
+    tn = productstate(state, s; kwargs...)
     for v in vertices(tn)
         tn[v] = ITensors.convert_eltype(elt, tn[v])
     end
     return tn
 end
 
-# Graph-input forms: build the IndsNetwork first (no site inds by default),
-# then forward.
-@traitfn function tensornetworkstate(value::Any, g::::IsUnderlyingGraph; kwargs...)
-    return tensornetworkstate(value, IndsNetwork(g); kwargs...)
-end
-@traitfn function tensornetworkstate(
-        elt::Type, value::Any, g::::IsUnderlyingGraph; kwargs...
-    )
-    return tensornetworkstate(elt, value, IndsNetwork(g); kwargs...)
-end
-
-@traitfn function random_tensornetwork(
-        rng::AbstractRNG, eltype::Type, g::::IsUnderlyingGraph; kwargs...
-    )
-    return random_tensornetwork(rng, eltype, IndsNetwork(g); kwargs...)
-end
-
-@traitfn function random_tensornetwork(eltype::Type, g::::IsUnderlyingGraph; kwargs...)
-    return random_tensornetwork(Random.default_rng(), eltype, g; kwargs...)
-end
-
-@traitfn function random_tensornetwork(rng::AbstractRNG, g::::IsUnderlyingGraph; kwargs...)
-    return random_tensornetwork(rng, Float64, g; kwargs...)
-end
-
-@traitfn function random_tensornetwork(g::::IsUnderlyingGraph; kwargs...)
-    return random_tensornetwork(Random.default_rng(), g; kwargs...)
-end
-
-# Build an ITensor network on a graph specified by the inds network `s`.
-# Entries are drawn from the supplied `Distribution`.
-function random_tensornetwork(
-        rng::AbstractRNG, distribution::Distribution, s::IndsNetwork; kwargs...
-    )
-    return _random_tensornetwork(
-        s, is -> itensor(rand(rng, distribution, dim.(is)...), is...); kwargs...
-    )
-end
-
-function random_tensornetwork(distribution::Distribution, s::IndsNetwork; kwargs...)
-    return random_tensornetwork(Random.default_rng(), distribution, s; kwargs...)
-end
-
-@traitfn function random_tensornetwork(
-        rng::AbstractRNG, distribution::Distribution, g::::IsUnderlyingGraph; kwargs...
-    )
-    return random_tensornetwork(rng, distribution, IndsNetwork(g); kwargs...)
-end
-
-@traitfn function random_tensornetwork(
-        distribution::Distribution, g::::IsUnderlyingGraph; kwargs...
-    )
-    return random_tensornetwork(Random.default_rng(), distribution, g; kwargs...)
-end
-
-function random_ttn(args...; kwargs...)
-    return normalize(
-        ITensorNetworks._TreeTensorNetwork(random_tensornetwork(args...; kwargs...))
-    )
-end
-
-function random_mps(args...; kwargs...)
-    return random_ttn(args...; kwargs...)
-end
-
-function random_mps(f, is::Vector{<:Index}; kwargs...)
-    return random_mps(f, ITensorNetworks.path_indsnetwork(is); kwargs...)
-end
-
-function random_mps(s::Vector{<:Index}; kwargs...)
-    return random_mps(ITensorNetworks.path_indsnetwork(s); kwargs...)
-end
+# --- ModelHamiltonians --------------------------------------------------------
 
 # Small grab-bag of model-Hamiltonian builders used in regression tests. Kept
 # in a submodule so call sites remain `ModelHamiltonians.ising(g; h = ...)` etc.

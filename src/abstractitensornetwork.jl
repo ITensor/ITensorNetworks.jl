@@ -274,7 +274,7 @@ end
 #
 
 function _siteinds(tn::AbstractITensorNetwork, vertex)
-    s = inds(tn[vertex])
+    s = collect(inds(tn[vertex]))
     for v in neighbors(tn, vertex)
         s = setdiff(s, inds(tn[v]))
     end
@@ -681,7 +681,7 @@ Truncation parameters are passed as keyword arguments and forwarded to `ITensors
   - `mindim`: Minimum number of singular values to keep.
 
 This operates on a single bond. For `TreeTensorNetwork`, the no-argument form
-`truncate(ttn; kwargs...)` sweeps all bonds and is generally preferred for full
+`truncate(tn; kwargs...)` sweeps all bonds and is generally preferred for full
 recompression after addition or subspace expansion.
 
 See also: `Base.truncate(::AbstractTreeTensorNetwork)`.

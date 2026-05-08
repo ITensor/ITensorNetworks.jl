@@ -18,7 +18,7 @@ variational sweep algorithm.
 ```@example main
 using Graphs: vertices
 using ITensorNetworks:
-    ITensorNetwork, TreeTensorNetwork, dmrg, dst, edges, normalize, siteinds, src, ttn
+    ITensorNetwork, TreeTensorNetwork, dmrg, dst, edges, normalize, siteinds, src
 using ITensors: Index, OpSum, random_itensor
 using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
@@ -30,7 +30,7 @@ function random_state(g, s; link_space)
         v => random_itensor(only(s[v]), (l[e] for e in incident_edges(g, v))...)
             for v in vertices(g)
     )
-    return ITensorNetwork(ts)
+    return ITensorNetwork(ts, g)
 end
 
 # Build a Heisenberg Hamiltonian on a comb tree
@@ -42,7 +42,7 @@ H = let h = OpSum()
         h += 0.5, "S-", src(e), "S+", dst(e)
         h += "Sz", src(e), "Sz", dst(e)
     end
-    ttn(h, s)
+    TreeTensorNetwork(h, s)
 end
 
 # Random initial state (normalise first!)

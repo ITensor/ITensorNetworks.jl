@@ -1,7 +1,7 @@
 using Dictionaries: Dictionary, Indices
 using Graphs: vertices
 using ITensorNetworks:
-    ITensorNetwork, ProjTTN, TreeTensorNetwork, environments, position, siteinds, ttn
+    ITensorNetwork, ProjTTN, TreeTensorNetwork, environments, position, siteinds
 using ITensors.NDTensors: with_auto_fermion
 using ITensors: ITensor
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_path_graph
@@ -25,14 +25,14 @@ using .ModelHamiltonians: ModelHamiltonians
 
         os = ModelHamiltonians.heisenberg(c)
 
-        H = ttn(os, s)
+        H = TreeTensorNetwork(os, s)
 
         d = Dict()
         for (i, v) in enumerate(vertices(s))
             d[v] = isodd(i) ? "Up" : "Dn"
         end
         states = v -> d[v]
-        psi = TreeTensorNetwork(tensornetworkstate(states, s))
+        psi = TreeTensorNetwork(productstate(states, s))
 
         # actual test, verifies that position is out of place
         vs = collect(vertices(s))

@@ -27,7 +27,7 @@ ITensors.disable_warn_order()
     β = 2.0
     Δβ = 0.2
 
-    ψ_init = tensornetworkstate(v -> "↑", s)
+    ψ_init = productstate(v -> "↑", s)
     #E0 = expect(ℋ, ψ_init)
     ψ = tebd(
         group_terms(ℋ, g),

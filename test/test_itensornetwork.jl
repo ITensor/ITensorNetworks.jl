@@ -5,7 +5,7 @@ using Graphs: degree, dijkstra_shortest_paths, edges, grid, has_vertex, ne, neig
 using GraphsFlows: GraphsFlows
 using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork, contraction_sequence,
     inner_network, linkinds, norm_sqr, norm_sqr_network, orthogonalize, siteinds,
-    tree_orthogonalize, ttn, ⊗
+    tree_orthogonalize, ⊗
 using ITensors.NDTensors: NDTensors, dim
 using ITensors: ITensors, ITensor, Index, Op, commonind, commoninds, contract, dag, hasinds,
     inds, inner, itensor, onehot, order, prime, random_itensor, scalartype, sim
@@ -89,7 +89,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         dims = (2, 2)
         g = named_grid(dims)
         s = siteinds("S=1/2", g)
-        ψ = tensornetworkstate(v -> "↑", s)
+        ψ = productstate(v -> "↑", s)
         tn = disjoint_union("bra" => ψ, "ket" => prime(dag(ψ); sites = []))
         tn_2 = contract(tn, ((1, 2), "ket") => ((1, 2), "bra"))
         @test !has_vertex(tn_2, ((1, 2), "ket"))
@@ -100,7 +100,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         dims = (2, 2)
         g = named_grid(dims)
         s = siteinds("S=1/2", g)
-        ψ = tensornetworkstate(v -> "↑", s)
+        ψ = productstate(v -> "↑", s)
         rem_vertex!(ψ, (1, 2))
         tn = norm_sqr_network(ψ)
         @test !has_vertex(tn, ((1, 2), "bra"))
@@ -241,14 +241,14 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         g = named_grid(dims)
         s = siteinds("S=1/2", g)
         state_map(v::Tuple) = iseven(sum(isodd.(v))) ? "↑" : "↓"
-        ψ = tensornetworkstate(state_map, s)
+        ψ = productstate(state_map, s)
         t = ψ[2, 2]
         si = only(siteinds(ψ, (2, 2)))
         bi = map(e -> only(linkinds(ψ, e)), incident_edges(ψ, (2, 2)))
         @test eltype(t) == Float64
         @test abs(t[si => "↑", [b => end for b in bi]...]) == 1.0 # insert_links introduces extra signs through factorization...
         @test t[si => "↓", [b => end for b in bi]...] == 0.0
-        ϕ = tensornetworkstate(elt, state_map, s)
+        ϕ = productstate(elt, state_map, s)
         t = ϕ[2, 2]
         si = only(siteinds(ϕ, (2, 2)))
         bi = map(e -> only(linkinds(ϕ, e)), incident_edges(ϕ, (2, 2)))

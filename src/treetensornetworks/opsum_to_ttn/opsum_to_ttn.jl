@@ -636,12 +636,12 @@ function sortmergeterms(os::OpSum{C}) where {C}
 end
 
 """
-    ttn(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
-    ttn(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
+    TreeTensorNetwork(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
+    TreeTensorNetwork(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
 
 Convert an OpSum object `os` to a TreeTensorNetwork, with indices given by `sites`.
 """
-function ttn(
+function TreeTensorNetwork(
         os::OpSum,
         sites::IndsNetwork;
         root_vertex = GraphsExtensions.default_root_vertex(sites),
@@ -658,16 +658,16 @@ function ttn(
 end
 
 function mpo(os::OpSum, external_inds::Vector; kwargs...)
-    return ttn(os, path_indsnetwork(external_inds); kwargs...)
+    return TreeTensorNetwork(os, path_indsnetwork(external_inds); kwargs...)
 end
 function mpo(os::OpSum, s::IndsNetwork; kwargs...)
     # TODO: Check it is a path graph.
-    return ttn(os, s; kwargs...)
+    return TreeTensorNetwork(os, s; kwargs...)
 end
 
 # Catch-all for leaf eltype specification
-function ttn(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
-    return NDTensors.convert_scalartype(eltype, ttn(os, sites; kwargs...))
+function TreeTensorNetwork(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
+    return NDTensors.convert_scalartype(eltype, TreeTensorNetwork(os, sites; kwargs...))
 end
 
 #

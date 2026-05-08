@@ -1,7 +1,7 @@
 using DataGraphs: vertex_data
 using Graphs: vertices
 using ITensorNetworks:
-    ITensorNetwork, TreeTensorNetwork, contract, ortho_region, orthogonalize, siteinds, ttn
+    ITensorNetwork, TreeTensorNetwork, contract, ortho_region, orthogonalize, siteinds
 using ITensors: @disable_warn_order, random_itensor
 using LinearAlgebra: norm
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
@@ -26,7 +26,7 @@ include("utils.jl")
         rng = StableRNG(1234)
         S = random_itensor(rng, vertex_data(is)...)
         # dense TTN constructor from IndsNetwork
-        @disable_warn_order s1 = ttn(S, is; cutoff)
+        @disable_warn_order s1 = TreeTensorNetwork(S, is; cutoff)
         root_vertex = only(ortho_region(s1))
         @disable_warn_order begin
             S1 = contract(s1, root_vertex)
@@ -40,7 +40,7 @@ include("utils.jl")
 
         rng = StableRNG(1234)
         psi = TreeTensorNetwork(random_tensornetwork(rng, sites))  # random
-        psi = TreeTensorNetwork(tensornetworkstate(v -> "Up", sites))  # product state
+        psi = TreeTensorNetwork(productstate(v -> "Up", sites))  # product state
 
         itn = ITensorNetwork(psi)  # TTN → ITensorNetwork
         @test vertex_data(itn) == vertex_data(psi.tensornetwork)
@@ -54,7 +54,7 @@ include("utils.jl")
 
         rng = StableRNG(1234)
         psi = TreeTensorNetwork(random_tensornetwork(rng, sites))  # random
-        psi = TreeTensorNetwork(tensornetworkstate(v -> "Up", sites))  # product state
+        psi = TreeTensorNetwork(productstate(v -> "Up", sites))  # product state
 
         v1 = collect(vertices(psi))[1]
         v2 = collect(vertices(psi))[2]

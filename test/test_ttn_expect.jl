@@ -16,7 +16,7 @@ include("utils.jl")
         magnetization[v] = isodd(i) ? 0.5 : -0.5
     end
     states = v -> d[v]
-    state = TreeTensorNetwork(tensornetworkstate(states, s))
+    state = TreeTensorNetwork(productstate(states, s))
     res = expect("Sz", state)
     @test all([isapprox(res[v], magnetization[v]; atol = 1.0e-8) for v in vertices(s)])
 end

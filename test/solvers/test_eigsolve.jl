@@ -1,5 +1,5 @@
 using Graphs: dst, edges, src, vertices
-using ITensorNetworks: SweepIterator, TreeTensorNetwork, dmrg, siteinds, ttn
+using ITensorNetworks: SweepIterator, TreeTensorNetwork, dmrg, siteinds
 using ITensors
 using ITensors.Ops: OpSum
 using Suppressor: @capture_out
@@ -25,14 +25,14 @@ include("utilities/tree_graphs.jl")
         h += 1 / 2, "S+", i, "S-", j
         h += 1 / 2, "S-", i, "S+", j
     end
-    H = ttn(h, sites)
+    H = TreeTensorNetwork(h, sites)
 
     # Make initial product state
     state = Dict{Tuple{Int, Int}, String}()
     for (j, v) in enumerate(vertices(sites))
         state[v] = iseven(j) ? "Up" : "Dn"
     end
-    psi0 = TreeTensorNetwork(tensornetworkstate(state, sites))
+    psi0 = TreeTensorNetwork(productstate(state, sites))
 
     (outputlevel >= 1) && println("Computing exact ground state")
     Ex, psix = ed_ground_state(H, psi0)

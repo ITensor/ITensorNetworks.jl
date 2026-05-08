@@ -38,7 +38,7 @@ julia> tn = ITensorNetwork([ITensor(i, j), ITensor(j, k)]);
 
 ```
 
-See also: `IndsNetwork`, [`ttn`](@ref ITensorNetworks.ttn), [`TreeTensorNetwork`](@ref ITensorNetworks.TreeTensorNetwork).
+See also: `IndsNetwork`, [`TreeTensorNetwork`](@ref ITensorNetworks.TreeTensorNetwork).
 """
 const _ITensorCollection = Union{
     AbstractVector{<:ITensor},

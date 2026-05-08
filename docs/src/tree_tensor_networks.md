@@ -21,7 +21,7 @@ A common way to obtain a Hamiltonian-shaped TTN is to convert an `OpSum` over an
 `IndsNetwork` of site indices.
 
 ```@docs; canonical=false
-ITensorNetworks.ttn(::ITensors.Ops.OpSum, ::ITensorNetworks.IndsNetwork)
+ITensorNetworks.TreeTensorNetwork(::ITensors.Ops.OpSum, ::ITensorNetworks.IndsNetwork)
 ```
 
 ### From an existing `ITensorNetwork`
@@ -32,21 +32,28 @@ orthogonality region. Use the `TreeTensorNetwork` constructor to convert a plain
 gauge metadata when you need a plain network again.
 
 ```@example main
-using Graphs: vertices
+using Graphs: edges, vertices
 using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, ortho_region, orthogonalize,
-    siteinds, ttn
-using ITensors: ITensors, ITensor
+    siteinds
+using ITensors: ITensors, Index, random_itensor
 using LinearAlgebra: norm
 using NamedGraphs: NamedGraph
+using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs.NamedGraphGenerators: named_comb_tree
 
 # Comb-tree TTN (a popular tree topology for 2D-like systems)
-g = named_comb_tree((3, 2))
+g = NamedGraph(named_comb_tree((3, 2)))
 sites = siteinds("S=1/2", g)
 
-# Build an `ITensorNetwork` from explicit per-vertex tensors and wrap as a TTN
-tensors = Dict(v => ITensor(sites[v]...) for v in vertices(g))
-itn = ITensorNetwork(tensors, NamedGraph(g))
+# Build a structured `ITensorNetwork` with shared link indices on each edge
+χ = 2
+links = Dict(e => Index(χ, "Link") for e in edges(g))
+tensors = Dict(map(collect(vertices(g))) do v
+    site_v = sites[v]
+    link_v = [haskey(links, e) ? links[e] : links[reverse(e)] for e in incident_edges(g, v)]
+    return v => random_itensor(site_v..., link_v...)
+end)
+itn = ITensorNetwork(tensors, g)
 psi = TreeTensorNetwork(itn)
 ```
 
@@ -68,14 +75,16 @@ tree edges. Truncation parameters (e.g. `cutoff`, `maxdim`) are forwarded to the
 factorisation step.
 
 ```@example main
-g = named_comb_tree((3, 1))
-sites = siteinds("S=1/2", g)
-A = ITensors.random_itensor(only(sites[(1, 1)]), only(sites[(2, 1)]), only(sites[(3, 1)]))
-ttn_A = ttn(A, sites)
+g_small = named_comb_tree((3, 1))
+sites_small = siteinds("S=1/2", g_small)
+A = ITensors.random_itensor(
+    only(sites_small[(1, 1)]), only(sites_small[(2, 1)]), only(sites_small[(3, 1)])
+)
+ttn_A = TreeTensorNetwork(A, sites_small)
 ```
 
 ```@docs; canonical=false
-ITensorNetworks.ttn(::ITensors.ITensor, ::ITensorNetworks.IndsNetwork)
+ITensorNetworks.TreeTensorNetwork(::ITensors.ITensor, ::ITensorNetworks.IndsNetwork)
 ```
 
 ## Orthogonal Gauge
