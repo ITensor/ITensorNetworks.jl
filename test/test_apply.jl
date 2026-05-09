@@ -2,16 +2,15 @@ using Compat: Compat
 using Graphs: vertices
 using ITensorNetworks:
     BeliefPropagationCache, apply, environment, norm_sqr_network, siteinds, update
-using ITensors: ITensors, Algorithm, ITensor, inner, op
+using ITensors: ITensors, ITensor, inner, op
 using NamedGraphs.NamedGraphGenerators: named_grid
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
-using Test: @test, @testset
+using Test: @test, @test_throws, @testset
 include("utils.jl")
 @testset "apply" begin
     g_dims = (2, 2)
-    n = prod(g_dims)
     g = named_grid(g_dims)
     s = siteinds("S=1/2", g)
     χ = 2
@@ -19,14 +18,18 @@ include("utils.jl")
     ψ = random_tensornetwork(rng, s; link_space = χ)
     v1, v2 = (2, 2), (1, 2)
     ψψ = norm_sqr_network(ψ)
-    #Simple Belief Propagation Grouping
+    # Simple Belief Propagation grouping (one bra+ket per partition) gives
+    # a product environment around `[v1, v2]`, which is what `apply` requires.
     bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
     bp_cache = update(bp_cache; maxiter = 20)
     envsSBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
-    #This grouping will correspond to calculating the environments exactly (each column of the grid is a partition)
-    bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
-    bp_cache = update(bp_cache; maxiter = 20)
-    envsGBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
+    # Column-grouping (one whole column per partition) gives a non-product
+    # environment; `apply` should reject it.
+    bp_cache_col = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
+    bp_cache_col = update(bp_cache_col; maxiter = 20)
+    envsGBP = environment(
+        bp_cache_col, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")]
+    )
     inner_alg = "exact"
     ngates = 5
     truncerr = 0.0
@@ -38,38 +41,15 @@ include("utils.jl")
     for i in 1:ngates
         o = op("RandomUnitary", s[v1]..., s[v2]...)
         ψOexact = apply(o, ψ; cutoff = nothing)
-        ψOSBP = apply(
-            o,
-            ψ;
-            envs = envsSBP,
-            maxdim = χ,
-            normalize = true,
-            print_fidelity_loss = true,
-            envisposdef = true,
-            callback
-        )
-        ψOGBP = apply(
-            o,
-            ψ;
-            envs = envsGBP,
-            maxdim = χ,
-            normalize = true,
-            print_fidelity_loss = true,
-            envisposdef = true
-        )
+        ψOSBP = apply(o, ψ; envs = envsSBP, maxdim = χ, normalize = true, callback)
         fSBP =
             inner(ψOSBP, ψOexact; alg = inner_alg) /
             sqrt(
             inner(ψOexact, ψOexact; alg = inner_alg) *
                 inner(ψOSBP, ψOSBP; alg = inner_alg)
         )
-        fGBP =
-            inner(ψOGBP, ψOexact; alg = inner_alg) /
-            sqrt(
-            inner(ψOexact, ψOexact; alg = inner_alg) *
-                inner(ψOGBP, ψOGBP; alg = inner_alg)
-        )
         @test !iszero(truncerr)
-        @test real(fGBP * conj(fGBP)) >= real(fSBP * conj(fSBP))
+        @test real(fSBP * conj(fSBP)) > 0
+        @test_throws ErrorException apply(o, ψ; envs = envsGBP, maxdim = χ)
     end
 end
