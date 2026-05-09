@@ -38,12 +38,10 @@ TupleTools = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 
 [weakdeps]
 OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715"
-Observers = "338f10d5-c7f1-4033-a7d1-f9dec39bcaa0"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
 [extensions]
 ITensorNetworksOMEinsumContractionOrdersExt = "OMEinsumContractionOrders"
-ITensorNetworksObserversExt = "Observers"
 ITensorNetworksTensorOperationsExt = "TensorOperations"
 
 [compat]
@@ -65,7 +63,6 @@ MacroTools = "0.5"
 NDTensors = "0.3, 0.4"
 NamedGraphs = "0.11"
 OMEinsumContractionOrders = "0.8.3, 0.9, 1"
-Observers = "0.2.4"
 SerializedElementArrays = "0.1"
 SimpleTraits = "0.9"
 SplitApplyCombine = "1.2"
