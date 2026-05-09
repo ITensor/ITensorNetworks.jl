@@ -1,5 +1,5 @@
 using Graphs: vertices
-using ITensorNetworks: ITensorNetworks, OpSum, siteinds, ttn
+using ITensorNetworks: ITensorNetworks, OpSum, TreeTensorNetwork, siteinds
 using ITensors.NDTensors: with_auto_fermion
 using NamedGraphs.NamedGraphGenerators: named_grid
 using Test: @test, @testset
@@ -15,9 +15,9 @@ using Test: @test, @testset
             os1 += 1.0, "Sx", (1, 1)
             os2 = OpSum()
             os2 += 1.0, "Sy", (1, 1)
-            H1 = ttn(os1, s)
-            H2 = ttn(os2, s)
-            H3 = ttn(os1 + os2, s)
+            H1 = TreeTensorNetwork(os1, s)
+            H2 = TreeTensorNetwork(os2, s)
+            H3 = TreeTensorNetwork(os1 + os2, s)
 
             @test H1 + H2 ≈ H3 rtol = 1.0e-6
         end

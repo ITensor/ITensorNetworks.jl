@@ -3,7 +3,7 @@ using Dictionaries: Dictionary
 using Graphs: add_edge!, add_vertex!, rem_edge!, vertices
 using ITensorMPS: ITensorMPS
 using ITensorNetworks.ITensorsExtensions: replace_vertices
-using ITensorNetworks: ITensorNetworks, siteinds, ttn
+using ITensorNetworks: ITensorNetworks, TreeTensorNetwork, siteinds
 using ITensors.NDTensors: matrix, with_auto_fermion
 using ITensors: @disable_warn_order, ITensor, Index, combinedind, combiner, contract, dag,
     inds, removeqns
@@ -53,7 +53,7 @@ end
 
         @testset "Svd approach" for root_vertex in leaf_vertices(is)
             # get TTN Hamiltonian directly
-            Hsvd = ttn(H, is; root_vertex, cutoff = 1.0e-10)
+            Hsvd = TreeTensorNetwork(H, is; root_vertex, cutoff = 1.0e-10)
             # get corresponding MPO Hamiltonian
             Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
             # compare resulting dense Hamiltonians
@@ -63,7 +63,7 @@ end
             end
             @test Tttno ≈ Tmpo rtol = 1.0e-6
 
-            Hsvd_lr = ttn(Hlr, is; root_vertex, cutoff = 1.0e-10)
+            Hsvd_lr = TreeTensorNetwork(Hlr, is; root_vertex, cutoff = 1.0e-10)
             Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
             @disable_warn_order begin
                 Tttno_lr = prod(Hline_lr)
@@ -102,7 +102,7 @@ end
 
         @testset "Svd approach" for root_vertex in leaf_vertices(is)
             # get TTN Hamiltonian directly
-            Hsvd = ttn(H, is; root_vertex, cutoff = 1.0e-10)
+            Hsvd = TreeTensorNetwork(H, is; root_vertex, cutoff = 1.0e-10)
             # get corresponding MPO Hamiltonian
             Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
             # compare resulting sparse Hamiltonians
@@ -113,7 +113,7 @@ end
             end
             @test Tttno ≈ Tmpo rtol = 1.0e-6
 
-            Hsvd_lr = ttn(Hlr, is; root_vertex, cutoff = 1.0e-10)
+            Hsvd_lr = TreeTensorNetwork(Hlr, is; root_vertex, cutoff = 1.0e-10)
             Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
             @disable_warn_order begin
                 Tttno_lr = prod(Hline_lr)
@@ -142,7 +142,7 @@ end
 
             @testset "Svd approach" for root_vertex in leaf_vertices(is)
                 # get TTN Hamiltonian directly
-                Hsvd = ttn(H, is; root_vertex, cutoff = 1.0e-10)
+                Hsvd = TreeTensorNetwork(H, is; root_vertex, cutoff = 1.0e-10)
                 # get corresponding MPO Hamiltonian
                 sites =
                     [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
@@ -209,7 +209,7 @@ end
 
         @testset "Svd approach" for root_vertex in leaf_vertices(is)
             # get TTN Hamiltonian directly
-            Hsvd = ttn(H, is_missing_site; root_vertex, cutoff = 1.0e-10)
+            Hsvd = TreeTensorNetwork(H, is_missing_site; root_vertex, cutoff = 1.0e-10)
             # get corresponding MPO Hamiltonian
             Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
 
@@ -220,7 +220,7 @@ end
             end
             @test Tttno ≈ Tmpo rtol = 1.0e-6
 
-            Hsvd_lr = ttn(Hlr, is_missing_site; root_vertex, cutoff = 1.0e-10)
+            Hsvd_lr = TreeTensorNetwork(Hlr, is_missing_site; root_vertex, cutoff = 1.0e-10)
             Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
             @disable_warn_order begin
                 Tttno_lr = prod(Hline_lr)

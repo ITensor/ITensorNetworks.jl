@@ -1,4 +1,4 @@
-using .ITensorsExtensions: ITensorsExtensions, promote_indtype
+using .ITensorsExtensions: ITensorsExtensions, promote_indtype, trivial_space
 using DataGraphs: DataGraphs, AbstractDataGraph, DataGraph, IsUnderlyingGraph, edge_data,
     get_edge_data, get_vertex_data, is_edge_assigned, is_vertex_assigned, map_data,
     set_edge_data!, set_vertex_data!, underlying_graph_type, vertex_data

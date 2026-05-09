@@ -1,14 +1,14 @@
-using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype
+using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype, trivial_space
 using Adapt: Adapt, adapt, adapt_structure
 using DataGraphs: DataGraphs, edge_data, get_vertex_data, is_vertex_assigned,
     set_vertex_data!, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
-    ne, neighbors, rem_edge!, src, vertices
+    has_edge, ne, neighbors, rem_edge!, src, vertices
 using ITensors: ITensors, @Algorithm_str, ITensor, addtags, combiner, commoninds,
     commontags, contract, dag, inds, noprime, onehot, prime, replaceprime, replacetags,
     setprime, settags, sim, swaptags, tags
-using LinearAlgebra: LinearAlgebra, factorize
+using LinearAlgebra: LinearAlgebra, factorize, qr
 using MacroTools: @capture
 using NDTensors: NDTensors, Algorithm, dim, scalartype
 using NamedGraphs.GraphsExtensions:
@@ -136,7 +136,7 @@ function fix_edges!(tn::AbstractITensorNetwork, v)
         if v ≠ vertex
             edge = v => vertex
             if !isempty(linkinds(tn, edge))
-                add_edge!(tn, edge)
+                add_edge!(data_graph(tn), edge)
             end
         end
     end
@@ -181,7 +181,7 @@ function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kw
     for v1 in vertices(tn1)
         for v2 in vertices(tn2)
             if !isempty(linkinds(tn, v1 => v2))
-                add_edge!(tn, v1 => v2)
+                add_edge!(data_graph(tn), v1 => v2)
             end
         end
     end
@@ -274,7 +274,7 @@ end
 #
 
 function _siteinds(tn::AbstractITensorNetwork, vertex)
-    s = inds(tn[vertex])
+    s = collect(inds(tn[vertex]))
     for v in neighbors(tn, vertex)
         s = setdiff(s, inds(tn[v]))
     end
@@ -471,10 +471,10 @@ function NDTensors.contract(
     rem_vertex!(tn, dst(edge))
     add_vertex!(tn, merged_vertex)
     for n_src in neighbors_src
-        add_edge!(tn, merged_vertex => n_src)
+        add_edge!(data_graph(tn), merged_vertex => n_src)
     end
     for n_dst in neighbors_dst
-        add_edge!(tn, merged_vertex => n_dst)
+        add_edge!(data_graph(tn), merged_vertex => n_dst)
     end
     @preserve_graph tn[merged_vertex] = new_itensor
     return tn
@@ -561,11 +561,11 @@ function LinearAlgebra.factorize(
     add_vertex!(tn, X_vertex)
     add_vertex!(tn, Y_vertex)
 
-    add_edge!(tn, X_vertex => Y_vertex)
+    add_edge!(data_graph(tn), X_vertex => Y_vertex)
     for nX in neighbors_X
-        add_edge!(tn, X_vertex => nX)
+        add_edge!(data_graph(tn), X_vertex => nX)
     end
-    add_edge!(tn, Y_vertex => dst(edge))
+    add_edge!(data_graph(tn), Y_vertex => dst(edge))
     @preserve_graph tn[X_vertex] = X
     @preserve_graph tn[Y_vertex] = Y
     return tn
@@ -681,7 +681,7 @@ Truncation parameters are passed as keyword arguments and forwarded to `ITensors
   - `mindim`: Minimum number of singular values to keep.
 
 This operates on a single bond. For `TreeTensorNetwork`, the no-argument form
-`truncate(ttn; kwargs...)` sweeps all bonds and is generally preferred for full
+`truncate(tn; kwargs...)` sweeps all bonds and is generally preferred for full
 recompression after addition or subspace expansion.
 
 See also: `Base.truncate(::AbstractTreeTensorNetwork)`.
@@ -853,6 +853,27 @@ function insert_linkinds(
         end
     end
     return tn
+end
+
+# Factor `tn[src(edge)]` via `f` along the inds it doesn't share with
+# `tn[dst(edge)]`, leaving the new factor on `src(edge)` and contracting
+# the residual into `tn[dst(edge)]`. With `f = qr` and no shared inds yet,
+# this threads a fresh link Index between the two endpoints. With shared
+# inds present, it regauges across the existing link.
+function factorize_edge!(f, tn::AbstractITensorNetwork, edge)
+    src_t, dst_t = tn[src(edge)], tn[dst(edge)]
+    left_inds = setdiff(inds(src_t), inds(dst_t))
+    x, y = f(src_t, left_inds)
+    @preserve_graph tn[src(edge)] = x
+    @preserve_graph tn[dst(edge)] = y * dst_t
+    return tn
+end
+
+function Graphs.add_edge!(tn::AbstractITensorNetwork, edge)
+    has_edge(tn, edge) && return false
+    add_edge!(data_graph(tn), edge)
+    factorize_edge!(qr, tn, edge)
+    return true
 end
 
 # TODO: What to output? Could be an `IndsNetwork`. Or maybe

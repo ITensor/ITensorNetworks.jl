@@ -1,12 +1,13 @@
 using Graphs: add_edge!, add_vertex!, vertices
 using ITensorNetworks:
-    ITensorNetworks, applyexp, dmrg, maxlinkdim, siteinds, time_evolve, ttn
+    ITensorNetworks, TreeTensorNetwork, applyexp, dmrg, maxlinkdim, siteinds, time_evolve
 using ITensors
 using ITensors.Ops: OpSum
 using NamedGraphs.NamedGraphGenerators: named_path_graph
 using NamedGraphs: NamedGraph
 using TensorOperations: TensorOperations
 using Test: @test, @testset #For contraction order finding
+include(joinpath(@__DIR__, "..", "utils.jl"))
 
 function chain_plus_ancilla(; nchain)
     g = NamedGraph()
@@ -38,14 +39,14 @@ end
             h += 1 / 2, "S+", j, "S-", j + 1
             h += 1 / 2, "S-", j, "S+", j + 1
         end
-        H = ttn(h, sites)
+        H = TreeTensorNetwork(h, sites)
 
         # Make initial product state
         state = Dict{Int, String}()
         for (j, v) in enumerate(vertices(sites))
             state[v] = iseven(j) ? "Up" : "Dn"
         end
-        psi0 = ttn(state, sites)
+        psi0 = TreeTensorNetwork(productstate(state, sites))
 
         cutoff = 1.0e-10
         maxdim = 100
@@ -89,14 +90,14 @@ end
             h += 1 / 2, "S+", j, "S-", j + 1
             h += 1 / 2, "S-", j, "S+", j + 1
         end
-        H = ttn(h, sites)
+        H = TreeTensorNetwork(h, sites)
 
         # Initial product state
         state = Dict{Int, String}()
         for (j, v) in enumerate(vertices(sites))
             state[v] = iseven(j) ? "Up" : "Dn"
         end
-        psi0 = ttn(state, sites)
+        psi0 = TreeTensorNetwork(productstate(state, sites))
 
         nsites = 2
         factorize_kwargs = (; cutoff = 1.0e-8, maxdim = 100)

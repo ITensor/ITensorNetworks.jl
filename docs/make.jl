@@ -14,7 +14,7 @@ DocMeta.setdocmeta!(
         using Graphs: dst, edges, src, vertices
         using ITensorNetworks
         using ITensorNetworks:
-            TreeTensorNetwork, expect, loginner, mps, orthogonalize, siteinds, truncate, ttn
+            TreeTensorNetwork, expect, loginner, orthogonalize, siteinds, truncate
         using ITensors: inner
         using LinearAlgebra: norm, normalize
         using OMEinsumContractionOrders

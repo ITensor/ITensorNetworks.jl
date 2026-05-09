@@ -1,11 +1,10 @@
 using Dictionaries: Dictionary
-using Distributions: Uniform
 using Graphs: degree, dijkstra_shortest_paths, edges, grid, has_vertex, ne, neighbors, nv,
     rem_vertex!, vertices, weights
 using GraphsFlows: GraphsFlows
 using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork, contraction_sequence,
     inner_network, linkinds, norm_sqr, norm_sqr_network, orthogonalize, siteinds,
-    tree_orthogonalize, ttn, ⊗
+    tree_orthogonalize, ⊗
 using ITensors.NDTensors: NDTensors, dim
 using ITensors: ITensors, ITensor, Index, Op, commonind, commoninds, contract, dag, hasinds,
     inds, inner, itensor, onehot, order, prime, random_itensor, scalartype, sim
@@ -28,7 +27,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         @test nv(s) == 4
         @test ne(s) == 3
         @test neighbors(s, (2,)) == [(1,), (3,)]
-        tn = ITensorNetwork(s; link_space = 2)
+        rng = StableRNG(1234)
+        tn = random_tensornetwork(rng, s; link_space = 2)
         @test nv(tn) == 4
         @test ne(tn) == 3
         @test tn isa ITensorNetwork
@@ -54,10 +54,6 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         @test_broken tn[1:2] isa ITensorNetwork
         # TODO: Support this syntax, maybe rename `subgraph`.
         @test_broken induced_subgraph(tn, [(1,), (2,)]) isa ITensorNetwork
-        rng = StableRNG(1234)
-        for v in vertices(tn)
-            tn[v] = randn!(rng, tn[v])
-        end
         tn′ = sim(dag(tn); sites = [])
 
         @test tn′ isa ITensorNetwork
@@ -69,7 +65,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         @test inner_res isa Float64
 
         # test that by default vertices are linked by bond-dimension 1 index
-        tn = ITensorNetwork(s)
+        tn = random_tensornetwork(rng, s)
         @test isone(ITensors.dim(commonind(tn[(1,)], tn[(2,)])))
     end
 
@@ -92,7 +88,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         dims = (2, 2)
         g = named_grid(dims)
         s = siteinds("S=1/2", g)
-        ψ = ITensorNetwork(v -> "↑", s)
+        ψ = productstate(v -> "↑", s)
         tn = disjoint_union("bra" => ψ, "ket" => prime(dag(ψ); sites = []))
         tn_2 = contract(tn, ((1, 2), "ket") => ((1, 2), "bra"))
         @test !has_vertex(tn_2, ((1, 2), "ket"))
@@ -103,7 +99,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         dims = (2, 2)
         g = named_grid(dims)
         s = siteinds("S=1/2", g)
-        ψ = ITensorNetwork(v -> "↑", s)
+        ψ = productstate(v -> "↑", s)
         rem_vertex!(ψ, (1, 2))
         tn = norm_sqr_network(ψ)
         @test !has_vertex(tn, ((1, 2), "bra"))
@@ -126,9 +122,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
             )
 
         rng = StableRNG(1234)
-        ψ = ITensorNetwork(g; kwargs...) do v
-            return inds -> itensor(randn(rng, elt, dim.(inds)...), inds)
-        end
+        ψ = random_tensornetwork(rng, elt, g; kwargs...)
         @test eltype(ψ[first(vertices(ψ))]) == elt
 
         ψc = conj(ψ)
@@ -142,96 +136,10 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         end
 
         rng = StableRNG(1234)
-        ψ = ITensorNetwork(g; kwargs...) do v
-            return inds -> itensor(randn(rng, dim.(inds)...), inds)
-        end
-        @test eltype(ψ[first(vertices(ψ))]) == Float64
-        rng = StableRNG(1234)
-        ψ = random_tensornetwork(rng, elt, g; kwargs...)
-        @test eltype(ψ[first(vertices(ψ))]) == elt
-        rng = StableRNG(1234)
         ψ = random_tensornetwork(rng, g; kwargs...)
-        @test eltype(ψ[first(vertices(ψ))]) == Float64
-        ψ = ITensorNetwork(elt, undef, g; kwargs...)
-        @test eltype(ψ[first(vertices(ψ))]) == elt
-        ψ = ITensorNetwork(undef, g)
         @test eltype(ψ[first(vertices(ψ))]) == Float64
     end
 
-    @testset "Product state constructors" for elt in elts
-        dims = (2, 2)
-        g = named_comb_tree(dims)
-        s = siteinds("S=1/2", g)
-        state1 = ["↑" "↓"; "↓" "↑"]
-        state2 = reshape([[1, 0], [0, 1], [0, 1], [1, 0]], 2, 2)
-        each_args = (;
-            ferro = (
-                ("↑",),
-                (elt, "↑"),
-                (Returns(i -> ITensor([1, 0], i)),),
-                (elt, Returns(i -> ITensor([1, 0], i))),
-                (Returns([1, 0]),),
-                (elt, Returns([1, 0])),
-            ),
-            antiferro = (
-                (state1,),
-                (elt, state1),
-                (Dict(CartesianIndices(dims) .=> state1),),
-                (elt, Dict(CartesianIndices(dims) .=> state1)),
-                (Dict(Tuple.(CartesianIndices(dims)) .=> state1),),
-                (elt, Dict(Tuple.(CartesianIndices(dims)) .=> state1)),
-                (Dictionary(CartesianIndices(dims), state1),),
-                (elt, Dictionary(CartesianIndices(dims), state1)),
-                (Dictionary(Tuple.(CartesianIndices(dims)), state1),),
-                (elt, Dictionary(Tuple.(CartesianIndices(dims)), state1)),
-                (state2,),
-                (elt, state2),
-                (Dict(CartesianIndices(dims) .=> state2),),
-                (elt, Dict(CartesianIndices(dims) .=> state2)),
-                (Dict(Tuple.(CartesianIndices(dims)) .=> state2),),
-                (elt, Dict(Tuple.(CartesianIndices(dims)) .=> state2)),
-                (Dictionary(CartesianIndices(dims), state2),),
-                (elt, Dictionary(CartesianIndices(dims), state2)),
-                (Dictionary(Tuple.(CartesianIndices(dims)), state2),),
-                (elt, Dictionary(Tuple.(CartesianIndices(dims)), state2)),
-            ),
-        )
-        for pattern in keys(each_args)
-            for args in each_args[pattern]
-                x = ITensorNetwork(args..., s)
-                if first(args) === elt
-                    @test scalartype(x) === elt
-                else
-                    @test scalartype(x) === Float64
-                end
-                for v in vertices(x)
-                    xᵛ = x[v]
-                    @test degree(x, v) + 1 == ndims(xᵛ)
-                    sᵛ = only(siteinds(x, v))
-                    for w in neighbors(x, v)
-                        lʷ = only(linkinds(x, v => w))
-                        @test dim(lʷ) == 1
-                        xᵛ *= onehot(lʷ => 1)
-                    end
-                    @test ndims(xᵛ) == 1
-                    a = if pattern == :ferro
-                        [1, 0]
-                    elseif pattern == :antiferro
-                        iseven(sum(v)) ? [1, 0] : [0, 1]
-                    end
-                    @test xᵛ == ITensor(a, sᵛ)
-                end
-            end
-        end
-    end
-    @testset "random_tensornetwork with custom distributions" begin
-        distribution = Uniform(-1.0, 1.0)
-        rng = StableRNG(1234)
-        tn = random_tensornetwork(rng, distribution, named_grid(4); link_space = 2)
-        # Note: distributions in package `Distributions` currently doesn't support customized
-        # eltype, and all elements have type `Float64`
-        @test eltype(tn[first(vertices(tn))]) == Float64
-    end
     @testset "orthogonalize" begin
         rng = StableRNG(1234)
         tn = random_tensornetwork(rng, named_grid(4); link_space = 2)
@@ -256,7 +164,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     end
 
     @testset "dijkstra_shortest_paths" begin
-        tn = ITensorNetwork(named_grid(4); link_space = 2)
+        rng = StableRNG(1234)
+        tn = random_tensornetwork(rng, named_grid(4); link_space = 2)
         paths = dijkstra_shortest_paths(tn, [1])
         @test paths.dists == Dictionary([0, 1, 2, 3])
         @test paths.parents == Dictionary([1, 1, 2, 3])
@@ -264,7 +173,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     end
 
     @testset "mincut" begin
-        tn = ITensorNetwork(named_grid(4); link_space = 3)
+        rng = StableRNG(1234)
+        tn = random_tensornetwork(rng, named_grid(4); link_space = 3)
         w = weights(tn)
         @test w isa Dictionary{Tuple{Int, Int}, Float64}
         @test length(w) ≈ ne(tn)
@@ -286,7 +196,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         dims = (2, 2)
         g = named_grid(dims)
         s = siteinds("S=1/2", g)
-        ψ = ITensorNetwork(s; link_space = 2)
+        rng = StableRNG(1234)
+        ψ = random_tensornetwork(rng, s; link_space = 2)
 
         e = (1, 1) => (2, 1)
         uie = setdiff(inds(ψ[1, 1]), inds(ψ[2, 1]))
@@ -321,14 +232,14 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         g = named_grid(dims)
         s = siteinds("S=1/2", g)
         state_map(v::Tuple) = iseven(sum(isodd.(v))) ? "↑" : "↓"
-        ψ = ITensorNetwork(state_map, s)
+        ψ = productstate(state_map, s)
         t = ψ[2, 2]
         si = only(siteinds(ψ, (2, 2)))
         bi = map(e -> only(linkinds(ψ, e)), incident_edges(ψ, (2, 2)))
         @test eltype(t) == Float64
         @test abs(t[si => "↑", [b => end for b in bi]...]) == 1.0 # insert_links introduces extra signs through factorization...
         @test t[si => "↓", [b => end for b in bi]...] == 0.0
-        ϕ = ITensorNetwork(elt, state_map, s)
+        ϕ = productstate(elt, state_map, s)
         t = ϕ[2, 2]
         si = only(siteinds(ϕ, (2, 2)))
         bi = map(e -> only(linkinds(ϕ, e)), incident_edges(ϕ, (2, 2)))

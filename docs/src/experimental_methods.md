@@ -50,7 +50,7 @@ Methods which still need to be discussed, modified, or deprecated.
 
 * From an `OpSum`, using `opsum_to_ttn.jl` code:
   ```julia
-  ttn(os::OpSum, sites::IndsNetwork; kws...)
+  TreeTensorNetwork(os::OpSum, sites::IndsNetwork; kws...)
   ```
 
 * From `OpSum`, assuming path graph (`opsum_to_ttn.jl`):

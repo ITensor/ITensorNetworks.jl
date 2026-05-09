@@ -11,39 +11,20 @@ records which vertices currently form the orthogonality center of the network. A
 update this field as the gauge changes.
 
 **MPS** (matrix product states) are the special case of a `TreeTensorNetwork` on a
-1D path graph. The [`mps`](@ref ITensorNetworks.mps) constructor enforces this topology
-and provides a convenient interface for 1D calculations.
+1D path graph.
 
 ## Construction
 
-### From an `IndsNetwork` or graph
+### From an `OpSum` (Hamiltonian)
 
-```@example main
-using Graphs: vertices
-using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, mps, ortho_region, orthogonalize,
-    siteinds, ttn
-using ITensors: ITensors
-using LinearAlgebra: norm
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
-
-# Comb-tree TTN (a popular tree topology for 2D-like systems)
-g = named_comb_tree((3, 2))
-sites = siteinds("S=1/2", g)
-
-psi = ttn(sites)  # zero-initialised
-psi = ttn(v -> "Up", sites)  # product state
-
-# 1D MPS
-s1d = siteinds("S=1/2", 6)
-mps_state = mps(v -> "Up", s1d)  # product MPS
-```
+A common way to obtain a Hamiltonian-shaped TTN is to convert an `OpSum` over an
+`IndsNetwork` of site indices.
 
 ```@docs; canonical=false
-ITensorNetworks.ttn
-ITensorNetworks.mps
+ITensorNetworks.TreeTensorNetwork(::ITensors.Ops.OpSum, ::ITensorNetworks.IndsNetwork)
 ```
 
-### The `TreeTensorNetwork` type and conversion
+### From an existing `ITensorNetwork`
 
 The `TreeTensorNetwork` struct wraps an `ITensorNetwork` and records the current
 orthogonality region. Use the `TreeTensorNetwork` constructor to convert a plain
@@ -51,8 +32,35 @@ orthogonality region. Use the `TreeTensorNetwork` constructor to convert a plain
 gauge metadata when you need a plain network again.
 
 ```@example main
-itn = ITensorNetwork(psi)  # TTN → ITensorNetwork
-psi = TreeTensorNetwork(itn)  # ITensorNetwork → TTN
+using Graphs: edges, vertices
+using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, ortho_region, orthogonalize,
+    siteinds
+using ITensors: ITensors, Index, random_itensor
+using LinearAlgebra: norm
+using NamedGraphs: NamedGraph
+using NamedGraphs.GraphsExtensions: incident_edges
+using NamedGraphs.NamedGraphGenerators: named_comb_tree
+
+# Comb-tree TTN (a popular tree topology for 2D-like systems)
+g = NamedGraph(named_comb_tree((3, 2)))
+sites = siteinds("S=1/2", g)
+
+# Build a structured `ITensorNetwork` with shared link indices on each edge
+χ = 2
+links = Dict(e => Index(χ, "Link") for e in edges(g))
+tensors = Dict(map(collect(vertices(g))) do v
+    site_v = sites[v]
+    link_v = [haskey(links, e) ? links[e] : links[reverse(e)] for e in incident_edges(g, v)]
+    return v => random_itensor(site_v..., link_v...)
+end)
+itn = ITensorNetwork(tensors, g)
+psi = TreeTensorNetwork(itn)
+```
+
+To strip the gauge metadata back to a plain `ITensorNetwork`:
+
+```@example main
+itn_again = ITensorNetwork(psi)  # TTN → ITensorNetwork
 ```
 
 ```@docs; canonical=false
@@ -67,14 +75,16 @@ tree edges. Truncation parameters (e.g. `cutoff`, `maxdim`) are forwarded to the
 factorisation step.
 
 ```@example main
-g = named_comb_tree((3, 1))
-sites = siteinds("S=1/2", g)
-A = ITensors.random_itensor(only(sites[(1, 1)]), only(sites[(2, 1)]), only(sites[(3, 1)]))
-ttn_A = ttn(A, sites)
+g_small = named_comb_tree((3, 1))
+sites_small = siteinds("S=1/2", g_small)
+A = ITensors.random_itensor(
+    only(sites_small[(1, 1)]), only(sites_small[(2, 1)]), only(sites_small[(3, 1)])
+)
+ttn_A = TreeTensorNetwork(A, sites_small)
 ```
 
 ```@docs; canonical=false
-ITensorNetworks.ttn(::ITensors.ITensor, ::ITensorNetworks.IndsNetwork)
+ITensorNetworks.TreeTensorNetwork(::ITensors.ITensor, ::ITensorNetworks.IndsNetwork)
 ```
 
 ## Orthogonal Gauge

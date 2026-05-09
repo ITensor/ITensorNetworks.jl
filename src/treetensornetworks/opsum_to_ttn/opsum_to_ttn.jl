@@ -1,12 +1,13 @@
 #using FillArrays: OneElement
-#using DataGraphs: DataGraph
+using DataGraphs: underlying_graph
 using Graphs: degree, is_tree, rem_vertex!
 using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks, truncate!
 using ITensors.Ops: Op, OpSum, argument, coefficient, name, params, site, terms, which_op
-using ITensors: flux, has_fermion_string, itensor, removeqns, space
+using ITensors: ITensor, flux, has_fermion_string, itensor, removeqns, space
 using NamedGraphs.GraphsExtensions:
-    GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
+    GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path, vertextype
+using NamedGraphs: NamedGraph
 using StaticArrays: MVector
 
 #
@@ -289,7 +290,10 @@ function compress_ttn(
         )
     end
 
-    H = ttn(sites0)   # initialize TTN without the dummy indices added
+    # initialize TTN without the dummy indices added; tensors are filled in below
+    g0 = NamedGraph(underlying_graph(sites0))
+    tensors0 = Dict{vertextype(g0), ITensor}(v => ITensor() for v in vertices(g0))
+    H = TreeTensorNetwork(ITensorNetwork(tensors0, g0))
     function qnblock(i::Index, q::QN)
         for b in 2:(nblocks(i) - 1)
             flux(i, Block(b)) == q && return b
@@ -632,12 +636,12 @@ function sortmergeterms(os::OpSum{C}) where {C}
 end
 
 """
-    ttn(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
-    ttn(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
+    TreeTensorNetwork(os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
+    TreeTensorNetwork(eltype::Type{<:Number}, os::OpSum, sites::IndsNetwork{<:Index}; kwargs...)
 
 Convert an OpSum object `os` to a TreeTensorNetwork, with indices given by `sites`.
 """
-function ttn(
+function TreeTensorNetwork(
         os::OpSum,
         sites::IndsNetwork;
         root_vertex = GraphsExtensions.default_root_vertex(sites),
@@ -654,16 +658,16 @@ function ttn(
 end
 
 function mpo(os::OpSum, external_inds::Vector; kwargs...)
-    return ttn(os, path_indsnetwork(external_inds); kwargs...)
+    return TreeTensorNetwork(os, path_indsnetwork(external_inds); kwargs...)
 end
 function mpo(os::OpSum, s::IndsNetwork; kwargs...)
     # TODO: Check it is a path graph.
-    return ttn(os, s; kwargs...)
+    return TreeTensorNetwork(os, s; kwargs...)
 end
 
 # Catch-all for leaf eltype specification
-function ttn(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
-    return NDTensors.convert_scalartype(eltype, ttn(os, sites; kwargs...))
+function TreeTensorNetwork(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
+    return NDTensors.convert_scalartype(eltype, TreeTensorNetwork(os, sites; kwargs...))
 end
 
 #

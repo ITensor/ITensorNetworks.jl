@@ -2,7 +2,8 @@
 
 ```@setup main
 using Graphs: edges, vertices
-using ITensorNetworks: ITensorNetwork, expect, inner, loginner, normalize, siteinds, ttn
+using ITensorNetworks:
+    ITensorNetwork, TreeTensorNetwork, expect, inner, loginner, normalize, siteinds
 using ITensors: Index, random_itensor
 using LinearAlgebra: norm
 using NamedGraphs.GraphsExtensions: incident_edges
@@ -20,10 +21,10 @@ end
 
 g = named_grid((4,))
 s = siteinds("S=1/2", g)
-phi = normalize(ttn(random_state(g, s; link_space = 2)))
-psi = normalize(ttn(random_state(g, s; link_space = 2)))
-x = normalize(ttn(random_state(g, s; link_space = 2)))
-y = normalize(ttn(random_state(g, s; link_space = 2)))
+phi = normalize(TreeTensorNetwork(random_state(g, s; link_space = 2)))
+psi = normalize(TreeTensorNetwork(random_state(g, s; link_space = 2)))
+x = normalize(TreeTensorNetwork(random_state(g, s; link_space = 2)))
+y = normalize(TreeTensorNetwork(random_state(g, s; link_space = 2)))
 v = first(vertices(psi))
 ```
 
