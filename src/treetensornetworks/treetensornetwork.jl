@@ -1,10 +1,6 @@
-using DataGraphs: underlying_graph
 using Dictionaries: Indices
-using Graphs: path_graph
-using ITensors: ITensor
-using LinearAlgebra: factorize, normalize
-using NamedGraphs.GraphsExtensions: GraphsExtensions, vertextype
-using NamedGraphs: NamedGraph, similar_graph
+using NamedGraphs.GraphsExtensions: vertextype
+using NamedGraphs: similar_graph
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
@@ -125,37 +121,4 @@ end
 # without any gauge transformations. To move the orthogonality center use orthogonalize.
 function set_ortho_region(tn::TTN, ortho_region)
     return TreeTensorNetwork(tn.tensornetwork; ortho_region)
-end
-
-"""
-    TreeTensorNetwork(a::ITensor, is::IndsNetwork; ortho_region=..., kwargs...) -> TreeTensorNetwork
-
-Decompose a dense `ITensor` `a` into a `TreeTensorNetwork` with the tree structure
-described by the `IndsNetwork` `is`.
-
-Successive QR/SVD factorizations are applied following a post-order DFS traversal from the
-root vertex, then the network is orthogonalized to `ortho_region` (defaults to the root).
-Extra `kwargs` (e.g. `cutoff`, `maxdim`) are forwarded to the factorization.
-"""
-function TreeTensorNetwork(
-        a::ITensor,
-        is::IndsNetwork;
-        ortho_region = Indices([GraphsExtensions.default_root_vertex(is)]),
-        kwargs...
-    )
-    for v in vertices(is)
-        @assert hasinds(a, is[v])
-    end
-    @assert ortho_region ⊆ vertices(is)
-    g = NamedGraph(underlying_graph(is))
-    ortho_center = first(ortho_region)
-    ts = Dict{vertextype(g), ITensor}()
-    for e in post_order_dfs_edges(g, ortho_center)
-        left_inds = setdiff(inds(a), get(is, dst(e), Index[]))
-        a_l, a_r = factorize(a, left_inds; tags = edge_tag(e), ortho = "left", kwargs...)
-        ts[src(e)] = a_l
-        a = a_r
-    end
-    ts[ortho_center] = a
-    return orthogonalize(TreeTensorNetwork(ITensorNetwork(ts, g)), ortho_center)
 end
