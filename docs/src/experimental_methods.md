@@ -29,21 +29,6 @@ Methods which still need to be discussed, modified, or deprecated.
   linkinds(tn::AbstractITensorNetwork)
   ```
 
-* Rewrite every index of a network according to a structural mapping `IndsNetwork => IndsNetwork`
-  (site indices per vertex, link indices per edge). The two `IndsNetwork`s must share the
-  same underlying graph (`abstractitensornetwork.jl`):
-  ```julia
-  replaceinds(tn::AbstractITensorNetwork, is_is′::Pair{<:IndsNetwork, <:IndsNetwork})
-  ```
-
-* "Split" an edge index by applying a map to each copy of it on the adjacent ITensors.
-  By default the `dst(edge)` copy is primed and the `src(edge)` copy is unchanged (`abstractitensornetwork.jl`):
-  ```julia
-  split_index(tn::AbstractITensorNetwork, edges_to_split; 
-              src_ind_map::Function = identity,
-              dst_ind_map::Function = prime)
-  ```
-
 ## TreeTensorNetwork Types
 
 #### OpSum Constructors
