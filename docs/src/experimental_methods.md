@@ -4,15 +4,6 @@ Methods which still need to be discussed, modified, or deprecated.
 
 ## ITensorNetwork Methods
 
-* Combine (fuse) every link index of a tensor network, or a chosen set of edges, into
-  a single index per edge using `combiner` tensors. (`abstractitensornetwork.jl`).
-  Comment: it may be better to fold this into a more general interface `gauge_transform(f, tn::AbstractITensorNetwork)` that applies a gauge transformation $X\_e$ $X\_e^{-1}$ on each edge $e$.
-  ```julia
-  linkinds_combiners(tn::AbstractITensorNetwork; edges = edges(tn))
-  combine_linkinds(tn::AbstractITensorNetwork, combiners)
-  combine_linkinds(tn::AbstractITensorNetwork; edges = edges(tn))
-  ```
-
 * Extract the `IndsNetwork` of a tensor network — site indices per vertex and link
   indices per edge (`abstractitensornetwork.jl`):
   ```julia
@@ -62,10 +53,10 @@ Methods which still need to be discussed, modified, or deprecated.
   tree-traversal QRs; `orthogonalize` is the user-facing wrapper, with `tree_orthogonalize`
   as an alias (`treetensornetworks/abstracttreetensornetwork.jl`):
   ```julia
-  gauge(alg::Algorithm, ttn::AbstractTTN, region::Vector; kwargs...)
-  gauge(alg::Algorithm, ttn::AbstractTTN, region; kwargs...)
-  orthogonalize(ttn::AbstractTTN, region; kwargs...)
-  tree_orthogonalize(ttn::AbstractTTN, args...; kwargs...)
+  gauge(ttn::AbstractTTN, region::Vector)
+  gauge(ttn::AbstractTTN, region)
+  orthogonalize(ttn::AbstractTTN, region)
+  tree_orthogonalize(ttn::AbstractTTN, args...)
   ```
 
 * Sweep-based truncation. The whole-TTN form orthogonalizes towards `src(e)` before
@@ -222,12 +213,6 @@ Methods which still need to be discussed, modified, or deprecated.
   of the corresponding indices from each input network (graphs must match) (`abstractindsnetwork.jl`):
   ```julia
   union_all_inds(is_in::AbstractIndsNetwork...)
-  ```
-
-* Insert a default link index on every edge of `indsnetwork` that doesn't already
-  have one — `link_space` controls the default bond dimension (`abstractindsnetwork.jl`):
-  ```julia
-  insert_linkinds(indsnetwork::AbstractIndsNetwork, edges = edges(indsnetwork); link_space = trivial_space(indsnetwork))
   ```
 
 #### IndsNetwork

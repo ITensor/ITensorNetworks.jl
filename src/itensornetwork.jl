@@ -40,21 +40,13 @@ julia> tn = ITensorNetwork([ITensor(i, j), ITensor(j, k)]);
 
 See also: `IndsNetwork`, [`TreeTensorNetwork`](@ref ITensorNetworks.TreeTensorNetwork).
 """
-const _ITensorCollection = Union{
-    AbstractVector{<:ITensor},
-    AbstractDict{<:Any, <:ITensor},
-    AbstractDictionary{<:Any, <:ITensor},
-}
-
 struct ITensorNetwork{V} <: AbstractITensorNetwork{V}
     data_graph::DataGraph{V, ITensor, ITensor, NamedGraph{V}, NamedEdge{V}}
 
     # Sole inner ctor: place `tensors` at the vertices of `graph`. No checks —
     # `tensors` must be indexable at every vertex, the graph's edges are
     # taken at face value.
-    function ITensorNetwork{V}(
-            tensors::_ITensorCollection, graph::NamedGraph
-        ) where {V}
+    function ITensorNetwork{V}(tensors, graph::NamedGraph) where {V}
         g = NamedGraph{V}(graph)
         dg = DataGraph(g; vertex_data_type = ITensor, edge_data_type = ITensor)
         for v in vertices(g)
@@ -79,33 +71,34 @@ end
 # Construction from collections of ITensors
 #
 
-# Tensors only: derive graph from `keys(tensors)`, then run edge inference.
-# Without the reverse index map, edge inference is O(n²).
-function ITensorNetwork{V}(tensors::_ITensorCollection) where {V}
+# Tensors only: derive the vertex list from `keys(tensors)`, write the
+# tensors at each vertex, then infer edges from shared Indices in an
+# O(n²) sweep. Without a reverse index map, that's the only available cost.
+function ITensorNetwork{V}(tensors) where {V}
     # Build the vertex list with element type `V` so that an empty `tensors`
     # input doesn't get the graph's vertex type inferred to whatever
     # `keys(tensors)` happens to give (e.g. `Int` for an empty `Vector{ITensor}`).
     g = NamedGraph(V[v for v in keys(tensors)])
-    # Annotate the default Dict's element type explicitly: when the
-    # comprehension is empty (e.g. constructing an empty `ITensorNetwork{V}`
-    # via the bootstrap call inside the IndsNetwork function-callback ctor)
-    # type inference can give `Dict{Any, Any}` for `V = Any`, which then
-    # falls outside `_ITensorCollection` and routes the next dispatch
-    # through the wrong path (function-callback Group C) — infinite
-    # recursion. Locking the value type to `ITensor` avoids that.
     default = Dict{V, ITensor}(v => ITensor() for v in vertices(g))
     tn = ITensorNetwork(default, g)
     for v in vertices(g)
-        tn[v] = tensors[v]
+        @preserve_graph tn[v] = tensors[v]
+    end
+    vs = collect(vertices(tn))
+    for i in eachindex(vs), j in (i + 1):lastindex(vs)
+        v1, v2 = vs[i], vs[j]
+        if !isempty(commoninds(tn[v1], tn[v2]))
+            add_edge!(data_graph(tn), v1 => v2)
+        end
     end
     return tn
 end
 
 # Non-parametric delegates: extract `V` via `keytype` / `vertextype`.
-function ITensorNetwork(tensors::_ITensorCollection)
+function ITensorNetwork(tensors)
     return ITensorNetwork{keytype(tensors)}(tensors)
 end
-function ITensorNetwork(tensors::_ITensorCollection, graph::NamedGraph)
+function ITensorNetwork(tensors, graph::NamedGraph)
     return ITensorNetwork{vertextype(graph)}(tensors, graph)
 end
 
@@ -115,9 +108,6 @@ end
 
 function ITensorNetwork{V}(tn::ITensorNetwork) where {V}
     g = NamedGraph{V}(underlying_graph(tn))
-    # Type-annotated so empty-`tn` + `V = Any` doesn't drop us out of
-    # `_ITensorCollection` and into the wrong dispatch (see the parametric
-    # `(tensors)` form above for the same gotcha).
     tensors = Dict{V, ITensor}(v => tn[v] for v in vertices(tn))
     return ITensorNetwork(tensors, g)
 end

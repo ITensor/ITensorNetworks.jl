@@ -32,17 +32,15 @@ function set_ortho_region(tn::AbstractTTN, new_region)
     return error("Not implemented")
 end
 
-function gauge(alg::Algorithm, ttn::AbstractTTN, region::Vector; kwargs...)
-    ttn = tree_gauge(alg, ttn, collect(ortho_region(ttn)), region; kwargs...)
+function gauge(ttn::AbstractTTN, region::Vector)
+    ttn = tree_gauge(ttn, collect(ortho_region(ttn)), region)
     return set_ortho_region(ttn, region)
 end
 
-function gauge(alg::Algorithm, ttn::AbstractTTN, region; kwargs...)
-    return gauge(alg, ttn, [region]; kwargs...)
-end
+gauge(ttn::AbstractTTN, region) = gauge(ttn, [region])
 
 """
-    orthogonalize(ttn::AbstractTreeTensorNetwork, region; kwargs...) -> TreeTensorNetwork
+    orthogonalize(ttn::AbstractTreeTensorNetwork, region) -> TreeTensorNetwork
 
 Bring `ttn` into an orthogonal gauge with orthogonality center at `region`.
 `region` may be a single vertex or a vector of vertices.
@@ -53,13 +51,9 @@ right-orthogonal with respect to that path.
 
 See also: [`ortho_region`](@ref), [`truncate`](@ref).
 """
-function orthogonalize(ttn::AbstractTTN, region; kwargs...)
-    return gauge(Algorithm("orthogonalize"), ttn, region; kwargs...)
-end
+orthogonalize(ttn::AbstractTTN, region) = gauge(ttn, region)
 
-function tree_orthogonalize(ttn::AbstractTTN, args...; kwargs...)
-    return orthogonalize(ttn, args...; kwargs...)
-end
+tree_orthogonalize(ttn::AbstractTTN, args...) = orthogonalize(ttn, args...)
 
 #
 # Truncation

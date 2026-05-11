@@ -48,21 +48,14 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   contract(tn::AbstractITensorNetwork, edge::Pair; kws...)
   ```
 
-* Factorize the bond on `edge` using the default factorization (`abstractitensornetwork.jl`):
+* QR-factorize across `edge`: keep the orthogonal factor on `src(edge)` and absorb
+  the residual into `tn[dst(edge)]`. Vertex set unchanged; the bond between
+  `src(edge)` and `dst(edge)` is re-gauged (`abstractitensornetwork.jl`):
   ```julia
-  factorize(tn::AbstractITensorNetwork, edge::AbstractEdge; kws...)
-  factorize(tn::AbstractITensorNetwork, edge::Pair; kws...)
-  ```
-
-* QR-factorize across `edge`, placing the orthogonal factor on `src(edge)` and the remainder
-  on `dst(edge)` (`abstractitensornetwork.jl`):
-  ```julia
-  qr(tn::AbstractITensorNetwork, edge::AbstractEdge; kws...)
-  ```
-
-* SVD-factorize across `edge` (`abstractitensornetwork.jl`):
-  ```julia
-  svd(tn::AbstractITensorNetwork, edge::AbstractEdge; kws...)
+  qr(tn::AbstractITensorNetwork, edge::AbstractEdge)
+  qr(tn::AbstractITensorNetwork, edge::Pair)
+  qr!(tn::AbstractITensorNetwork, edge::AbstractEdge)
+  qr!(tn::AbstractITensorNetwork, edge::Pair)
   ```
 
 * Truncate the bond on `edge` via SVD; forwards `cutoff`, `maxdim`, `mindim` kwargs (`abstractitensornetwork.jl`):

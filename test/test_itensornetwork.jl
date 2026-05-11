@@ -8,7 +8,6 @@ using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork, contraction
 using ITensors.NDTensors: NDTensors, dim
 using ITensors: ITensors, ITensor, Index, Op, commonind, commoninds, contract, dag, hasinds,
     inds, inner, itensor, onehot, order, prime, random_itensor, scalartype, sim
-using LinearAlgebra: factorize
 using NDTensors: NDTensors, dim
 using NamedGraphs.GraphsExtensions: disjoint_union, incident_edges
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
@@ -144,12 +143,6 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         rng = StableRNG(1234)
         tn = random_tensornetwork(rng, named_grid(4); link_space = 2)
         Z = norm_sqr(tn)
-        tn_ortho = factorize(tn, 4 => 3)
-        # TODO: Error here in arranging the edges. Arrange by hash?
-        Z̃ = norm_sqr(tn_ortho)
-        @test nv(tn_ortho) == 5
-        @test nv(tn) == 4
-        @test Z ≈ Z̃
         tn_ortho = tree_orthogonalize(tn, [3, 4])
         Z̃ = norm_sqr(tn_ortho)
         @test nv(tn_ortho) == 4

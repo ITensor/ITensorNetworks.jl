@@ -5,14 +5,14 @@ using DataGraphs: DataGraphs, edge_data, get_vertex_data, is_vertex_assigned,
 using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
     has_edge, ne, neighbors, rem_edge!, src, vertices
-using ITensors: ITensors, @Algorithm_str, ITensor, addtags, combiner, commoninds,
-    commontags, contract, dag, inds, noprime, onehot, prime, replaceprime, replacetags,
-    setprime, settags, sim, swaptags, tags
-using LinearAlgebra: LinearAlgebra, factorize, qr
+using ITensors: ITensors, ITensor, addtags, commoninds, commontags, contract, dag, inds,
+    noprime, onehot, prime, replaceprime, replacetags, setprime, settags, sim, swaptags,
+    tags
+using LinearAlgebra: LinearAlgebra, qr, qr!
 using MacroTools: @capture
 using NDTensors: NDTensors, Algorithm, dim, scalartype
 using NamedGraphs.GraphsExtensions:
-    directed_graph, incident_edges, rename_vertices, vertextype, ⊔
+    add_edges, directed_graph, incident_edges, rename_vertices, vertextype, ⊔
 using NamedGraphs: NamedGraphs, NamedGraph, Vertices, not_implemented, steiner_tree
 using SplitApplyCombine: flatten
 
@@ -111,14 +111,12 @@ function DataGraphs.get_vertex_data(is::AbstractITensorNetwork, v)
 end
 
 function DataGraphs.set_vertex_data!(tn::AbstractITensorNetwork, value, v)
-    # v = to_vertex(tn, index...)
     @preserve_graph tn[v] = value
     fix_edges!(tn, v)
     return tn
 end
 
 function DataGraphs.set_vertices_data!(tn::AbstractITensorNetwork, values, vertices)
-    # v = to_vertex(tn, index...)
     for v in vertices
         @preserve_graph tn[v] = values[v]
     end
@@ -128,6 +126,16 @@ function DataGraphs.set_vertices_data!(tn::AbstractITensorNetwork, values, verti
     return tn
 end
 
+# Reconcile the graph edges incident to `v` with the shared Indices of
+# `tn[v]`, after a non-`@preserve_graph` write that may have changed
+# which neighbors share an Index with `v`. Removes any incident edges
+# that no longer correspond to a shared Index, and adds edges to any
+# vertex now sharing one. The long-term invariant is graph-edge ↔
+# shared-Index one-to-one; until that's structural (e.g. via a reverse
+# Index map on the type), this auto-reconciliation runs after
+# `set_vertex_data!` / `set_vertices_data!` so plain `tn[v] = ...`
+# writes don't desync the two. Callers that already maintain the
+# invariant explicitly should bypass this with `@preserve_graph`.
 function fix_edges!(tn::AbstractITensorNetwork, v)
     for edge in incident_edges(tn, v)
         rem_edge!(tn, edge)
@@ -485,138 +493,34 @@ function ITensors.tags(tn::AbstractITensorNetwork, edge)
     return commontags(is)
 end
 
-function LinearAlgebra.svd(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-    return svd(tn, edgetype(tn)(edge))
-end
-
-function LinearAlgebra.svd(
-        tn::AbstractITensorNetwork,
-        edge::AbstractEdge;
-        U_vertex = src(edge),
-        S_vertex = (edge, "S"),
-        V_vertex = (edge, "V"),
-        u_tags = tags(tn, edge),
-        v_tags = tags(tn, edge),
-        kwargs...
-    )
-    tn = copy(tn)
+# QR-factor `tn[src(edge)]` along the inds it doesn't share with
+# `tn[dst(edge)]`, keep the orthogonal factor `Q` on `src(edge)`, and
+# absorb the residual `R` into `tn[dst(edge)]`. Mutates `tn` in place;
+# the graph is unchanged.
+function LinearAlgebra.qr!(tn::AbstractITensorNetwork, edge::AbstractEdge)
     left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
-    U, S, V =
-        svd(tn[src(edge)], left_inds; lefttags = u_tags, righttags = v_tags, kwargs...)
-
-    rem_vertex!(tn, src(edge))
-    add_vertex!(tn, U_vertex)
-    tn[U_vertex] = U
-
-    add_vertex!(tn, S_vertex)
-    tn[S_vertex] = S
-
-    add_vertex!(tn, V_vertex)
-    tn[V_vertex] = V
-
+    Q, R = qr(tn[src(edge)], left_inds; tags = edge_tag(edge))
+    @preserve_graph tn[src(edge)] = Q
+    @preserve_graph tn[dst(edge)] = R * tn[dst(edge)]
     return tn
 end
 
-function LinearAlgebra.qr(
-        tn::AbstractITensorNetwork,
-        edge::AbstractEdge;
-        Q_vertex = src(edge),
-        R_vertex = (edge, "R"),
-        tags = tags(tn, edge),
-        kwargs...
-    )
-    tn = copy(tn)
-    left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
-    Q, R = factorize(tn[src(edge)], left_inds; tags, kwargs...)
-
-    rem_vertex!(tn, src(edge))
-    add_vertex!(tn, Q_vertex)
-    tn[Q_vertex] = Q
-
-    add_vertex!(tn, R_vertex)
-    tn[R_vertex] = R
-
-    return tn
+function LinearAlgebra.qr!(tn::AbstractITensorNetwork, edge::Pair)
+    return qr!(tn, edgetype(tn)(edge))
 end
 
-function LinearAlgebra.factorize(
-        tn::AbstractITensorNetwork,
-        edge::AbstractEdge;
-        X_vertex = src(edge),
-        Y_vertex = ("Y", edge),
-        tags = tags(tn, edge),
-        kwargs...
-    )
-    # Promote vertex type
-    V = promote_type(vertextype(tn), typeof(X_vertex), typeof(Y_vertex))
+LinearAlgebra.qr(tn::AbstractITensorNetwork, edge::AbstractEdge) = qr!(copy(tn), edge)
+LinearAlgebra.qr(tn::AbstractITensorNetwork, edge::Pair) = qr!(copy(tn), edge)
 
-    # TODO: Check `ITensorNetwork{V}`, shouldn't need a copy here.
-    tn = ITensorNetwork{V}(copy(tn))
-
-    neighbors_X = setdiff(neighbors(tn, src(edge)), [dst(edge)])
-    left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
-    X, Y = factorize(tn[src(edge)], left_inds; tags, kwargs...)
-
-    rem_vertex!(tn, src(edge))
-    add_vertex!(tn, X_vertex)
-    add_vertex!(tn, Y_vertex)
-
-    add_edge!(data_graph(tn), X_vertex => Y_vertex)
-    for nX in neighbors_X
-        add_edge!(data_graph(tn), X_vertex => nX)
-    end
-    add_edge!(data_graph(tn), Y_vertex => dst(edge))
-    @preserve_graph tn[X_vertex] = X
-    @preserve_graph tn[Y_vertex] = Y
-    return tn
-end
-
-function LinearAlgebra.factorize(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-    return factorize(tn, edgetype(tn)(edge); kwargs...)
-end
-
-# For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function gauge_edge(
-        alg::Algorithm"orthogonalize", tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...
-    )
-    # tn = factorize(tn, edge; kwargs...)
-    # # TODO: Implement as `only(common_neighbors(tn, src(edge), dst(edge)))`
-    # new_vertex = only(neighbors(tn, src(edge)) ∩ neighbors(tn, dst(edge)))
-    # return contract(tn, new_vertex => dst(edge))
-    !has_edge(tn, edge) && throw(ArgumentError("Edge not in graph."))
-    tn = copy(tn)
-    left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
-    ltags = tags(tn, edge)
-    X, Y = factorize(tn[src(edge)], left_inds; tags = ltags, ortho = "left", kwargs...)
-    @preserve_graph tn[src(edge)] = X
-    @preserve_graph tn[dst(edge)] = tn[dst(edge)] * Y
-    return tn
-end
-
-# For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function gauge_walk(
-        alg::Algorithm, tn::AbstractITensorNetwork, edges::Vector{<:AbstractEdge}; kwargs...
-    )
+function gauge_walk(tn::AbstractITensorNetwork, edges)
     tn = copy(tn)
     for edge in edges
-        tn = gauge_edge(alg, tn, edge; kwargs...)
+        qr!(tn, edge)
     end
     return tn
 end
 
-function gauge_walk(alg::Algorithm, tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-    return gauge_edge(alg::Algorithm, tn, edgetype(tn)(edge); kwargs...)
-end
-
-function gauge_walk(
-        alg::Algorithm, tn::AbstractITensorNetwork, edges::Vector{<:Pair}; kwargs...
-    )
-    return gauge_walk(alg, tn, edgetype(tn).(edges); kwargs...)
-end
-
-function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region)
-    return tree_gauge(alg, ψ, [region])
-end
+tree_gauge(ψ::AbstractITensorNetwork, region) = tree_gauge(ψ, [region])
 
 #Get the path that moves the gauge from a to b on a tree
 #TODO: Move to NamedGraphs
@@ -630,31 +534,18 @@ end
 
 # Gauge a ITensorNetwork from cur_region towards new_region, treating
 # the network as a tree spanned by a spanning tree.
-function tree_gauge(
-        alg::Algorithm,
-        ψ::AbstractITensorNetwork,
-        cur_region::Vector,
-        new_region::Vector;
-        kwargs...
-    )
+function tree_gauge(ψ::AbstractITensorNetwork, cur_region::Vector, new_region::Vector)
     es = edge_sequence_between_regions(ψ, cur_region, new_region)
-    ψ = gauge_walk(alg, ψ, es; kwargs...)
-    return ψ
+    return gauge_walk(ψ, es)
 end
 
 # Gauge a ITensorNetwork towards a region, treating
 # the network as a tree spanned by a spanning tree.
-function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region::Vector)
-    return tree_gauge(alg, ψ, collect(vertices(ψ)), region)
+function tree_gauge(ψ::AbstractITensorNetwork, region::Vector)
+    return tree_gauge(ψ, collect(vertices(ψ)), region)
 end
 
-function tree_orthogonalize(ψ::AbstractITensorNetwork, cur_region, new_region; kwargs...)
-    return tree_gauge(Algorithm("orthogonalize"), ψ, cur_region, new_region; kwargs...)
-end
-
-function tree_orthogonalize(ψ::AbstractITensorNetwork, region; kwargs...)
-    return tree_gauge(Algorithm("orthogonalize"), ψ, region; kwargs...)
-end
+tree_orthogonalize(ψ::AbstractITensorNetwork, args...) = tree_gauge(ψ, args...)
 
 # TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
 function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
@@ -707,38 +598,6 @@ function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
     ψT = ψ ⊔ ITensorNetwork([T])
     v⃗ = neighbors(ψT, (1, 2))
     return first.(v⃗)
-end
-
-function linkinds_combiners(tn::AbstractITensorNetwork; edges = edges(tn))
-    combiners = DataGraph(
-        directed_graph(underlying_graph(tn));
-        vertex_data_type = ITensor,
-        edge_data_type = ITensor
-    )
-    for e in edges
-        C = combiner(linkinds(tn, e); tags = edge_tag(e))
-        combiners[e] = C
-        combiners[reverse(e)] = dag(C)
-    end
-    return combiners
-end
-
-function combine_linkinds(tn::AbstractITensorNetwork, combiners)
-    combined_tn = copy(tn)
-    for e in edges(tn)
-        if !isempty(linkinds(tn, e)) && isassigned(combiners, e)
-            combined_tn[src(e)] = combined_tn[src(e)] * combiners[e]
-            combined_tn[dst(e)] = combined_tn[dst(e)] * combiners[reverse(e)]
-        end
-    end
-    return combined_tn
-end
-
-function combine_linkinds(
-        tn::AbstractITensorNetwork; edges::Vector{<:Union{Pair, AbstractEdge}} = edges(tn)
-    )
-    combiners = linkinds_combiners(tn; edges)
-    return combine_linkinds(tn, combiners)
 end
 
 function inner_network(x::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...)
@@ -824,40 +683,17 @@ function linkdims(tn::AbstractITensorNetwork{V}) where {V}
     return ld
 end
 
-function insert_linkinds(
-        tn::AbstractITensorNetwork, edges = edges(tn); link_space = trivial_space(tn)
-    )
-    tn = copy(tn)
-    for e in edges
-        if isempty(linkinds(tn, e))
-            iₑ = Index(link_space, edge_tag(e))
-            X = onehot(iₑ => 1)
-            tn[src(e)] *= X
-            tn[dst(e)] *= dag(X)
-        end
-    end
-    return tn
-end
-
-# Factor `tn[src(edge)]` via `f` along the inds it doesn't share with
-# `tn[dst(edge)]`, leaving the new factor on `src(edge)` and contracting
-# the residual into `tn[dst(edge)]`. With `f = qr` and no shared inds yet,
-# this threads a fresh link Index between the two endpoints. With shared
-# inds present, it regauges across the existing link.
-function factorize_edge!(f, tn::AbstractITensorNetwork, edge)
-    src_t, dst_t = tn[src(edge)], tn[dst(edge)]
-    left_inds = setdiff(inds(src_t), inds(dst_t))
-    x, y = f(src_t, left_inds)
-    @preserve_graph tn[src(edge)] = x
-    @preserve_graph tn[dst(edge)] = y * dst_t
-    return tn
-end
-
+# Ensure `edge` is present in both the underlying graph and as a shared
+# Index between the endpoint tensors. The long-term invariant is that the
+# two are one-to-one; today they can drift apart, so this fills in
+# whichever piece is missing. Returns the `Graphs.add_edge!` convention:
+# `true` if a new graph edge was added, `false` if the graph edge was
+# already present (regardless of whether link inds had to be threaded).
 function Graphs.add_edge!(tn::AbstractITensorNetwork, edge)
-    has_edge(tn, edge) && return false
-    add_edge!(data_graph(tn), edge)
-    factorize_edge!(qr, tn, edge)
-    return true
+    added = !has_edge(tn, edge)
+    added && add_edge!(data_graph(tn), edge)
+    isempty(linkinds(tn, edge)) && qr!(tn, edge)
+    return added
 end
 
 # TODO: What to output? Could be an `IndsNetwork`. Or maybe
@@ -873,10 +709,6 @@ function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
     end
     return inds
 end
-
-# Check if the edge of an itensornetwork has multiple indices
-is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
-is_multi_edge(tn::AbstractITensorNetwork) = Base.Fix1(is_multi_edge, tn)
 
 """
     add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) -> ITensorNetwork
@@ -894,15 +726,23 @@ See also: `Base.:+` for `TreeTensorNetwork`, `truncate`.
 function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
     @assert issetequal(vertices(tn1), vertices(tn2))
 
-    tn1 = combine_linkinds(tn1; edges = filter(is_multi_edge(tn1), edges(tn1)))
-    tn2 = combine_linkinds(tn2; edges = filter(is_multi_edge(tn2), edges(tn2)))
+    # Collapse any multi-edges (edges carrying >1 shared Index) to a single
+    # shared Index, so the per-edge direct sum below sees one link per edge.
+    tn1 = copy(tn1)
+    tn2 = copy(tn2)
+    for e in edges(tn1)
+        length(linkinds(tn1, e)) > 1 && qr!(tn1, e)
+    end
+    for e in edges(tn2)
+        length(linkinds(tn2, e)) > 1 && qr!(tn2, e)
+    end
 
     edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
 
     if !issetequal(edges_tn1, edges_tn2)
         new_edges = union(edges_tn1, edges_tn2)
-        tn1 = insert_linkinds(tn1, new_edges)
-        tn2 = insert_linkinds(tn2, new_edges)
+        tn1 = add_edges(tn1, new_edges)
+        tn2 = add_edges(tn2, new_edges)
     end
 
     edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
