@@ -2,12 +2,12 @@ using Compat: Compat
 using Graphs: vertices
 using ITensorNetworks: ITensorNetworks, @preserve_graph, BeliefPropagationCache, contract,
     contraction_sequence, environment, inner_network, message, message_diff,
-    partitioned_tensornetwork, scalar, siteinds, split_index, tensornetwork, update,
-    update_factor, updated_message, ⊗
+    partitioned_tensornetwork, scalar, siteinds, tensornetwork, update, update_factor,
+    updated_message, ⊗
 include("utils.jl")
 using ITensors.NDTensors: array
-using ITensors:
-    ITensors, Algorithm, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
+using ITensors: ITensors, Algorithm, ITensor, combiner, commoninds, dag, inds, inner, op,
+    prime, random_itensor
 using LinearAlgebra: eigvals, tr
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NamedGraphs.PartitionedGraphs: quotientedges
@@ -60,7 +60,14 @@ using Test: @test, @testset
         #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
         vs = [(2, 2), (2, 3)]
 
-        ψψsplit = split_index(ψψ, NamedEdge.([(v, 1) => (v, 2) for v in vs]))
+        # Prime the bra-ket shared site indices on the ket side at the
+        # selected vertices, so the contracted RDM has open primed/unprimed
+        # legs there. Mutates a copy of `ψψ` in place; no graph edits.
+        ψψsplit = copy(ψψ)
+        for v in vs
+            common = commoninds(ψψsplit[(v, 1)], ψψsplit[(v, 2)])
+            ψψsplit[(v, 2)] = prime(ψψsplit[(v, 2)], common)
+        end
         env_tensors = environment(bpc, [(v, 2) for v in vs])
         rdm =
             contract(vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]))
