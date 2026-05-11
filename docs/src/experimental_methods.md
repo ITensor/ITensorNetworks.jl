@@ -4,15 +4,6 @@ Methods which still need to be discussed, modified, or deprecated.
 
 ## ITensorNetwork Methods
 
-* Combine (fuse) every link index of a tensor network, or a chosen set of edges, into
-  a single index per edge using `combiner` tensors. (`abstractitensornetwork.jl`).
-  Comment: it may be better to fold this into a more general interface `gauge_transform(f, tn::AbstractITensorNetwork)` that applies a gauge transformation $X\_e$ $X\_e^{-1}$ on each edge $e$.
-  ```julia
-  linkinds_combiners(tn::AbstractITensorNetwork; edges = edges(tn))
-  combine_linkinds(tn::AbstractITensorNetwork, combiners)
-  combine_linkinds(tn::AbstractITensorNetwork; edges = edges(tn))
-  ```
-
 * Extract the `IndsNetwork` of a tensor network — site indices per vertex and link
   indices per edge (`abstractitensornetwork.jl`):
   ```julia

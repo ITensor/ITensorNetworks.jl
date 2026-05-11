@@ -5,9 +5,9 @@ using DataGraphs: DataGraphs, edge_data, get_vertex_data, is_vertex_assigned,
 using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
     has_edge, ne, neighbors, rem_edge!, src, vertices
-using ITensors: ITensors, @Algorithm_str, ITensor, addtags, combiner, commoninds,
-    commontags, contract, dag, inds, noprime, onehot, prime, replaceprime, replacetags,
-    setprime, settags, sim, swaptags, tags
+using ITensors: ITensors, @Algorithm_str, ITensor, addtags, commoninds, commontags,
+    contract, dag, inds, noprime, onehot, prime, replaceprime, replacetags, setprime,
+    settags, sim, swaptags, tags
 using LinearAlgebra: LinearAlgebra, factorize, qr
 using MacroTools: @capture
 using NDTensors: NDTensors, Algorithm, dim, scalartype
@@ -709,38 +709,6 @@ function neighbor_vertices(ψ::AbstractITensorNetwork, T::ITensor)
     return first.(v⃗)
 end
 
-function linkinds_combiners(tn::AbstractITensorNetwork; edges = edges(tn))
-    combiners = DataGraph(
-        directed_graph(underlying_graph(tn));
-        vertex_data_type = ITensor,
-        edge_data_type = ITensor
-    )
-    for e in edges
-        C = combiner(linkinds(tn, e); tags = edge_tag(e))
-        combiners[e] = C
-        combiners[reverse(e)] = dag(C)
-    end
-    return combiners
-end
-
-function combine_linkinds(tn::AbstractITensorNetwork, combiners)
-    combined_tn = copy(tn)
-    for e in edges(tn)
-        if !isempty(linkinds(tn, e)) && isassigned(combiners, e)
-            combined_tn[src(e)] = combined_tn[src(e)] * combiners[e]
-            combined_tn[dst(e)] = combined_tn[dst(e)] * combiners[reverse(e)]
-        end
-    end
-    return combined_tn
-end
-
-function combine_linkinds(
-        tn::AbstractITensorNetwork; edges::Vector{<:Union{Pair, AbstractEdge}} = edges(tn)
-    )
-    combiners = linkinds_combiners(tn; edges)
-    return combine_linkinds(tn, combiners)
-end
-
 function inner_network(x::AbstractITensorNetwork, y::AbstractITensorNetwork; kwargs...)
     return LinearFormNetwork(x, y; kwargs...)
 end
@@ -865,10 +833,6 @@ function ITensors.commoninds(tn1::AbstractITensorNetwork, tn2::AbstractITensorNe
     return inds
 end
 
-# Check if the edge of an itensornetwork has multiple indices
-is_multi_edge(tn::AbstractITensorNetwork, e) = length(linkinds(tn, e)) > 1
-is_multi_edge(tn::AbstractITensorNetwork) = Base.Fix1(is_multi_edge, tn)
-
 """
     add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork) -> ITensorNetwork
 
@@ -885,8 +849,16 @@ See also: `Base.:+` for `TreeTensorNetwork`, `truncate`.
 function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
     @assert issetequal(vertices(tn1), vertices(tn2))
 
-    tn1 = combine_linkinds(tn1; edges = filter(is_multi_edge(tn1), edges(tn1)))
-    tn2 = combine_linkinds(tn2; edges = filter(is_multi_edge(tn2), edges(tn2)))
+    # Collapse any multi-edges (edges carrying >1 shared Index) to a single
+    # shared Index, so the per-edge direct sum below sees one link per edge.
+    tn1 = copy(tn1)
+    tn2 = copy(tn2)
+    for e in edges(tn1)
+        length(linkinds(tn1, e)) > 1 && factorize_edge!(qr, tn1, e)
+    end
+    for e in edges(tn2)
+        length(linkinds(tn2, e)) > 1 && factorize_edge!(qr, tn2, e)
+    end
 
     edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
 
