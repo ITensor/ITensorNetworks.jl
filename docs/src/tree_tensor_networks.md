@@ -68,25 +68,6 @@ ITensorNetworks.TreeTensorNetwork
 ITensorNetworks.ITensorNetwork(::ITensorNetworks.TreeTensorNetwork)
 ```
 
-### From a dense `ITensor`
-
-A dense tensor can be decomposed into a TTN by successive QR/SVD factorisations along the
-tree edges. Truncation parameters (e.g. `cutoff`, `maxdim`) are forwarded to the
-factorisation step.
-
-```@example main
-g_small = named_comb_tree((3, 1))
-sites_small = siteinds("S=1/2", g_small)
-A = ITensors.random_itensor(
-    only(sites_small[(1, 1)]), only(sites_small[(2, 1)]), only(sites_small[(3, 1)])
-)
-ttn_A = TreeTensorNetwork(A, sites_small)
-```
-
-```@docs; canonical=false
-ITensorNetworks.TreeTensorNetwork(::ITensors.ITensor, ::ITensorNetworks.IndsNetwork)
-```
-
 ## Orthogonal Gauge
 
 One of the most powerful features of tree tensor networks is the ability to bring the
