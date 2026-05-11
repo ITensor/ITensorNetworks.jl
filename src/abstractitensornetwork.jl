@@ -824,21 +824,6 @@ function linkdims(tn::AbstractITensorNetwork{V}) where {V}
     return ld
 end
 
-function insert_linkinds(
-        tn::AbstractITensorNetwork, edges = edges(tn); link_space = trivial_space(tn)
-    )
-    tn = copy(tn)
-    for e in edges
-        if isempty(linkinds(tn, e))
-            iₑ = Index(link_space, edge_tag(e))
-            X = onehot(iₑ => 1)
-            tn[src(e)] *= X
-            tn[dst(e)] *= dag(X)
-        end
-    end
-    return tn
-end
-
 # Factor `tn[src(edge)]` via `f` along the inds it doesn't share with
 # `tn[dst(edge)]`, leaving the new factor on `src(edge)` and contracting
 # the residual into `tn[dst(edge)]`. With `f = qr` and no shared inds yet,
@@ -853,11 +838,17 @@ function factorize_edge!(f, tn::AbstractITensorNetwork, edge)
     return tn
 end
 
+# Ensure `edge` is present in both the underlying graph and as a shared
+# Index between the endpoint tensors. The long-term invariant is that the
+# two are one-to-one; today they can drift apart, so this fills in
+# whichever piece is missing. Returns the `Graphs.add_edge!` convention:
+# `true` if a new graph edge was added, `false` if the graph edge was
+# already present (regardless of whether link inds had to be threaded).
 function Graphs.add_edge!(tn::AbstractITensorNetwork, edge)
-    has_edge(tn, edge) && return false
-    add_edge!(data_graph(tn), edge)
-    factorize_edge!(qr, tn, edge)
-    return true
+    added = !has_edge(tn, edge)
+    added && add_edge!(data_graph(tn), edge)
+    isempty(linkinds(tn, edge)) && factorize_edge!(qr, tn, edge)
+    return added
 end
 
 # TODO: What to output? Could be an `IndsNetwork`. Or maybe
@@ -900,9 +891,10 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
     edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
 
     if !issetequal(edges_tn1, edges_tn2)
-        new_edges = union(edges_tn1, edges_tn2)
-        tn1 = insert_linkinds(tn1, new_edges)
-        tn2 = insert_linkinds(tn2, new_edges)
+        for e in union(edges_tn1, edges_tn2)
+            add_edge!(tn1, e)
+            add_edge!(tn2, e)
+        end
     end
 
     edges_tn1, edges_tn2 = edges(tn1), edges(tn2)

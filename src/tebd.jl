@@ -15,11 +15,14 @@ function tebd(
     s = siteinds(ψ)
     u⃗ = Vector{ITensor}(𝒰, s)
     nsteps = Int(β ÷ Δβ)
+    ψ = copy(ψ)
+    for e in edges(ψ)
+        add_edge!(ψ, e)
+    end
     for step in 1:nsteps
         if step % print_frequency == 0
             @show step, (step - 1) * Δβ, β
         end
-        ψ = insert_linkinds(ψ)
         ψ = apply(u⃗, ψ; cutoff, maxdim, normalize = true, ortho, kwargs...)
         if ortho
             for v in vertices(ψ)
