@@ -1,9 +1,8 @@
-using .ITensorsExtensions: ITensorsExtensions, promote_indtype, trivial_space
 using DataGraphs: DataGraphs, AbstractDataGraph, DataGraph, IsUnderlyingGraph, edge_data,
     get_edge_data, get_vertex_data, is_edge_assigned, is_vertex_assigned, map_data,
     set_edge_data!, set_vertex_data!, underlying_graph_type, vertex_data
 using Graphs: Graphs, AbstractEdge
-using ITensors: ITensors, unioninds
+using ITensors: ITensors, Index, unioninds
 using NamedGraphs.GraphsExtensions:
     GraphsExtensions, directed_graph, incident_edges, rename_vertices
 using NamedGraphs: NamedGraphs
@@ -61,18 +60,6 @@ end
 #
 # Convenience functions
 #
-
-function ITensorsExtensions.promote_indtypeof(is::AbstractIndsNetwork)
-    sitetype = mapreduce(promote_indtype, vertices(is); init = Index{Int}) do v
-        # TODO: Replace with `is[v]` once `getindex(::IndsNetwork, ...)` is smarter.
-        return mapreduce(typeof, promote_indtype, get(is, v, Index[]); init = Index{Int})
-    end
-    linktype = mapreduce(promote_indtype, edges(is); init = Index{Int}) do e
-        # TODO: Replace with `is[e]` once `getindex(::IndsNetwork, ...)` is smarter.
-        return mapreduce(typeof, promote_indtype, get(is, e, Index[]); init = Index{Int})
-    end
-    return promote_indtype(sitetype, linktype)
-end
 
 function union_all_inds(is_in::AbstractIndsNetwork...)
     @assert all(map(ug -> ug == underlying_graph(is_in[1]), underlying_graph.(is_in)))

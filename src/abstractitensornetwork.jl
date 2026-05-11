@@ -1,4 +1,4 @@
-using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype, trivial_space
+using .ITensorsExtensions: ITensorsExtensions
 using Adapt: Adapt, adapt, adapt_structure
 using DataGraphs: DataGraphs, edge_data, get_vertex_data, is_vertex_assigned,
     set_vertex_data!, underlying_graph, underlying_graph_type, vertex_data
@@ -209,10 +209,6 @@ end
 #
 # Promotion and conversion
 #
-
-function ITensorsExtensions.promote_indtypeof(tn::AbstractITensorNetwork)
-    return mapreduce(v -> indtype(tn[v]), promote_indtype, vertices(tn))
-end
 
 function NDTensors.scalartype(tn::AbstractITensorNetwork)
     return mapreduce(v -> eltype(tn[v]), promote_type, vertices(tn); init = Bool)

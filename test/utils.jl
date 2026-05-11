@@ -5,13 +5,22 @@
 
 using DataGraphs: underlying_graph, vertex_data
 using Graphs: AbstractGraph, add_edge!, dst, edges, src, vertices
-using ITensorNetworks.ITensorsExtensions: trivial_space
 using ITensorNetworks: @preserve_graph, ITensorNetwork, IndsNetwork, data_graph
 using ITensors.NDTensors: dim
-using ITensors: ITensors, ITensor, Index, dag, itensor, onehot
+using ITensors: ITensors, ITensor, Index, QN, dag, hasqns, inds, itensor, onehot
 using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs: NamedGraph
 using Random: Random, AbstractRNG
+
+# Pick a length-1 space matching `tn`'s Index style: a dense `1` if no
+# vertex tensor has QN-graded indices, otherwise a single-block `[QN() => 1]`.
+# Used by `_add_edge!` below to thread a trivial Link Index between two
+# tensors without disturbing the QN structure (real `Index` constructors
+# need a space, not just a dimension).
+function _trivial_link_space(tn)
+    any(hasqns ∘ inds, (tn[v] for v in vertices(tn))) || return 1
+    return [QN() => 1]
+end
 
 # --- random_tensornetwork ----------------------------------------------------
 
@@ -82,7 +91,7 @@ end
 # `add_edge!` on the underlying graph so the graph-edge ↔ shared-Index
 # invariant is maintained without relying on auto-reconciliation.
 function _add_edge!(elt::Type, tn, edge)
-    iₑ = Index(trivial_space(tn), "Link")
+    iₑ = Index(_trivial_link_space(tn), "Link")
     X = ITensors.convert_eltype(elt, onehot(iₑ => 1))
     @preserve_graph tn[src(edge)] = tn[src(edge)] * X
     @preserve_graph tn[dst(edge)] = tn[dst(edge)] * dag(X)
@@ -209,3 +218,48 @@ module ModelHamiltonians
     end
 
 end  # module ModelHamiltonians
+
+# --- OpSum helpers ------------------------------------------------------------
+
+# Vertex-relabeling for OpSum trees: walks `Sum`/`Prod`/`Scaled`/`Op` nodes and
+# applies `f` to every site label inside `Op`. The `Scaled` step also runs the
+# coefficient through `maybe_real` to drop spurious complex zero imaginary
+# parts. Used by `test_opsum_to_ttn_mpo_cross_check.jl` to compare against
+# `ITensorMPS.MPO` by reindexing graph vertices onto an MPS line.
+using ITensorNetworks.BaseExtensions: maybe_real, to_tuple
+using ITensors.LazyApply: Prod, Scaled, Sum
+using ITensors.Ops: Op, Ops
+
+function replace_vertices(f, ∑o::Sum)
+    return Sum(map(oᵢ -> replace_vertices(f, oᵢ), Ops.terms(∑o)))
+end
+
+function replace_vertices(f, ∏o::Prod)
+    return Prod(map(oᵢ -> replace_vertices(f, oᵢ), Ops.terms(∏o)))
+end
+
+function replace_vertices(f, o::Scaled)
+    return maybe_real(Ops.coefficient(o)) * replace_vertices(f, Ops.argument(o))
+end
+
+set_sites(o::Op, sites) = Op(Ops.which_op(o), sites...; Ops.params(o)...)
+
+function replace_vertices(f, o::Op)
+    return set_sites(o, f.(Ops.sites(o)))
+end
+
+# Bucket `ITensors.terms(ℋ)` by which edge of `g` they sit on. Each term that
+# lives on a single edge `e = src => dst` gets summed into one bucket; the
+# returned `Sum` carries those per-edge sums in the order `edges(g)` produces
+# them. Used by `test_tebd.jl` to pre-group an Ising Hamiltonian before feeding
+# it to TEBD, which expects per-edge terms.
+using SplitApplyCombine: group
+
+function group_terms(ℋ::Sum, g)
+    grouped_terms = group(ITensors.terms(ℋ)) do t
+        findfirst(edges(g)) do e
+            return to_tuple.(ITensors.sites(t)) ⊆ [src(e), dst(e)]
+        end
+    end
+    return Sum(collect(sum.(grouped_terms)))
+end

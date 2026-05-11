@@ -2,7 +2,6 @@ using DataGraphs: vertex_data
 using Dictionaries: Dictionary
 using Graphs: add_edge!, add_vertex!, rem_edge!, vertices
 using ITensorMPS: ITensorMPS
-using ITensorNetworks.ITensorsExtensions: replace_vertices
 using ITensorNetworks: ITensorNetworks, TreeTensorNetwork, siteinds
 using ITensors.NDTensors: matrix, with_auto_fermion
 using ITensors: @disable_warn_order, ITensor, Index, combinedind, combiner, contract, dag,

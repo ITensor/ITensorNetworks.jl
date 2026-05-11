@@ -16,8 +16,6 @@ struct IndsNetwork{V, I} <: AbstractIndsNetwork{V, I}
         return new{V, I}(g)
     end
 end
-ITensorsExtensions.indtype(inds_network::IndsNetwork) = indtype(typeof(inds_network))
-ITensorsExtensions.indtype(::Type{<:IndsNetwork{V, I}}) where {V, I} = I
 data_graph(is::IndsNetwork) = is.data_graph
 NamedGraphs.vertextype(::Type{<:IndsNetwork{V}}) where {V} = V
 Graphs.is_directed(::Type{<:IndsNetwork}) = false
