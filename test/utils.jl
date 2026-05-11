@@ -226,9 +226,16 @@ end  # module ModelHamiltonians
 # coefficient through `maybe_real` to drop spurious complex zero imaginary
 # parts. Used by `test_opsum_to_ttn_mpo_cross_check.jl` to compare against
 # `ITensorMPS.MPO` by reindexing graph vertices onto an MPS line.
-using ITensorNetworks.BaseExtensions: maybe_real, to_tuple
+using ITensorNetworks: maybe_real
 using ITensors.LazyApply: Prod, Scaled, Sum
 using ITensors.Ops: Op, Ops
+
+# Promote a scalar / tuple-of-scalars into tuple form. Used below by
+# `group_terms` to compare each `OpSum` term's site list against `[src(e),
+# dst(e)]` uniformly, regardless of whether sites are bare scalars or already
+# tuples (NamedGraph vertex labels can be either).
+to_tuple(x) = (x,)
+to_tuple(x::Tuple) = x
 
 function replace_vertices(f, ∑o::Sum)
     return Sum(map(oᵢ -> replace_vertices(f, oᵢ), Ops.terms(∑o)))

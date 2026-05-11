@@ -1,10 +1,10 @@
-using ITensorNetworks.ITensorsExtensions: eigendecomp, map_eigvals
+using ITensorNetworks: eigendecomp, map_eigvals
 using ITensors.NDTensors: with_auto_fermion
 using ITensors: ITensor, Index, QN, apply, dag, delta, inds, mapprime, noprime, norm, op,
     permute, prime, random_itensor, replaceind, replaceinds, sim, swapprime
 using StableRNGs: StableRNG
 using Test: @test, @testset
-@testset "ITensorsExtensions" begin
+@testset "map_eigvals" begin
     @testset "Test map eigvals without QNS (eltype=$elt, dim=$n)" for elt in (
                 Float32, Float64, Complex{Float32}, Complex{Float64},
             ),

@@ -1,4 +1,3 @@
-using .ITensorsExtensions: ITensorsExtensions, indtype
 using DataGraphs: DataGraphs, DataGraph, IsUnderlyingGraph, get_vertex_data,
     is_vertex_assigned, map_data, set_vertex_data!, underlying_graph_type, vertex_data
 using Dictionaries: AbstractDictionary, Dictionary, Indices
@@ -9,6 +8,31 @@ using NamedGraphs.GraphsExtensions: vertextype
 using NamedGraphs.NamedGraphGenerators: named_path_graph
 using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph
 using SimpleTraits: SimpleTraits, @traitfn, Not
+
+# Spaces accepted by `Index`: a plain `Integer` dimension (dense) or a QN-block
+# vector `Vector{Pair{QN, <:Integer}}` (block-sparse). Used as the dispatch tag
+# for `_indtype` so a raw space spec gets mapped to the appropriate `Index{T}`.
+const IsIndexSpace = Union{<:Integer, Vector{<:Pair{QN, <:Integer}}}
+
+# Infer the `Index` type of an `IndsNetwork` from the per-edge / per-vertex
+# space specs the user passes to the `IndsNetwork{V, I}(g, link_space,
+# site_space)` constructor. Either argument may be `nothing` (defer entirely
+# to the other), a space spec, or a container (`AbstractVector` /
+# `AbstractDictionary`) of space specs.
+indtype(link_space::Nothing, site_space::Nothing) = Index
+indtype(link_space::Nothing, site_space) = indtype(site_space)
+indtype(link_space, site_space::Nothing) = indtype(link_space)
+indtype(link_space, site_space) = promote_type(indtype(link_space), indtype(site_space))
+
+indtype(space) = _indtype(typeof(space))
+
+# `_indtype` dispatches on the static space type to avoid recursion through
+# the user-facing `indtype(space)` entry point.
+_indtype(T::Type{<:Index}) = T
+_indtype(T::Type{<:IsIndexSpace}) = Index{T}
+_indtype(::Type{Nothing}) = Index
+_indtype(T::Type{<:AbstractDictionary}) = _indtype(eltype(T))
+_indtype(T::Type{<:AbstractVector}) = _indtype(eltype(T))
 
 struct IndsNetwork{V, I} <: AbstractIndsNetwork{V, I}
     data_graph::DataGraph{V, Vector{I}, Vector{I}, NamedGraph{V}, NamedEdge{V}}
