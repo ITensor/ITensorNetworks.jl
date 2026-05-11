@@ -11,5 +11,5 @@ Suggestions of methods which could be deleted.
   ```julia
   linkinds(pitn::PartitionedGraph, edge::QuotientEdge)
   ```
-  To be revisited after Jack's work on NamedGraphs.
+  Likely removable once the BP `default_message` chain is cleaned up.
 
