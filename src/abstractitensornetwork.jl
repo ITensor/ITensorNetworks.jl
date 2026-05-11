@@ -12,7 +12,7 @@ using LinearAlgebra: LinearAlgebra, factorize, qr
 using MacroTools: @capture
 using NDTensors: NDTensors, Algorithm, dim, scalartype
 using NamedGraphs.GraphsExtensions:
-    directed_graph, incident_edges, rename_vertices, vertextype, ⊔
+    add_edges!, directed_graph, incident_edges, rename_vertices, vertextype, ⊔
 using NamedGraphs: NamedGraphs, NamedGraph, Vertices, not_implemented, steiner_tree
 using SplitApplyCombine: flatten
 
@@ -891,10 +891,9 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
     edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
 
     if !issetequal(edges_tn1, edges_tn2)
-        for e in union(edges_tn1, edges_tn2)
-            add_edge!(tn1, e)
-            add_edge!(tn2, e)
-        end
+        new_edges = union(edges_tn1, edges_tn2)
+        add_edges!(tn1, new_edges)
+        add_edges!(tn2, new_edges)
     end
 
     edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
