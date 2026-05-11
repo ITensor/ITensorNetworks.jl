@@ -4,7 +4,7 @@ using DataGraphs: DataGraphs, edge_data, get_vertex_data, is_vertex_assigned,
     set_vertex_data!, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
-    has_edge, ne, neighbors, src, vertices
+    has_edge, ne, neighbors, rem_edge!, src, vertices
 using ITensors: ITensors, ITensor, addtags, commoninds, commontags, contract, dag, inds,
     noprime, onehot, prime, replaceprime, replacetags, setprime, settags, sim, swaptags,
     tags
@@ -12,7 +12,7 @@ using LinearAlgebra: LinearAlgebra, qr, qr!
 using MacroTools: @capture
 using NDTensors: NDTensors, Algorithm, dim, scalartype
 using NamedGraphs.GraphsExtensions:
-    add_edges, directed_graph, rename_vertices, vertextype, ⊔
+    add_edges, directed_graph, incident_edges, rename_vertices, vertextype, ⊔
 using NamedGraphs: NamedGraphs, NamedGraph, Vertices, not_implemented, steiner_tree
 using SplitApplyCombine: flatten
 
@@ -112,12 +112,41 @@ end
 
 function DataGraphs.set_vertex_data!(tn::AbstractITensorNetwork, value, v)
     @preserve_graph tn[v] = value
+    fix_edges!(tn, v)
     return tn
 end
 
 function DataGraphs.set_vertices_data!(tn::AbstractITensorNetwork, values, vertices)
     for v in vertices
         @preserve_graph tn[v] = values[v]
+    end
+    for v in vertices
+        fix_edges!(tn, v)
+    end
+    return tn
+end
+
+# Reconcile the graph edges incident to `v` with the shared Indices of
+# `tn[v]`, after a non-`@preserve_graph` write that may have changed
+# which neighbors share an Index with `v`. Removes any incident edges
+# that no longer correspond to a shared Index, and adds edges to any
+# vertex now sharing one. The long-term invariant is graph-edge ↔
+# shared-Index one-to-one; until that's structural (e.g. via a reverse
+# Index map on the type), this auto-reconciliation runs after
+# `set_vertex_data!` / `set_vertices_data!` so plain `tn[v] = ...`
+# writes don't desync the two. Callers that already maintain the
+# invariant explicitly should bypass this with `@preserve_graph`.
+function fix_edges!(tn::AbstractITensorNetwork, v)
+    for edge in incident_edges(tn, v)
+        rem_edge!(tn, edge)
+    end
+    for vertex in vertices(tn)
+        if v ≠ vertex
+            edge = v => vertex
+            if !isempty(linkinds(tn, edge))
+                add_edge!(data_graph(tn), edge)
+            end
+        end
     end
     return tn
 end
