@@ -15,8 +15,7 @@ function tebd(
     s = siteinds(ψ)
     u⃗ = Vector{ITensor}(𝒰, s)
     nsteps = Int(β ÷ Δβ)
-    ψ = copy(ψ)
-    add_edges!(ψ, edges(ψ))
+    ψ = add_edges(ψ, edges(ψ))
     for step in 1:nsteps
         if step % print_frequency == 0
             @show step, (step - 1) * Δβ, β
