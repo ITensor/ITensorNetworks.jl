@@ -1,6 +1,6 @@
 using Graphs: has_edge, ne
 using ITensors.NDTensors: scalartype
-using ITensors: ITensors, ITensor, Index, Ops, apply, commonind, commoninds, contract, dag,
+using ITensors: ITensors, ITensor, Index, apply, commonind, commoninds, contract, dag,
     denseblocks, factorize, factorize_svd, hascommoninds, hasqns, isdiag, map_diag,
     noncommonind, noprime, prime, replaceind, replaceinds, tags, unioninds, uniqueinds
 using LinearAlgebra: eigen, norm, qr, svd
@@ -158,32 +158,4 @@ function ITensors.apply(
         o⃗ψ = apply(oᵢ, o⃗ψ; normalize, ortho, apply_kwargs...)
     end
     return o⃗ψ
-end
-
-function ITensors.apply(
-        o⃗::Scaled,
-        ψ::AbstractITensorNetwork;
-        cutoff = nothing,
-        normalize = false,
-        ortho = false,
-        apply_kwargs...
-    )
-    return maybe_real(Ops.coefficient(o⃗)) *
-        apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho, apply_kwargs...)
-end
-
-function ITensors.apply(
-        o⃗::Prod, ψ::AbstractITensorNetwork; normalize = false, ortho = false, apply_kwargs...
-    )
-    o⃗ψ = ψ
-    for oᵢ in o⃗
-        o⃗ψ = apply(oᵢ, o⃗ψ; normalize, ortho, apply_kwargs...)
-    end
-    return o⃗ψ
-end
-
-function ITensors.apply(
-        o::Op, ψ::AbstractITensorNetwork; normalize = false, ortho = false, apply_kwargs...
-    )
-    return apply(ITensor(o, siteinds(ψ)), ψ; normalize, ortho, apply_kwargs...)
 end
