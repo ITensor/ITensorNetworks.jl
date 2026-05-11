@@ -8,7 +8,7 @@ using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edge
 using ITensors: ITensors, ITensor, addtags, commoninds, commontags, contract, dag, inds,
     noprime, onehot, prime, replaceprime, replacetags, setprime, settags, sim, swaptags,
     tags
-using LinearAlgebra: LinearAlgebra, factorize, qr, qr!
+using LinearAlgebra: LinearAlgebra, qr, qr!
 using MacroTools: @capture
 using NDTensors: NDTensors, Algorithm, dim, scalartype
 using NamedGraphs.GraphsExtensions:
@@ -470,11 +470,9 @@ end
 # the graph is unchanged.
 function LinearAlgebra.qr!(tn::AbstractITensorNetwork, edge::AbstractEdge)
     left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
-    Q, R = factorize(
-        tn[src(edge)], left_inds; tags = edge_tag(edge), ortho = "left"
-    )
+    Q, R = qr(tn[src(edge)], left_inds; tags = edge_tag(edge))
     @preserve_graph tn[src(edge)] = Q
-    @preserve_graph tn[dst(edge)] = tn[dst(edge)] * R
+    @preserve_graph tn[dst(edge)] = R * tn[dst(edge)]
     return tn
 end
 

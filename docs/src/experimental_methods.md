@@ -53,10 +53,10 @@ Methods which still need to be discussed, modified, or deprecated.
   tree-traversal QRs; `orthogonalize` is the user-facing wrapper, with `tree_orthogonalize`
   as an alias (`treetensornetworks/abstracttreetensornetwork.jl`):
   ```julia
-  gauge(alg::Algorithm, ttn::AbstractTTN, region::Vector; kwargs...)
-  gauge(alg::Algorithm, ttn::AbstractTTN, region; kwargs...)
-  orthogonalize(ttn::AbstractTTN, region; kwargs...)
-  tree_orthogonalize(ttn::AbstractTTN, args...; kwargs...)
+  gauge(ttn::AbstractTTN, region::Vector)
+  gauge(ttn::AbstractTTN, region)
+  orthogonalize(ttn::AbstractTTN, region)
+  tree_orthogonalize(ttn::AbstractTTN, args...)
   ```
 
 * Sweep-based truncation. The whole-TTN form orthogonalizes towards `src(e)` before
