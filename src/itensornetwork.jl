@@ -79,8 +79,9 @@ end
 # Construction from collections of ITensors
 #
 
-# Tensors only: derive graph from `keys(tensors)`, then run edge inference.
-# Without the reverse index map, edge inference is O(n²).
+# Tensors only: derive the vertex list from `keys(tensors)`, write the
+# tensors at each vertex, then infer edges from shared Indices in an
+# O(n²) sweep. Without a reverse index map, that's the only available cost.
 function ITensorNetwork{V}(tensors::_ITensorCollection) where {V}
     # Build the vertex list with element type `V` so that an empty `tensors`
     # input doesn't get the graph's vertex type inferred to whatever
@@ -96,7 +97,14 @@ function ITensorNetwork{V}(tensors::_ITensorCollection) where {V}
     default = Dict{V, ITensor}(v => ITensor() for v in vertices(g))
     tn = ITensorNetwork(default, g)
     for v in vertices(g)
-        tn[v] = tensors[v]
+        @preserve_graph tn[v] = tensors[v]
+    end
+    vs = collect(vertices(tn))
+    for i in eachindex(vs), j in (i + 1):lastindex(vs)
+        v1, v2 = vs[i], vs[j]
+        if !isempty(commoninds(tn[v1], tn[v2]))
+            add_edge!(data_graph(tn), v1 => v2)
+        end
     end
     return tn
 end
