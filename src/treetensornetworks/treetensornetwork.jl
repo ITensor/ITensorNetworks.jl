@@ -147,25 +147,15 @@ function TreeTensorNetwork(
         @assert hasinds(a, is[v])
     end
     @assert ortho_region ⊆ vertices(is)
-    is = insert_linkinds(is)
     g = NamedGraph(underlying_graph(is))
-    ts = Dict{vertextype(g), ITensor}()
-    for v in vertices(g)
-        site_inds = get(is, v, Index[])
-        edges_v = [edgetype(is)(v, nv) for nv in neighbors(is, v)]
-        link_inds = reduce(vcat, (is[e] for e in edges_v); init = Index[])
-        ts[v] = ITensor(site_inds..., link_inds...)
-    end
-    tn = ITensorNetwork(ts, g)
     ortho_center = first(ortho_region)
-    for e in post_order_dfs_edges(tn, ortho_center)
-        left_inds = setdiff(inds(a), inds(tn[dst(e)]))
+    ts = Dict{vertextype(g), ITensor}()
+    for e in post_order_dfs_edges(g, ortho_center)
+        left_inds = setdiff(inds(a), get(is, dst(e), Index[]))
         a_l, a_r = factorize(a, left_inds; tags = edge_tag(e), ortho = "left", kwargs...)
-        tn[src(e)] = a_l
-        is[e] = commoninds(a_l, a_r)
+        ts[src(e)] = a_l
         a = a_r
     end
-    tn[ortho_center] = a
-    ttn_a = TreeTensorNetwork(tn)
-    return orthogonalize(ttn_a, ortho_center)
+    ts[ortho_center] = a
+    return orthogonalize(TreeTensorNetwork(ITensorNetwork(ts, g)), ortho_center)
 end

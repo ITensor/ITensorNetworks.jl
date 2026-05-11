@@ -93,24 +93,3 @@ function union_all_inds(is_in::AbstractIndsNetwork...)
     end
     return is_out
 end
-
-function insert_linkinds(
-        indsnetwork::AbstractIndsNetwork,
-        edges = edges(indsnetwork);
-        link_space = trivial_space(indsnetwork)
-    )
-    indsnetwork = copy(indsnetwork)
-    for e in edges
-        # TODO: Change to check if it is empty.
-        if !isassigned(indsnetwork, e)
-            if !isnothing(link_space)
-                iₑ = Index(link_space, edge_tag(e))
-                # TODO: Allow setting with just `Index`.
-                indsnetwork[e] = [iₑ]
-            else
-                indsnetwork[e] = []
-            end
-        end
-    end
-    return indsnetwork
-end

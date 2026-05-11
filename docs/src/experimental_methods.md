@@ -224,12 +224,6 @@ Methods which still need to be discussed, modified, or deprecated.
   union_all_inds(is_in::AbstractIndsNetwork...)
   ```
 
-* Insert a default link index on every edge of `indsnetwork` that doesn't already
-  have one — `link_space` controls the default bond dimension (`abstractindsnetwork.jl`):
-  ```julia
-  insert_linkinds(indsnetwork::AbstractIndsNetwork, edges = edges(indsnetwork); link_space = trivial_space(indsnetwork))
-  ```
-
 #### IndsNetwork
 
 * Type-parameter accessors and graph-type metadata (`indsnetwork.jl`):
