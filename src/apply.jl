@@ -4,7 +4,6 @@ using ITensors: ITensors, ITensor, Index, apply, commonind, commoninds, contract
     denseblocks, factorize, factorize_svd, hascommoninds, hasqns, isdiag, map_diag,
     noncommonind, noprime, prime, replaceind, replaceinds, tags, unioninds, uniqueinds
 using LinearAlgebra: eigen, norm, qr, svd
-using NamedGraphs: NamedEdge
 
 #TODO: Make this work for non-hermitian A
 function eigendecomp(A::ITensor, linds, rinds; ishermitian = false, kwargs...)
@@ -32,7 +31,7 @@ end
 # each endpoint into a small bond tensor, applies the gate, factor-SVDs back,
 # then unwinds the inverse sqrt envs.
 function simple_update_bp(
-        o::Union{NamedEdge, ITensor}, ψ, v⃗; envs, callback = Returns(nothing), apply_kwargs...
+        o::ITensor, ψ, v⃗; envs, callback = Returns(nothing), apply_kwargs...
     )
     cutoff = 10 * eps(real(scalartype(ψ)))
     envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
@@ -96,7 +95,7 @@ function simple_update_bp(
 end
 
 function ITensors.apply(
-        o::Union{NamedEdge, ITensor},
+        o::ITensor,
         ψ::AbstractITensorNetwork;
         envs = ITensor[],
         normalize = false,
@@ -147,7 +146,7 @@ function ITensors.apply(
 end
 
 function ITensors.apply(
-        o⃗::Union{Vector{NamedEdge}, Vector{ITensor}},
+        o⃗::Vector{ITensor},
         ψ::AbstractITensorNetwork;
         normalize = false,
         ortho = false,

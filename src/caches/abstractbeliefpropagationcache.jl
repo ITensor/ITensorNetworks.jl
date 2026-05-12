@@ -1,10 +1,12 @@
 using Adapt: Adapt, adapt, adapt_structure
-using Graphs: Graphs, IsDirected
-using ITensors: delta, dir
+using Graphs: Graphs, IsDirected, dst, src
+using ITensors: commoninds, delta, dir
 using LinearAlgebra: diag, dot
 using NDTensors: NDTensors
-using NamedGraphs.PartitionedGraphs: PartitionedGraph, PartitionedGraphs, QuotientVertex,
-    boundary_quotientedges, quotientedges, quotientvertices, unpartitioned_graph
+using NamedGraphs.GraphsExtensions: subgraph
+using NamedGraphs.PartitionedGraphs: PartitionedGraph, PartitionedGraphs, QuotientEdge,
+    QuotientVertex, boundary_quotientedges, quotientedges, quotientvertices,
+    unpartitioned_graph
 using NamedGraphs.SimilarType: SimilarType
 using NamedGraphs: to_graph_index
 using SimpleTraits: SimpleTraits, @traitfn, Not
@@ -161,7 +163,8 @@ function PartitionedGraphs.quotientedge(
 end
 
 function linkinds(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge)
-    return linkinds(partitioned_tensornetwork(bpc), pe)
+    pitn = partitioned_tensornetwork(bpc)
+    return commoninds(subgraph(pitn, src(pe)), subgraph(pitn, dst(pe)))
 end
 
 NDTensors.scalartype(bpc::AbstractBeliefPropagationCache) = scalartype(tensornetwork(bpc))

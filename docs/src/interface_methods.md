@@ -276,13 +276,10 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
     )
   ```
 
-* Apply a set of gates to an ITensorNetwork (`apply.jl`):
+* Apply a gate (or a sequence of gates) to an ITensorNetwork (`apply.jl`):
   ```julia
-  ITensors.apply(o::Union{NamedEdge, ITensor},ψ::AbstractITensorNetwork; kws...)
-  ITensors.apply(o⃗::Union{Vector{NamedEdge}, Vector{ITensor}}, ψ::AbstractITensorNetwork; kws...)
-  ITensors.apply(o⃗::Scaled,ψ::AbstractITensorNetwork; kws...)
-  ITensors.apply(o⃗::Prod, ψ::AbstractITensorNetwork; kws...)
-  ITensors.apply(o::Op, ψ::AbstractITensorNetwork; kws...)
+  ITensors.apply(o::ITensor, ψ::AbstractITensorNetwork; kws...)
+  ITensors.apply(o⃗::Vector{ITensor}, ψ::AbstractITensorNetwork; kws...)
   ```
 
 ## Visualization System
