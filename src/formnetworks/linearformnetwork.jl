@@ -1,8 +1,6 @@
 using DataGraphs: DataGraphs, set_vertex_data!
-using Graphs: AbstractGraph
 using ITensors: ITensor, prime
 using NamedGraphs.GraphsExtensions: disjoint_union
-using NamedGraphs: similar_graph
 
 default_dual_link_index_map = prime
 
@@ -46,14 +44,6 @@ tensornetwork(lf::LinearFormNetwork) = lf.tensornetwork
 function DataGraphs.set_vertex_data!(lf::LinearFormNetwork, value, vertex)
     set_vertex_data!(tensornetwork(lf), value, vertex)
     return lf
-end
-
-function NamedGraphs.similar_graph(
-        lf::LinearFormNetwork,
-        underlying_graph::AbstractGraph
-    )
-    tn = similar_graph(tensornetwork(lf), underlying_graph)
-    return LinearFormNetwork(tn, bra_vertex_suffix(lf), ket_vertex_suffix(lf))
 end
 
 function Base.copy(lf::LinearFormNetwork)

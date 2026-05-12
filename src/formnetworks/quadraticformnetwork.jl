@@ -1,5 +1,4 @@
 using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
-using NamedGraphs: similar_graph
 
 default_index_map = prime
 default_inv_index_map = noprime
@@ -14,17 +13,6 @@ struct QuadraticFormNetwork{
     formnetwork::FormNetwork
     dual_index_map::IndexMap
     dual_inv_index_map::InvIndexMap
-end
-
-function NamedGraphs.similar_graph(
-        qf::QuadraticFormNetwork,
-        underlying_graph::AbstractGraph
-    )
-    return QuadraticFormNetwork(
-        similar_graph(bilinear_formnetwork(qf), underlying_graph),
-        dual_index_map(qf),
-        dual_inv_index_map(qf)
-    )
 end
 
 bilinear_formnetwork(qf::QuadraticFormNetwork) = qf.formnetwork

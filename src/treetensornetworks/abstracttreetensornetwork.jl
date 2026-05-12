@@ -293,7 +293,7 @@ function Base.:+(
         end
         tensors_out[v] = tnv
     end
-    return TreeTensorNetwork(ITensorNetwork(tensors_out))
+    return TreeTensorNetwork(tensors_out)
 end
 
 # TODO: switch default algorithm once more are implemented

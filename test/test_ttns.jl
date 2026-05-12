@@ -16,8 +16,8 @@ include("utils.jl")
         psi = TreeTensorNetwork(productstate(v -> "Up", sites))  # product state
 
         itn = ITensorNetwork(psi)  # TTN → ITensorNetwork
-        @test vertex_data(itn) == vertex_data(psi.tensornetwork)
-        @test !(itn === psi.tensornetwork)
+        @test vertex_data(itn) == vertex_data(psi)
+        @test !(vertex_data(itn) === vertex_data(psi))
         @test vertex_data(TreeTensorNetwork(itn)) == vertex_data(psi)
     end
 

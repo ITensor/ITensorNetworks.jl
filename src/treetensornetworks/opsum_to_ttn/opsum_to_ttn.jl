@@ -445,7 +445,7 @@ function compress_ttn(
             H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
         end
     end
-    return TreeTensorNetwork(ITensorNetwork(H))
+    return TreeTensorNetwork(H)
 end
 
 #

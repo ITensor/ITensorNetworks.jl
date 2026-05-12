@@ -17,8 +17,9 @@ using SplitApplyCombine: flatten
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V, ITensor, ITensor} end
 
 # Subtypes provide the storage: `underlying_graph(tn)` returns the named graph
-# and `vertex_data(tn)` returns a `Dict{V, ITensor}`-like mapping. Edge data is
-# unused — every `AbstractITensorNetwork` is treated as having no edge data.
+# and `vertex_data(tn)` returns a `Dictionary{V, ITensor}`-like mapping. Edge
+# data is unused — every `AbstractITensorNetwork` is treated as having no edge
+# data.
 
 # TODO: Define a generic fallback for `AbstractDataGraph`?
 DataGraphs.edge_data_type(::Type{<:AbstractITensorNetwork}) = ITensor
@@ -128,9 +129,8 @@ end
 
 # TODO: Define `eltype(::AbstractITensorNetwork)` as `ITensor`?
 
-# TODO: Implement using `adapt`
 function NDTensors.convert_scalartype(eltype::Type{<:Number}, tn::AbstractITensorNetwork)
-    return map(t -> ITensors.adapt(eltype, t), tn)
+    return map(adapt(eltype), tn)
 end
 
 function Base.complex(tn::AbstractITensorNetwork)
@@ -358,9 +358,9 @@ function NDTensors.contract(
     new_itensor = tn[src(edge)] * tn[dst(edge)]
     rem_vertex!(tn, src(edge))
     rem_vertex!(tn, dst(edge))
-    add_vertex!(tn, merged_vertex)
-    # Reverse-map reconciliation on assignment picks up the new bonds
-    # to the surviving neighbors of `src(edge)` and `dst(edge)`.
+    # `setindex!` (via `set_vertex_data!`) adds `merged_vertex` to the
+    # graph and reverse-map reconciliation picks up the new bonds to the
+    # surviving neighbors of `src(edge)` and `dst(edge)`.
     tn[merged_vertex] = new_itensor
     return tn
 end
@@ -505,7 +505,7 @@ function Base.show(io::IO, mime::MIME"text/plain", graph::AbstractITensorNetwork
     end
     println(io)
     println(io, "with vertex data:")
-    show(io, mime, Dict(v => inds(graph[v]) for v in vertices(graph)))
+    show(io, mime, inds.(vertex_data(graph)))
     return nothing
 end
 
@@ -669,10 +669,7 @@ function NamedGraphs.induced_subgraph_from_vertices(
         itn::AbstractITensorNetwork,
         subvertices
     )
-    subgraph, vlist = induced_subgraph(underlying_graph(itn), subvertices)
-    subitn = similar_graph(itn, subgraph)
-
-    subitn[Vertices(subvertices)] = vertex_data(itn)
-
-    return subitn, vlist
+    _, vlist = induced_subgraph(underlying_graph(itn), subvertices)
+    sub_vs = collect(subvertices)
+    return ITensorNetwork(Dictionary(sub_vs, [itn[v] for v in sub_vs])), vlist
 end
