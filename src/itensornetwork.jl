@@ -69,17 +69,24 @@ end
 # Constructors
 #
 
-# Construct by feeding `tensors` through `set_vertex_data!` one vertex
-# at a time — this centralizes the reverse-map registration, edge
-# inference, and hypergraph check in a single place (the `setindex!`
-# code path). Walking `keys(tensors)` in order makes the resulting
-# `neighbors(g, v)` / `edges(g)` iteration order deterministic in the
-# input order. An empty `tensors` (`Dict{V, ITensor}()`, etc.) yields
-# an empty network — there is no separate empty-arg constructor.
+# Empty network with no vertices. Mirrors the `Vector()` / `Dictionary()`
+# convention; vertex type defaults to `Any` when unspecified.
+function ITensorNetwork{V}() where {V}
+    return ITensorNetwork{V}(
+        NamedGraph{V}(), Dictionary{V, ITensor}(), Dict{Index, Set{V}}()
+    )
+end
+ITensorNetwork() = ITensorNetwork{Any}()
+
+# Construct by writing each tensor into a freshly empty network via
+# `setindex!`. The `setindex!` code path centralizes reverse-map
+# registration, edge inference, and the hypergraph check, and walking
+# `keys(tensors)` in order makes the resulting `neighbors(g, v)` /
+# `edges(g)` iteration order deterministic in the input order.
 function ITensorNetwork{V}(tensors) where {V}
-    tn = ITensorNetwork{V}(NamedGraph{V}(), Dictionary{V, ITensor}(), Dict{Index, Set{V}}())
+    tn = ITensorNetwork{V}()
     for v in keys(tensors)
-        set_vertex_data!(tn, tensors[v], v)
+        tn[v] = tensors[v]
     end
     return tn
 end

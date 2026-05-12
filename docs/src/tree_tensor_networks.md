@@ -65,7 +65,6 @@ itn_again = ITensorNetwork(psi)  # TTN → ITensorNetwork
 
 ```@docs; canonical=false
 ITensorNetworks.TreeTensorNetwork
-ITensorNetworks.ITensorNetwork(::ITensorNetworks.TreeTensorNetwork)
 ```
 
 ## Orthogonal Gauge

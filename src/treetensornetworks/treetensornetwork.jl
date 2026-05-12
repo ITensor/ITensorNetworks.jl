@@ -26,6 +26,15 @@ struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
     ortho_region::Indices{V}
 end
 
+# Empty TTN with no vertices. The is-a-tree invariant holds trivially.
+function TreeTensorNetwork{V}() where {V}
+    itn = ITensorNetwork{V}()
+    return TreeTensorNetwork{V}(
+        itn.graph, itn.vertex_data, itn.ind_to_vertices, Indices{V}()
+    )
+end
+TreeTensorNetwork() = TreeTensorNetwork{Any}()
+
 """
     TreeTensorNetwork(tensors; ortho_region=nothing) -> TreeTensorNetwork
 
@@ -69,16 +78,6 @@ end
 const TTN = TreeTensorNetwork
 
 # Field access
-"""
-    ITensorNetwork(tn::TreeTensorNetwork) -> ITensorNetwork
-
-Convert a `TreeTensorNetwork` to a plain `ITensorNetwork`, discarding orthogonality
-metadata. The returned network shares the same underlying tensor data.
-
-See also: [`TreeTensorNetwork`](@ref).
-"""
-ITensorNetwork(tn::TTN) = ITensorNetwork(map(copy, vertex_data(tn)))
-
 """
     ortho_region(tn::TreeTensorNetwork) -> Indices
 

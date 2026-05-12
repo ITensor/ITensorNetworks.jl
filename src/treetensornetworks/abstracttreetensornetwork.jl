@@ -16,8 +16,6 @@ function DataGraphs.underlying_graph_type(::Type{<:AbstractTTN{V}}) where {V}
     return NamedGraph{V}
 end
 
-ITensorNetwork(tn::AbstractTTN) = error("Not implemented")
-
 #
 # Field access
 #
