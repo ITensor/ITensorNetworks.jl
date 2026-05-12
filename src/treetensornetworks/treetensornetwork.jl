@@ -1,6 +1,6 @@
 using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
-using Dictionaries: Dictionaries, Dictionary, Indices
-using Graphs: Graphs, add_vertex!, has_vertex, is_tree, rem_vertex!, vertices
+using Dictionaries: Dictionary, Indices
+using Graphs: Graphs, is_tree, rem_vertex!, vertices
 using ITensors: ITensor, Index
 using NamedGraphs.GraphsExtensions: vertextype
 using NamedGraphs: NamedGraph
@@ -24,27 +24,6 @@ struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
     vertex_data::Dictionary{V, ITensor}
     ind_to_vertices::Dict{Index, Set{V}}
     ortho_region::Indices{V}
-    global function _TreeTensorNetwork(
-            graph::NamedGraph{V},
-            vertex_data::Dictionary{V, ITensor},
-            ind_to_vertices::Dict{Index, Set{V}},
-            ortho_region::Indices{V}
-        ) where {V}
-        @assert is_tree(graph)
-        return new{V}(graph, vertex_data, ind_to_vertices, ortho_region)
-    end
-end
-
-function _TreeTensorNetwork(tn::ITensorNetwork{V}, ortho_region::Indices{V}) where {V}
-    return _TreeTensorNetwork(tn.graph, tn.vertex_data, tn.ind_to_vertices, ortho_region)
-end
-
-function _TreeTensorNetwork(tn::ITensorNetwork{V}, ortho_region) where {V}
-    return _TreeTensorNetwork(tn, Indices{V}(ortho_region))
-end
-
-function _TreeTensorNetwork(tn::ITensorNetwork)
-    return _TreeTensorNetwork(tn, vertices(tn))
 end
 
 """
@@ -61,31 +40,27 @@ Throws an error if the underlying graph of `tn` is not a tree.
 # Example
 
 ```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
-
-julia> using NamedGraphs: NamedGraph
+julia> using ITensors: Index, ITensor
 
 julia> using Graphs: vertices
 
-julia> using ITensors: ITensor
+julia> i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k");
 
-julia> g = named_comb_tree((2, 2));
+julia> itn = ITensorNetwork([ITensor(i, j), ITensor(j, k)]);
 
-julia> s = siteinds("S=1/2", g);
-
-julia> tensors = Dict(v => ITensor(s[v]...) for v in vertices(g));
-
-julia> itn = ITensorNetwork(tensors);
-
-julia> ttn_state = TreeTensorNetwork(itn; ortho_region = [first(vertices(itn))]);
+julia> ttn = TreeTensorNetwork(itn; ortho_region = [first(vertices(itn))]);
 
 ```
 
 See also: [`ITensorNetwork`](@ref), [`orthogonalize`](@ref).
 """
-function TreeTensorNetwork(tn::ITensorNetwork; ortho_region = vertices(tn))
-    return _TreeTensorNetwork(tn, ortho_region)
+function TreeTensorNetwork(tn::ITensorNetwork{V}; ortho_region = vertices(tn)) where {V}
+    @assert is_tree(tn)
+    return TreeTensorNetwork{V}(
+        tn.graph, tn.vertex_data, tn.ind_to_vertices, Indices{V}(ortho_region)
+    )
 end
+
 function TreeTensorNetwork{V}(tn::ITensorNetwork) where {V}
     return TreeTensorNetwork(ITensorNetwork{V}(tn))
 end
@@ -132,9 +107,8 @@ function Graphs.rem_vertex!(tn::TTN, v)
     return tn
 end
 
-function Base.copy(tn::TTN)
-    V = vertextype(tn)
-    return _TreeTensorNetwork(
+function Base.copy(tn::TTN{V}) where {V}
+    return TreeTensorNetwork{V}(
         copy(tn.graph),
         map(copy, tn.vertex_data),
         Dict{Index, Set{V}}(i => copy(vs) for (i, vs) in tn.ind_to_vertices),
@@ -142,14 +116,10 @@ function Base.copy(tn::TTN)
     )
 end
 
-#
-# Constructor
-#
-
 # set_ortho_region: low-level update of the ortho_region metadata only,
 # without any gauge transformations. To move the orthogonality center use orthogonalize.
-function set_ortho_region(tn::TTN, ortho_region)
-    return _TreeTensorNetwork(
-        tn.graph, tn.vertex_data, tn.ind_to_vertices, Indices{vertextype(tn)}(ortho_region)
+function set_ortho_region(tn::TTN{V}, ortho_region) where {V}
+    return TreeTensorNetwork{V}(
+        tn.graph, tn.vertex_data, tn.ind_to_vertices, Indices{V}(ortho_region)
     )
 end

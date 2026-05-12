@@ -1,9 +1,9 @@
 using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
 using Dictionaries: Dictionaries, Dictionary
-using Graphs: Graphs, add_edge!, add_vertex!, edges, has_edge, has_vertex, neighbors,
-    rem_edge!, rem_vertex!, vertices
-using ITensors: ITensors, ITensor, Index, inds
-using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, vertextype
+using Graphs:
+    Graphs, add_edge!, add_vertex!, has_edge, has_vertex, neighbors, rem_edge!, rem_vertex!
+using ITensors: ITensor, Index, inds
+using NamedGraphs: NamedGraphs, NamedGraph, vertextype
 
 """
     ITensorNetwork{V}
@@ -69,6 +69,14 @@ end
 # Constructors
 #
 
+# Empty network with no vertices, used as the starting point for the
+# tensor-collection constructor below.
+function ITensorNetwork{V}() where {V}
+    return ITensorNetwork{V}(
+        NamedGraph{V}(), Dictionary{V, ITensor}(), Dict{Index, Set{V}}()
+    )
+end
+
 # Construct by feeding `tensors` through `set_vertex_data!` one vertex
 # at a time — this centralizes the reverse-map registration, edge
 # inference, and hypergraph check in a single place (the `setindex!`
@@ -76,7 +84,7 @@ end
 # `neighbors(g, v)` / `edges(g)` iteration order deterministic in the
 # input order.
 function ITensorNetwork{V}(tensors) where {V}
-    tn = ITensorNetwork{V}(NamedGraph{V}(), Dictionary{V, ITensor}(), Dict{Index, Set{V}}())
+    tn = ITensorNetwork{V}()
     for v in keys(tensors)
         set_vertex_data!(tn, tensors[v], v)
     end
@@ -100,12 +108,29 @@ Base.copy(tn::ITensorNetwork) = ITensorNetwork(map(copy, vertex_data(tn)))
 # Mutation: keep `graph`, `vertex_data`, and `ind_to_vertices` in sync.
 #
 
+# Drop the inds of `vertex_data[v]` from the reverse map, leaving
+# `vertex_data` and `graph` themselves untouched. Used both as a
+# prelude to overwriting `v` and as a step in `_rem_vertex!`.
+function _unregister_inds!(
+        vertex_data::Dictionary{V, ITensor},
+        ind_to_vertices::Dict{Index, Set{V}},
+        v
+    ) where {V}
+    haskey(vertex_data, v) || return nothing
+    for i in inds(vertex_data[v])
+        owners = ind_to_vertices[i]
+        delete!(owners, v)
+        isempty(owners) && delete!(ind_to_vertices, i)
+    end
+    return nothing
+end
+
 # Write `value` to vertex `v`, updating the reverse map and reconciling
-# edges so the graph-edge ↔ shared-`Index` invariant holds. Cost is
-# O(deg(v) + |inds(value)|). If `v` isn't already in the network, it's
-# added — so this is also the natural way to grow the network one tensor
-# at a time without a separate `add_vertex!` step. Operates on raw
-# storage so `ITensorNetwork` and `TreeTensorNetwork` can share it.
+# edges so the graph-edge ↔ shared-`Index` invariant holds. If `v` is
+# new it's added to the graph — so this is also the natural way to grow
+# the network one tensor at a time without a separate `add_vertex!`
+# step. Operates on raw storage so `ITensorNetwork` and
+# `TreeTensorNetwork` can share it.
 function _set_vertex_data!(
         graph::NamedGraph{V},
         vertex_data::Dictionary{V, ITensor},
@@ -113,20 +138,13 @@ function _set_vertex_data!(
         value,
         v
     ) where {V}
-    # Add the vertex to the graph if it's new.
     has_vertex(graph, v) || add_vertex!(graph, v)
-    # Unregister old inds of `vertex_data[v]` from the reverse map.
-    if haskey(vertex_data, v)
-        for i in inds(vertex_data[v])
-            owners = ind_to_vertices[i]
-            delete!(owners, v)
-            isempty(owners) && delete!(ind_to_vertices, i)
-        end
-    end
-    # Write the new tensor. `Dictionaries.set!` inserts or updates;
-    # plain `setindex!` would error on a vertex not already in the dict.
+    _unregister_inds!(vertex_data, ind_to_vertices, v)
+    # `set!` updates in place when `v` is already present, preserving
+    # the insertion order of `vertex_data`. Plain `setindex!` would
+    # error on a missing key, and `insert!` would error on an existing
+    # one — `set!` handles both branches.
     Dictionaries.set!(vertex_data, v, value)
-    # Register new inds.
     for i in inds(value)
         push!(get!(ind_to_vertices, i, Set{V}()), v)
         length(ind_to_vertices[i]) <= 2 || error(
@@ -162,14 +180,8 @@ function _rem_vertex!(
         ind_to_vertices::Dict{Index, Set{V}},
         v
     ) where {V}
-    if haskey(vertex_data, v)
-        for i in inds(vertex_data[v])
-            owners = ind_to_vertices[i]
-            delete!(owners, v)
-            isempty(owners) && delete!(ind_to_vertices, i)
-        end
-        delete!(vertex_data, v)
-    end
+    _unregister_inds!(vertex_data, ind_to_vertices, v)
+    haskey(vertex_data, v) && delete!(vertex_data, v)
     rem_vertex!(graph, v)
     return nothing
 end
