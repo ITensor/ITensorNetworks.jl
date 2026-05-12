@@ -1,8 +1,29 @@
-using .BaseExtensions: maybe_real
-using .ITensorsExtensions: tensor_sum
 using ITensors.LazyApply: Applied, Prod, Scaled, Sum
 using ITensors.Ops: Op, Ops
-using ITensors: ITensor, hascommoninds, op
+using ITensors: ITensor, filterinds, hascommoninds, op, uniqueinds
+
+# Drop a spurious zero imaginary part on a complex scalar so that downstream
+# scalar promotions stay real. Used when materializing `Scaled` `OpSum` terms
+# and when applying scalar-multiplied gates in `apply.jl`.
+maybe_real(x::Real) = x
+maybe_real(x::Complex) = iszero(imag(x)) ? real(x) : x
+
+# Tensor sum: `A ⊞ B = A ⊗ Iᴮ + Iᴬ ⊗ B`
+# https://github.com/JuliaLang/julia/issues/13333#issuecomment-143825995
+# "PRESERVATION OF TENSOR SUM AND TENSOR PRODUCT"
+# C. S. KUBRUSLY and N. LEVAN
+# https://www.emis.de/journals/AMUC/_vol-80/_no_1/_kubrusly/kubrusly.pdf
+function tensor_sum(A::ITensor, B::ITensor)
+    extend_A = filterinds(uniqueinds(B, A); plev = 0)
+    extend_B = filterinds(uniqueinds(A, B); plev = 0)
+    for i in extend_A
+        A *= op("I", i)
+    end
+    for i in extend_B
+        B *= op("I", i)
+    end
+    return A + B
+end
 
 function ITensors.ITensor(o::Op, s::IndsNetwork)
     s⃗ = [only(s[nᵢ]) for nᵢ in Ops.sites(o)]

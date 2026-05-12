@@ -204,11 +204,6 @@ Methods which still need to be discussed, modified, or deprecated.
   rename_vertices(f::Function, tn::AbstractIndsNetwork)
   ```
 
-* Promoted index type across all site and link indices in the network (`abstractindsnetwork.jl`):
-  ```julia
-  promote_indtypeof(is::AbstractIndsNetwork)
-  ```
-
 * Build an `IndsNetwork` whose site/link indices at each vertex/edge are the union
   of the corresponding indices from each input network (graphs must match) (`abstractindsnetwork.jl`):
   ```julia
@@ -219,8 +214,6 @@ Methods which still need to be discussed, modified, or deprecated.
 
 * Type-parameter accessors and graph-type metadata (`indsnetwork.jl`):
   ```julia
-  indtype(inds_network::IndsNetwork)
-  indtype(::Type{<:IndsNetwork{V, I}}) where {V, I}
   data_graph(is::IndsNetwork)
   underlying_graph(is::IndsNetwork)
   vertextype(::Type{<:IndsNetwork{V}}) where {V}

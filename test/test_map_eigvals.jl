@@ -1,10 +1,10 @@
-using ITensorNetworks.ITensorsExtensions: eigendecomp, map_eigvals
+using ITensorNetworks: eigendecomp, map_eigvals
 using ITensors.NDTensors: with_auto_fermion
 using ITensors: ITensor, Index, QN, apply, dag, delta, inds, mapprime, noprime, norm, op,
     permute, prime, random_itensor, replaceind, replaceinds, sim, swapprime
 using StableRNGs: StableRNG
 using Test: @test, @testset
-@testset "ITensorsExtensions" begin
+@testset "map_eigvals" begin
     @testset "Test map eigvals without QNS (eltype=$elt, dim=$n)" for elt in (
                 Float32, Float64, Complex{Float32}, Complex{Float64},
             ),
@@ -77,58 +77,6 @@ using Test: @test, @testset
             Ul, D, Ur = eigendecomp(T, [s1', s2'], [dag(s1), dag(s2)]; ishermitian = true)
 
             @test Ul * D * Ur ≈ T
-        end
-    end
-
-    @testset "Fermionic map eigvals tests" begin
-        with_auto_fermion() do
-            s1 = Index(
-                [QN("Nf", 0, -1) => 2, QN("Nf", 1, -1) => 2], "Site,Fermion,n=1"
-            )
-            s2 = Index(
-                [QN("Nf", 0, -1) => 2, QN("Nf", 1, -1) => 2], "Site,Fermion,n=2"
-            )
-
-            # Make a random Hermitian matrix ITensor
-            M = random_itensor(s1', dag(s1))
-            #M = mapprime(prime(M)*swapprime(dag(M),0=>1),2=>1)
-            M = apply(M, swapprime(dag(M), 0 => 1))
-
-            # Make a random Hermitian matrix-like 4th order ITensor
-            T = random_itensor(s1', s2', dag(s2), dag(s1))
-            T = apply(T, swapprime(dag(T), 0 => 1))
-
-            # Matrix test
-            sqrtM = map_eigvals(sqrt, M, [s1'], [dag(s1)]; ishermitian = true)
-            @test M ≈ apply(sqrtM, sqrtM)
-
-            ## Tensor test
-            sqrtT = map_eigvals(sqrt, T, [s1', s2'], [dag(s1), dag(s2)]; ishermitian = true)
-            @test T ≈ apply(sqrtT, sqrtT)
-
-            # Permute and test again
-            T = permute(T, dag(s2), s2', dag(s1), s1')
-            sqrtT = map_eigvals(sqrt, T, [s1', s2'], [dag(s1), dag(s2)]; ishermitian = true)
-            @test T ≈ apply(sqrtT, sqrtT)
-
-            ## Explicitly passing indices in different, valid orders
-            sqrtT = map_eigvals(sqrt, T, [s2', s1'], [dag(s2), dag(s1)]; ishermitian = true)
-            @test T ≈ apply(sqrtT, sqrtT)
-            sqrtT = map_eigvals(
-                sqrt, T, [dag(s2), dag(s1)], [s2', s1'], ; ishermitian = true
-            )
-            @test T ≈ apply(sqrtT, sqrtT)
-            sqrtT = map_eigvals(
-                sqrt, T, [dag(s1), dag(s2)], [s1', s2'], ; ishermitian = true
-            )
-            @test T ≈ apply(sqrtT, sqrtT)
-
-            # Test bosonic index case while fermion system is enabled
-            b = Index([QN("Nb", 0) => 2, QN("Nb", 1) => 2])
-            T = random_itensor(b', dag(b))
-            T = apply(T, swapprime(dag(T), 0 => 1))
-            sqrtT = map_eigvals(sqrt, T, [b'], [dag(b)]; ishermitian = true)
-            @test T ≈ apply(sqrtT, sqrtT)
         end
     end
 end

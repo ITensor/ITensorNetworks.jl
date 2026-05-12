@@ -1,7 +1,5 @@
 module ITensorNetworks
 
-include("lib/BaseExtensions/src/BaseExtensions.jl")
-include("lib/ITensorsExtensions/src/ITensorsExtensions.jl")
 include("visualize.jl")
 include("abstractindsnetwork.jl")
 include("indextags.jl")
@@ -13,7 +11,6 @@ include("contraction_sequences.jl")
 include("tebd.jl")
 include("itensornetwork.jl")
 include("contract.jl")
-include("partitioneditensornetwork.jl")
 include("edge_sequences.jl")
 include("caches/abstractbeliefpropagationcache.jl")
 include("caches/beliefpropagationcache.jl")

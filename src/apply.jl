@@ -1,11 +1,28 @@
-using .BaseExtensions: maybe_real
 using Graphs: has_edge, ne
 using ITensors.NDTensors: scalartype
-using ITensors: ITensors, ITensor, Index, Ops, apply, commonind, commoninds, contract, dag,
-    denseblocks, factorize, factorize_svd, hascommoninds, hasqns, isdiag, noprime, prime,
-    replaceind, replaceinds, tags, unioninds, uniqueinds
+using ITensors: ITensors, ITensor, Index, apply, commonind, commoninds, contract, dag,
+    denseblocks, factorize, factorize_svd, hascommoninds, hasqns, isdiag, map_diag,
+    noncommonind, noprime, prime, replaceind, replaceinds, tags, unioninds, uniqueinds
 using LinearAlgebra: eigen, norm, qr, svd
-using NamedGraphs: NamedEdge
+
+#TODO: Make this work for non-hermitian A
+function eigendecomp(A::ITensor, linds, rinds; ishermitian = false, kwargs...)
+    @assert ishermitian
+    D, U = eigen(A, linds, rinds; ishermitian, kwargs...)
+    ul, ur = noncommonind(D, U), commonind(D, U)
+    Ul = replaceinds(U, vcat(rinds, ur), vcat(linds, ul))
+    return Ul, D, dag(U)
+end
+
+# Apply `f` to the eigenvalues of `A` (assumed Hermitian along the
+# `Linds | Rinds` bipartition) and rebuild the operator. Used by
+# `simple_update_bp` to form `sqrt(env)` and `inv ∘ sqrt(env)` of each
+# product-environment factor.
+function map_eigvals(f::Function, A::ITensor, Linds, Rinds; kws...)
+    isdiag(A) && return map_diag(f, A)
+    Ul, D, Ur = eigendecomp(A, Linds, Rinds; kws...)
+    return Ul * map_diag(f, D) * Ur
+end
 
 # Reduced simple-update on a 2-site gate `o`. Assumes `envs` is a product
 # environment: each `env` shares indices with exactly one of `ψ[v⃗[1]]` or
@@ -14,31 +31,41 @@ using NamedGraphs: NamedEdge
 # each endpoint into a small bond tensor, applies the gate, factor-SVDs back,
 # then unwinds the inverse sqrt envs.
 function simple_update_bp(
-        o::Union{NamedEdge, ITensor}, ψ, v⃗; envs, callback = Returns(nothing), apply_kwargs...
+        o::ITensor, ψ, v⃗; envs, callback = Returns(nothing), apply_kwargs...
     )
     cutoff = 10 * eps(real(scalartype(ψ)))
     envs_v1 = filter(env -> hascommoninds(env, ψ[v⃗[1]]), envs)
     envs_v2 = filter(env -> hascommoninds(env, ψ[v⃗[2]]), envs)
     @assert all(ndims(env) == 2 for env in vcat(envs_v1, envs_v2))
     sqrt_envs_v1 = [
-        ITensorsExtensions.map_eigvals(
-                sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian = true
-            ) for env in envs_v1
+        map_eigvals(sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian = true)
+            for env in envs_v1
     ]
     sqrt_envs_v2 = [
-        ITensorsExtensions.map_eigvals(
-                sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian = true
-            ) for env in envs_v2
+        map_eigvals(sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian = true)
+            for env in envs_v2
     ]
     inv_sqrt_envs_v1 = [
-        ITensorsExtensions.map_eigvals(
-                inv ∘ sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian = true
-            ) for env in envs_v1
+        map_eigvals(
+                inv ∘ sqrt,
+                env,
+                inds(env)[1],
+                inds(env)[2];
+                cutoff,
+                ishermitian = true
+            )
+            for env in envs_v1
     ]
     inv_sqrt_envs_v2 = [
-        ITensorsExtensions.map_eigvals(
-                inv ∘ sqrt, env, inds(env)[1], inds(env)[2]; cutoff, ishermitian = true
-            ) for env in envs_v2
+        map_eigvals(
+                inv ∘ sqrt,
+                env,
+                inds(env)[1],
+                inds(env)[2];
+                cutoff,
+                ishermitian = true
+            )
+            for env in envs_v2
     ]
     ψᵥ₁ = contract([ψ[v⃗[1]]; sqrt_envs_v1])
     ψᵥ₂ = contract([ψ[v⃗[2]]; sqrt_envs_v2])
@@ -68,7 +95,7 @@ function simple_update_bp(
 end
 
 function ITensors.apply(
-        o::Union{NamedEdge, ITensor},
+        o::ITensor,
         ψ::AbstractITensorNetwork;
         envs = ITensor[],
         normalize = false,
@@ -119,7 +146,7 @@ function ITensors.apply(
 end
 
 function ITensors.apply(
-        o⃗::Union{Vector{NamedEdge}, Vector{ITensor}},
+        o⃗::Vector{ITensor},
         ψ::AbstractITensorNetwork;
         normalize = false,
         ortho = false,
@@ -130,32 +157,4 @@ function ITensors.apply(
         o⃗ψ = apply(oᵢ, o⃗ψ; normalize, ortho, apply_kwargs...)
     end
     return o⃗ψ
-end
-
-function ITensors.apply(
-        o⃗::Scaled,
-        ψ::AbstractITensorNetwork;
-        cutoff = nothing,
-        normalize = false,
-        ortho = false,
-        apply_kwargs...
-    )
-    return maybe_real(Ops.coefficient(o⃗)) *
-        apply(Ops.argument(o⃗), ψ; cutoff, maxdim, normalize, ortho, apply_kwargs...)
-end
-
-function ITensors.apply(
-        o⃗::Prod, ψ::AbstractITensorNetwork; normalize = false, ortho = false, apply_kwargs...
-    )
-    o⃗ψ = ψ
-    for oᵢ in o⃗
-        o⃗ψ = apply(oᵢ, o⃗ψ; normalize, ortho, apply_kwargs...)
-    end
-    return o⃗ψ
-end
-
-function ITensors.apply(
-        o::Op, ψ::AbstractITensorNetwork; normalize = false, ortho = false, apply_kwargs...
-    )
-    return apply(ITensor(o, siteinds(ψ)), ψ; normalize, ortho, apply_kwargs...)
 end

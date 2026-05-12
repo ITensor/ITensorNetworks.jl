@@ -1,4 +1,3 @@
-using .ITensorsExtensions: ITensorsExtensions, indtype, promote_indtype, trivial_space
 using Adapt: Adapt, adapt, adapt_structure
 using DataGraphs: DataGraphs, edge_data, get_vertex_data, is_vertex_assigned,
     set_vertex_data!, underlying_graph, underlying_graph_type, vertex_data
@@ -65,7 +64,6 @@ function ITensors.datatype(tn::AbstractITensorNetwork)
     return mapreduce(v -> datatype(tn[v]), promote_type, vertices(tn))
 end
 
-# TODO: Move to `BaseExtensions` module.
 function is_setindex!_expr(expr::Expr)
     return is_assignment_expr(expr) && is_getindex_expr(first(expr.args))
 end
@@ -209,10 +207,6 @@ end
 #
 # Promotion and conversion
 #
-
-function ITensorsExtensions.promote_indtypeof(tn::AbstractITensorNetwork)
-    return mapreduce(v -> indtype(tn[v]), promote_indtype, vertices(tn))
-end
 
 function NDTensors.scalartype(tn::AbstractITensorNetwork)
     return mapreduce(v -> eltype(tn[v]), promote_type, vertices(tn); init = Bool)

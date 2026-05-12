@@ -1,5 +1,4 @@
 using Graphs: vertices
-using ITensorNetworks.ITensorsExtensions: group_terms
 using ITensorNetworks: ITensorNetwork, cartesian_to_linear, dmrg, expect, siteinds, tebd
 using ITensors: ITensors
 using NamedGraphs.GraphsExtensions: rename_vertices
