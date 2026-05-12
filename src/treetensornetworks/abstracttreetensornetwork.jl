@@ -12,8 +12,8 @@ abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
 
 const AbstractTTN = AbstractTreeTensorNetwork
 
-function DataGraphs.underlying_graph_type(G::Type{<:AbstractTTN})
-    return underlying_graph_type(data_graph_type(G))
+function DataGraphs.underlying_graph_type(::Type{<:AbstractTTN{V}}) where {V}
+    return NamedGraph{V}
 end
 
 ITensorNetwork(tn::AbstractTTN) = error("Not implemented")
@@ -267,17 +267,15 @@ function Base.:+(
         tns[j] = orthogonalize(tns[j], root_vertex)
     end
 
-    # Output state: empty TTN over the same graph as the inputs.
-    # Tensor data and link indices are filled in by the directsum loop below.
-    g_out = NamedGraph(underlying_graph(siteinds(tns[1])))
-    tensors_out = Dict{vertextype(g_out), ITensor}(
-        v => ITensor() for v in vertices(g_out)
-    )
-    tn = TreeTensorNetwork(ITensorNetwork(tensors_out, g_out))
-
-    vs = post_order_dfs_vertices(tn, root_vertex)
-    es = post_order_dfs_edges(tn, root_vertex)
-    link_space = Dict{edgetype(tn), Index}()
+    # Drive traversal off the first input TTN (it has the right graph
+    # structure). Tensor data is built into a `Dict` buffer and wrapped as
+    # a `TreeTensorNetwork` at the end — edges of the output network are
+    # then inferred from the assigned tensors' shared `Index`es.
+    tn0 = first(tns)
+    vs = post_order_dfs_vertices(tn0, root_vertex)
+    es = post_order_dfs_edges(tn0, root_vertex)
+    link_space = Dict{edgetype(tn0), Index}()
+    tensors_out = Dict{vertextype(tn0), ITensor}()
 
     for v in reverse(vs)
         edges = filter(e -> dst(e) == v || src(e) == v, es)
@@ -293,9 +291,9 @@ function Base.:+(
         if !isnothing(dim_out)
             tnv = replaceind(tnv, lv[dim_out] => dag(link_space[edges[dim_out]]))
         end
-        tn[v] = tnv
+        tensors_out[v] = tnv
     end
-    return tn
+    return TreeTensorNetwork(ITensorNetwork(tensors_out))
 end
 
 # TODO: switch default algorithm once more are implemented

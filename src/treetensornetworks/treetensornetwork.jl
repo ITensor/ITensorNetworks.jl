@@ -1,4 +1,6 @@
+using DataGraphs: DataGraphs, underlying_graph, vertex_data
 using Dictionaries: Indices
+using Graphs: Graphs, add_vertex!, rem_vertex!
 using NamedGraphs.GraphsExtensions: vertextype
 using NamedGraphs: similar_graph
 
@@ -61,7 +63,7 @@ julia> s = siteinds("S=1/2", g);
 
 julia> tensors = Dict(v => ITensor(s[v]...) for v in vertices(g));
 
-julia> itn = ITensorNetwork(tensors, NamedGraph(g));
+julia> itn = ITensorNetwork(tensors);
 
 julia> ttn_state = TreeTensorNetwork(itn; ortho_region = [first(vertices(itn))]);
 
@@ -102,18 +104,25 @@ See also: [`orthogonalize`](@ref).
 """
 ortho_region(tn::TTN) = tn.ortho_region
 
-# Required for `AbstractITensorNetwork` interface
-data_graph(tn::TTN) = data_graph(tn.tensornetwork)
+# `AbstractITensorNetwork` storage forwarding — delegate to the inner
+# `ITensorNetwork` so its reverse-index map and edge reconciliation
+# run on writes.
+DataGraphs.underlying_graph(tn::TTN) = underlying_graph(tn.tensornetwork)
+DataGraphs.vertex_data(tn::TTN) = vertex_data(tn.tensornetwork)
 
-# Forward vertex writes to the wrapped `ITensorNetwork` so its
-# reverse-index map and edge reconciliation run as usual.
 function DataGraphs.set_vertex_data!(tn::TTN, value, v)
     set_vertex_data!(tn.tensornetwork, value, v)
     return tn
 end
 
-function data_graph_type(G::Type{<:TTN})
-    return data_graph_type(fieldtype(G, :tensornetwork))
+function Graphs.rem_vertex!(tn::TTN, v)
+    rem_vertex!(tn.tensornetwork, v)
+    return tn
+end
+
+function Graphs.add_vertex!(tn::TTN, v)
+    add_vertex!(tn.tensornetwork, v)
+    return tn
 end
 
 function Base.copy(tn::TTN)

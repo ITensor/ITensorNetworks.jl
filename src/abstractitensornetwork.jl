@@ -1,7 +1,7 @@
 using Adapt: Adapt, adapt, adapt_structure
-using DataGraphs: DataGraphs, edge_data, get_vertex_data, is_vertex_assigned,
-    set_vertex_data!, underlying_graph, underlying_graph_type, vertex_data
-using Dictionaries: Dictionary
+using DataGraphs:
+    DataGraphs, set_vertex_data!, underlying_graph, underlying_graph_type, vertex_data
+using Dictionaries: Dictionaries, Dictionary
 using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
     has_edge, ne, neighbors, rem_edge!, src, vertices
 using ITensors: ITensors, ITensor, Index, addtags, commoninds, commontags, contract, dag,
@@ -16,9 +16,9 @@ using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V, ITensor, ITensor} end
 
-# Field access
-data_graph_type(::Type{<:AbstractITensorNetwork}) = not_implemented()
-data_graph(graph::AbstractITensorNetwork) = not_implemented()
+# Subtypes provide the storage: `underlying_graph(tn)` returns the named graph
+# and `vertex_data(tn)` returns a `Dict{V, ITensor}`-like mapping. Edge data is
+# unused — every `AbstractITensorNetwork` is treated as having no edge data.
 
 # TODO: Define a generic fallback for `AbstractDataGraph`?
 DataGraphs.edge_data_type(::Type{<:AbstractITensorNetwork}) = ITensor
@@ -38,13 +38,14 @@ end
 # Copy
 Base.copy(tn::AbstractITensorNetwork) = not_implemented()
 
-# Iteration
-Base.iterate(tn::AbstractITensorNetwork, args...) = iterate(vertex_data(tn), args...)
-
-# Vertex-keyed access: `keys(tn)` returns the vertex set, `tn[v]` returns the
-# tensor at vertex `v`. Together with `Base.iterate` above, this lets `tn`
-# stand in as a `keys`/`values`-style collection of tensors keyed by vertex.
+# Vertex-keyed access: `keys(tn)` returns the vertex set, `values(tn)` the
+# tensors, and `tn[v]` the tensor at vertex `v`. Going through `values(tn)`
+# (rather than `values(vertex_data(tn))`) lets callers stay agnostic about
+# whether `vertex_data` is a `Dict`, `Dictionary`, or anything else with
+# different default-iteration semantics.
 Base.keys(tn::AbstractITensorNetwork) = vertices(tn)
+Base.values(tn::AbstractITensorNetwork) = (tn[v] for v in vertices(tn))
+Base.iterate(tn::AbstractITensorNetwork, args...) = iterate(values(tn), args...)
 
 # TODO: This contrasts with the `DataGraphs.AbstractDataGraph` definition,
 # where it is defined as the `vertextype`. Does that cause problems or should it be changed?
@@ -52,32 +53,24 @@ Base.eltype(tn::AbstractITensorNetwork) = eltype(vertex_data(tn))
 
 # Overload if needed
 Graphs.is_directed(::Type{<:AbstractITensorNetwork}) = false
-GraphsExtensions.directed_graph(is::AbstractITensorNetwork) = directed_graph(data_graph(is))
-
-# Derived interface, may need to be overloaded
-function DataGraphs.underlying_graph_type(G::Type{<:AbstractITensorNetwork})
-    return underlying_graph_type(data_graph_type(G))
+function GraphsExtensions.directed_graph(tn::AbstractITensorNetwork)
+    return directed_graph(underlying_graph(tn))
 end
 
 function ITensors.datatype(tn::AbstractITensorNetwork)
     return mapreduce(v -> datatype(tn[v]), promote_type, vertices(tn))
 end
 
-# AbstractDataGraphs overloads
+# AbstractDataGraphs overloads — defined directly in terms of the
+# `underlying_graph` / `vertex_data` storage, with no edge data.
 
-DataGraphs.underlying_graph(tn::AbstractITensorNetwork) = underlying_graph(data_graph(tn))
-
-function DataGraphs.is_vertex_assigned(is::AbstractITensorNetwork, v)
-    return is_vertex_assigned(data_graph(is), v)
+function DataGraphs.is_vertex_assigned(tn::AbstractITensorNetwork, v)
+    return haskey(vertex_data(tn), v)
 end
 
-function DataGraphs.is_edge_assigned(is::AbstractITensorNetwork, v)
-    return is_edge_assigned(data_graph(is), v)
-end
+DataGraphs.is_edge_assigned(::AbstractITensorNetwork, _) = false
 
-function DataGraphs.get_vertex_data(is::AbstractITensorNetwork, v)
-    return get_vertex_data(data_graph(is), v)
-end
+DataGraphs.get_vertex_data(tn::AbstractITensorNetwork, v) = vertex_data(tn)[v]
 
 function DataGraphs.set_vertices_data!(tn::AbstractITensorNetwork, values, vertices)
     for v in vertices
@@ -112,22 +105,13 @@ function Base.union(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork; kw
     tensors = Dict{vertextype(g), ITensor}(
         v => (v in vertices(tn1) ? tn1[v] : tn2[v]) for v in vertices(g)
     )
-    tn = ITensorNetwork(tensors, g)
-    # Add any new edges that are introduced during the union
-    for v1 in vertices(tn1)
-        for v2 in vertices(tn2)
-            if !isempty(linkinds(tn, v1 => v2))
-                add_edge!(data_graph(tn), v1 => v2)
-            end
-        end
-    end
-    return tn
+    # `ITensorNetwork(tensors)` infers edges from shared `Index`es, so any
+    # cross-network bonds between `tn1` and `tn2` are picked up automatically.
+    return ITensorNetwork(tensors)
 end
 
 function NamedGraphs.rename_vertices(f::Function, tn::AbstractITensorNetwork)
-    new_g = NamedGraphs.rename_vertices(f, underlying_graph(tn))
-    tensors = Dict{vertextype(new_g), ITensor}(f(v) => tn[v] for v in vertices(tn))
-    return ITensorNetwork(tensors, new_g)
+    return ITensorNetwork(Dict(f(v) => tn[v] for v in vertices(tn)))
 end
 
 #
@@ -146,9 +130,7 @@ end
 
 # TODO: Implement using `adapt`
 function NDTensors.convert_scalartype(eltype::Type{<:Number}, tn::AbstractITensorNetwork)
-    tn = copy(tn)
-    vertex_data(tn) .= ITensors.adapt.(Ref(eltype), vertex_data(tn))
-    return tn
+    return map(t -> ITensors.adapt(eltype, t), tn)
 end
 
 function Base.complex(tn::AbstractITensorNetwork)
@@ -373,24 +355,12 @@ function NDTensors.contract(
     V = promote_type(vertextype(tn), typeof(merged_vertex))
     # TODO: Check `ITensorNetwork{V}`, shouldn't need a copy here.
     tn = ITensorNetwork{V}(copy(tn))
-    neighbors_src = setdiff(neighbors(tn, src(edge)), [dst(edge)])
-    neighbors_dst = setdiff(neighbors(tn, dst(edge)), [src(edge)])
     new_itensor = tn[src(edge)] * tn[dst(edge)]
-    # The following is equivalent to:
-    #
-    # tn[dst(edge)] = new_itensor
-    #
-    # but without having to search all vertices
-    # to update the edges.
     rem_vertex!(tn, src(edge))
     rem_vertex!(tn, dst(edge))
     add_vertex!(tn, merged_vertex)
-    for n_src in neighbors_src
-        add_edge!(data_graph(tn), merged_vertex => n_src)
-    end
-    for n_dst in neighbors_dst
-        add_edge!(data_graph(tn), merged_vertex => n_dst)
-    end
+    # Reverse-map reconciliation on assignment picks up the new bonds
+    # to the surviving neighbors of `src(edge)` and `dst(edge)`.
     tn[merged_vertex] = new_itensor
     return tn
 end
@@ -535,7 +505,7 @@ function Base.show(io::IO, mime::MIME"text/plain", graph::AbstractITensorNetwork
     end
     println(io)
     println(io, "with vertex data:")
-    show(io, mime, inds.(vertex_data(graph)))
+    show(io, mime, Dict(v => inds(graph[v]) for v in vertices(graph)))
     return nothing
 end
 

@@ -1,4 +1,5 @@
 using Adapt: Adapt, adapt, adapt_structure
+using DataGraphs: DataGraphs, underlying_graph, vertex_data
 using Graphs: Graphs, IsDirected, dst, src
 using ITensors: commoninds, delta, dir
 using LinearAlgebra: diag, dot
@@ -18,10 +19,12 @@ function SimilarType.similar_type(bpc::AbstractBeliefPropagationCache)
     return typeof(tensornetwork(bpc))
 end
 
-function data_graph_type(bpc::AbstractBeliefPropagationCache)
-    return data_graph_type(tensornetwork(bpc))
+function DataGraphs.underlying_graph(bpc::AbstractBeliefPropagationCache)
+    return underlying_graph(tensornetwork(bpc))
 end
-data_graph(bpc::AbstractBeliefPropagationCache) = data_graph(tensornetwork(bpc))
+function DataGraphs.vertex_data(bpc::AbstractBeliefPropagationCache)
+    return vertex_data(tensornetwork(bpc))
+end
 
 #TODO: Take `dot` without precontracting the messages to allow scaling to more complex
 # messages

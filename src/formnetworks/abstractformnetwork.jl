@@ -1,3 +1,4 @@
+using DataGraphs: DataGraphs, underlying_graph, vertex_data
 using Graphs: induced_subgraph
 using NamedGraphs.SimilarType: SimilarType
 
@@ -20,12 +21,9 @@ function SimilarType.similar_type(f::AbstractFormNetwork)
     return typeof(tensornetwork(f))
 end
 
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph_type`.
-function data_graph_type(f::AbstractFormNetwork)
-    return data_graph_type(tensornetwork(f))
-end
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
-data_graph(f::AbstractFormNetwork) = data_graph(tensornetwork(f))
+# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph` / `parent_graph_type`.
+DataGraphs.underlying_graph(f::AbstractFormNetwork) = underlying_graph(tensornetwork(f))
+DataGraphs.vertex_data(f::AbstractFormNetwork) = vertex_data(tensornetwork(f))
 
 function operator_vertices(f::AbstractFormNetwork)
     return filter(v -> last(v) == operator_vertex_suffix(f), vertices(f))

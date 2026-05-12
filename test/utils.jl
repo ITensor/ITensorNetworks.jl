@@ -4,6 +4,7 @@
 # inside its gensym module.
 
 using DataGraphs: underlying_graph, vertex_data
+using Dictionaries: Dictionary
 using Graphs: AbstractGraph, dst, edges, src, vertices
 using ITensorNetworks: ITensorNetwork, IndsNetwork
 using ITensors.NDTensors: dim
@@ -35,14 +36,15 @@ function random_tensornetwork(
     g = NamedGraph(graph)
     links = Dict(e => Index(link_space, "Link") for e in edges(g))
     links = merge(links, Dict(reverse(e) => links[e] for e in edges(g)))
-    tensors = Dict(
-        map(collect(vertices(g))) do v
-            link_v = [links[e] for e in incident_edges(g, v)]
-            inds_v = [siteinds[v]; link_v]
-            return v => itensor(randn(rng, eltype, dim.(inds_v)...), inds_v)
-        end
-    )
-    return ITensorNetwork(tensors, g)
+    # Use a `Dictionary` (insertion-ordered) so the constructed
+    # `ITensorNetwork`'s vertex / edge order tracks `vertices(g)`.
+    vs = collect(vertices(g))
+    ts = map(vs) do v
+        link_v = [links[e] for e in incident_edges(g, v)]
+        inds_v = [siteinds[v]; link_v]
+        return itensor(randn(rng, eltype, dim.(inds_v)...), inds_v)
+    end
+    return ITensorNetwork(Dictionary(vs, ts))
 end
 
 # `IndsNetwork`: extract site inds (`Index[]` where unassigned).
@@ -106,15 +108,13 @@ function productstate(elt::Type, state::Function, s::IndsNetwork)
     return productstate(elt, Dict(v => state(v) for v in vertices(s)), s)
 end
 function productstate(elt::Type, state, s::IndsNetwork)
-    g = NamedGraph(collect(vertices(s)))
-    tensors = Dict(
-        map(collect(vertices(s))) do v
-            site_v = isassigned(vertex_data(s), v) ? s[v] : Index[]
-            t = ITensors.state(state[v], only(site_v))
-            return v => ITensors.convert_eltype(elt, t)
-        end
-    )
-    tn = ITensorNetwork(tensors, g)
+    vs = collect(vertices(s))
+    ts = map(vs) do v
+        site_v = isassigned(vertex_data(s), v) ? s[v] : Index[]
+        t = ITensors.state(state[v], only(site_v))
+        return ITensors.convert_eltype(elt, t)
+    end
+    tn = ITensorNetwork(Dictionary(vs, ts))
     for e in edges(s)
         _add_edge!(elt, tn, e)
     end

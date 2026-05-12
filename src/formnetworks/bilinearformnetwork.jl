@@ -96,12 +96,11 @@ function BilinearFormNetwork(
     s_mapped = dual_site_index_map(s)
     operator_inds = union_all_inds(s, s_mapped)
 
-    g = NamedGraph(underlying_graph(operator_inds))
-    ts = Dict{vertextype(g), ITensor}()
+    ts = Dict{vertextype(operator_inds), ITensor}()
     for v in vertices(operator_inds)
         ts[v] = itensor_identity_map(scalartype(ket), s[v] .=> s_mapped[v])
     end
-    O = ITensorNetwork(ts, g)
+    O = ITensorNetwork(ts)
     O = adapt(promote_type(datatype(bra), datatype(ket)), O)
     return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end

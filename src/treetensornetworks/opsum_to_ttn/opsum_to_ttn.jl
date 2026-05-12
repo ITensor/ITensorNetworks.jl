@@ -290,10 +290,12 @@ function compress_ttn(
         )
     end
 
-    # initialize TTN without the dummy indices added; tensors are filled in below
-    g0 = NamedGraph(underlying_graph(sites0))
-    tensors0 = Dict{vertextype(g0), ITensor}(v => ITensor() for v in vertices(g0))
-    H = TreeTensorNetwork(ITensorNetwork(tensors0, g0))
+    # Buffer the per-vertex tensors in a plain `Dict` first. Wrapping in
+    # `ITensorNetwork` + `TreeTensorNetwork` is deferred until the loop
+    # below has assigned real tensors at every vertex, so the tree
+    # structure (and `Index` space type) is locked in only once the data
+    # is consistent.
+    H = Dict{vertextype(sites0), ITensor}(v => ITensor() for v in vertices(sites0))
     function qnblock(i::Index, q::QN)
         for b in 2:(nblocks(i) - 1)
             flux(i, Block(b)) == q && return b
@@ -443,7 +445,7 @@ function compress_ttn(
             H[v] += T * ITensorNetworks.computeSiteProd(sites, Prod([(Op("Id", v))]))
         end
     end
-    return H
+    return TreeTensorNetwork(ITensorNetwork(H))
 end
 
 #

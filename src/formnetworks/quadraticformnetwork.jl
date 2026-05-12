@@ -1,4 +1,4 @@
-using DataGraphs: DataGraphs, set_vertex_data!
+using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
 using NamedGraphs: similar_graph
 
 default_index_map = prime
@@ -35,8 +35,6 @@ for f in [
         :bra_vertex_suffix,
         :ket_vertex_suffix,
         :tensornetwork,
-        :data_graph,
-        :data_graph_type,
     ]
     @eval begin
         function $f(qf::QuadraticFormNetwork, args...; kwargs...)
@@ -44,6 +42,11 @@ for f in [
         end
     end
 end
+
+function DataGraphs.underlying_graph(qf::QuadraticFormNetwork)
+    return underlying_graph(bilinear_formnetwork(qf))
+end
+DataGraphs.vertex_data(qf::QuadraticFormNetwork) = vertex_data(bilinear_formnetwork(qf))
 
 dual_index_map(qf::QuadraticFormNetwork) = qf.dual_index_map
 dual_inv_index_map(qf::QuadraticFormNetwork) = qf.dual_inv_index_map
