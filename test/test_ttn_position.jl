@@ -51,7 +51,7 @@ end
     # `ITensorNetwork` has a single edge (and is therefore a valid tree).
     link = Index(1, "Link")
     tensors = Dict{Any, ITensor}(v => ITensor(link) for v in vertices(named_path_graph(2)))
-    operator = TreeTensorNetwork(ITensorNetwork{Any}(tensors))
+    operator = TreeTensorNetwork(tensors)
     environments = Dictionary{NamedEdge{Any}, ITensor}()
     @test ProjTTN(pos, operator, environments) isa ProjTTN{Any, Indices{Any}}
 end
