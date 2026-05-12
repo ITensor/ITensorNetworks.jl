@@ -105,6 +105,13 @@ ortho_region(tn::TTN) = tn.ortho_region
 # Required for `AbstractITensorNetwork` interface
 data_graph(tn::TTN) = data_graph(tn.tensornetwork)
 
+# Forward vertex writes to the wrapped `ITensorNetwork` so its
+# reverse-index map and edge reconciliation run as usual.
+function DataGraphs.set_vertex_data!(tn::TTN, value, v)
+    set_vertex_data!(tn.tensornetwork, value, v)
+    return tn
+end
+
 function data_graph_type(G::Type{<:TTN})
     return data_graph_type(fieldtype(G, :tensornetwork))
 end

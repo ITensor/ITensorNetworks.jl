@@ -1,3 +1,4 @@
+using DataGraphs: DataGraphs, set_vertex_data!
 using Graphs: IsDirected
 using ITensors: dir
 using LinearAlgebra: diag, dot
@@ -106,7 +107,12 @@ function default_bp_edge_sequence(bp_cache::BeliefPropagationCache)
     return default_edge_sequence(partitioned_tensornetwork(bp_cache))
 end
 
-Base.setindex!(bpc::BeliefPropagationCache, factor::ITensor, vertex) = not_implemented()
+# Forward vertex writes to the underlying `ITensorNetwork` so its
+# reverse-index map and edge reconciliation handle the update.
+function DataGraphs.set_vertex_data!(bpc::BeliefPropagationCache, value, vertex)
+    set_vertex_data!(tensornetwork(bpc), value, vertex)
+    return bpc
+end
 partitions(bpc::BeliefPropagationCache) = quotientvertices(partitioned_tensornetwork(bpc))
 function PartitionedGraphs.quotientedges(bpc::BeliefPropagationCache)
     return quotientedges(partitioned_tensornetwork(bpc))

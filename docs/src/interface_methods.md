@@ -65,12 +65,10 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
 
 ## Global Operations on ITensorNetworks
 
-* Scale tensors at chosen vertices by per-vertex weights, either out-of-place or in-place (`abstractitensornetwork.jl`).
+* Map a function over the vertex tensors of an `ITensorNetwork`, returning a copy
+  (`abstractitensornetwork.jl`):
   ```julia
-  scale_tensors(tn::AbstractITensorNetwork, vertices_weights::Dictionary; kwargs...)
-  scale_tensors(weight_function::Function, tn; kwargs...)
-  scale_tensors!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
-  scale_tensors!(weight_function::Function, tn::AbstractITensorNetwork; kwargs...)
+  map(f, tn::AbstractITensorNetwork)
   ```
 
 * Tensor product (disjoint union) of two ITensorNetworks (`abstractitensornetwork.jl`):

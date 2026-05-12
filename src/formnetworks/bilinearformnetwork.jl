@@ -1,4 +1,5 @@
 using Adapt: adapt
+using DataGraphs: DataGraphs, set_vertex_data!
 using ITensors.NDTensors: datatype, denseblocks
 using ITensors: ITensor, Op, delta, prime, sim
 using NamedGraphs.GraphsExtensions: disjoint_union
@@ -58,6 +59,13 @@ ket_vertex_suffix(blf::BilinearFormNetwork) = blf.ket_vertex_suffix
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 tensornetwork(blf::BilinearFormNetwork) = blf.tensornetwork
 
+# Forward vertex writes to the wrapped network so reverse-index map and
+# edge reconciliation run on the underlying `ITensorNetwork`.
+function DataGraphs.set_vertex_data!(blf::BilinearFormNetwork, value, vertex)
+    set_vertex_data!(tensornetwork(blf), value, vertex)
+    return blf
+end
+
 function Base.copy(blf::BilinearFormNetwork)
     return BilinearFormNetwork(
         copy(tensornetwork(blf)),
@@ -106,12 +114,7 @@ function update(
         ket_state::ITensor
     )
     blf = copy(blf)
-    # TODO: Maybe add a check that it really does preserve the graph.
-    setindex_preserve_graph!(
-        tensornetwork(blf), bra_state, bra_vertex(blf, original_bra_state_vertex)
-    )
-    setindex_preserve_graph!(
-        tensornetwork(blf), ket_state, ket_vertex(blf, original_ket_state_vertex)
-    )
+    tensornetwork(blf)[bra_vertex(blf, original_bra_state_vertex)] = bra_state
+    tensornetwork(blf)[ket_vertex(blf, original_ket_state_vertex)] = ket_state
     return blf
 end

@@ -1,3 +1,4 @@
+using DataGraphs: DataGraphs, set_vertex_data!
 using NamedGraphs: similar_graph
 
 default_index_map = prime
@@ -46,6 +47,13 @@ end
 
 dual_index_map(qf::QuadraticFormNetwork) = qf.dual_index_map
 dual_inv_index_map(qf::QuadraticFormNetwork) = qf.dual_inv_index_map
+
+# Forward vertex writes to the inner `BilinearFormNetwork`, which in turn
+# forwards to the underlying `ITensorNetwork`.
+function DataGraphs.set_vertex_data!(qf::QuadraticFormNetwork, value, vertex)
+    set_vertex_data!(bilinear_formnetwork(qf), value, vertex)
+    return qf
+end
 function Base.copy(qf::QuadraticFormNetwork)
     return QuadraticFormNetwork(
         copy(bilinear_formnetwork(qf)), dual_index_map(qf), dual_inv_index_map(qf)

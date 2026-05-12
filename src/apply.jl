@@ -113,7 +113,7 @@ function ITensors.apply(
         if normalize
             oψᵥ ./= norm(oψᵥ)
         end
-        setindex_preserve_graph!(ψ, oψᵥ, v⃗[1])
+        ψ[v⃗[1]] = oψᵥ
     elseif length(v⃗) == 2
         envs = Vector{ITensor}(envs)
         if !iszero(ne(ITensorNetwork(envs)))
@@ -135,8 +135,8 @@ function ITensors.apply(
             ψᵥ₁ ./= norm(ψᵥ₁)
             ψᵥ₂ ./= norm(ψᵥ₂)
         end
-        setindex_preserve_graph!(ψ, ψᵥ₁, v⃗[1])
-        setindex_preserve_graph!(ψ, ψᵥ₂, v⃗[2])
+        ψ[v⃗[1]] = ψᵥ₁
+        ψ[v⃗[2]] = ψᵥ₂
     elseif length(v⃗) < 1
         error("Gate being applied does not share indices with tensor network.")
     elseif length(v⃗) > 2

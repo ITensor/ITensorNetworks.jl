@@ -20,15 +20,17 @@ function insert!(region_iter, local_tensor; normalize = false, set_orthogonal_re
             local_tensor, indsTe; tags, trunc_kwargs...
         )
 
-        @preserve_graph psi[first(region)] = U
+        psi[first(region)] = U
         prob = set_truncation_info!(prob; spectrum)
     else
         error("Region of length $(length(region)) not currently supported")
     end
     v = last(region)
-    @preserve_graph psi[v] = C
+    psi[v] = C
     psi = set_orthogonal_region ? set_ortho_region(psi, [v]) : psi
-    normalize && @preserve_graph psi[v] = psi[v] / norm(psi[v])
+    if normalize
+        psi[v] = psi[v] / norm(psi[v])
+    end
 
     prob.state = psi
 
