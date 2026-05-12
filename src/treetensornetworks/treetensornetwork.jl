@@ -53,13 +53,9 @@ gauge is assumed. To enforce an actual orthogonal gauge, call
 ```jldoctest
 julia> using ITensors: Index, ITensor
 
-julia> using Graphs: vertices
-
 julia> i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k");
 
-julia> itn = ITensorNetwork([ITensor(i, j), ITensor(j, k)]);
-
-julia> ttn = TreeTensorNetwork(itn; ortho_region = [first(vertices(itn))]);
+julia> ttn = TreeTensorNetwork([ITensor(i, j), ITensor(j, k)]; ortho_region = [1]);
 
 ```
 
