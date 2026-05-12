@@ -127,21 +127,6 @@ function IndsNetwork{V, I}(
     return IndsNetwork{V, I}(NamedGraph(g), link_space, site_space)
 end
 
-# Construct from collections of indices
-
-function path_indsnetwork(external_inds::Vector{<:Vector{<:Index}})
-    g = named_path_graph(length(external_inds))
-    is = IndsNetwork(g)
-    for v in eachindex(external_inds)
-        is[v] = external_inds[v]
-    end
-    return is
-end
-
-function path_indsnetwork(external_inds::Vector{<:Index})
-    return path_indsnetwork(map(i -> [i], external_inds))
-end
-
 @traitfn function default_link_space(V::Type, g::::IsUnderlyingGraph)
     # TODO: Convert `g` to vertex type `V`
     E = edgetype(g)

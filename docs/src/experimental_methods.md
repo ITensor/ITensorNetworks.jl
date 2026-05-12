@@ -29,12 +29,6 @@ Methods which still need to be discussed, modified, or deprecated.
   TreeTensorNetwork(os::OpSum, sites::IndsNetwork; kws...)
   ```
 
-* From `OpSum`, assuming path graph (`opsum_to_ttn.jl`):
-  ```julia
-  mpo(os::OpSum, external_inds::Vector; kws...)
-  mpo(os::OpSum, s::IndsNetwork; kws...)
-  ```
-
 #### AbstractTreeTensorNetwork Type
 
 * Required-to-implement abstract interface — `TreeTensorNetwork` provides both (`treetensornetworks/abstracttreetensornetwork.jl`):
@@ -241,13 +235,6 @@ Methods which still need to be discussed, modified, or deprecated.
   ```julia
   IndsNetwork{V, I}(g::AbstractNamedGraph, link_space::Dictionary, site_space::Dictionary)
   IndsNetwork{V, I}(g::AbstractSimpleGraph, link_space::Dictionary, site_space::Dictionary)
-  ```
-
-* Build an `IndsNetwork` on a path graph from a vector of external (site) indices
-  per vertex, or one index per vertex (`indsnetwork.jl`):
-  ```julia
-  path_indsnetwork(external_inds::Vector{<:Vector{<:Index}})
-  path_indsnetwork(external_inds::Vector{<:Index})
   ```
 
 * Normalize a user-supplied link-space spec into a `Dictionary{edgetype, Vector{I}}`,
