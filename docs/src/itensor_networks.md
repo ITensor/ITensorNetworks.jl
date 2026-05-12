@@ -116,4 +116,6 @@ see the [Tree Tensor Networks](@ref) page.
 
 ```@docs; canonical=false
 Base.truncate(::ITensorNetworks.AbstractITensorNetwork, ::Graphs.AbstractEdge)
+ITensorNetworks.left_orth
+ITensorNetworks.left_orth!
 ```
