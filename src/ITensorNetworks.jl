@@ -2,7 +2,6 @@ module ITensorNetworks
 
 include("lib/BaseExtensions/src/BaseExtensions.jl")
 include("lib/ITensorsExtensions/src/ITensorsExtensions.jl")
-include("visualize.jl")
 include("abstractindsnetwork.jl")
 include("indextags.jl")
 include("indsnetwork.jl")
