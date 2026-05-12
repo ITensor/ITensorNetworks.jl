@@ -659,14 +659,6 @@ function TreeTensorNetwork(
     return ttn_svd(os, sites, root_vertex; kwargs...)
 end
 
-function mpo(os::OpSum, external_inds::Vector; kwargs...)
-    return TreeTensorNetwork(os, path_indsnetwork(external_inds); kwargs...)
-end
-function mpo(os::OpSum, s::IndsNetwork; kwargs...)
-    # TODO: Check it is a path graph.
-    return TreeTensorNetwork(os, s; kwargs...)
-end
-
 # Catch-all for leaf eltype specification
 function TreeTensorNetwork(eltype::Type{<:Number}, os, sites::IndsNetwork; kwargs...)
     return NDTensors.convert_scalartype(eltype, TreeTensorNetwork(os, sites; kwargs...))
