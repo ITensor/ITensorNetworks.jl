@@ -27,15 +27,17 @@ struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
 end
 
 """
-    TreeTensorNetwork(tn::ITensorNetwork; ortho_region=vertices(tn)) -> TreeTensorNetwork
+    TreeTensorNetwork(tensors; ortho_region=nothing) -> TreeTensorNetwork
 
-Construct a `TreeTensorNetwork` from an `ITensorNetwork` with tree graph structure.
+Construct a `TreeTensorNetwork` from any collection of tensors accepted by
+`ITensorNetwork` (e.g. a `Dict`, `Dictionary`, a `Vector{ITensor}`, or another
+`AbstractITensorNetwork`). Edges are inferred from shared `Index`es; the
+underlying graph must be a tree.
 
-The `ortho_region` keyword specifies which vertices currently form the orthogonality center.
-By default all vertices are included, meaning no particular gauge is assumed. To enforce an
-actual orthogonal gauge, call [`orthogonalize`](@ref) afterward.
-
-Throws an error if the underlying graph of `tn` is not a tree.
+`ortho_region` specifies which vertices currently form the orthogonality
+center. The default `nothing` includes all vertices, meaning no particular
+gauge is assumed. To enforce an actual orthogonal gauge, call
+[`orthogonalize`](@ref) afterward.
 
 # Example
 
@@ -54,21 +56,14 @@ julia> ttn = TreeTensorNetwork(itn; ortho_region = [first(vertices(itn))]);
 
 See also: [`ITensorNetwork`](@ref), [`orthogonalize`](@ref).
 """
-function TreeTensorNetwork(tn::ITensorNetwork{V}; ortho_region = vertices(tn)) where {V}
-    @assert is_tree(tn)
+function TreeTensorNetwork(tensors; ortho_region = nothing)
+    itn = ITensorNetwork(tensors)
+    @assert is_tree(itn)
+    V = vertextype(itn)
+    region = isnothing(ortho_region) ? vertices(itn) : ortho_region
     return TreeTensorNetwork{V}(
-        tn.graph, tn.vertex_data, tn.ind_to_vertices, Indices{V}(ortho_region)
+        itn.graph, itn.vertex_data, itn.ind_to_vertices, Indices{V}(region)
     )
-end
-
-function TreeTensorNetwork{V}(tn::ITensorNetwork) where {V}
-    return TreeTensorNetwork(ITensorNetwork{V}(tn))
-end
-
-# Build a `TreeTensorNetwork` directly from a tensor collection (anything
-# accepted by `ITensorNetwork`), saving the caller a wrapping step.
-function TreeTensorNetwork(tensors; kwargs...)
-    return TreeTensorNetwork(ITensorNetwork(tensors); kwargs...)
 end
 
 const TTN = TreeTensorNetwork

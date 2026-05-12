@@ -45,6 +45,8 @@ Base.copy(tn::AbstractITensorNetwork) = not_implemented()
 # whether `vertex_data` is a `Dict`, `Dictionary`, or anything else with
 # different default-iteration semantics.
 Base.keys(tn::AbstractITensorNetwork) = vertices(tn)
+Base.keytype(::Type{<:AbstractITensorNetwork{V}}) where {V} = V
+Base.keytype(tn::AbstractITensorNetwork) = keytype(typeof(tn))
 Base.values(tn::AbstractITensorNetwork) = (tn[v] for v in vertices(tn))
 Base.iterate(tn::AbstractITensorNetwork, args...) = iterate(values(tn), args...)
 
