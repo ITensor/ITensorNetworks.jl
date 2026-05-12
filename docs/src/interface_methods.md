@@ -50,7 +50,15 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   qr!(tn::AbstractITensorNetwork, edge::Pair)
   ```
 
-* Truncate the bond on `edge` via SVD; forwards `cutoff`, `maxdim`, `mindim` kwargs (`abstractitensornetwork.jl`):
+* Left-orthogonalize the bond on `edge` via SVD; forwards `cutoff`, `maxdim`, `mindim` kwargs to truncate while gauging (`abstractitensornetwork.jl`):
+  ```julia
+  left_orth(tn::AbstractITensorNetwork, edge::AbstractEdge; kws...)
+  left_orth(tn::AbstractITensorNetwork, edge::Pair; kws...)
+  left_orth!(tn::AbstractITensorNetwork, edge::AbstractEdge; kws...)
+  left_orth!(tn::AbstractITensorNetwork, edge::Pair; kws...)
+  ```
+
+* Truncate the bond on `edge` via SVD (delegates to `left_orth`) (`abstractitensornetwork.jl`):
   ```julia
   truncate(tn::AbstractITensorNetwork, edge::AbstractEdge; kws...)
   ```

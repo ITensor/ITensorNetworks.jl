@@ -419,10 +419,23 @@ end
 
 tree_orthogonalize(ψ::AbstractITensorNetwork, args...) = tree_gauge(ψ, args...)
 
-# TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+"""
+    left_orth!(tn::AbstractITensorNetwork, edge; kwargs...) -> AbstractITensorNetwork
+
+Mutate `tn` so the bond at `edge` is left-orthogonal: SVD-factorize
+`tn[src(edge)]` into `U * S * V`, replace `tn[src(edge)]` with the
+left-isometric `U`, and absorb `S * V` into `tn[dst(edge)]`. `edge` may be an
+`AbstractEdge` or a `Pair` of vertices.
+
+`kwargs...` are forwarded to `ITensors.svd`, so passing `cutoff` / `maxdim` /
+`mindim` truncates the bond in addition to gauging it. For a non-truncating
+left-orthogonal gauge, prefer `LinearAlgebra.qr!(tn, edge)`, which uses QR
+instead of SVD.
+
+See also: [`left_orth`](@ref), [`Base.truncate(::AbstractITensorNetwork, ::AbstractEdge)`](@ref).
+"""
+function left_orth!(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
     !has_edge(tn, edge) && throw(ArgumentError("Edge not in graph."))
-    tn = copy(tn)
     left_inds = setdiff(inds(tn[src(edge)]), inds(tn[dst(edge)]))
     ltags = tags(tn, edge)
     U, S, V = svd(tn[src(edge)], left_inds; lefttags = ltags, kwargs...)
@@ -431,13 +444,34 @@ function _truncate_edge(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs..
     return tn
 end
 
+function left_orth!(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+    return left_orth!(tn, edgetype(tn)(edge); kwargs...)
+end
+
 """
-    truncate(tn::AbstractITensorNetwork, edge; kwargs...) -> ITensorNetwork
+    left_orth(tn::AbstractITensorNetwork, edge; kwargs...) -> AbstractITensorNetwork
+
+Non-mutating version of [`left_orth!`](@ref): return a copy of `tn` with the
+bond at `edge` made left-orthogonal.
+"""
+function left_orth(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
+    return left_orth!(copy(tn), edge; kwargs...)
+end
+
+function left_orth(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
+    return left_orth(tn, edgetype(tn)(edge); kwargs...)
+end
+
+"""
+    truncate(tn::AbstractITensorNetwork, edge; kwargs...) -> AbstractITensorNetwork
 
 Truncate the bond across `edge` in `tn` by performing an SVD and discarding small
 singular values. `edge` may be an `AbstractEdge` or a `Pair` of vertices.
 
-Truncation parameters are passed as keyword arguments and forwarded to `ITensors.svd`:
+This is the user-facing verb for bond compression and delegates to
+[`left_orth`](@ref), which names the underlying left-orthogonal gauge
+transformation. Truncation parameters are passed as keyword arguments and
+forwarded to `ITensors.svd`:
 
   - `cutoff`: Drop singular values smaller than this threshold.
   - `maxdim`: Maximum number of singular values to keep.
@@ -447,10 +481,10 @@ This operates on a single bond. For `TreeTensorNetwork`, the no-argument form
 `truncate(tn; kwargs...)` sweeps all bonds and is generally preferred for full
 recompression after addition or subspace expansion.
 
-See also: `Base.truncate(::AbstractTreeTensorNetwork)`.
+See also: [`left_orth`](@ref), `Base.truncate(::AbstractTreeTensorNetwork)`.
 """
 function Base.truncate(tn::AbstractITensorNetwork, edge::AbstractEdge; kwargs...)
-    return _truncate_edge(tn, edge; kwargs...)
+    return left_orth(tn, edge; kwargs...)
 end
 
 function Base.truncate(tn::AbstractITensorNetwork, edge::Pair; kwargs...)
