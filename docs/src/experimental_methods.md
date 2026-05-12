@@ -261,11 +261,6 @@ Methods which still need to be discussed, modified, or deprecated.
   map_inds(f, is::IndsNetwork, args...; sites = nothing, links = nothing, kwargs...)
   ```
 
-* Visualize an `IndsNetwork` by wrapping it in a default `ITensorNetwork` (`indsnetwork.jl`):
-  ```julia
-  visualize(is::IndsNetwork, args...; kwargs...)
-  ```
-
 
 ## ProjTTN System
 
