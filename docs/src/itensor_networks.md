@@ -56,7 +56,7 @@ tensors = Dict(map(collect(vertices(g))) do v
     return v => random_itensor(site_v..., link_v...)
 end)
 
-ψ = ITensorNetwork(tensors, g)
+ψ = ITensorNetwork(tensors)
 ```
 
 Higher-level construction routines (random networks, product states, OpSum-derived

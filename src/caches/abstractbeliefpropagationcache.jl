@@ -1,4 +1,5 @@
 using Adapt: Adapt, adapt, adapt_structure
+using DataGraphs: DataGraphs, underlying_graph, vertex_data
 using Graphs: Graphs, IsDirected, dst, src
 using ITensors: commoninds, delta, dir
 using LinearAlgebra: diag, dot
@@ -18,10 +19,12 @@ function SimilarType.similar_type(bpc::AbstractBeliefPropagationCache)
     return typeof(tensornetwork(bpc))
 end
 
-function data_graph_type(bpc::AbstractBeliefPropagationCache)
-    return data_graph_type(tensornetwork(bpc))
+function DataGraphs.underlying_graph(bpc::AbstractBeliefPropagationCache)
+    return underlying_graph(tensornetwork(bpc))
 end
-data_graph(bpc::AbstractBeliefPropagationCache) = data_graph(tensornetwork(bpc))
+function DataGraphs.vertex_data(bpc::AbstractBeliefPropagationCache)
+    return vertex_data(tensornetwork(bpc))
+end
 
 #TODO: Take `dot` without precontracting the messages to allow scaling to more complex
 # messages
@@ -45,9 +48,6 @@ default_messages(ptn::PartitionedGraph) = Dictionary()
 end
 default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertices(ψ))
 
-function Base.setindex!(bpc::AbstractBeliefPropagationCache, factor::ITensor, vertex)
-    return not_implemented()
-end
 partitioned_tensornetwork(bpc::AbstractBeliefPropagationCache) = not_implemented()
 messages(bpc::AbstractBeliefPropagationCache) = not_implemented()
 function default_message(
@@ -131,7 +131,7 @@ end
 function map_factors(f, bpc::AbstractBeliefPropagationCache, vs = vertices(bpc))
     bpc = copy(bpc)
     for v in vs
-        @preserve_graph bpc[v] = f(bpc[v])
+        bpc[v] = f(bpc[v])
     end
     return bpc
 end
@@ -176,14 +176,14 @@ function update_factors(bpc::AbstractBeliefPropagationCache, factors)
     bpc = copy(bpc)
     for vertex in eachindex(factors)
         # TODO: Add a check that this preserves the graph structure.
-        setindex_preserve_graph!(bpc, factors[vertex], vertex)
+        bpc[vertex] = factors[vertex]
     end
     return bpc
 end
 
 function update_factor(bpc, vertex, factor)
     bpc = copy(bpc)
-    setindex_preserve_graph!(bpc, factor, vertex)
+    bpc[vertex] = factor
     return bpc
 end
 
@@ -371,8 +371,9 @@ function rescale_partitions(
     )
     bpc = copy(bpc)
     tn = tensornetwork(bpc)
-    norms = map(v -> inv(norm(tn[v])), verts)
-    scale_tensors!(bpc, Dictionary(verts, norms))
+    for v in verts
+        bpc[v] = inv(norm(tn[v])) * bpc[v]
+    end
 
     vertices_weights = Dictionary()
     for pv in partitions
@@ -388,7 +389,9 @@ function rescale_partitions(
         end
     end
 
-    scale_tensors!(bpc, vertices_weights)
+    for (v, w) in pairs(vertices_weights)
+        bpc[v] = w * bpc[v]
+    end
 
     return bpc
 end

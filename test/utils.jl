@@ -4,8 +4,9 @@
 # inside its gensym module.
 
 using DataGraphs: underlying_graph, vertex_data
-using Graphs: AbstractGraph, add_edge!, dst, edges, src, vertices
-using ITensorNetworks: @preserve_graph, ITensorNetwork, IndsNetwork, data_graph
+using Dictionaries: Indices
+using Graphs: AbstractGraph, dst, edges, src, vertices
+using ITensorNetworks: ITensorNetwork, IndsNetwork
 using ITensors.NDTensors: dim
 using ITensors: ITensors, ITensor, Index, QN, dag, hasqns, inds, itensor, onehot
 using NamedGraphs.GraphsExtensions: incident_edges
@@ -35,14 +36,15 @@ function random_tensornetwork(
     g = NamedGraph(graph)
     links = Dict(e => Index(link_space, "Link") for e in edges(g))
     links = merge(links, Dict(reverse(e) => links[e] for e in edges(g)))
-    tensors = Dict(
-        map(collect(vertices(g))) do v
-            link_v = [links[e] for e in incident_edges(g, v)]
-            inds_v = [siteinds[v]; link_v]
-            return v => itensor(randn(rng, eltype, dim.(inds_v)...), inds_v)
-        end
-    )
-    return ITensorNetwork(tensors, g)
+    # `Indices`-keyed `map` returns a `Dictionary` (insertion-ordered),
+    # so the constructed `ITensorNetwork`'s vertex / edge order tracks
+    # `vertices(g)`.
+    ts = map(Indices(vertices(g))) do v
+        link_v = [links[e] for e in incident_edges(g, v)]
+        inds_v = [siteinds[v]; link_v]
+        return itensor(randn(rng, eltype, dim.(inds_v)...), inds_v)
+    end
+    return ITensorNetwork(ts)
 end
 
 # `IndsNetwork`: extract site inds (`Index[]` where unassigned).
@@ -87,15 +89,13 @@ end
 # uses QR, which would push site-state QN flux into the link and leave BP's
 # `default_message` (single-index `delta`) with no compatible block. `onehot`
 # defaults to `Float64`, so we typecast it to `elt` to keep `productstate(elt,
-# ...)` element-type-preserving. Uses `@preserve_graph` plus an explicit
-# `add_edge!` on the underlying graph so the graph-edge ↔ shared-Index
-# invariant is maintained without relying on auto-reconciliation.
+# ...)` element-type-preserving. Reverse-map reconciliation on the second
+# `setindex!` brings the graph edge along for free.
 function _add_edge!(elt::Type, tn, edge)
     iₑ = Index(_trivial_link_space(tn), "Link")
     X = ITensors.convert_eltype(elt, onehot(iₑ => 1))
-    @preserve_graph tn[src(edge)] = tn[src(edge)] * X
-    @preserve_graph tn[dst(edge)] = tn[dst(edge)] * dag(X)
-    add_edge!(data_graph(tn), edge)
+    tn[src(edge)] = tn[src(edge)] * X
+    tn[dst(edge)] = tn[dst(edge)] * dag(X)
     return tn
 end
 
@@ -108,15 +108,12 @@ function productstate(elt::Type, state::Function, s::IndsNetwork)
     return productstate(elt, Dict(v => state(v) for v in vertices(s)), s)
 end
 function productstate(elt::Type, state, s::IndsNetwork)
-    g = NamedGraph(collect(vertices(s)))
-    tensors = Dict(
-        map(collect(vertices(s))) do v
-            site_v = isassigned(vertex_data(s), v) ? s[v] : Index[]
-            t = ITensors.state(state[v], only(site_v))
-            return v => ITensors.convert_eltype(elt, t)
-        end
-    )
-    tn = ITensorNetwork(tensors, g)
+    ts = map(Indices(vertices(s))) do v
+        site_v = isassigned(vertex_data(s), v) ? s[v] : Index[]
+        t = ITensors.state(state[v], only(site_v))
+        return ITensors.convert_eltype(elt, t)
+    end
+    tn = ITensorNetwork(ts)
     for e in edges(s)
         _add_edge!(elt, tn, e)
     end

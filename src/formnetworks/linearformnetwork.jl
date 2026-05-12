@@ -1,7 +1,6 @@
-using Graphs: AbstractGraph
+using DataGraphs: DataGraphs, set_vertex_data!
 using ITensors: ITensor, prime
 using NamedGraphs.GraphsExtensions: disjoint_union
-using NamedGraphs: similar_graph
 
 default_dual_link_index_map = prime
 
@@ -40,12 +39,11 @@ ket_vertex_suffix(lf::LinearFormNetwork) = lf.ket_vertex_suffix
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 tensornetwork(lf::LinearFormNetwork) = lf.tensornetwork
 
-function NamedGraphs.similar_graph(
-        lf::LinearFormNetwork,
-        underlying_graph::AbstractGraph
-    )
-    tn = similar_graph(tensornetwork(lf), underlying_graph)
-    return LinearFormNetwork(tn, bra_vertex_suffix(lf), ket_vertex_suffix(lf))
+# Forward vertex writes to the wrapped network so reverse-index map and
+# edge reconciliation run on the underlying `ITensorNetwork`.
+function DataGraphs.set_vertex_data!(lf::LinearFormNetwork, value, vertex)
+    set_vertex_data!(tensornetwork(lf), value, vertex)
+    return lf
 end
 
 function Base.copy(lf::LinearFormNetwork)
@@ -56,9 +54,6 @@ end
 
 function update(lf::LinearFormNetwork, original_ket_state_vertex, ket_state::ITensor)
     lf = copy(lf)
-    # TODO: Maybe add a check that it really does preserve the graph.
-    setindex_preserve_graph!(
-        tensornetwork(lf), ket_state, ket_vertex(blf, original_ket_state_vertex)
-    )
+    tensornetwork(lf)[ket_vertex(blf, original_ket_state_vertex)] = ket_state
     return lf
 end

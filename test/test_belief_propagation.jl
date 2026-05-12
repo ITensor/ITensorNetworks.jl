@@ -1,6 +1,6 @@
 using Compat: Compat
 using Graphs: vertices
-using ITensorNetworks: ITensorNetworks, @preserve_graph, BeliefPropagationCache, contract,
+using ITensorNetworks: ITensorNetworks, BeliefPropagationCache, contract,
     contraction_sequence, environment, inner_network, message, message_diff,
     partitioned_tensornetwork, scalar, siteinds, tensornetwork, update, update_factor,
     updated_message, ⊗
@@ -37,8 +37,8 @@ using Test: @test, @testset
         new_A_dag = ITensors.replaceind(
             dag(prime(new_A)), only(s[first(vket)])', only(s[first(vket)])
         )
-        @preserve_graph bpc[vket] = new_A
-        @preserve_graph bpc[vbra] = new_A_dag
+        bpc[vket] = new_A
+        bpc[vbra] = new_A_dag
         @test bpc[vket] == new_A
         @test bpc[vbra] == new_A_dag
 

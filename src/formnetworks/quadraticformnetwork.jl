@@ -1,4 +1,4 @@
-using NamedGraphs: similar_graph
+using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
 
 default_index_map = prime
 default_inv_index_map = noprime
@@ -15,17 +15,6 @@ struct QuadraticFormNetwork{
     dual_inv_index_map::InvIndexMap
 end
 
-function NamedGraphs.similar_graph(
-        qf::QuadraticFormNetwork,
-        underlying_graph::AbstractGraph
-    )
-    return QuadraticFormNetwork(
-        similar_graph(bilinear_formnetwork(qf), underlying_graph),
-        dual_index_map(qf),
-        dual_inv_index_map(qf)
-    )
-end
-
 bilinear_formnetwork(qf::QuadraticFormNetwork) = qf.formnetwork
 
 #Needed for implementation, forward from bilinear form
@@ -34,8 +23,6 @@ for f in [
         :bra_vertex_suffix,
         :ket_vertex_suffix,
         :tensornetwork,
-        :data_graph,
-        :data_graph_type,
     ]
     @eval begin
         function $f(qf::QuadraticFormNetwork, args...; kwargs...)
@@ -44,8 +31,20 @@ for f in [
     end
 end
 
+function DataGraphs.underlying_graph(qf::QuadraticFormNetwork)
+    return underlying_graph(bilinear_formnetwork(qf))
+end
+DataGraphs.vertex_data(qf::QuadraticFormNetwork) = vertex_data(bilinear_formnetwork(qf))
+
 dual_index_map(qf::QuadraticFormNetwork) = qf.dual_index_map
 dual_inv_index_map(qf::QuadraticFormNetwork) = qf.dual_inv_index_map
+
+# Forward vertex writes to the inner `BilinearFormNetwork`, which in turn
+# forwards to the underlying `ITensorNetwork`.
+function DataGraphs.set_vertex_data!(qf::QuadraticFormNetwork, value, vertex)
+    set_vertex_data!(bilinear_formnetwork(qf), value, vertex)
+    return qf
+end
 function Base.copy(qf::QuadraticFormNetwork)
     return QuadraticFormNetwork(
         copy(bilinear_formnetwork(qf)), dual_index_map(qf), dual_inv_index_map(qf)

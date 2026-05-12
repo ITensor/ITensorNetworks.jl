@@ -3,7 +3,7 @@ using Graphs: vertices
 using ITensorNetworks:
     ITensorNetwork, ProjTTN, TreeTensorNetwork, environments, position, siteinds
 using ITensors.NDTensors: with_auto_fermion
-using ITensors: ITensor
+using ITensors: ITensor, Index
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_path_graph
 using NamedGraphs: NamedEdge, NamedGraph
 using Test: @test, @testset
@@ -47,9 +47,11 @@ using .ModelHamiltonians: ModelHamiltonians
 end
 @testset "ProjTTN construction regression test" begin
     pos = Indices{Tuple{String, Int}}()
-    g = NamedGraph{Any}(named_path_graph(2))
-    tensors = Dict{Any, ITensor}(v => ITensor() for v in vertices(g))
-    operator = TreeTensorNetwork(ITensorNetwork{Any}(tensors, g))
+    # Share a placeholder `Index` between the two tensors so the resulting
+    # `ITensorNetwork` has a single edge (and is therefore a valid tree).
+    link = Index(1, "Link")
+    tensors = Dict{Any, ITensor}(v => ITensor(link) for v in vertices(named_path_graph(2)))
+    operator = TreeTensorNetwork(tensors)
     environments = Dictionary{NamedEdge{Any}, ITensor}()
     @test ProjTTN(pos, operator, environments) isa ProjTTN{Any, Indices{Any}}
 end

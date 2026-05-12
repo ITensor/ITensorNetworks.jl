@@ -1,4 +1,5 @@
 using Adapt: adapt
+using DataGraphs: DataGraphs, set_vertex_data!
 using ITensors.NDTensors: datatype, denseblocks
 using ITensors: ITensor, Op, delta, prime, sim
 using NamedGraphs.GraphsExtensions: disjoint_union
@@ -40,23 +41,18 @@ function BilinearFormNetwork(
     )
 end
 
-function NamedGraphs.similar_graph(
-        bf::BilinearFormNetwork,
-        underlying_graph::AbstractGraph
-    )
-    return BilinearFormNetwork(
-        similar_graph(bf.tensornetwork, underlying_graph),
-        operator_vertex_suffix(bf),
-        bra_vertex_suffix(bf),
-        ket_vertex_suffix(bf)
-    )
-end
-
 operator_vertex_suffix(blf::BilinearFormNetwork) = blf.operator_vertex_suffix
 bra_vertex_suffix(blf::BilinearFormNetwork) = blf.bra_vertex_suffix
 ket_vertex_suffix(blf::BilinearFormNetwork) = blf.ket_vertex_suffix
 # TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
 tensornetwork(blf::BilinearFormNetwork) = blf.tensornetwork
+
+# Forward vertex writes to the wrapped network so reverse-index map and
+# edge reconciliation run on the underlying `ITensorNetwork`.
+function DataGraphs.set_vertex_data!(blf::BilinearFormNetwork, value, vertex)
+    set_vertex_data!(tensornetwork(blf), value, vertex)
+    return blf
+end
 
 function Base.copy(blf::BilinearFormNetwork)
     return BilinearFormNetwork(
@@ -88,12 +84,11 @@ function BilinearFormNetwork(
     s_mapped = dual_site_index_map(s)
     operator_inds = union_all_inds(s, s_mapped)
 
-    g = NamedGraph(underlying_graph(operator_inds))
-    ts = Dict{vertextype(g), ITensor}()
+    ts = Dict{vertextype(operator_inds), ITensor}()
     for v in vertices(operator_inds)
         ts[v] = itensor_identity_map(scalartype(ket), s[v] .=> s_mapped[v])
     end
-    O = ITensorNetwork(ts, g)
+    O = ITensorNetwork(ts)
     O = adapt(promote_type(datatype(bra), datatype(ket)), O)
     return BilinearFormNetwork(O, bra, ket; dual_site_index_map, kwargs...)
 end
@@ -106,12 +101,7 @@ function update(
         ket_state::ITensor
     )
     blf = copy(blf)
-    # TODO: Maybe add a check that it really does preserve the graph.
-    setindex_preserve_graph!(
-        tensornetwork(blf), bra_state, bra_vertex(blf, original_bra_state_vertex)
-    )
-    setindex_preserve_graph!(
-        tensornetwork(blf), ket_state, ket_vertex(blf, original_ket_state_vertex)
-    )
+    tensornetwork(blf)[bra_vertex(blf, original_bra_state_vertex)] = bra_state
+    tensornetwork(blf)[ket_vertex(blf, original_ket_state_vertex)] = ket_state
     return blf
 end

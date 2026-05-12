@@ -15,14 +15,6 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ITensorNetwork{V}(tensors)
   ```
 
-* From a collection of `ITensor`s placed at the vertices of a given `NamedGraph`. No
-  edge inference; the graph's edges are used as-is.
-  ```julia
-  ITensorNetwork(tensors, graph::NamedGraph)
-  ITensorNetwork{V}(tensors, graph::NamedGraph)
-  ```
-
-
 ## Analyzing ITensorNetworks
 
 
@@ -65,12 +57,10 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
 
 ## Global Operations on ITensorNetworks
 
-* Scale tensors at chosen vertices by per-vertex weights, either out-of-place or in-place (`abstractitensornetwork.jl`).
+* Map a function over the vertex tensors of an `ITensorNetwork`, returning a copy
+  (`abstractitensornetwork.jl`):
   ```julia
-  scale_tensors(tn::AbstractITensorNetwork, vertices_weights::Dictionary; kwargs...)
-  scale_tensors(weight_function::Function, tn; kwargs...)
-  scale_tensors!(tn::AbstractITensorNetwork, vertices_weights::Dictionary)
-  scale_tensors!(weight_function::Function, tn::AbstractITensorNetwork; kwargs...)
+  map(f, tn::AbstractITensorNetwork)
   ```
 
 * Tensor product (disjoint union) of two ITensorNetworks (`abstractitensornetwork.jl`):

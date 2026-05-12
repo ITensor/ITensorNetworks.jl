@@ -1,13 +1,16 @@
-using Dictionaries: Indices
+using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
+using Dictionaries: Dictionary, Indices
+using Graphs: Graphs, is_tree, rem_vertex!, vertices
+using ITensors: ITensor, Index
 using NamedGraphs.GraphsExtensions: vertextype
-using NamedGraphs: similar_graph
+using NamedGraphs: NamedGraph
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
 
-A tensor network whose underlying graph is a tree. In addition to the tensor data,
-it tracks an `ortho_region`: the set of vertices that currently form the orthogonality
-center of the network.
+A tensor network whose underlying graph is a tree. Storage mirrors
+[`ITensorNetwork`](@ref) — `graph`, `vertex_data`, and `ind_to_vertices`
+— plus an `ortho_region` tracking the orthogonality center.
 
 `TTN` is an alias for `TreeTensorNetwork`.
 
@@ -17,82 +20,60 @@ Use the [`TreeTensorNetwork`](@ref) constructors to build instances, and
 See also: [`ITensorNetwork`](@ref).
 """
 struct TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
-    tensornetwork::ITensorNetwork{V}
+    graph::NamedGraph{V}
+    vertex_data::Dictionary{V, ITensor}
+    ind_to_vertices::Dict{Index, Set{V}}
     ortho_region::Indices{V}
-    global function _TreeTensorNetwork(tensornetwork::ITensorNetwork, ortho_region::Indices)
-        @assert is_tree(tensornetwork)
-        return new{vertextype(tensornetwork)}(tensornetwork, ortho_region)
-    end
 end
 
-function _TreeTensorNetwork(tensornetwork::ITensorNetwork, ortho_region)
-    return _TreeTensorNetwork(tensornetwork, Indices(ortho_region))
+# Empty TTN with no vertices. The is-a-tree invariant holds trivially.
+function TreeTensorNetwork{V}() where {V}
+    return TreeTensorNetwork{V}(
+        NamedGraph{V}(),
+        Dictionary{V, ITensor}(),
+        Dict{Index, Set{V}}(),
+        Indices{V}()
+    )
 end
-
-function _TreeTensorNetwork(tensornetwork::ITensorNetwork)
-    return _TreeTensorNetwork(tensornetwork, vertices(tensornetwork))
-end
+TreeTensorNetwork() = TreeTensorNetwork{Any}()
 
 """
-    TreeTensorNetwork(tn::ITensorNetwork; ortho_region=vertices(tn)) -> TreeTensorNetwork
+    TreeTensorNetwork(tensors) -> TreeTensorNetwork
 
-Construct a `TreeTensorNetwork` from an `ITensorNetwork` with tree graph structure.
+Construct a `TreeTensorNetwork` from any collection of tensors accepted by
+`ITensorNetwork` (e.g. a `Dict`, `Dictionary`, a `Vector{ITensor}`, or another
+`AbstractITensorNetwork`). Edges are inferred from shared `Index`es; the
+underlying graph must be a tree.
 
-The `ortho_region` keyword specifies which vertices currently form the orthogonality center.
-By default all vertices are included, meaning no particular gauge is assumed. To enforce an
-actual orthogonal gauge, call [`orthogonalize`](@ref) afterward.
-
-Throws an error if the underlying graph of `tn` is not a tree.
+The result starts with `ortho_region == vertices(tn)` — i.e. no particular
+gauge is assumed. Use [`orthogonalize`](@ref) to bring the network into a
+canonical gauge centered at a chosen vertex or region.
 
 # Example
 
 ```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
+julia> using ITensors: Index, ITensor
 
-julia> using NamedGraphs: NamedGraph
+julia> i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k");
 
-julia> using Graphs: vertices
-
-julia> using ITensors: ITensor
-
-julia> g = named_comb_tree((2, 2));
-
-julia> s = siteinds("S=1/2", g);
-
-julia> tensors = Dict(v => ITensor(s[v]...) for v in vertices(g));
-
-julia> itn = ITensorNetwork(tensors, NamedGraph(g));
-
-julia> ttn_state = TreeTensorNetwork(itn; ortho_region = [first(vertices(itn))]);
+julia> ttn = TreeTensorNetwork([ITensor(i, j), ITensor(j, k)]);
 
 ```
 
 See also: [`ITensorNetwork`](@ref), [`orthogonalize`](@ref).
 """
-function TreeTensorNetwork(tn::ITensorNetwork; ortho_region = vertices(tn))
-    return _TreeTensorNetwork(tn, ortho_region)
-end
-function TreeTensorNetwork{V}(tn::ITensorNetwork) where {V}
-    return TreeTensorNetwork(ITensorNetwork{V}(tn))
+function TreeTensorNetwork(tensors)
+    itn = ITensorNetwork(tensors)
+    @assert is_tree(itn)
+    V = vertextype(itn)
+    return TreeTensorNetwork{V}(
+        itn.graph, itn.vertex_data, itn.ind_to_vertices, Indices{V}(vertices(itn))
+    )
 end
 
 const TTN = TreeTensorNetwork
 
-function NamedGraphs.similar_graph(ttn::TTN, underlying_graph::AbstractGraph)
-    return TTN(similar_graph(ttn.tensornetwork, underlying_graph))
-end
-
 # Field access
-"""
-    ITensorNetwork(tn::TreeTensorNetwork) -> ITensorNetwork
-
-Convert a `TreeTensorNetwork` to a plain `ITensorNetwork`, discarding orthogonality
-metadata. The returned network shares the same underlying tensor data.
-
-See also: [`TreeTensorNetwork`](@ref).
-"""
-ITensorNetwork(tn::TTN) = copy(tn.tensornetwork)
-
 """
     ortho_region(tn::TreeTensorNetwork) -> Indices
 
@@ -102,23 +83,33 @@ See also: [`orthogonalize`](@ref).
 """
 ortho_region(tn::TTN) = tn.ortho_region
 
-# Required for `AbstractITensorNetwork` interface
-data_graph(tn::TTN) = data_graph(tn.tensornetwork)
+# `AbstractITensorNetwork` storage hooks.
+DataGraphs.underlying_graph(tn::TTN) = tn.graph
+DataGraphs.vertex_data(tn::TTN) = tn.vertex_data
 
-function data_graph_type(G::Type{<:TTN})
-    return data_graph_type(fieldtype(G, :tensornetwork))
+function DataGraphs.set_vertex_data!(tn::TTN, value, v)
+    _set_vertex_data!(tn.graph, tn.vertex_data, tn.ind_to_vertices, value, v)
+    return tn
 end
 
-function Base.copy(tn::TTN)
-    return _TreeTensorNetwork(copy(tn.tensornetwork), copy(tn.ortho_region))
+function Graphs.rem_vertex!(tn::TTN, v)
+    _rem_vertex!(tn.graph, tn.vertex_data, tn.ind_to_vertices, v)
+    return tn
 end
 
-#
-# Constructor
-#
+function Base.copy(tn::TTN{V}) where {V}
+    return TreeTensorNetwork{V}(
+        copy(tn.graph),
+        map(copy, tn.vertex_data),
+        Dict{Index, Set{V}}(i => copy(vs) for (i, vs) in tn.ind_to_vertices),
+        copy(tn.ortho_region)
+    )
+end
 
 # set_ortho_region: low-level update of the ortho_region metadata only,
 # without any gauge transformations. To move the orthogonality center use orthogonalize.
-function set_ortho_region(tn::TTN, ortho_region)
-    return TreeTensorNetwork(tn.tensornetwork; ortho_region)
+function set_ortho_region(tn::TTN{V}, ortho_region) where {V}
+    return TreeTensorNetwork{V}(
+        tn.graph, tn.vertex_data, tn.ind_to_vertices, Indices{V}(ortho_region)
+    )
 end

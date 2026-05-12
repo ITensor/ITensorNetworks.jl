@@ -1,31 +1,39 @@
-using DataGraphs: DataGraphs, DataGraph
-using ITensors: ITensors, ITensor
-using NamedGraphs: NamedGraphs, NamedEdge, NamedGraph, similar_graph, vertextype
+using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
+using Dictionaries: Dictionaries, Dictionary
+using Graphs:
+    Graphs, add_edge!, add_vertex!, has_edge, has_vertex, neighbors, rem_edge!, rem_vertex!
+using ITensors: ITensor, Index, inds
+using NamedGraphs: NamedGraphs, NamedGraph, vertextype
 
 """
     ITensorNetwork{V}
 
-A tensor network where each vertex holds an `ITensor`. The network graph is a
-`NamedGraph{V}` and edges represent shared indices between neighboring tensors.
+A tensor network where each vertex holds an `ITensor`. Storage is split
+across three fields:
 
-# Constructors
+  - `graph::NamedGraph{V}` — the network's graph (`V` is the vertex type),
+  - `vertex_data::Dictionary{V, ITensor}` — the tensor at each vertex,
+  - `ind_to_vertices::Dict{Index, Set{V}}` — reverse map from each `Index`
+    to the vertices it appears in.
 
-**From a collection of `ITensor`s** (edges inferred from shared indices):
+The reverse map keeps vertex lookup by shared `Index` O(1) and enforces
+the graph-edge ↔ shared-`Index` invariant: every `Index` appears at
+either one vertex (an external / site index) or two (a bond), and every
+graph edge corresponds to exactly the pair of vertices sharing at least
+one `Index`. Hyperedges (an `Index` shared by three or more vertices)
+are rejected.
+
+# Construction
 
 ```julia
 ITensorNetwork(tensors)
+ITensorNetwork{V}(tensors)
 ```
 
 `tensors` is any collection where `keys(tensors)` are vertex labels and
 `values(tensors)` are the `ITensor`s at those vertices (e.g. a `Dict`, a
 `Dictionary`, or a `Vector{ITensor}` with linear-index vertex labels).
-
-**From a collection of `ITensor`s placed at the vertices of a given graph**
-(no edge inference; the caller is responsible for the edges):
-
-```julia
-ITensorNetwork(tensors, graph::NamedGraph)
-```
+Edges are inferred from shared `Index`es.
 
 # Example
 
@@ -41,90 +49,144 @@ julia> tn = ITensorNetwork([ITensor(i, j), ITensor(j, k)]);
 See also: `IndsNetwork`, [`TreeTensorNetwork`](@ref ITensorNetworks.TreeTensorNetwork).
 """
 struct ITensorNetwork{V} <: AbstractITensorNetwork{V}
-    data_graph::DataGraph{V, ITensor, ITensor, NamedGraph{V}, NamedEdge{V}}
-
-    # Sole inner ctor: place `tensors` at the vertices of `graph`. No checks —
-    # `tensors` must be indexable at every vertex, the graph's edges are
-    # taken at face value.
-    function ITensorNetwork{V}(tensors, graph::NamedGraph) where {V}
-        g = NamedGraph{V}(graph)
-        dg = DataGraph(g; vertex_data_type = ITensor, edge_data_type = ITensor)
-        for v in vertices(g)
-            dg[v] = tensors[v]
-        end
-        return new{V}(dg)
-    end
+    graph::NamedGraph{V}
+    vertex_data::Dictionary{V, ITensor}
+    ind_to_vertices::Dict{Index, Set{V}}
 end
 
 #
-# Data access
+# AbstractITensorNetwork interface (field access)
 #
 
-data_graph(tn::ITensorNetwork) = getfield(tn, :data_graph)
-data_graph_type(TN::Type{<:ITensorNetwork}) = fieldtype(TN, :data_graph)
+DataGraphs.underlying_graph(tn::ITensorNetwork) = tn.graph
+DataGraphs.vertex_data(tn::ITensorNetwork) = tn.vertex_data
 
-function DataGraphs.underlying_graph_type(TN::Type{<:ITensorNetwork})
-    return fieldtype(data_graph_type(TN), :underlying_graph)
+function DataGraphs.underlying_graph_type(::Type{<:ITensorNetwork{V}}) where {V}
+    return NamedGraph{V}
 end
 
 #
-# Construction from collections of ITensors
+# Constructors
 #
 
-# Tensors only: derive the vertex list from `keys(tensors)`, write the
-# tensors at each vertex, then infer edges from shared Indices in an
-# O(n²) sweep. Without a reverse index map, that's the only available cost.
+# Empty network with no vertices. Mirrors the `Vector()` / `Dictionary()`
+# convention; vertex type defaults to `Any` when unspecified.
+function ITensorNetwork{V}() where {V}
+    return ITensorNetwork{V}(
+        NamedGraph{V}(), Dictionary{V, ITensor}(), Dict{Index, Set{V}}()
+    )
+end
+ITensorNetwork() = ITensorNetwork{Any}()
+
+# Construct by writing each tensor into a freshly empty network via
+# `setindex!`. The `setindex!` code path centralizes reverse-map
+# registration, edge inference, and the hypergraph check, and walking
+# `keys(tensors)` in order makes the resulting `neighbors(g, v)` /
+# `edges(g)` iteration order deterministic in the input order.
 function ITensorNetwork{V}(tensors) where {V}
-    # Build the vertex list with element type `V` so that an empty `tensors`
-    # input doesn't get the graph's vertex type inferred to whatever
-    # `keys(tensors)` happens to give (e.g. `Int` for an empty `Vector{ITensor}`).
-    g = NamedGraph(V[v for v in keys(tensors)])
-    default = Dict{V, ITensor}(v => ITensor() for v in vertices(g))
-    tn = ITensorNetwork(default, g)
-    for v in vertices(g)
-        @preserve_graph tn[v] = tensors[v]
-    end
-    vs = collect(vertices(tn))
-    for i in eachindex(vs), j in (i + 1):lastindex(vs)
-        v1, v2 = vs[i], vs[j]
-        if !isempty(commoninds(tn[v1], tn[v2]))
-            add_edge!(data_graph(tn), v1 => v2)
-        end
+    tn = ITensorNetwork{V}()
+    for v in keys(tensors)
+        tn[v] = tensors[v]
     end
     return tn
 end
 
-# Non-parametric delegates: extract `V` via `keytype` / `vertextype`.
-function ITensorNetwork(tensors)
-    return ITensorNetwork{keytype(tensors)}(tensors)
-end
-function ITensorNetwork(tensors, graph::NamedGraph)
-    return ITensorNetwork{vertextype(graph)}(tensors, graph)
-end
+ITensorNetwork(tensors) = ITensorNetwork{keytype(tensors)}(tensors)
 
 #
 # Vertex-type conversion and copy
 #
 
-function ITensorNetwork{V}(tn::ITensorNetwork) where {V}
-    g = NamedGraph{V}(underlying_graph(tn))
-    tensors = Dict{V, ITensor}(v => tn[v] for v in vertices(tn))
-    return ITensorNetwork(tensors, g)
-end
-
-ITensorNetwork(tn::ITensorNetwork) = copy(tn)
-
 NamedGraphs.convert_vertextype(::Type{V}, tn::ITensorNetwork{V}) where {V} = tn
-NamedGraphs.convert_vertextype(V::Type, tn::ITensorNetwork) = ITensorNetwork{V}(tn)
-
-function Base.copy(tn::ITensorNetwork{V}) where {V}
-    g = copy(underlying_graph(tn))
-    tensors = Dict{V, ITensor}(v => copy(tn[v]) for v in vertices(g))
-    return ITensorNetwork(tensors, g)
+function NamedGraphs.convert_vertextype(::Type{V}, tn::ITensorNetwork) where {V}
+    return ITensorNetwork{V}(tn)
 end
 
-function NamedGraphs.similar_graph(tn::ITensorNetwork, underlying_graph::AbstractGraph)
-    g = NamedGraph(underlying_graph)
-    default = Dict{vertextype(g), ITensor}(v => ITensor() for v in vertices(g))
-    return ITensorNetwork(default, g)
+Base.copy(tn::ITensorNetwork) = ITensorNetwork(map(copy, vertex_data(tn)))
+
+#
+# Mutation: keep `graph`, `vertex_data`, and `ind_to_vertices` in sync.
+#
+
+# Drop the inds of `vertex_data[v]` from the reverse map, leaving
+# `vertex_data` and `graph` themselves untouched. Used both as a
+# prelude to overwriting `v` and as a step in `_rem_vertex!`.
+function _unregister_inds!(
+        vertex_data::Dictionary{V, ITensor},
+        ind_to_vertices::Dict{Index, Set{V}},
+        v
+    ) where {V}
+    haskey(vertex_data, v) || return nothing
+    for i in inds(vertex_data[v])
+        owners = ind_to_vertices[i]
+        delete!(owners, v)
+        isempty(owners) && delete!(ind_to_vertices, i)
+    end
+    return nothing
+end
+
+# Write `value` to vertex `v`, updating the reverse map and reconciling
+# edges so the graph-edge ↔ shared-`Index` invariant holds. If `v` is
+# new it's added to the graph — so this is also the natural way to grow
+# the network one tensor at a time without a separate `add_vertex!`
+# step. Operates on raw storage so `ITensorNetwork` and
+# `TreeTensorNetwork` can share it.
+function _set_vertex_data!(
+        graph::NamedGraph{V},
+        vertex_data::Dictionary{V, ITensor},
+        ind_to_vertices::Dict{Index, Set{V}},
+        value,
+        v
+    ) where {V}
+    has_vertex(graph, v) || add_vertex!(graph, v)
+    _unregister_inds!(vertex_data, ind_to_vertices, v)
+    # `set!` updates in place when `v` is already present, preserving
+    # the insertion order of `vertex_data`. Plain `setindex!` would
+    # error on a missing key, and `insert!` would error on an existing
+    # one — `set!` handles both branches.
+    Dictionaries.set!(vertex_data, v, value)
+    for i in inds(value)
+        push!(get!(ind_to_vertices, i, Set{V}()), v)
+        length(ind_to_vertices[i]) <= 2 || error(
+            "Index $i now appears at $(length(ind_to_vertices[i])) vertices; " *
+                "`ITensorNetwork` forbids hyperedges (3+ vertices sharing an `Index`)."
+        )
+    end
+    # Reconcile graph edges incident to `v` against the reverse map.
+    desired = Set{V}()
+    for i in inds(value)
+        for u in ind_to_vertices[i]
+            u == v || push!(desired, u)
+        end
+    end
+    for u in collect(neighbors(graph, v))
+        u in desired || rem_edge!(graph, v => u)
+    end
+    for u in desired
+        has_edge(graph, v, u) || add_edge!(graph, v => u)
+    end
+    return nothing
+end
+
+function DataGraphs.set_vertex_data!(tn::ITensorNetwork, value, v)
+    _set_vertex_data!(tn.graph, tn.vertex_data, tn.ind_to_vertices, value, v)
+    return tn
+end
+
+# Drop `v` from the reverse map, vertex data, and graph in one shot.
+function _rem_vertex!(
+        graph::NamedGraph{V},
+        vertex_data::Dictionary{V, ITensor},
+        ind_to_vertices::Dict{Index, Set{V}},
+        v
+    ) where {V}
+    _unregister_inds!(vertex_data, ind_to_vertices, v)
+    haskey(vertex_data, v) && delete!(vertex_data, v)
+    rem_vertex!(graph, v)
+    return nothing
+end
+
+function Graphs.rem_vertex!(tn::ITensorNetwork, v)
+    _rem_vertex!(tn.graph, tn.vertex_data, tn.ind_to_vertices, v)
+    return tn
 end

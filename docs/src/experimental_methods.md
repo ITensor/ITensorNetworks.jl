@@ -37,9 +37,8 @@ Methods which still need to be discussed, modified, or deprecated.
 
 #### AbstractTreeTensorNetwork Type
 
-* Required-to-implement abstract interface — `TreeTensorNetwork` provides all three (`treetensornetworks/abstracttreetensornetwork.jl`):
+* Required-to-implement abstract interface — `TreeTensorNetwork` provides both (`treetensornetworks/abstracttreetensornetwork.jl`):
   ```julia
-  ITensorNetwork(tn::AbstractTTN)
   ortho_region(tn::AbstractTTN)
   set_ortho_region(tn::AbstractTTN, new_region)
   ```
@@ -133,11 +132,6 @@ Methods which still need to be discussed, modified, or deprecated.
   ```
 
 #### TreeTensorNetwork Type
-
-* Get the underlying `ITensorNetwork` of a `TTN` (drops orthogonality metadata) (`treetensornetworks/treetensornetwork.jl`):
-  ```julia
-  ITensorNetwork(tn::TTN)
-  ```
 
 * Get the current orthogonality region — the set of vertices forming the gauge center (`treetensornetworks/treetensornetwork.jl`):
   ```julia
