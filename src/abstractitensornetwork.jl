@@ -75,13 +75,6 @@ DataGraphs.is_edge_assigned(::AbstractITensorNetwork, _) = false
 
 DataGraphs.get_vertex_data(tn::AbstractITensorNetwork, v) = vertex_data(tn)[v]
 
-function DataGraphs.set_vertices_data!(tn::AbstractITensorNetwork, values, vertices)
-    for v in vertices
-        set_vertex_data!(tn, values[v], v)
-    end
-    return tn
-end
-
 function NamedGraphs.vertex_positions(tn::AbstractITensorNetwork)
     return NamedGraphs.vertex_positions(underlying_graph(tn))
 end

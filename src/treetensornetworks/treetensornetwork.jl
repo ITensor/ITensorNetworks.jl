@@ -36,17 +36,16 @@ end
 TreeTensorNetwork() = TreeTensorNetwork{Any}()
 
 """
-    TreeTensorNetwork(tensors; ortho_region=nothing) -> TreeTensorNetwork
+    TreeTensorNetwork(tensors) -> TreeTensorNetwork
 
 Construct a `TreeTensorNetwork` from any collection of tensors accepted by
 `ITensorNetwork` (e.g. a `Dict`, `Dictionary`, a `Vector{ITensor}`, or another
 `AbstractITensorNetwork`). Edges are inferred from shared `Index`es; the
 underlying graph must be a tree.
 
-`ortho_region` specifies which vertices currently form the orthogonality
-center. The default `nothing` includes all vertices, meaning no particular
-gauge is assumed. To enforce an actual orthogonal gauge, call
-[`orthogonalize`](@ref) afterward.
+The result starts with `ortho_region == vertices(tn)` — i.e. no particular
+gauge is assumed. Use [`orthogonalize`](@ref) to bring the network into a
+canonical gauge centered at a chosen vertex or region.
 
 # Example
 
@@ -55,19 +54,18 @@ julia> using ITensors: Index, ITensor
 
 julia> i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k");
 
-julia> ttn = TreeTensorNetwork([ITensor(i, j), ITensor(j, k)]; ortho_region = [1]);
+julia> ttn = TreeTensorNetwork([ITensor(i, j), ITensor(j, k)]);
 
 ```
 
 See also: [`ITensorNetwork`](@ref), [`orthogonalize`](@ref).
 """
-function TreeTensorNetwork(tensors; ortho_region = nothing)
+function TreeTensorNetwork(tensors)
     itn = ITensorNetwork(tensors)
     @assert is_tree(itn)
     V = vertextype(itn)
-    region = isnothing(ortho_region) ? vertices(itn) : ortho_region
     return TreeTensorNetwork{V}(
-        itn.graph, itn.vertex_data, itn.ind_to_vertices, Indices{V}(region)
+        itn.graph, itn.vertex_data, itn.ind_to_vertices, Indices{V}(vertices(itn))
     )
 end
 
