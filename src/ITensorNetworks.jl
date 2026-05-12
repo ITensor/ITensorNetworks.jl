@@ -1,6 +1,5 @@
 module ITensorNetworks
 
-include("visualize.jl")
 include("abstractindsnetwork.jl")
 include("indextags.jl")
 include("indsnetwork.jl")
