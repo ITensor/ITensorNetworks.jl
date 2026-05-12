@@ -30,7 +30,7 @@ function random_state(g, s; link_space)
         v => random_itensor(only(s[v]), (l[e] for e in incident_edges(g, v))...)
             for v in vertices(g)
     )
-    return ITensorNetwork(ts, g)
+    return ITensorNetwork(ts)
 end
 
 # Build a Heisenberg Hamiltonian on a comb tree

@@ -53,7 +53,7 @@ tensors = Dict(map(collect(vertices(g))) do v
     link_v = [haskey(links, e) ? links[e] : links[reverse(e)] for e in incident_edges(g, v)]
     return v => random_itensor(site_v..., link_v...)
 end)
-itn = ITensorNetwork(tensors, g)
+itn = ITensorNetwork(tensors)
 psi = TreeTensorNetwork(itn)
 ```
 

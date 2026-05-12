@@ -15,14 +15,6 @@ These ITensorNetwork constructor interfaces are foundational to other constructo
   ITensorNetwork{V}(tensors)
   ```
 
-* From a collection of `ITensor`s placed at the vertices of a given `NamedGraph`. No
-  edge inference; the graph's edges are used as-is.
-  ```julia
-  ITensorNetwork(tensors, graph::NamedGraph)
-  ITensorNetwork{V}(tensors, graph::NamedGraph)
-  ```
-
-
 ## Analyzing ITensorNetworks
 
 

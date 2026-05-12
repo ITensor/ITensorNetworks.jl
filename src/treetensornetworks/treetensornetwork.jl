@@ -28,9 +28,11 @@ end
 
 # Empty TTN with no vertices. The is-a-tree invariant holds trivially.
 function TreeTensorNetwork{V}() where {V}
-    itn = ITensorNetwork{V}()
     return TreeTensorNetwork{V}(
-        itn.graph, itn.vertex_data, itn.ind_to_vertices, Indices{V}()
+        NamedGraph{V}(),
+        Dictionary{V, ITensor}(),
+        Dict{Index, Set{V}}(),
+        Indices{V}()
     )
 end
 TreeTensorNetwork() = TreeTensorNetwork{Any}()

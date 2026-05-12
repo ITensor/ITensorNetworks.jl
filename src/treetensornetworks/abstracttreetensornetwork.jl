@@ -89,7 +89,7 @@ end
 
 # For ambiguity error
 function Base.truncate(tn::AbstractTTN, edge::AbstractEdge; kwargs...)
-    return typeof(tn)(truncate(ITensorNetwork(tn), edge; kwargs...))
+    return TreeTensorNetwork(truncate(ITensorNetwork(tn), edge; kwargs...))
 end
 
 #
