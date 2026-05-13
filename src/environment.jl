@@ -24,11 +24,13 @@ function environment(
         vertices::Vector;
         (cache!) = nothing,
         update_cache = isnothing(cache!),
-        cache_construction_kwargs = default_cache_construction_kwargs(alg, ptn),
+        cache_construction_kwargs = (;),
         cache_update_kwargs = (;)
     )
     if isnothing(cache!)
-        cache! = Ref(cache(alg, ptn; cache_construction_kwargs...))
+        cache! = Ref(
+            initialize_cache(environment, alg, ptn; cache_construction_kwargs...)
+        )
     end
 
     if update_cache

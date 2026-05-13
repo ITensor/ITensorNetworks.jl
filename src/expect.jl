@@ -1,7 +1,4 @@
-using Dictionaries: Dictionary, set!
-using Graphs: is_tree
 using ITensors: Op, contract, op, which_op
-using NamedGraphs.PartitionedGraphs: PartitionedGraph, quotient_graph
 
 default_expect_alg() = "bp"
 
@@ -22,7 +19,7 @@ function expect(ψIψ::AbstractFormNetwork, op::Op; kwargs...)
 end
 
 function expect(
-        alg::Algorithm"bp",
+        alg::Algorithm,
         ψ::AbstractITensorNetwork,
         ops;
         (cache!) = nothing,
@@ -33,17 +30,7 @@ function expect(
     )
     ψIψ = QuadraticFormNetwork(ψ)
     if isnothing(cache!)
-        pv = get(
-            cache_construction_kwargs, :partitioned_vertices,
-            default_partitioned_vertices(ψIψ)
-        )
-        ptn = PartitionedGraph(ψIψ, pv)
-        messages = get(cache_construction_kwargs, :messages, nothing)
-        if isnothing(messages)
-            messages =
-                is_tree(quotient_graph(ptn)) ? Dictionary() : identity_messages(ψIψ, ptn)
-        end
-        cache! = Ref(BeliefPropagationCache(ptn; messages))
+        cache! = Ref(initialize_cache(expect, alg, ψIψ; cache_construction_kwargs...))
     end
 
     if update_cache

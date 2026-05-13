@@ -42,12 +42,12 @@ function logscalar(
         alg::Algorithm,
         tn::AbstractITensorNetwork;
         (cache!) = nothing,
-        cache_construction_kwargs = default_cache_construction_kwargs(alg, tn),
+        cache_construction_kwargs = (;),
         update_cache = isnothing(cache!),
         cache_update_kwargs = (;)
     )
     if isnothing(cache!)
-        cache! = Ref(cache(alg, tn; cache_construction_kwargs...))
+        cache! = Ref(initialize_cache(scalar, alg, tn; cache_construction_kwargs...))
     end
 
     if update_cache

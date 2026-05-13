@@ -10,14 +10,6 @@ using NamedGraphs.PartitionedGraphs: AbstractPartitionedGraph, PartitionedGraph,
 using SimpleTraits: SimpleTraits, @traitfn, Not
 using SplitApplyCombine: group
 
-function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
-    return (; partitioned_vertices = default_partitioned_vertices(ψ))
-end
-
-function default_cache_construction_kwargs(alg::Algorithm"bp", pg::PartitionedGraph)
-    return (;)
-end
-
 struct BeliefPropagationCache{V, PV, PTN <: AbstractPartitionedGraph{V, PV}, MTS} <:
     AbstractBeliefPropagationCache{V, PV}
     partitioned_tensornetwork::PTN
@@ -40,10 +32,6 @@ function BeliefPropagationCache(
         kwargs...
     )
     return BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
-end
-
-function cache(alg::Algorithm"bp", tn; kwargs...)
-    return BeliefPropagationCache(tn; kwargs...)
 end
 
 function partitioned_tensornetwork(bp_cache::BeliefPropagationCache)

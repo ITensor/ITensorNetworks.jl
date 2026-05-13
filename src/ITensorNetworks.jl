@@ -55,6 +55,7 @@ include("inner.jl")
 include("normalize.jl")
 include("expect.jl")
 include("environment.jl")
+include("initialize_cache.jl")
 include("exports.jl")
 
 end
