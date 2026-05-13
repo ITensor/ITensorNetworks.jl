@@ -18,7 +18,6 @@
 * Graph plumbing forwarded to the underlying tensor network (`formnetworks/abstractformnetwork.jl`):
   ```julia
   data_graph(f::AbstractFormNetwork)
-  data_graph_type(f::AbstractFormNetwork)
   ```
 
 * Lists of vertices in each role: those tagged with the operator/bra/ket suffix (`formnetworks/abstractformnetwork.jl`):
@@ -142,7 +141,6 @@
   ket_vertex_suffix(qf::QuadraticFormNetwork)
   tensornetwork(qf::QuadraticFormNetwork)
   data_graph(qf::QuadraticFormNetwork)
-  data_graph_type(qf::QuadraticFormNetwork)
   ```
 
 * Copy a `QuadraticFormNetwork` (deep-copies the inner bilinear form) (`formnetworks/quadraticformnetwork.jl`):
@@ -185,7 +183,6 @@
   (`caches/abstractbeliefpropagationcache.jl`):
   ```julia
   # How many of these are user-facing versus internal?
-  setindex!(bpc::AbstractBeliefPropagationCache, factor::ITensor, vertex)
   partitioned_tensornetwork(bpc::AbstractBeliefPropagationCache)
   messages(bpc::AbstractBeliefPropagationCache)
   copy(bpc::AbstractBeliefPropagationCache)
@@ -201,7 +198,6 @@
   network behind a cache (`caches/abstractbeliefpropagationcache.jl`):
   ```julia
   similar_type(bpc::AbstractBeliefPropagationCache)
-  data_graph_type(bpc::AbstractBeliefPropagationCache)
   data_graph(bpc::AbstractBeliefPropagationCache)
   tensornetwork(bpc::AbstractBeliefPropagationCache)
   scalartype(bpc::AbstractBeliefPropagationCache)
@@ -372,7 +368,6 @@
   ```julia
   copy(bp_cache::BeliefPropagationCache)
   messages(bp_cache::BeliefPropagationCache)
-  setindex!(bpc::BeliefPropagationCache, factor::ITensor, vertex)
   ```
 
 * Partition-graph related queries — list partitions, quotient edges between partitions, and
