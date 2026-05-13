@@ -4,7 +4,6 @@ using ITensorNetworks: BeliefPropagationCache, apply, environment, initialize_ca
     norm_sqr_network, siteinds, update
 using ITensors: ITensors, Algorithm, ITensor, inner, op
 using NamedGraphs.NamedGraphGenerators: named_grid
-using NamedGraphs.PartitionedGraphs: PartitionedGraph
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
@@ -28,25 +27,17 @@ include("utils.jl")
     # Simple Belief Propagation grouping (one bra/ket/operator triple per
     # partition) gives a product environment around `[v1, v2]`, which is
     # what `apply` requires.
-    ptn_SBP = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
+    pv_SBP = group(v -> v[1], vertices(ψψ))
     bp_cache = update(
-        initialize_cache(
-            Algorithm("bp"),
-            ψψ;
-            partitioned_vertices = ptn_SBP.partitioned_vertices
-        );
+        initialize_cache(Algorithm("bp"), ψψ; partitioned_vertices = pv_SBP);
         maxiter = 20
     )
     envsSBP = environment(bp_cache, env_verts((v1, v2)))
     # Column-grouping (one whole column per partition) gives a non-product
     # environment; `apply` should reject it.
-    ptn_col = PartitionedGraph(ψψ, group(v -> v[1][1], vertices(ψψ)))
+    pv_col = group(v -> v[1][1], vertices(ψψ))
     bp_cache_col = update(
-        initialize_cache(
-            Algorithm("bp"),
-            ψψ;
-            partitioned_vertices = ptn_col.partitioned_vertices
-        );
+        initialize_cache(Algorithm("bp"), ψψ; partitioned_vertices = pv_col);
         maxiter = 20
     )
     envsGBP = environment(bp_cache_col, env_verts((v1, v2)))
