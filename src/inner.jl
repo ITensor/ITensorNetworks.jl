@@ -1,4 +1,4 @@
-using ITensors: inner, scalar
+using ITensors: inner, scalar, sim
 using LinearAlgebra: norm, norm_sqr
 
 default_contract_alg(tns::Tuple) = "bp"

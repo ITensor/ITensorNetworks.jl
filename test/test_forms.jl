@@ -59,15 +59,14 @@ include("utils.jl")
     ∂qf_∂v = only(environment(qf, state_vertices(qf, [v]); alg = "exact"))
     @test (∂qf_∂v) * (qf[ket_vertex(qf, v)] * qf[bra_vertex(qf, v)]) ≈ contract(qf)
 
-    ∂qf_∂v_bp = environment(qf, state_vertices(qf, [v]); alg = "bp", update_cache = false)
-    ∂qf_∂v_bp = contract(∂qf_∂v_bp)
-    ∂qf_∂v_bp /= norm(∂qf_∂v_bp)
-    ∂qf_∂v /= norm(∂qf_∂v)
-    @test ∂qf_∂v_bp != ∂qf_∂v
-
+    # `environment(::AbstractFormNetwork, …; alg = "bp")` builds messages
+    # via the form-network's `identity_messages` path and updates the
+    # cache; on a tree, BP is exact so the BP env matches the exact env
+    # after one sweep.
     ∂qf_∂v_bp = environment(qf, state_vertices(qf, [v]); alg = "bp", update_cache = true)
     ∂qf_∂v_bp = contract(∂qf_∂v_bp)
     ∂qf_∂v_bp /= norm(∂qf_∂v_bp)
+    ∂qf_∂v /= norm(∂qf_∂v)
     @test ∂qf_∂v_bp ≈ ∂qf_∂v
 
     #Test having non-uniform number of site indices per vertex

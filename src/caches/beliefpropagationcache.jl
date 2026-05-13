@@ -1,4 +1,5 @@
 using DataGraphs: DataGraphs, set_vertex_data!
+using Dictionaries: Dictionary
 using Graphs: IsDirected
 using ITensors: dir
 using LinearAlgebra: diag, dot
@@ -24,7 +25,7 @@ struct BeliefPropagationCache{V, PV, PTN <: AbstractPartitionedGraph{V, PV}, MTS
 end
 
 #Constructors...
-function BeliefPropagationCache(ptn::PartitionedGraph; messages = default_messages(ptn))
+function BeliefPropagationCache(ptn::PartitionedGraph; messages = Dictionary())
     return BeliefPropagationCache(ptn, messages)
 end
 
@@ -50,10 +51,6 @@ function partitioned_tensornetwork(bp_cache::BeliefPropagationCache)
 end
 
 messages(bp_cache::BeliefPropagationCache) = bp_cache.messages
-
-function default_message(bp_cache::BeliefPropagationCache, edge::QuotientEdge)
-    return default_message(datatype(bp_cache), linkinds(bp_cache, edge))
-end
 
 function Base.copy(bp_cache::BeliefPropagationCache)
     return BeliefPropagationCache(

@@ -1,4 +1,8 @@
 using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
+using Dictionaries: Dictionary
+using Graphs: is_tree
+using ITensors.NDTensors: @Algorithm_str, Algorithm
+using NamedGraphs.PartitionedGraphs: PartitionedGraph, quotient_graph
 
 default_index_map = prime
 default_inv_index_map = noprime
@@ -83,6 +87,34 @@ function QuadraticFormNetwork(
         kwargs...
     )
     return QuadraticFormNetwork(blf, dual_index_map, dual_inv_index_map)
+end
+
+function identity_messages(fn::QuadraticFormNetwork, ptn::PartitionedGraph)
+    return identity_messages(bilinear_formnetwork(fn), ptn)
+end
+
+# QFN is structurally ψ-vs-ψ, so identity messages are the canonical
+# initialization on a loopy quotient graph. Asymmetric form networks
+# (general LFN/BFN built from ϕ ≠ ψ) don't have this guarantee, so this
+# specialization is QFN-only — `inner(ϕ, ψ; alg = "bp")` still falls
+# back to the generic path and requires the caller to supply messages.
+function logscalar(
+        alg::Algorithm"bp",
+        fn::QuadraticFormNetwork;
+        (cache!) = nothing,
+        update_cache = isnothing(cache!),
+        cache_update_kwargs = (;)
+    )
+    if isnothing(cache!)
+        pv = default_partitioned_vertices(fn)
+        ptn = PartitionedGraph(fn, pv)
+        messages = is_tree(quotient_graph(ptn)) ? Dictionary() : identity_messages(fn, ptn)
+        cache! = Ref(BeliefPropagationCache(ptn; messages))
+    end
+    if update_cache
+        cache![] = update(cache![]; cache_update_kwargs...)
+    end
+    return logscalar(cache![])
 end
 
 function update(qf::QuadraticFormNetwork, original_state_vertex, ket_state::ITensor)

@@ -1,9 +1,10 @@
 using Compat: Compat
 using Graphs: vertices
-using ITensorNetworks:
-    BeliefPropagationCache, apply, environment, norm_sqr_network, siteinds, update
+using ITensorNetworks: BeliefPropagationCache, apply, environment, identity_messages,
+    norm_sqr_network, siteinds, update
 using ITensors: ITensors, ITensor, inner, op
 using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs.PartitionedGraphs: PartitionedGraph
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
@@ -20,12 +21,15 @@ include("utils.jl")
     ψψ = norm_sqr_network(ψ)
     # Simple Belief Propagation grouping (one bra+ket per partition) gives
     # a product environment around `[v1, v2]`, which is what `apply` requires.
-    bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
+    ptn_SBP = PartitionedGraph(ψψ, group(v -> v[1], vertices(ψψ)))
+    bp_cache = BeliefPropagationCache(ptn_SBP; messages = identity_messages(ψψ, ptn_SBP))
     bp_cache = update(bp_cache; maxiter = 20)
     envsSBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
     # Column-grouping (one whole column per partition) gives a non-product
     # environment; `apply` should reject it.
-    bp_cache_col = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
+    ptn_col = PartitionedGraph(ψψ, group(v -> v[1][1], vertices(ψψ)))
+    bp_cache_col =
+        BeliefPropagationCache(ptn_col; messages = identity_messages(ψψ, ptn_col))
     bp_cache_col = update(bp_cache_col; maxiter = 20)
     envsGBP = environment(
         bp_cache_col, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")]

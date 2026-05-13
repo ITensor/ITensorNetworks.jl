@@ -1,5 +1,6 @@
 using Adapt: Adapt, adapt, adapt_structure
 using DataGraphs: DataGraphs, underlying_graph, vertex_data
+using Dictionaries: Dictionary, dictionary
 using Graphs: Graphs, IsDirected, dst, src
 using ITensors: commoninds, delta, dir
 using LinearAlgebra: diag, dot
@@ -34,14 +35,31 @@ function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
     return 1 - f
 end
 
-function default_message(datatype::Type{<:AbstractArray}, inds_e)
-    return [adapt(datatype, denseblocks(delta(i))) for i in inds_e]
+"""
+    identity_messages([elt::Type,] pairings) -> Dictionary{QuotientEdge, Vector{ITensor}}
+
+Build a message dictionary from a `pairings` mapping that lists, for each
+quotient edge `e`, the `(bra_inds, ket_inds)` pair that defines the
+identity-from-bra-to-ket message on that edge. Each entry is constructed
+as `[delta(elt, bra_ind_i, ket_ind_i) for i in ...]`; the bra-side and
+ket-side Indices are expected to already carry opposite directions so the
+two-leg delta has well-defined QN flow (the bra side of a form network is
+constructed via `dag` of the dual-mapped ket, which gives this naturally).
+
+`pairings` is anything supporting `pairs(...)` iteration yielding
+`e => (bra_inds => ket_inds)` entries (e.g. a `Dictionary` or `Dict`).
+`elt` defaults to `Float64`; form-network wrappers fill it in from
+`scalartype(tensornetwork(fn))`.
+"""
+function identity_messages(elt::Type, pairings)
+    return dictionary(
+        e => ITensor[delta(elt, b, k) for (b, k) in zip(bras, kets)]
+            for (e, (bras, kets)) in pairs(pairings)
+    )
 end
 
-function default_message(elt::Type{<:Number}, inds_e)
-    return default_message(Vector{elt}, inds_e)
-end
-default_messages(ptn::PartitionedGraph) = Dictionary()
+identity_messages(pairings) = identity_messages(Float64, pairings)
+
 @traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
 @traitfn function default_bp_maxiter(g::::IsDirected)
     return default_bp_maxiter(undirected_graph(underlying_graph(g)))
@@ -50,11 +68,6 @@ default_partitioned_vertices(ψ::AbstractITensorNetwork) = group(v -> v, vertice
 
 partitioned_tensornetwork(bpc::AbstractBeliefPropagationCache) = not_implemented()
 messages(bpc::AbstractBeliefPropagationCache) = not_implemented()
-function default_message(
-        bpc::AbstractBeliefPropagationCache, edge::QuotientEdge; kwargs...
-    )
-    return not_implemented()
-end
 default_update_alg(bpc::AbstractBeliefPropagationCache) = not_implemented()
 default_message_update_alg(bpc::AbstractBeliefPropagationCache) = not_implemented()
 Base.copy(bpc::AbstractBeliefPropagationCache) = not_implemented()
@@ -162,11 +175,6 @@ function PartitionedGraphs.quotientedge(
     return PartitionedGraphs.quotientedge(partitioned_tensornetwork(bpc), edge)
 end
 
-function linkinds(bpc::AbstractBeliefPropagationCache, pe::QuotientEdge)
-    pitn = partitioned_tensornetwork(bpc)
-    return commoninds(subgraph(pitn, src(pe)), subgraph(pitn, dst(pe)))
-end
-
 NDTensors.scalartype(bpc::AbstractBeliefPropagationCache) = scalartype(tensornetwork(bpc))
 
 """
@@ -187,12 +195,11 @@ function update_factor(bpc, vertex, factor)
     return bpc
 end
 
-function message(bpc::AbstractBeliefPropagationCache, edge::QuotientEdge; kwargs...)
-    mts = messages(bpc)
-    return get(() -> default_message(bpc, edge; kwargs...), mts, edge)
+function message(bpc::AbstractBeliefPropagationCache, edge::QuotientEdge)
+    return messages(bpc)[edge]
 end
-function messages(bpc::AbstractBeliefPropagationCache, edges; kwargs...)
-    return map(edge -> message(bpc, edge; kwargs...), edges)
+function messages(bpc::AbstractBeliefPropagationCache, edges)
+    return map(edge -> message(bpc, edge), edges)
 end
 function set_messages!(bpc::AbstractBeliefPropagationCache, quotientedges_messages)
     ms = messages(bpc)

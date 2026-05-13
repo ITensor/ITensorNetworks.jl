@@ -1,9 +1,11 @@
 using Graphs: SimpleGraph, uniform_tree
-using ITensorNetworks: BeliefPropagationCache, QuadraticFormNetwork, edge_scalars, messages,
+using ITensorNetworks: BeliefPropagationCache, QuadraticFormNetwork,
+    default_partitioned_vertices, edge_scalars, identity_messages, messages,
     norm_sqr_network, rescale, scalartype, siteinds, vertex_scalars
 using ITensors: dag, inner, scalar
 using LinearAlgebra: normalize
 using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
+using NamedGraphs.PartitionedGraphs: PartitionedGraph
 using NamedGraphs: NamedGraph
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
@@ -37,7 +39,13 @@ include("utils.jl")
     ψ = normalize(x; alg = "exact")
     @test scalar(norm_sqr_network(ψ); alg = "exact") ≈ 1.0
 
-    ψIψ_bpc = Ref(BeliefPropagationCache(QuadraticFormNetwork(x)))
+    # Loopy BP needs explicit initial messages; the form-network's
+    # `identity_messages` gives a properly-flowing pair-delta starting
+    # point even for QN-graded indices.
+    qfn = QuadraticFormNetwork(x)
+    pv = default_partitioned_vertices(qfn)
+    ptn = PartitionedGraph(qfn, pv)
+    ψIψ_bpc = Ref(BeliefPropagationCache(ptn; messages = identity_messages(qfn, ptn)))
     ψ = normalize(
         x; alg = "bp", (cache!) = ψIψ_bpc, update_cache = true,
         cache_update_kwargs = (; maxiter = 20)
