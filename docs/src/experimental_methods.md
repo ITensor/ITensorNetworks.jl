@@ -37,7 +37,7 @@ Methods which still need to be discussed, modified, or deprecated.
   set_ortho_region(tn::AbstractTTN, new_region)
   ```
 
-* Underlying-graph type forwarded to `data_graph_type` (`treetensornetworks/abstracttreetensornetwork.jl`):
+* Underlying-graph type for `AbstractTTN` (`treetensornetworks/abstracttreetensornetwork.jl`):
   ```julia
   underlying_graph_type(G::Type{<:AbstractTTN})
   ```
@@ -135,7 +135,6 @@ Methods which still need to be discussed, modified, or deprecated.
 * `AbstractITensorNetwork` interface, forwarded to the wrapped `ITensorNetwork` (`treetensornetworks/treetensornetwork.jl`):
   ```julia
   data_graph(tn::TTN)
-  data_graph_type(G::Type{<:TTN})
   copy(tn::TTN)
   ```
 
@@ -179,7 +178,7 @@ Methods which still need to be discussed, modified, or deprecated.
   ```julia
   vertex_data(graph::AbstractIndsNetwork, args...)
   edge_data(graph::AbstractIndsNetwork, args...)
-  edge_data_eltype(::Type{<:AbstractIndsNetwork{V, I}}) where {V, I}
+  edge_data_type(::Type{<:AbstractIndsNetwork{V, I}}) where {V, I}
   ```
 
 * Merge two `AbstractIndsNetwork`s, returning an `IndsNetwork` over the merged graph (`abstractindsnetwork.jl`):
@@ -259,11 +258,6 @@ Methods which still need to be discussed, modified, or deprecated.
   link index (`links` kwarg) of the network (`indsnetwork.jl`):
   ```julia
   map_inds(f, is::IndsNetwork, args...; sites = nothing, links = nothing, kwargs...)
-  ```
-
-* Visualize an `IndsNetwork` by wrapping it in a default `ITensorNetwork` (`indsnetwork.jl`):
-  ```julia
-  visualize(is::IndsNetwork, args...; kwargs...)
   ```
 
 
