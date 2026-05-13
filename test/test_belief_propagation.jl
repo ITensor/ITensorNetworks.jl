@@ -1,19 +1,16 @@
 using Compat: Compat
-using Dictionaries: Dictionary, set!
-using Graphs: dst, src, vertices
+using Graphs: vertices
 using ITensorNetworks: ITensorNetworks, BeliefPropagationCache, QuadraticFormNetwork,
-    contract, contraction_sequence, environment, identity_messages, inner_network, message,
-    message_diff, partitioned_tensornetwork, scalar, siteinds, tensornetwork, update,
-    update_factor, updated_message, ⊗
+    bra_vertex, contract, contraction_sequence, default_partitioned_vertices, environment,
+    identity_messages, ket_vertex, message, message_diff, norm_sqr_network, operator_vertex,
+    partitioned_tensornetwork, scalar, siteinds, tensornetwork, update, update_factor,
+    updated_message
 include("utils.jl")
 using ITensors.NDTensors: array
-using ITensors: ITensors, Algorithm, ITensor, Index, combiner, commoninds, dag, inds, inner,
-    op, prime, random_itensor
+using ITensors: ITensors, ITensor, combiner, dag, inds, inner, prime, random_itensor
 using LinearAlgebra: eigvals, tr
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using NamedGraphs.PartitionedGraphs: PartitionedGraph, QuotientEdge, quotientedges
-using NamedGraphs: NamedEdge, NamedGraph
-using SplitApplyCombine: group
+using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs.PartitionedGraphs: PartitionedGraph, quotientedges
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset
@@ -28,38 +25,19 @@ using Test: @test, @testset
         χ = 2
         rng = StableRNG(1234)
         ψ = random_tensornetwork(rng, elt, s; link_space = χ)
-        ψψ = ψ ⊗ prime(dag(ψ); sites = [])
-        pv = group(v -> first(v), vertices(ψψ))
-        ptn = PartitionedGraph(ψψ, pv)
-        # Build identity initial messages by hand: layer 1 is the ket
-        # (original ψ) and layer 2 is the bra (`dag(prime(ψ; sites = []))`).
-        # Pair the bra/ket link inds ordinally on each quotient edge so the
-        # resulting `delta(b, dag(k))` has opposite QN flow.
-        pairings = Dictionary{QuotientEdge, Pair{Vector{Index}, Vector{Index}}}()
-        for pe in quotientedges(ptn)
-            v_src, v_dst = parent(src(pe)), parent(dst(pe))
-            for (v_from, v_to, e) in (
-                    (v_src, v_dst, pe),
-                    (v_dst, v_src, reverse(pe)),
-                )
-                # ψψ layer 2 is `dag(prime(ψ; sites = []))`, so each bra
-                # link Index is `dag(prime(k))` for the matching ket k.
-                # Build the pair explicitly to avoid relying on
-                # `commoninds` ordering across the two layers.
-                kets = collect(commoninds(ψψ[(v_from, 1)], ψψ[(v_to, 1)]))
-                bras = dag.(prime.(kets))
-                set!(pairings, e, bras => kets)
-            end
-        end
-        bpc = BeliefPropagationCache(ptn; messages = identity_messages(elt, pairings))
+        ψψ = norm_sqr_network(ψ)
+        ptn = PartitionedGraph(ψψ, default_partitioned_vertices(ψψ))
+        bpc = BeliefPropagationCache(ptn; messages = identity_messages(ψψ, ptn))
 
-        #Test updating the tensors in the cache
-        vket, vbra = ((1, 1), 1), ((1, 1), 2)
+        # Test updating the tensors in the cache. QFN bra has both site
+        # and link inds primed (relative to the ket), so the bra-side
+        # tensor is constructed as `dag(prime(new_A))` directly.
+        v = (1, 1)
+        vket = ket_vertex(ψψ, v)
+        vbra = bra_vertex(ψψ, v)
         A = bpc[vket]
         new_A = random_itensor(elt, inds(A))
-        new_A_dag = ITensors.replaceind(
-            dag(prime(new_A)), only(s[first(vket)])', only(s[first(vket)])
-        )
+        new_A_dag = dag(prime(new_A))
         bpc[vket] = new_A
         bpc[vbra] = new_A_dag
         @test bpc[vket] == new_A
@@ -73,28 +51,31 @@ using Test: @test, @testset
             @test eltype(only(message(bpc, pe))) == elt
         end
         #Test updating the underlying tensornetwork in the cache
-        v = first(vertices(ψψ))
+        v_any = first(vertices(ψψ))
         rng = StableRNG(1234)
-        new_tensor = random_itensor(rng, inds(ψψ[v]))
-        bpc_updated = update_factor(bpc, v, new_tensor)
+        new_tensor = random_itensor(rng, inds(ψψ[v_any]))
+        bpc_updated = update_factor(bpc, v_any, new_tensor)
         ψψ_updated = tensornetwork(bpc_updated)
-        @test ψψ_updated[v] == new_tensor
+        @test ψψ_updated[v_any] == new_tensor
 
-        #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
+        # Two-site RDM at `vs`: ask for the environment around all three
+        # layers (bra/ket/operator) at `vs` so the BP env is just incoming
+        # messages, then contract with only the bra and ket tensors at
+        # `vs` — dropping the per-site identity operator at those
+        # vertices leaves the bra (primed) and ket (unprimed) site inds
+        # open, which is exactly the RDM.
         vs = [(2, 2), (2, 3)]
-
-        # Prime the bra-ket shared site indices on the ket side at the
-        # selected vertices, so the contracted RDM has open primed/unprimed
-        # legs there. Mutates a copy of `ψψ` in place; no graph edits.
-        ψψsplit = copy(ψψ)
-        for v in vs
-            common = commoninds(ψψsplit[(v, 1)], ψψsplit[(v, 2)])
-            ψψsplit[(v, 2)] = prime(ψψsplit[(v, 2)], common)
-        end
-        env_tensors = environment(bpc, [(v, 2) for v in vs])
-        rdm =
-            contract(vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]))
-
+        env_vs = vcat(
+            [bra_vertex(ψψ, v) for v in vs],
+            [ket_vertex(ψψ, v) for v in vs],
+            [operator_vertex(ψψ, v) for v in vs]
+        )
+        env_tensors = environment(bpc, env_vs)
+        local_tensors = vcat(
+            ITensor[ψψ[bra_vertex(ψψ, v)] for v in vs],
+            ITensor[ψψ[ket_vertex(ψψ, v)] for v in vs]
+        )
+        rdm = contract(vcat(env_tensors, local_tensors))
         rdm = array(
             (rdm * combiner(inds(rdm; plev = 0)...)) * combiner(inds(rdm; plev = 1)...)
         )
