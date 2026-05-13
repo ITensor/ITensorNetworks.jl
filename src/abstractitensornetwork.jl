@@ -540,24 +540,6 @@ end
 
 Base.show(io::IO, graph::AbstractITensorNetwork) = show(io, MIME"text/plain"(), graph)
 
-# TODO: Move to an `ITensorNetworksVisualizationInterfaceExt`
-# package extension (and define a `VisualizationInterface` package
-# based on `ITensorVisualizationCore`.).
-using ITensors.ITensorVisualizationCore: ITensorVisualizationCore, visualize
-function ITensorVisualizationCore.visualize(
-        tn::AbstractITensorNetwork,
-        args...;
-        vertex_labels_prefix = nothing,
-        vertex_labels = nothing,
-        kwargs...
-    )
-    if !isnothing(vertex_labels_prefix)
-        vertex_labels = [vertex_labels_prefix * string(v) for v in vertices(tn)]
-    end
-    # TODO: Use `tokenize_vertex`.
-    return visualize([tn[v] for v in vertices(tn)], args...; vertex_labels, kwargs...)
-end
-
 #
 # Link dimensions
 #
