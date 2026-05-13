@@ -1,6 +1,6 @@
 using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
 using Dictionaries: Dictionary, set!
-using ITensors: Index, commoninds, dag
+using ITensors: ITensor, commoninds, dag, delta
 using NamedGraphs.PartitionedGraphs:
     PartitionedGraph, QuotientEdge, partitioned_vertices, quotientedges
 
@@ -95,8 +95,9 @@ end
 # the pairing is correct even when multiple link indices share an edge
 # (where `commoninds`-zip ordering between layers is not guaranteed).
 function identity_messages(fn::QuadraticFormNetwork, ptn::PartitionedGraph)
-    pairings = Dictionary{QuotientEdge, Pair{Vector{Index}, Vector{Index}}}()
+    messages = Dictionary{QuotientEdge, Vector{ITensor}}()
     tn = tensornetwork(fn)
+    elt = scalartype(tn)
     map_idx = dual_index_map(fn)
     pv = partitioned_vertices(ptn)
     ket_s = ket_vertex_suffix(fn)
@@ -107,19 +108,16 @@ function identity_messages(fn::QuadraticFormNetwork, ptn::PartitionedGraph)
                 (src_orig, dst_orig, pe),
                 (dst_orig, src_orig, reverse(pe)),
             )
-            kets = Index[]
-            bras = Index[]
+            ms = ITensor[]
             for v_from in from_orig, v_to in to_orig
-                cur_kets = collect(
-                    commoninds(tn[ket_vertex(fn, v_from)], tn[ket_vertex(fn, v_to)])
-                )
-                append!(kets, cur_kets)
-                append!(bras, dag.(map_idx.(cur_kets)))
+                for k in commoninds(tn[ket_vertex(fn, v_from)], tn[ket_vertex(fn, v_to)])
+                    push!(ms, delta(elt, dag(map_idx(k)), k))
+                end
             end
-            set!(pairings, e, bras => kets)
+            set!(messages, e, ms)
         end
     end
-    return identity_messages(scalartype(tn), pairings)
+    return messages
 end
 
 function update(qf::QuadraticFormNetwork, original_state_vertex, ket_state::ITensor)

@@ -1,8 +1,8 @@
 using Adapt: Adapt, adapt, adapt_structure
 using DataGraphs: DataGraphs, underlying_graph, vertex_data
-using Dictionaries: Dictionary, dictionary
+using Dictionaries: Dictionary
 using Graphs: Graphs, IsDirected, dst, src
-using ITensors: commoninds, delta, dir
+using ITensors: dir
 using LinearAlgebra: diag, dot
 using NDTensors: NDTensors
 using NamedGraphs.GraphsExtensions: subgraph
@@ -34,31 +34,6 @@ function message_diff(message_a::Vector{ITensor}, message_b::Vector{ITensor})
     f = abs2(dot(lhs / norm(lhs), rhs / norm(rhs)))
     return 1 - f
 end
-
-"""
-    identity_messages([elt::Type,] pairings) -> Dictionary{QuotientEdge, Vector{ITensor}}
-
-Build a message dictionary from a `pairings` mapping that lists, for each
-quotient edge `e`, the `(bra_inds, ket_inds)` pair that defines the
-identity-from-bra-to-ket message on that edge. Each entry is constructed
-as `[delta(elt, bra_ind_i, ket_ind_i) for i in ...]`; the bra-side and
-ket-side Indices are expected to already carry opposite directions so the
-two-leg delta has well-defined QN flow (the bra side of a form network is
-constructed via `dag` of the dual-mapped ket, which gives this naturally).
-
-`pairings` is anything supporting `pairs(...)` iteration yielding
-`e => (bra_inds => ket_inds)` entries (e.g. a `Dictionary` or `Dict`).
-`elt` defaults to `Float64`; form-network wrappers fill it in from
-`scalartype(tensornetwork(fn))`.
-"""
-function identity_messages(elt::Type, pairings)
-    return dictionary(
-        e => ITensor[delta(elt, b, k) for (b, k) in zip(bras, kets)]
-            for (e, (bras, kets)) in pairs(pairings)
-    )
-end
-
-identity_messages(pairings) = identity_messages(Float64, pairings)
 
 @traitfn default_bp_maxiter(g::::(!IsDirected)) = is_tree(g) ? 1 : nothing
 @traitfn function default_bp_maxiter(g::::IsDirected)
