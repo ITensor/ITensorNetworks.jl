@@ -1,5 +1,8 @@
 using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
-using NamedGraphs.PartitionedGraphs: PartitionedGraph
+using Dictionaries: Dictionary, set!
+using ITensors: Index, commoninds, dag
+using NamedGraphs.PartitionedGraphs:
+    PartitionedGraph, QuotientEdge, partitioned_vertices, quotientedges
 
 default_index_map = prime
 default_inv_index_map = noprime
@@ -86,8 +89,37 @@ function QuadraticFormNetwork(
     return QuadraticFormNetwork(blf, dual_index_map, dual_inv_index_map)
 end
 
+# Build initial BP messages on each quotient edge as `delta(bra, ket)`
+# pairs, one per ket link Index crossing the cut. The bra-side counterpart
+# of each ket Index is computed explicitly via `dual_index_map(fn)`, so
+# the pairing is correct even when multiple link indices share an edge
+# (where `commoninds`-zip ordering between layers is not guaranteed).
 function identity_messages(fn::QuadraticFormNetwork, ptn::PartitionedGraph)
-    return identity_messages(bilinear_formnetwork(fn), ptn)
+    pairings = Dictionary{QuotientEdge, Pair{Vector{Index}, Vector{Index}}}()
+    tn = tensornetwork(fn)
+    map_idx = dual_index_map(fn)
+    pv = partitioned_vertices(ptn)
+    ket_s = ket_vertex_suffix(fn)
+    for pe in quotientedges(ptn)
+        src_orig = unique(first.(filter(v -> last(v) == ket_s, pv[parent(src(pe))])))
+        dst_orig = unique(first.(filter(v -> last(v) == ket_s, pv[parent(dst(pe))])))
+        for (from_orig, to_orig, e) in (
+                (src_orig, dst_orig, pe),
+                (dst_orig, src_orig, reverse(pe)),
+            )
+            kets = Index[]
+            bras = Index[]
+            for v_from in from_orig, v_to in to_orig
+                cur_kets = collect(
+                    commoninds(tn[ket_vertex(fn, v_from)], tn[ket_vertex(fn, v_to)])
+                )
+                append!(kets, cur_kets)
+                append!(bras, dag.(map_idx.(cur_kets)))
+            end
+            set!(pairings, e, bras => kets)
+        end
+    end
+    return identity_messages(scalartype(tn), pairings)
 end
 
 function update(qf::QuadraticFormNetwork, original_state_vertex, ket_state::ITensor)

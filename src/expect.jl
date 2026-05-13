@@ -30,7 +30,7 @@ function expect(
     )
     ψIψ = QuadraticFormNetwork(ψ)
     if isnothing(cache!)
-        cache! = Ref(initialize_cache(expect, alg, ψIψ; cache_construction_kwargs...))
+        cache! = Ref(initialize_cache(alg, ψIψ; cache_construction_kwargs...))
     end
 
     if update_cache

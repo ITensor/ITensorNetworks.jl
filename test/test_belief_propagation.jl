@@ -42,8 +42,12 @@ using Test: @test, @testset
                     (v_src, v_dst, pe),
                     (v_dst, v_src, reverse(pe)),
                 )
-                bras = collect(commoninds(ψψ[(v_from, 2)], ψψ[(v_to, 2)]))
+                # ψψ layer 2 is `dag(prime(ψ; sites = []))`, so each bra
+                # link Index is `dag(prime(k))` for the matching ket k.
+                # Build the pair explicitly to avoid relying on
+                # `commoninds` ordering across the two layers.
                 kets = collect(commoninds(ψψ[(v_from, 1)], ψψ[(v_to, 1)]))
+                bras = dag.(prime.(kets))
                 set!(pairings, e, bras => kets)
             end
         end

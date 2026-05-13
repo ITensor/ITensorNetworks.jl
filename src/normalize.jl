@@ -21,7 +21,7 @@ function rescale(
         kwargs...
     )
     if isnothing(cache!)
-        cache! = Ref(initialize_cache(rescale, alg, tn; cache_construction_kwargs...))
+        cache! = Ref(initialize_cache(alg, tn; cache_construction_kwargs...))
     end
 
     if update_cache
@@ -55,7 +55,7 @@ end
 function LinearAlgebra.normalize(
         alg::Algorithm"exact", tn::AbstractITensorNetwork; kwargs...
     )
-    logn = logscalar(alg, inner_network(tn, tn); kwargs...)
+    logn = logscalar(alg, norm_sqr_network(tn); kwargs...)
     c = inv(exp(logn / (2 * length(vertices(tn)))))
     return map(t -> c * t, tn)
 end
@@ -68,10 +68,9 @@ function LinearAlgebra.normalize(
         cache_update_kwargs = (;),
         cache_construction_kwargs = (;)
     )
-    norm_tn = inner_network(tn, tn)
+    norm_tn = norm_sqr_network(tn)
     if isnothing(cache!)
-        cache! =
-            Ref(initialize_cache(normalize, alg, norm_tn; cache_construction_kwargs...))
+        cache! = Ref(initialize_cache(alg, norm_tn; cache_construction_kwargs...))
     end
     vs = collect(vertices(tn))
     verts = vcat([ket_vertex(norm_tn, v) for v in vs], [bra_vertex(norm_tn, v) for v in vs])

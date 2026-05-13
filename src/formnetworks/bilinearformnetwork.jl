@@ -1,11 +1,8 @@
 using Adapt: adapt
 using DataGraphs: DataGraphs, set_vertex_data!
-using Dictionaries: Dictionary, set!
 using ITensors.NDTensors: datatype, denseblocks
-using ITensors: ITensor, Index, Op, commoninds, dag, delta, prime, sim
+using ITensors: ITensor, Index, Op, dag, delta, prime, sim
 using NamedGraphs.GraphsExtensions: disjoint_union
-using NamedGraphs.PartitionedGraphs:
-    PartitionedGraph, QuotientEdge, partitioned_vertices, quotientedges
 
 default_dual_site_index_map = prime
 default_dual_link_index_map = sim
@@ -107,51 +104,4 @@ function update(
     tensornetwork(blf)[bra_vertex(blf, original_bra_state_vertex)] = bra_state
     tensornetwork(blf)[ket_vertex(blf, original_ket_state_vertex)] = ket_state
     return blf
-end
-
-# Initial BP messages from bra↔ket pairings on each quotient edge.
-# Errors when the operator subnet has its own inter-vertex links (the
-# multi-site-operator case): those legs are operator-internal and have
-# no bra/ket pair, so no canonical identity initialization exists — the
-# caller must supply `messages` explicitly.
-function identity_messages(fn::BilinearFormNetwork, ptn::PartitionedGraph)
-    pairings = Dictionary{QuotientEdge, Pair{Vector{Index}, Vector{Index}}}()
-    tn = tensornetwork(fn)
-    pv = partitioned_vertices(ptn)
-    ket_s = ket_vertex_suffix(fn)
-    for pe in quotientedges(ptn)
-        src_orig = unique(first.(filter(v -> last(v) == ket_s, pv[parent(src(pe))])))
-        dst_orig = unique(first.(filter(v -> last(v) == ket_s, pv[parent(dst(pe))])))
-        for v_from in src_orig, v_to in dst_orig
-            op_inds = commoninds(
-                tn[operator_vertex(fn, v_from)], tn[operator_vertex(fn, v_to)]
-            )
-            if !isempty(op_inds)
-                error(
-                    "BilinearFormNetwork: operator-internal cross-Index between " *
-                        "$v_from and $v_to has no bra/ket pair; supply `messages` " *
-                        "explicitly to BP."
-                )
-            end
-        end
-        for (from_orig, to_orig, e) in (
-                (src_orig, dst_orig, pe),
-                (dst_orig, src_orig, reverse(pe)),
-            )
-            bras = Index[]
-            kets = Index[]
-            for v_from in from_orig, v_to in to_orig
-                append!(
-                    bras,
-                    commoninds(tn[bra_vertex(fn, v_from)], tn[bra_vertex(fn, v_to)])
-                )
-                append!(
-                    kets,
-                    commoninds(tn[ket_vertex(fn, v_from)], tn[ket_vertex(fn, v_to)])
-                )
-            end
-            set!(pairings, e, bras => kets)
-        end
-    end
-    return identity_messages(scalartype(tn), pairings)
 end

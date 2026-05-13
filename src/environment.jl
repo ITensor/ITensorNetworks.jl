@@ -28,9 +28,7 @@ function environment(
         cache_update_kwargs = (;)
     )
     if isnothing(cache!)
-        cache! = Ref(
-            initialize_cache(environment, alg, ptn; cache_construction_kwargs...)
-        )
+        cache! = Ref(initialize_cache(alg, ptn; cache_construction_kwargs...))
     end
 
     if update_cache

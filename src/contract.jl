@@ -47,7 +47,7 @@ function logscalar(
         cache_update_kwargs = (;)
     )
     if isnothing(cache!)
-        cache! = Ref(initialize_cache(scalar, alg, tn; cache_construction_kwargs...))
+        cache! = Ref(initialize_cache(alg, tn; cache_construction_kwargs...))
     end
 
     if update_cache
