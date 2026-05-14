@@ -45,7 +45,12 @@ include("utils.jl")
     qfn = QuadraticFormNetwork(x)
     pv = default_partitioned_vertices(qfn)
     ptn = PartitionedGraph(qfn, pv)
-    ψIψ_bpc = Ref(BeliefPropagationCache(ptn; messages = identity_messages(qfn, ptn)))
+    ψIψ_bpc = Ref(
+        BeliefPropagationCache(
+            ptn;
+            messages = identity_messages(qfn; partitioned_vertices = pv)
+        )
+    )
     ψ = normalize(
         x; alg = "bp", (cache!) = ψIψ_bpc, update_cache = true,
         cache_update_kwargs = (; maxiter = 20)

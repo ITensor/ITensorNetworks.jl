@@ -1,8 +1,7 @@
 using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
 using Dictionaries: Dictionary, set!
 using ITensors: ITensor, commoninds, dag, delta
-using NamedGraphs.PartitionedGraphs:
-    PartitionedGraph, QuotientEdge, partitioned_vertices, quotientedges
+using NamedGraphs.PartitionedGraphs: PartitionedGraph, QuotientEdge, quotientedges
 
 default_index_map = prime
 default_inv_index_map = noprime
@@ -94,12 +93,16 @@ end
 # of each ket Index is computed explicitly via `dual_index_map(fn)`, so
 # the pairing is correct even when multiple link indices share an edge
 # (where `commoninds`-zip ordering between layers is not guaranteed).
-function identity_messages(fn::QuadraticFormNetwork, ptn::PartitionedGraph)
+function identity_messages(
+        fn::QuadraticFormNetwork;
+        partitioned_vertices = default_partitioned_vertices(fn)
+    )
+    ptn = PartitionedGraph(fn, partitioned_vertices)
     messages = Dictionary{QuotientEdge, Vector{ITensor}}()
     tn = tensornetwork(fn)
     elt = scalartype(tn)
     map_idx = dual_index_map(fn)
-    pv = partitioned_vertices(ptn)
+    pv = partitioned_vertices
     ket_s = ket_vertex_suffix(fn)
     for pe in quotientedges(ptn)
         src_orig = unique(first.(filter(v -> last(v) == ket_s, pv[parent(src(pe))])))

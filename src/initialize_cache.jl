@@ -19,7 +19,11 @@ function initialize_cache(
     )
     ptn = PartitionedGraph(fn, partitioned_vertices)
     if isnothing(messages)
-        messages = is_tree(quotient_graph(ptn)) ? Dictionary() : identity_messages(fn, ptn)
+        messages = if is_tree(quotient_graph(ptn))
+            Dictionary()
+        else
+            identity_messages(fn; partitioned_vertices)
+        end
     end
     return BeliefPropagationCache(ptn; messages)
 end

@@ -26,8 +26,11 @@ using Test: @test, @testset
         rng = StableRNG(1234)
         ψ = random_tensornetwork(rng, elt, s; link_space = χ)
         ψψ = norm_sqr_network(ψ)
-        ptn = PartitionedGraph(ψψ, default_partitioned_vertices(ψψ))
-        bpc = BeliefPropagationCache(ptn; messages = identity_messages(ψψ, ptn))
+        pv = default_partitioned_vertices(ψψ)
+        ptn = PartitionedGraph(ψψ, pv)
+        bpc = BeliefPropagationCache(
+            ptn; messages = identity_messages(ψψ; partitioned_vertices = pv)
+        )
 
         # Test updating the tensors in the cache. QFN bra has both site
         # and link inds primed (relative to the ket), so the bra-side
