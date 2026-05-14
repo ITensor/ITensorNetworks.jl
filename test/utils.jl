@@ -198,8 +198,8 @@ end  # module ModelHamiltonians
 # Vertex-relabeling for OpSum trees: walks `Sum`/`Prod`/`Scaled`/`Op` nodes and
 # applies `f` to every site label inside `Op`. The `Scaled` step also runs the
 # coefficient through `maybe_real` to drop spurious complex zero imaginary
-# parts. Used by `test_opsum_to_ttn_mpo_cross_check.jl` to compare against
-# `ITensorMPS.MPO` by reindexing graph vertices onto an MPS line.
+# parts. Used by `test_opsum_to_ttn_cross_check.jl` to compare a comb-tree TTN
+# against the same OpSum laid out on a linearized path graph.
 using ITensorNetworks: maybe_real
 using ITensors.LazyApply: Prod, Scaled, Sum
 using ITensors.Ops: Op, Ops

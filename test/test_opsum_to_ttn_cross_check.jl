@@ -1,31 +1,30 @@
 using DataGraphs: vertex_data
 using Dictionaries: Dictionary
 using Graphs: add_edge!, add_vertex!, rem_edge!, vertices
-using ITensorMPS: ITensorMPS
 using ITensorNetworks: ITensorNetworks, TreeTensorNetwork, siteinds
-using ITensors.NDTensors: matrix, with_auto_fermion
-using ITensors: @disable_warn_order, ITensor, Index, combinedind, combiner, contract, dag,
-    inds, removeqns
+using ITensors.NDTensors: with_auto_fermion
+using ITensors: @disable_warn_order, Index, contract, removeqns
 using LinearAlgebra: norm
 using NamedGraphs.GraphsExtensions: leaf_vertices, post_order_dfs_vertices
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
-using Test: @test, @test_broken, @testset
+using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_path_graph
+using Test: @test, @testset
 include("utils.jl")
 using .ModelHamiltonians: ModelHamiltonians
 
-# Cross-check the `ttn` construction from an `OpSum` against the `ITensorMPS.MPO`
-# construction on a linearized version of the same graph. Quarantined in its own
-# file so the ITensorMPS test-time dependency is easy to track and remove once
-# ITensorNetworks has internal equivalents for these correctness checks.
+# Cross-check `TreeTensorNetwork(os::OpSum, sites::IndsNetwork)` on a comb tree
+# against the same constructor on a linearized path graph that carries the same
+# site indices. Both must produce equivalent dense Hamiltonians: the OpSum and
+# its site indices are unchanged, only the auxiliary tree topology differs.
 
-function to_matrix(t::ITensor)
-    c = combiner(inds(t; plev = 0))
-    tc = (t * c) * dag(c')
-    cind = combinedind(c)
-    return matrix(tc, cind', cind)
+# Path-graph IndsNetwork carrying the supplied `sites` in vertex order
+# `1:length(sites)`. `siteinds(f, g)` walks `vertices(g)` and assigns
+# `to_siteind(f(v), v)`, which preserves an existing `Index` value unchanged.
+function path_siteinds(sites::Vector{<:Index})
+    g = named_path_graph(length(sites))
+    return siteinds(v -> sites[v], g)
 end
 
-@testset "OpSum to TTN vs ITensorMPS.MPO" begin
+@testset "OpSum to TTN: comb tree vs path linearization" begin
     @testset "OpSum to TTN" begin
         # small comb tree
         tooth_lengths = fill(2, 3)
@@ -37,6 +36,7 @@ end
         linear_order = [4, 1, 2, 5, 3, 6]
         vmap = Dictionary(collect(vertices(is))[linear_order], eachindex(linear_order))
         sites = only.(collect(vertex_data(is)))[linear_order]
+        is_line = path_siteinds(sites)
 
         # test with next-to-nearest-neighbor Ising Hamiltonian
         J1 = -1
@@ -50,25 +50,22 @@ end
         Hlr += 2.0, "Z", (2, 2), "Z", (3, 2)
         Hlr += -1.0, "Z", (1, 2), "Z", (3, 1)
 
+        Hline =
+            TreeTensorNetwork(replace_vertices(v -> vmap[v], H), is_line; cutoff = 1.0e-10)
+        Hline_lr = TreeTensorNetwork(
+            replace_vertices(v -> vmap[v], Hlr), is_line; cutoff = 1.0e-10
+        )
+
         @testset "Svd approach" for root_vertex in leaf_vertices(is)
-            # get TTN Hamiltonian directly
             Hsvd = TreeTensorNetwork(H, is; root_vertex, cutoff = 1.0e-10)
-            # get corresponding MPO Hamiltonian
-            Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
-            # compare resulting dense Hamiltonians
             @disable_warn_order begin
-                Tttno = prod(Hline)
-                Tmpo = contract(Hsvd)
+                @test contract(Hsvd) ≈ contract(Hline) rtol = 1.0e-6
             end
-            @test Tttno ≈ Tmpo rtol = 1.0e-6
 
             Hsvd_lr = TreeTensorNetwork(Hlr, is; root_vertex, cutoff = 1.0e-10)
-            Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
             @disable_warn_order begin
-                Tttno_lr = prod(Hline_lr)
-                Tmpo_lr = contract(Hsvd_lr)
+                @test contract(Hsvd_lr) ≈ contract(Hline_lr) rtol = 1.0e-6
             end
-            @test Tttno_lr ≈ Tmpo_lr rtol = 1.0e-6
         end
     end
 
@@ -86,39 +83,36 @@ end
         linear_order = [4, 1, 2, 5, 3, 6]
         vmap = Dictionary(collect(vertices(is))[linear_order], eachindex(linear_order))
         sites = only.(collect(vertex_data(is)))[linear_order]
+        is_line = path_siteinds(sites)
 
-        # test with next-to-nearest-neighbor Ising Hamiltonian
+        # test with next-to-nearest-neighbor Heisenberg Hamiltonian
         J1 = -1
         J2 = 2
         h = 0.5
         H = ModelHamiltonians.heisenberg(c; J1 = J1, J2 = J2, h = h)
         # add combination of longer range interactions
         Hlr = copy(H)
-        Hlr += 5, "Z", (1, 2), "Z", (2, 2) #, "Z", (3,2)
+        Hlr += 5, "Z", (1, 2), "Z", (2, 2)
         Hlr += -4, "Z", (1, 1), "Z", (2, 2)
         Hlr += 2.0, "Z", (2, 2), "Z", (3, 2)
         Hlr += -1.0, "Z", (1, 2), "Z", (3, 1)
 
-        @testset "Svd approach" for root_vertex in leaf_vertices(is)
-            # get TTN Hamiltonian directly
-            Hsvd = TreeTensorNetwork(H, is; root_vertex, cutoff = 1.0e-10)
-            # get corresponding MPO Hamiltonian
-            Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
-            # compare resulting sparse Hamiltonians
+        Hline =
+            TreeTensorNetwork(replace_vertices(v -> vmap[v], H), is_line; cutoff = 1.0e-10)
+        Hline_lr = TreeTensorNetwork(
+            replace_vertices(v -> vmap[v], Hlr), is_line; cutoff = 1.0e-10
+        )
 
+        @testset "Svd approach" for root_vertex in leaf_vertices(is)
+            Hsvd = TreeTensorNetwork(H, is; root_vertex, cutoff = 1.0e-10)
             @disable_warn_order begin
-                Tmpo = prod(Hline)
-                Tttno = contract(Hsvd)
+                @test contract(Hsvd) ≈ contract(Hline) rtol = 1.0e-6
             end
-            @test Tttno ≈ Tmpo rtol = 1.0e-6
 
             Hsvd_lr = TreeTensorNetwork(Hlr, is; root_vertex, cutoff = 1.0e-10)
-            Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
             @disable_warn_order begin
-                Tttno_lr = prod(Hline_lr)
-                Tmpo_lr = contract(Hsvd_lr)
+                @test contract(Hsvd_lr) ≈ contract(Hline_lr) rtol = 1.0e-6
             end
-            @test Tttno_lr ≈ Tmpo_lr rtol = 1.0e-6
         end
     end
 
@@ -136,36 +130,28 @@ end
             h = 0.5
             H = ModelHamiltonians.tight_binding(c; t, tp, h)
 
-            # add combination of longer range interactions
-            Hlr = copy(H)
-
             @testset "Svd approach" for root_vertex in leaf_vertices(is)
-                # get TTN Hamiltonian directly
+                # get TTN Hamiltonian on the comb tree directly
                 Hsvd = TreeTensorNetwork(H, is; root_vertex, cutoff = 1.0e-10)
-                # get corresponding MPO Hamiltonian
-                sites =
-                    [only(is[v]) for v in reverse(post_order_dfs_vertices(c, root_vertex))]
-                vmap = Dictionary(
-                    reverse(post_order_dfs_vertices(c, root_vertex)),
-                    1:length(sites)
+
+                # linearize along the root's post-order DFS and build the same
+                # OpSum as a path-graph TTN with the matching site assignment.
+                vorder = reverse(post_order_dfs_vertices(c, root_vertex))
+                sites = [only(is[v]) for v in vorder]
+                vmap = Dictionary(vorder, 1:length(sites))
+                is_line = path_siteinds(sites)
+                Hline = TreeTensorNetwork(
+                    replace_vertices(v -> vmap[v], H), is_line; cutoff = 1.0e-10
                 )
-                Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
+
                 @disable_warn_order begin
-                    Tmpo = prod(Hline)
+                    Tline = contract(Hline)
                     Tttno = contract(Hsvd)
                 end
 
-                # verify that the norm isn't 0 and thus the same (which would indicate a problem with the autofermion system
-                @test norm(Tmpo) > 0
+                @test norm(Tline) > 0
                 @test norm(Tttno) > 0
-                @test norm(Tmpo) ≈ norm(Tttno) rtol = 1.0e-6
-
-                # TODO: fix comparison for fermionic tensors
-                @test_broken Tmpo ≈ Tttno
-                # In the meantime: matricize tensors and convert to dense Matrix to compare element by element
-                dTmm = to_matrix(Tmpo)
-                dTtm = to_matrix(Tttno)
-                @test any(>(1.0e-14), dTmm - dTtm)
+                @test Tline ≈ Tttno rtol = 1.0e-6
             end
         end
     end
@@ -192,6 +178,7 @@ end
         vmap = Dictionary(collect(vertices(is))[linear_order], eachindex(linear_order))
         sites =
             only.(filter(d -> !isempty(d), collect(vertex_data(is_missing_site))))[linear_order]
+        is_line = path_siteinds(sites)
 
         J1 = -1
         J2 = 2
@@ -206,26 +193,22 @@ end
         Hlr += 2.0, "Z", (2, 2), "Z", (3, 2)
         Hlr += -1.0, "Z", (1, 2), "Z", (3, 1)
 
-        @testset "Svd approach" for root_vertex in leaf_vertices(is)
-            # get TTN Hamiltonian directly
-            Hsvd = TreeTensorNetwork(H, is_missing_site; root_vertex, cutoff = 1.0e-10)
-            # get corresponding MPO Hamiltonian
-            Hline = ITensorMPS.MPO(replace_vertices(v -> vmap[v], H), sites)
+        Hline =
+            TreeTensorNetwork(replace_vertices(v -> vmap[v], H), is_line; cutoff = 1.0e-10)
+        Hline_lr = TreeTensorNetwork(
+            replace_vertices(v -> vmap[v], Hlr), is_line; cutoff = 1.0e-10
+        )
 
-            # compare resulting sparse Hamiltonians
+        @testset "Svd approach" for root_vertex in leaf_vertices(is)
+            Hsvd = TreeTensorNetwork(H, is_missing_site; root_vertex, cutoff = 1.0e-10)
             @disable_warn_order begin
-                Tmpo = prod(Hline)
-                Tttno = contract(Hsvd)
+                @test contract(Hsvd) ≈ contract(Hline) rtol = 1.0e-6
             end
-            @test Tttno ≈ Tmpo rtol = 1.0e-6
 
             Hsvd_lr = TreeTensorNetwork(Hlr, is_missing_site; root_vertex, cutoff = 1.0e-10)
-            Hline_lr = ITensorMPS.MPO(replace_vertices(v -> vmap[v], Hlr), sites)
             @disable_warn_order begin
-                Tttno_lr = prod(Hline_lr)
-                Tmpo_lr = contract(Hsvd_lr)
+                @test contract(Hsvd_lr) ≈ contract(Hline_lr) rtol = 1.0e-6
             end
-            @test Tttno_lr ≈ Tmpo_lr rtol = 1.0e-6
         end
     end
 end
