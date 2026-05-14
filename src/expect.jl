@@ -1,4 +1,3 @@
-using Dictionaries: Dictionary, set!
 using ITensors: Op, contract, op, which_op
 
 default_expect_alg() = "bp"
@@ -31,7 +30,7 @@ function expect(
     )
     ψIψ = QuadraticFormNetwork(ψ)
     if isnothing(cache!)
-        cache! = Ref(cache(alg, ψIψ; cache_construction_kwargs...))
+        cache! = Ref(initialize_cache(alg, ψIψ; cache_construction_kwargs...))
     end
 
     if update_cache

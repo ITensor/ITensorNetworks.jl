@@ -1,18 +1,16 @@
 using Compat: Compat
 using Graphs: vertices
-using ITensorNetworks: ITensorNetworks, BeliefPropagationCache, contract,
-    contraction_sequence, environment, inner_network, message, message_diff,
+using ITensorNetworks: ITensorNetworks, BeliefPropagationCache, QuadraticFormNetwork,
+    bra_vertex, contract, contraction_sequence, default_partitioned_vertices, environment,
+    identity_messages, ket_vertex, message, message_diff, norm_sqr_network, operator_vertex,
     partitioned_tensornetwork, scalar, siteinds, tensornetwork, update, update_factor,
-    updated_message, ⊗
+    updated_message
 include("utils.jl")
 using ITensors.NDTensors: array
-using ITensors: ITensors, Algorithm, ITensor, combiner, commoninds, dag, inds, inner, op,
-    prime, random_itensor
+using ITensors: ITensors, ITensor, combiner, dag, inds, inner, prime, random_itensor
 using LinearAlgebra: eigvals, tr
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using NamedGraphs.PartitionedGraphs: quotientedges
-using NamedGraphs: NamedEdge, NamedGraph
-using SplitApplyCombine: group
+using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs.PartitionedGraphs: PartitionedGraph, quotientedges
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset
@@ -27,16 +25,22 @@ using Test: @test, @testset
         χ = 2
         rng = StableRNG(1234)
         ψ = random_tensornetwork(rng, elt, s; link_space = χ)
-        ψψ = ψ ⊗ prime(dag(ψ); sites = [])
-        bpc = BeliefPropagationCache(ψψ, group(v -> first(v), vertices(ψψ)))
+        ψψ = norm_sqr_network(ψ)
+        pv = default_partitioned_vertices(ψψ)
+        ptn = PartitionedGraph(ψψ, pv)
+        bpc = BeliefPropagationCache(
+            ptn; messages = identity_messages(ψψ; partitioned_vertices = pv)
+        )
 
-        #Test updating the tensors in the cache
-        vket, vbra = ((1, 1), 1), ((1, 1), 2)
+        # Test updating the tensors in the cache. QFN bra has both site
+        # and link inds primed (relative to the ket), so the bra-side
+        # tensor is constructed as `dag(prime(new_A))` directly.
+        v = (1, 1)
+        vket = ket_vertex(ψψ, v)
+        vbra = bra_vertex(ψψ, v)
         A = bpc[vket]
         new_A = random_itensor(elt, inds(A))
-        new_A_dag = ITensors.replaceind(
-            dag(prime(new_A)), only(s[first(vket)])', only(s[first(vket)])
-        )
+        new_A_dag = dag(prime(new_A))
         bpc[vket] = new_A
         bpc[vbra] = new_A_dag
         @test bpc[vket] == new_A
@@ -50,28 +54,31 @@ using Test: @test, @testset
             @test eltype(only(message(bpc, pe))) == elt
         end
         #Test updating the underlying tensornetwork in the cache
-        v = first(vertices(ψψ))
+        v_any = first(vertices(ψψ))
         rng = StableRNG(1234)
-        new_tensor = random_itensor(rng, inds(ψψ[v]))
-        bpc_updated = update_factor(bpc, v, new_tensor)
+        new_tensor = random_itensor(rng, inds(ψψ[v_any]))
+        bpc_updated = update_factor(bpc, v_any, new_tensor)
         ψψ_updated = tensornetwork(bpc_updated)
-        @test ψψ_updated[v] == new_tensor
+        @test ψψ_updated[v_any] == new_tensor
 
-        #Test forming a two-site RDM. Check it has the correct size, trace 1 and is PSD
+        # Two-site RDM at `vs`: ask for the environment around all three
+        # layers (bra/ket/operator) at `vs` so the BP env is just incoming
+        # messages, then contract with only the bra and ket tensors at
+        # `vs` — dropping the per-site identity operator at those
+        # vertices leaves the bra (primed) and ket (unprimed) site inds
+        # open, which is exactly the RDM.
         vs = [(2, 2), (2, 3)]
-
-        # Prime the bra-ket shared site indices on the ket side at the
-        # selected vertices, so the contracted RDM has open primed/unprimed
-        # legs there. Mutates a copy of `ψψ` in place; no graph edits.
-        ψψsplit = copy(ψψ)
-        for v in vs
-            common = commoninds(ψψsplit[(v, 1)], ψψsplit[(v, 2)])
-            ψψsplit[(v, 2)] = prime(ψψsplit[(v, 2)], common)
-        end
-        env_tensors = environment(bpc, [(v, 2) for v in vs])
-        rdm =
-            contract(vcat(env_tensors, ITensor[ψψsplit[vp] for vp in [(v, 2) for v in vs]]))
-
+        env_vs = vcat(
+            [bra_vertex(ψψ, v) for v in vs],
+            [ket_vertex(ψψ, v) for v in vs],
+            [operator_vertex(ψψ, v) for v in vs]
+        )
+        env_tensors = environment(bpc, env_vs)
+        local_tensors = vcat(
+            ITensor[ψψ[bra_vertex(ψψ, v)] for v in vs],
+            ITensor[ψψ[ket_vertex(ψψ, v)] for v in vs]
+        )
+        rdm = contract(vcat(env_tensors, local_tensors))
         rdm = array(
             (rdm * combiner(inds(rdm; plev = 0)...)) * combiner(inds(rdm; plev = 1)...)
         )
@@ -91,4 +98,19 @@ using Test: @test, @testset
         ψ[(1, 1)] = 0 * ψ[(1, 1)]
         @test iszero(scalar(ψ; alg = "bp"))
     end
+end
+
+# Regression guard for `identity_messages`: a tiny QN-graded loopy
+# network (4-cycle, S=1/2 sites) where the old single-leg `delta(i)`
+# initialization collapsed messages to empty blocks and BP produced
+# NaN. Two-leg `delta(b, k)` keeps the QN sectors aligned, so the
+# QFN-routed `scalar` (which auto-uses `identity_messages` because QFN
+# is structurally ψ-vs-ψ) must come back finite and nonzero.
+@testset "QN-graded loopy BP — identity_messages regression" begin
+    g = named_grid((2, 2); periodic = true)
+    s = siteinds("S=1/2", g; conserve_qns = true)
+    ψ = productstate(v -> isodd(sum(v)) ? "↑" : "↓", s)
+    n2 = scalar(QuadraticFormNetwork(ψ); alg = "bp", cache_update_kwargs = (; maxiter = 25))
+    @test isfinite(n2)
+    @test !iszero(n2)
 end

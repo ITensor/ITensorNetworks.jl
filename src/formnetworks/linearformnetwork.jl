@@ -1,5 +1,5 @@
 using DataGraphs: DataGraphs, set_vertex_data!
-using ITensors: ITensor, prime
+using ITensors: ITensor, dag, prime
 using NamedGraphs.GraphsExtensions: disjoint_union
 
 default_dual_link_index_map = prime

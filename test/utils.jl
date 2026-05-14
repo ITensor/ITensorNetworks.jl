@@ -5,23 +5,13 @@
 
 using DataGraphs: underlying_graph, vertex_data
 using Dictionaries: Indices
-using Graphs: AbstractGraph, dst, edges, src, vertices
+using Graphs: AbstractGraph, add_edge!, dst, edges, src, vertices
 using ITensorNetworks: ITensorNetwork, IndsNetwork
 using ITensors.NDTensors: dim
-using ITensors: ITensors, ITensor, Index, QN, dag, hasqns, inds, itensor, onehot
+using ITensors: ITensors, ITensor, Index, QN, dag, hasqns, inds, itensor
 using NamedGraphs.GraphsExtensions: incident_edges
 using NamedGraphs: NamedGraph
 using Random: Random, AbstractRNG
-
-# Pick a length-1 space matching `tn`'s Index style: a dense `1` if no
-# vertex tensor has QN-graded indices, otherwise a single-block `[QN() => 1]`.
-# Used by `_add_edge!` below to thread a trivial Link Index between two
-# tensors without disturbing the QN structure (real `Index` constructors
-# need a space, not just a dimension).
-function _trivial_link_space(tn)
-    any(hasqns ∘ inds, (tn[v] for v in vertices(tn))) || return 1
-    return [QN() => 1]
-end
 
 # --- random_tensornetwork ----------------------------------------------------
 
@@ -83,27 +73,14 @@ end
 
 # --- productstate -------------------------------------------------------------
 
-# Thread a fresh trivial-QN dim-1 link Index between `src(edge)` and `dst(edge)`
-# by outer-producting `onehot` basis vectors into each endpoint tensor. This is
-# the productstate-specific analog of `ITensorNetworks.add_edge!` — the latter
-# uses QR, which would push site-state QN flux into the link and leave BP's
-# `default_message` (single-index `delta`) with no compatible block. `onehot`
-# defaults to `Float64`, so we typecast it to `elt` to keep `productstate(elt,
-# ...)` element-type-preserving. Reverse-map reconciliation on the second
-# `setindex!` brings the graph edge along for free.
-function _add_edge!(elt::Type, tn, edge)
-    iₑ = Index(_trivial_link_space(tn), "Link")
-    X = ITensors.convert_eltype(elt, onehot(iₑ => 1))
-    tn[src(edge)] = tn[src(edge)] * X
-    tn[dst(edge)] = tn[dst(edge)] * dag(X)
-    return tn
-end
-
 # Build a product-state ITensorNetwork: start from a site-only TN (one tensor
 # per vertex with just the on-site state vector, looked up via
 # `ITensors.state(name, site_index)`), then add each edge from the original
-# IndsNetwork via `_add_edge!`. `state` is anything indexable by vertex (dict,
-# dictionary, array, ...); the `Function` method just materializes a Dict first.
+# IndsNetwork via `Graphs.add_edge!`. The latter threads a fresh link `Index`
+# via QR; QN flux on the link is fine here because BP messages now pair the
+# bra and ket legs explicitly via `identity_messages`. `state` is anything
+# indexable by vertex (dict, dictionary, array, ...); the `Function` method
+# just materializes a Dict first.
 function productstate(elt::Type, state::Function, s::IndsNetwork)
     return productstate(elt, Dict(v => state(v) for v in vertices(s)), s)
 end
@@ -115,7 +92,7 @@ function productstate(elt::Type, state, s::IndsNetwork)
     end
     tn = ITensorNetwork(ts)
     for e in edges(s)
-        _add_edge!(elt, tn, e)
+        add_edge!(tn, e)
     end
     return tn
 end

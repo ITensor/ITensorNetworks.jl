@@ -1,4 +1,5 @@
 using DataGraphs: DataGraphs, set_vertex_data!
+using Dictionaries: Dictionary
 using Graphs: IsDirected
 using ITensors: dir
 using LinearAlgebra: diag, dot
@@ -9,14 +10,6 @@ using NamedGraphs.PartitionedGraphs: AbstractPartitionedGraph, PartitionedGraph,
 using SimpleTraits: SimpleTraits, @traitfn, Not
 using SplitApplyCombine: group
 
-function default_cache_construction_kwargs(alg::Algorithm"bp", ψ::AbstractITensorNetwork)
-    return (; partitioned_vertices = default_partitioned_vertices(ψ))
-end
-
-function default_cache_construction_kwargs(alg::Algorithm"bp", pg::PartitionedGraph)
-    return (;)
-end
-
 struct BeliefPropagationCache{V, PV, PTN <: AbstractPartitionedGraph{V, PV}, MTS} <:
     AbstractBeliefPropagationCache{V, PV}
     partitioned_tensornetwork::PTN
@@ -24,7 +17,7 @@ struct BeliefPropagationCache{V, PV, PTN <: AbstractPartitionedGraph{V, PV}, MTS
 end
 
 #Constructors...
-function BeliefPropagationCache(ptn::PartitionedGraph; messages = default_messages(ptn))
+function BeliefPropagationCache(ptn::PartitionedGraph; messages = Dictionary())
     return BeliefPropagationCache(ptn, messages)
 end
 
@@ -41,19 +34,11 @@ function BeliefPropagationCache(
     return BeliefPropagationCache(tn, partitioned_vertices; kwargs...)
 end
 
-function cache(alg::Algorithm"bp", tn; kwargs...)
-    return BeliefPropagationCache(tn; kwargs...)
-end
-
 function partitioned_tensornetwork(bp_cache::BeliefPropagationCache)
     return bp_cache.partitioned_tensornetwork
 end
 
 messages(bp_cache::BeliefPropagationCache) = bp_cache.messages
-
-function default_message(bp_cache::BeliefPropagationCache, edge::QuotientEdge)
-    return default_message(datatype(bp_cache), linkinds(bp_cache, edge))
-end
 
 function Base.copy(bp_cache::BeliefPropagationCache)
     return BeliefPropagationCache(

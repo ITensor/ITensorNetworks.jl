@@ -517,7 +517,7 @@ function inner_network(
     return BilinearFormNetwork(A, x, y; kwargs...)
 end
 
-norm_sqr_network(ψ::AbstractITensorNetwork) = inner_network(ψ, ψ)
+norm_sqr_network(ψ::AbstractITensorNetwork) = QuadraticFormNetwork(ψ)
 
 #
 # Printing

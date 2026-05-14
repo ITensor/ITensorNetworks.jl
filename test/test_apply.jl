@@ -1,8 +1,8 @@
 using Compat: Compat
 using Graphs: vertices
-using ITensorNetworks:
-    BeliefPropagationCache, apply, environment, norm_sqr_network, siteinds, update
-using ITensors: ITensors, ITensor, inner, op
+using ITensorNetworks: BeliefPropagationCache, apply, environment, initialize_cache,
+    norm_sqr_network, siteinds, update
+using ITensors: ITensors, Algorithm, ITensor, inner, op
 using NamedGraphs.NamedGraphGenerators: named_grid
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
@@ -18,18 +18,29 @@ include("utils.jl")
     ψ = random_tensornetwork(rng, s; link_space = χ)
     v1, v2 = (2, 2), (1, 2)
     ψψ = norm_sqr_network(ψ)
-    # Simple Belief Propagation grouping (one bra+ket per partition) gives
-    # a product environment around `[v1, v2]`, which is what `apply` requires.
-    bp_cache = BeliefPropagationCache(ψψ, group(v -> v[1], vertices(ψψ)))
-    bp_cache = update(bp_cache; maxiter = 20)
-    envsSBP = environment(bp_cache, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")])
+    # Vertices of `[v1, v2]` across all layers of `ψψ` (bra/ket/operator),
+    # so the environment around them is just the incoming BP messages —
+    # the per-site operator tensors aren't pulled in as central tensors.
+    env_verts(vs) = [
+        (v, suffix) for v in vs for suffix in ("bra", "ket", "operator")
+    ]
+    # Simple Belief Propagation grouping (one bra/ket/operator triple per
+    # partition) gives a product environment around `[v1, v2]`, which is
+    # what `apply` requires.
+    pv_SBP = group(v -> v[1], vertices(ψψ))
+    bp_cache = update(
+        initialize_cache(Algorithm("bp"), ψψ; partitioned_vertices = pv_SBP);
+        maxiter = 20
+    )
+    envsSBP = environment(bp_cache, env_verts((v1, v2)))
     # Column-grouping (one whole column per partition) gives a non-product
     # environment; `apply` should reject it.
-    bp_cache_col = BeliefPropagationCache(ψψ, group(v -> v[1][1], vertices(ψψ)))
-    bp_cache_col = update(bp_cache_col; maxiter = 20)
-    envsGBP = environment(
-        bp_cache_col, [(v1, "bra"), (v1, "ket"), (v2, "bra"), (v2, "ket")]
+    pv_col = group(v -> v[1][1], vertices(ψψ))
+    bp_cache_col = update(
+        initialize_cache(Algorithm("bp"), ψψ; partitioned_vertices = pv_col);
+        maxiter = 20
     )
+    envsGBP = environment(bp_cache_col, env_verts((v1, v2)))
     inner_alg = "exact"
     ngates = 5
     truncerr = 0.0

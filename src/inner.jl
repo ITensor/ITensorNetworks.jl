@@ -1,4 +1,4 @@
-using ITensors: inner, scalar
+using ITensors: inner, scalar, sim
 using LinearAlgebra: norm, norm_sqr
 
 default_contract_alg(tns::Tuple) = "bp"
@@ -173,7 +173,9 @@ end
 
 # TODO: rename `sqnorm` to match https://github.com/JuliaStats/Distances.jl,
 # or `norm_sqr` to match `LinearAlgebra.norm_sqr`
-LinearAlgebra.norm_sqr(ψ::AbstractITensorNetwork; kwargs...) = inner(ψ, ψ; kwargs...)
+function LinearAlgebra.norm_sqr(ψ::AbstractITensorNetwork; kwargs...)
+    return scalar(norm_sqr_network(ψ); kwargs...)
+end
 
 function LinearAlgebra.norm(ψ::AbstractITensorNetwork; kwargs...)
     return sqrt(abs(real(norm_sqr(ψ; kwargs...))))

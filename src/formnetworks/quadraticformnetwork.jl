@@ -1,4 +1,7 @@
 using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
+using Dictionaries: Dictionary, set!
+using ITensors: ITensor, commoninds, dag, delta
+using NamedGraphs.PartitionedGraphs: PartitionedGraph, QuotientEdge, quotientedges
 
 default_index_map = prime
 default_inv_index_map = noprime
@@ -83,6 +86,41 @@ function QuadraticFormNetwork(
         kwargs...
     )
     return QuadraticFormNetwork(blf, dual_index_map, dual_inv_index_map)
+end
+
+# Build initial BP messages on each quotient edge as `delta(bra, ket)`
+# pairs, one per ket link Index crossing the cut. The bra-side counterpart
+# of each ket Index is computed explicitly via `dual_index_map(fn)`, so
+# the pairing is correct even when multiple link indices share an edge
+# (where `commoninds`-zip ordering between layers is not guaranteed).
+function identity_messages(
+        fn::QuadraticFormNetwork;
+        partitioned_vertices = default_partitioned_vertices(fn)
+    )
+    ptn = PartitionedGraph(fn, partitioned_vertices)
+    messages = Dictionary{QuotientEdge, Vector{ITensor}}()
+    tn = tensornetwork(fn)
+    elt = scalartype(tn)
+    map_idx = dual_index_map(fn)
+    pv = partitioned_vertices
+    ket_s = ket_vertex_suffix(fn)
+    for pe in quotientedges(ptn)
+        src_orig = unique(first.(filter(v -> last(v) == ket_s, pv[parent(src(pe))])))
+        dst_orig = unique(first.(filter(v -> last(v) == ket_s, pv[parent(dst(pe))])))
+        for (from_orig, to_orig, e) in (
+                (src_orig, dst_orig, pe),
+                (dst_orig, src_orig, reverse(pe)),
+            )
+            ms = ITensor[]
+            for v_from in from_orig, v_to in to_orig
+                for k in commoninds(tn[ket_vertex(fn, v_from)], tn[ket_vertex(fn, v_to)])
+                    push!(ms, delta(elt, dag(map_idx(k)), k))
+                end
+            end
+            set!(messages, e, ms)
+        end
+    end
+    return messages
 end
 
 function update(qf::QuadraticFormNetwork, original_state_vertex, ket_state::ITensor)

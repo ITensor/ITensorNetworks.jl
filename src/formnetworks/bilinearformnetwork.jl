@@ -1,7 +1,7 @@
 using Adapt: adapt
 using DataGraphs: DataGraphs, set_vertex_data!
 using ITensors.NDTensors: datatype, denseblocks
-using ITensors: ITensor, Op, delta, prime, sim
+using ITensors: ITensor, Index, Op, dag, delta, prime, sim
 using NamedGraphs.GraphsExtensions: disjoint_union
 
 default_dual_site_index_map = prime
