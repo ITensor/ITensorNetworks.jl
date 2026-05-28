@@ -556,7 +556,7 @@ function linkdim(tn::AbstractITensorNetwork, edge::Pair)
     return linkdim(tn, edgetype(tn)(edge))
 end
 
-function linkdim(tn::AbstractITensorNetwork{V}, edge::AbstractEdge{V}) where {V}
+function linkdim(tn::AbstractITensorNetwork, edge::AbstractEdge)
     ls = linkinds(tn, edge)
     return prod([isnothing(l) ? 1 : dim(l) for l in ls])
 end

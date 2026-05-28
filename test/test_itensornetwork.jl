@@ -250,4 +250,16 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
         tn = random_tensornetwork(rng, is; link_space = 3)
         @test_broken swapprime(tn, 0, 2)
     end
+
+    # Regression test for https://github.com/ITensor/ITensorNetworks.jl/pull/373.
+    @testset "linkdim accepts an AbstractEdge whose vertex type is a subtype" begin
+        i = Index(2)
+        A = ITensor(i)
+        B = ITensor(i)
+        tn = ITensorNetwork{Any}(Dictionary([1, 2], [A, B]))
+        @test tn isa ITensorNetwork{Any}
+        e = NamedEdge(1 => 2)
+        @test e isa NamedEdge{Int}
+        @test ITensorNetworks.linkdim(tn, e) == 2
+    end
 end
