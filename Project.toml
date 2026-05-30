@@ -41,7 +41,7 @@ ITensorNetworksTensorOperationsExt = "TensorOperations"
 [compat]
 Accessors = "0.1.42"
 Adapt = "4"
-DataGraphs = "0.4.1"
+DataGraphs = "0.4.1, 0.5"
 Dictionaries = "0.4"
 DocStringExtensions = "0.9"
 Graphs = "1.8"
