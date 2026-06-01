@@ -5,7 +5,7 @@ on:
     branches:
       - "master"
       - "main"
-      - "release-0.21"
+      - "release-*"
     paths:
       - "Project.toml"
   issue_comment:
