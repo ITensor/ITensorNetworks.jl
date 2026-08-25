@@ -56,25 +56,29 @@ contraction.
 See also: [`expect(ψ, op::String)`](@ref).
 """
 function expect(ψ::AbstractITensorNetwork, op::Op; alg = default_expect_alg(), kwargs...)
-    return expect(Algorithm(alg), ψ, [op]; kwargs...)
+    return only(expect(Algorithm(alg), ψ, [op]; kwargs...))
 end
 
 """
-    expect(ψ::AbstractITensorNetwork, op::String, vertices; alg="bp", kwargs...) -> Dictionary
+    expect(ψ::AbstractITensorNetwork, op::String, vertices; alg="bp", kwargs...)
 
 Compute local expectation values ⟨ψ|op_v|ψ⟩ / ⟨ψ|ψ⟩ for the operator named `op` at each
 vertex in `vertices`.
+
+The result is a container of the same kind as `vertices`: passing a `Vector` of vertices
+returns a `Vector` of values in the same order, while passing a dictionary of vertex indices
+(such as `vertices(ψ)`) returns a dictionary keyed by vertex.
 
 See [`expect(ψ, op::String)`](@ref) for full documentation.
 """
 function expect(
         ψ::AbstractITensorNetwork, op::String, vertices; alg = default_expect_alg(), kwargs...
     )
-    return expect(Algorithm(alg), ψ, [Op(op, vertex) for vertex in vertices]; kwargs...)
+    return expect(Algorithm(alg), ψ, map(v -> Op(op, v), vertices); kwargs...)
 end
 
 """
-    expect(ψ::AbstractITensorNetwork, op::String; alg="bp", kwargs...) -> Dictionary
+    expect(ψ::AbstractITensorNetwork, op::String; alg="bp", kwargs...) -> AbstractDictionary
 
 Compute local expectation values ⟨ψ|op_v|ψ⟩ / ⟨ψ|ψ⟩ for the operator named `op` at every
 vertex of `ψ`.
@@ -94,7 +98,8 @@ vertex of `ψ`.
 
 # Returns
 
-A `Dictionary` mapping each vertex of `ψ` to its expectation value.
+A dictionary mapping each vertex of `ψ` to its expectation value, so results
+are looked up by vertex: `expect(ψ, "Sz")[v]`.
 
 See also: [`expect(ψ, op::String, vertices)`](@ref),
 [`expect(operator, state::AbstractTreeTensorNetwork)`](@ref).
