@@ -3,15 +3,14 @@ using DataGraphs:
     DataGraphs, set_vertex_data!, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionaries, Dictionary
 using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
-    has_edge, ne, neighbors, rem_edge!, src, vertices
+    has_edge, ne, neighbors, rem_edge!, src, steiner_tree, vertices
 using ITensors: ITensors, ITensor, Index, addtags, commoninds, commontags, contract, dag,
     inds, noprime, onehot, prime, replaceprime, replacetags, setprime, settags, sim,
     swaptags, tags
 using LinearAlgebra: LinearAlgebra, qr, qr!
 using NDTensors: NDTensors, Algorithm, dim, scalartype
-using NamedGraphs.GraphsExtensions:
-    add_edges, directed_graph, incident_edges, rename_vertices, vertextype, ⊔
-using NamedGraphs: NamedGraphs, NamedGraph, Vertices, not_implemented, steiner_tree
+using NamedGraphs: NamedGraphs, NamedGraph, add_edges, directed_graph, incident_edges,
+    not_implemented, rename_vertices, vertextype, ⊔
 using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V, ITensor, ITensor} end
@@ -56,7 +55,7 @@ Base.eltype(tn::AbstractITensorNetwork) = eltype(vertex_data(tn))
 
 # Overload if needed
 Graphs.is_directed(::Type{<:AbstractITensorNetwork}) = false
-function GraphsExtensions.directed_graph(tn::AbstractITensorNetwork)
+function NamedGraphs.directed_graph(tn::AbstractITensorNetwork)
     return directed_graph(underlying_graph(tn))
 end
 
@@ -74,13 +73,6 @@ end
 DataGraphs.is_edge_assigned(::AbstractITensorNetwork, _) = false
 
 DataGraphs.get_vertex_data(tn::AbstractITensorNetwork, v) = vertex_data(tn)[v]
-
-function NamedGraphs.vertex_positions(tn::AbstractITensorNetwork)
-    return NamedGraphs.vertex_positions(underlying_graph(tn))
-end
-function NamedGraphs.ordered_vertices(tn::AbstractITensorNetwork)
-    return NamedGraphs.ordered_vertices(underlying_graph(tn))
-end
 
 function Adapt.adapt_structure(to, tn::AbstractITensorNetwork)
     return map(adapt(to), tn)
@@ -623,7 +615,7 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
         length(linkinds(tn2, e)) > 1 && qr!(tn2, e)
     end
 
-    edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
+    edges_tn1, edges_tn2 = collect(edges(tn1)), collect(edges(tn2))
 
     if !issetequal(edges_tn1, edges_tn2)
         new_edges = union(edges_tn1, edges_tn2)
@@ -631,7 +623,7 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
         tn2 = add_edges(tn2, new_edges)
     end
 
-    edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
+    edges_tn1, edges_tn2 = collect(edges(tn1)), collect(edges(tn2))
     @assert issetequal(edges_tn1, edges_tn2)
 
     tn12 = copy(tn1)

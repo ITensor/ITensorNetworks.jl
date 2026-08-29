@@ -3,9 +3,8 @@ using Graphs: has_vertex
 using ITensors:
     ITensors, @Algorithm_str, Algorithm, ITensor, directsum, hasinds, permute, plev
 using IsApprox: IsApprox, Approx
-using NamedGraphs.GraphsExtensions: GraphsExtensions, a_star, edge_path, leaf_vertices,
-    post_order_dfs_edges, post_order_dfs_vertices, vertextype
-using NamedGraphs: NamedGraph, namedgraph_a_star, steiner_tree
+using NamedGraphs: NamedGraph, default_root_vertex, post_order_dfs_edges,
+    post_order_dfs_vertices, vertextype
 using TupleTools: TupleTools
 
 abstract type AbstractTreeTensorNetwork{V} <: AbstractITensorNetwork{V} end
@@ -76,7 +75,7 @@ Truncation parameters are passed through `kwargs`.
 See also: [`orthogonalize`](@ref).
 """
 function Base.truncate(
-        tn::AbstractTTN; root_vertex = GraphsExtensions.default_root_vertex(tn), kwargs...
+        tn::AbstractTTN; root_vertex = default_root_vertex(tn), kwargs...
     )
     for e in post_order_dfs_edges(tn, root_vertex)
         # always orthogonalize towards source first to make truncations controlled
@@ -98,7 +97,7 @@ end
 
 # TODO: decide on contraction order: reverse dfs vertices or forward dfs edges?
 function NDTensors.contract(
-        tn::AbstractTTN, root_vertex = GraphsExtensions.default_root_vertex(tn); kwargs...
+        tn::AbstractTTN, root_vertex = default_root_vertex(tn); kwargs...
     )
     tn = copy(tn)
     # reverse post order vertices
@@ -123,7 +122,7 @@ Both networks must have the same graph structure and compatible site indices.
 See also: [`loginner`](@ref ITensorNetworks.loginner), `norm`, [`inner(y, A, x)`](@ref ITensorNetworks.inner).
 """
 function ITensors.inner(
-        x::AbstractTTN, y::AbstractTTN; root_vertex = GraphsExtensions.default_root_vertex(x)
+        x::AbstractTTN, y::AbstractTTN; root_vertex = default_root_vertex(x)
     )
     xᴴ = sim(dag(x); sites = [])
     y = sim(y; sites = [])
@@ -212,7 +211,7 @@ end
 # TODO: stick with this traversal or find optimal contraction sequence?
 function loginner(
         tn1::AbstractTTN, tn2::AbstractTTN;
-        root_vertex = GraphsExtensions.default_root_vertex(tn1)
+        root_vertex = default_root_vertex(tn1)
     )
     N = nv(tn1)
     if nv(tn2) != N
@@ -252,7 +251,7 @@ end
 function Base.:+(
         ::Algorithm"directsum",
         tns::AbstractTTN...;
-        root_vertex = GraphsExtensions.default_root_vertex(first(tns))
+        root_vertex = default_root_vertex(first(tns))
     )
     @assert all(tn -> nv(first(tns)) == nv(tn), tns)
 
@@ -369,7 +368,7 @@ function ITensors.inner(
         y::AbstractTTN,
         A::AbstractTTN,
         x::AbstractTTN;
-        root_vertex = GraphsExtensions.default_root_vertex(x)
+        root_vertex = default_root_vertex(x)
     )
     traversal_order = reverse(post_order_dfs_vertices(x, root_vertex))
     ydag = sim(dag(y); sites = [])
@@ -387,7 +386,7 @@ function ITensors.inner(
         y::AbstractTTN,
         A::AbstractTTN,
         x::AbstractTTN;
-        root_vertex = GraphsExtensions.default_root_vertex(B)
+        root_vertex = default_root_vertex(B)
     )
     N = nv(B)
     if nv(y) != N || nv(x) != N || nv(A) != N
@@ -447,7 +446,7 @@ function expect(
         state::AbstractTTN;
         vertices = vertices(state),
         # TODO: verify that this is a sane default
-        root_vertex = GraphsExtensions.default_root_vertex(state)
+        root_vertex = default_root_vertex(state)
     )
     # TODO: Optimize this with proper caching.
     state /= norm(state)

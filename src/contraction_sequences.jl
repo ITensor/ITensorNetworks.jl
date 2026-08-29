@@ -1,8 +1,22 @@
-using Graphs: vertices
+using Graphs: nv, vertices
 using ITensors.NDTensors: @Algorithm_str, Algorithm
 using ITensors: ITensor
-using NamedGraphs.Keys: Key
-using NamedGraphs.OrdinalIndexing: th
+using NamedGraphs: NamedGraphs, decoded_vertex
+
+# A key (index) type, used for unambiguously identifying an object as a key or
+# index of an indexable object rather than as a container to descend into. That
+# distinction matters for the nested structure of a contraction sequence, whose
+# leaves are vertices that may themselves be containers:
+#
+#     [Key([1, 2]), [Key([3, 4]), Key([5, 6])]]
+struct Key{K}
+    I::K
+end
+Key(I...) = Key(I)
+
+Base.show(io::IO, I::Key) = print(io, "Key(", I.I, ")")
+
+NamedGraphs.to_graph_index(graph, key::Key) = key.I
 
 const ITensorList = Union{Vector{ITensor}, Tuple{Vararg{ITensor}}}
 
@@ -24,9 +38,8 @@ function deepmap(f, tree; filter = (x -> x isa AbstractArray))
 end
 
 function contraction_sequence(tn::AbstractITensorNetwork; kwargs...)
-    # TODO: Use `token_vertex` and/or `token_vertices` here.
-    ts = map(v -> tn[v], (1:nv(tn))th)
+    ts = map(code -> tn[decoded_vertex(tn, code)], 1:nv(tn))
     seq_linear_index = contraction_sequence(ts; kwargs...)
     # TODO: Use `Functors.fmap` or `StructWalk`?
-    return deepmap(n -> Key(vertices(tn)[n * th]), seq_linear_index)
+    return deepmap(code -> Key(decoded_vertex(tn, code)), seq_linear_index)
 end

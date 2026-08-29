@@ -2,8 +2,7 @@ using DataGraphs: DataGraphs, underlying_graph
 using Dictionaries: Dictionary, Indices
 using Graphs: edgetype, vertices
 using ITensors: ITensor, hascommoninds
-using NamedGraphs.GraphsExtensions: incident_edges, is_leaf_vertex
-using NamedGraphs: NamedEdge
+using NamedGraphs: NamedEdge, incident_edges, is_leaf_vertex
 
 struct ProjTTN{V, Pos <: Union{Indices{V}, NamedEdge{V}}} <: AbstractProjTTN{V}
     pos::Pos

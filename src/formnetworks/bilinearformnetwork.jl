@@ -2,7 +2,7 @@ using Adapt: adapt
 using DataGraphs: DataGraphs, set_vertex_data!
 using ITensors.NDTensors: datatype, denseblocks
 using ITensors: ITensor, Index, Op, dag, delta, prime, sim
-using NamedGraphs.GraphsExtensions: disjoint_union
+using NamedGraphs: disjoint_union
 
 default_dual_site_index_map = prime
 default_dual_link_index_map = sim
@@ -44,7 +44,7 @@ end
 operator_vertex_suffix(blf::BilinearFormNetwork) = blf.operator_vertex_suffix
 bra_vertex_suffix(blf::BilinearFormNetwork) = blf.bra_vertex_suffix
 ket_vertex_suffix(blf::BilinearFormNetwork) = blf.ket_vertex_suffix
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
+# TODO: Use `NamedGraphs.parent_graph`.
 tensornetwork(blf::BilinearFormNetwork) = blf.tensornetwork
 
 # Forward vertex writes to the wrapped network so reverse-index map and
