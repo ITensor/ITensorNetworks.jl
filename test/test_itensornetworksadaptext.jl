@@ -1,7 +1,7 @@
 using Adapt: Adapt, adapt
 using ITensorNetworks: siteinds
 using ITensors: ITensors
-using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs: named_grid
 using Test: @test, @testset
 include("utils.jl")
 

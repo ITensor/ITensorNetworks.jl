@@ -2,7 +2,7 @@ using DataGraphs: vertex_data
 using Graphs: vertices
 using ITensorNetworks:
     ITensorNetwork, TreeTensorNetwork, ortho_region, orthogonalize, siteinds
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using NamedGraphs: named_comb_tree
 using StableRNGs: StableRNG
 using Test: @test, @testset
 include("utils.jl")

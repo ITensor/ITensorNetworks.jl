@@ -1,6 +1,5 @@
 using Graphs: add_edge!, add_vertex!
-using NamedGraphs.GraphsExtensions: is_binary_arborescence, is_rooted, root_vertex
-using NamedGraphs: NamedDiGraph
+using NamedGraphs: NamedDiGraph, is_binary_arborescence, is_rooted, root_vertex
 using Test: @test, @testset
 
 @testset "test rooted directed graphs" begin

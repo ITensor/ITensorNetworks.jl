@@ -23,7 +23,7 @@ indices:
 using Graphs: edges, ne, neighbors, nv, vertices
 using ITensorNetworks: ITensorNetwork, add, linkinds, siteinds
 using ITensors: Index, ITensor
-using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs: named_grid
 
 i, j, k = Index(2, "i"), Index(2, "j"), Index(2, "k")
 A, B, C = ITensor(i, j), ITensor(j, k), ITensor(k)
@@ -39,8 +39,7 @@ indices on each edge, build the indices once per edge and reuse them at both end
 
 ```@example main
 using ITensors: random_itensor
-using NamedGraphs: NamedGraph
-using NamedGraphs.GraphsExtensions: edgetype, incident_edges
+using NamedGraphs: NamedGraph, edgetype, incident_edges
 
 g = NamedGraph(named_grid((3, 3)))
 s = siteinds("S=1/2", g)  # one spin-½ site Index per vertex

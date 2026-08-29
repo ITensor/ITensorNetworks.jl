@@ -4,8 +4,7 @@ using ITensorNetworks:
     ITensorNetwork, ProjTTN, TreeTensorNetwork, environments, position, siteinds
 using ITensors.NDTensors: with_auto_fermion
 using ITensors: ITensor, Index
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_path_graph
-using NamedGraphs: NamedEdge, NamedGraph
+using NamedGraphs: NamedEdge, NamedGraph, named_comb_tree, named_path_graph
 using Test: @test, @testset
 include("utils.jl")
 using .ModelHamiltonians: ModelHamiltonians

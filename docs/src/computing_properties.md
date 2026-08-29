@@ -6,8 +6,7 @@ using ITensorNetworks:
     ITensorNetwork, TreeTensorNetwork, expect, inner, loginner, normalize, siteinds
 using ITensors: Index, random_itensor
 using LinearAlgebra: norm
-using NamedGraphs.GraphsExtensions: incident_edges
-using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs: incident_edges, named_grid
 
 function random_state(g, s; link_space)
     l = Dict(e => Index(link_space, "Link") for e in edges(g))

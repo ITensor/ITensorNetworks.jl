@@ -1,5 +1,5 @@
 using ITensors: hascommoninds, uniqueinds
-using NamedGraphs.GraphsExtensions: incident_edges
+using NamedGraphs: incident_edges
 using Printf: @printf
 
 function subspace_expand!(

@@ -9,8 +9,7 @@ using Graphs: AbstractGraph, add_edge!, dst, edges, src, vertices
 using ITensorNetworks: ITensorNetwork, IndsNetwork
 using ITensors.NDTensors: dim
 using ITensors: ITensors, ITensor, Index, QN, dag, hasqns, inds, itensor
-using NamedGraphs.GraphsExtensions: incident_edges
-using NamedGraphs: NamedGraph
+using NamedGraphs: NamedGraph, incident_edges
 using Random: Random, AbstractRNG
 
 # --- random_tensornetwork ----------------------------------------------------
@@ -238,7 +237,7 @@ using SplitApplyCombine: group
 
 function group_terms(ℋ::Sum, g)
     grouped_terms = group(ITensors.terms(ℋ)) do t
-        findfirst(edges(g)) do e
+        findfirst(collect(edges(g))) do e
             return to_tuple.(ITensors.sites(t)) ⊆ [src(e), dst(e)]
         end
     end
