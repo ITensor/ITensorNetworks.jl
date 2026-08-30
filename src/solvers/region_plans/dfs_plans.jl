@@ -1,6 +1,5 @@
 using Graphs: dst, src
-using NamedGraphs.GraphsExtensions:
-    default_root_vertex, post_order_dfs_edges, post_order_dfs_vertices
+using NamedGraphs: default_root_vertex, post_order_dfs_edges, post_order_dfs_vertices
 
 function post_order_dfs_plan(
         graph, sweep_kwargs; nsites, root_vertex = default_root_vertex(graph)

@@ -3,8 +3,7 @@ using ITensorNetworks:
     ITensorNetworks, applyexp, dmrg, maxlinkdim, siteinds, time_evolve, ttn
 using ITensors
 using ITensors.Ops: OpSum
-using NamedGraphs.NamedGraphGenerators: named_path_graph
-using NamedGraphs: NamedGraph
+using NamedGraphs: NamedGraph, named_path_graph
 using TensorOperations: TensorOperations
 using Test: @test, @testset #For contraction order finding
 

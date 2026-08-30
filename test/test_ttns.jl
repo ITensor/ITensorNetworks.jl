@@ -4,7 +4,7 @@ using ITensorNetworks:
     ITensorNetwork, TreeTensorNetwork, contract, ortho_region, orthogonalize, siteinds, ttn
 using ITensors: @disable_warn_order, random_itensor
 using LinearAlgebra: norm
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using NamedGraphs: named_comb_tree
 using Random: shuffle
 using StableRNGs: StableRNG
 using Test: @test, @testset

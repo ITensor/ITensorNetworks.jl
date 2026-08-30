@@ -5,8 +5,7 @@ using ITensors.LazyApply: Prod, Sum, coefficient
 using ITensors.NDTensors: Block, blockdim, maxdim, nblocks, nnzblocks, truncate!
 using ITensors.Ops: Op, OpSum, argument, coefficient, name, params, site, terms, which_op
 using ITensors: flux, has_fermion_string, itensor, removeqns, space
-using NamedGraphs.GraphsExtensions:
-    GraphsExtensions, boundary_edges, degrees, is_leaf_vertex, vertex_path
+using NamedGraphs: boundary_edges, default_root_vertex, is_leaf_vertex
 using StaticArrays: MVector
 
 #
@@ -640,7 +639,7 @@ Convert an OpSum object `os` to a TreeTensorNetwork, with indices given by `site
 function ttn(
         os::OpSum,
         sites::IndsNetwork;
-        root_vertex = GraphsExtensions.default_root_vertex(sites),
+        root_vertex = default_root_vertex(sites),
         kwargs...
     )
     length(terms(os)) == 0 && error("OpSum has no terms")

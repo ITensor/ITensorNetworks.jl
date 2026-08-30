@@ -10,7 +10,7 @@ using ITensorNetworks: ITensorNetworks, ITensorNetwork, IndsNetwork
 using ITensors.NDTensors: dim
 using ITensors: ITensor, Index, itensor
 using LinearAlgebra: normalize
-using NamedGraphs.GraphsExtensions: incident_edges
+using NamedGraphs: incident_edges
 using Random: Random, AbstractRNG
 using SimpleTraits: SimpleTraits, @traitfn
 

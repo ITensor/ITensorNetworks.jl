@@ -2,8 +2,7 @@ using Graphs: rem_edge!, vertices
 using ITensorNetworks: ITensorNetwork, inner_network, orthogonalize, siteinds, truncate, ttn
 using ITensors: ITensors, apply, inner, op, scalar
 using LinearAlgebra: norm_sqr
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using NamedGraphs: NamedEdge
+using NamedGraphs: NamedEdge, named_comb_tree, named_grid
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset

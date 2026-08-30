@@ -2,8 +2,7 @@ using Dictionaries: Indices
 using Graphs: path_graph
 using ITensors: ITensor
 using LinearAlgebra: factorize, normalize
-using NamedGraphs.GraphsExtensions: GraphsExtensions, vertextype
-using NamedGraphs: similar_graph
+using NamedGraphs: default_root_vertex, similar_graph, vertextype
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}
@@ -50,7 +49,7 @@ Throws an error if the underlying graph of `tn` is not a tree.
 # Example
 
 ```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
+julia> using NamedGraphs: named_comb_tree
 
 julia> using Graphs: vertices
 
@@ -134,7 +133,7 @@ Call [`orthogonalize`](@ref) to impose a gauge.
 # Example
 
 ```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
+julia> using NamedGraphs: named_comb_tree
 
 julia> g = named_comb_tree((2, 2));
 
@@ -203,7 +202,7 @@ Extra `kwargs` (e.g. `cutoff`, `maxdim`) are forwarded to the factorization.
 # Example
 
 ```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_comb_tree
+julia> using NamedGraphs: named_comb_tree
 
 julia> using ITensors: ITensors
 
@@ -220,7 +219,7 @@ julia> ttn_A = ttn(A, s);
 function ttn(
         a::ITensor,
         is::IndsNetwork;
-        ortho_region = Indices([GraphsExtensions.default_root_vertex(is)]),
+        ortho_region = Indices([default_root_vertex(is)]),
         kwargs...
     )
     for v in vertices(is)

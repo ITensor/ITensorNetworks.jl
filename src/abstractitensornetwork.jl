@@ -4,16 +4,15 @@ using DataGraphs: DataGraphs, edge_data, get_vertex_data, is_vertex_assigned,
     set_vertex_data!, underlying_graph, underlying_graph_type, vertex_data
 using Dictionaries: Dictionary
 using Graphs: Graphs, Graph, add_edge!, add_vertex!, bfs_tree, center, dst, edges, edgetype,
-    ne, neighbors, rem_edge!, src, vertices
+    ne, neighbors, rem_edge!, src, steiner_tree, vertices
 using ITensors: ITensors, @Algorithm_str, ITensor, addtags, combiner, commoninds,
     commontags, contract, dag, inds, noprime, onehot, prime, replaceprime, replacetags,
     setprime, settags, sim, swaptags, tags
 using LinearAlgebra: LinearAlgebra, factorize
 using MacroTools: @capture
 using NDTensors: NDTensors, Algorithm, dim, scalartype
-using NamedGraphs.GraphsExtensions:
-    directed_graph, incident_edges, rename_vertices, vertextype, ⊔
-using NamedGraphs: NamedGraphs, NamedGraph, Vertices, not_implemented, steiner_tree
+using NamedGraphs: NamedGraphs, NamedGraph, Vertices, directed_graph, incident_edges,
+    not_implemented, rename_vertices, vertextype, ⊔
 using SplitApplyCombine: flatten
 
 abstract type AbstractITensorNetwork{V} <: AbstractDataGraph{V, ITensor, ITensor} end
@@ -54,7 +53,7 @@ Base.eltype(tn::AbstractITensorNetwork) = eltype(vertex_data(tn))
 
 # Overload if needed
 Graphs.is_directed(::Type{<:AbstractITensorNetwork}) = false
-GraphsExtensions.directed_graph(is::AbstractITensorNetwork) = directed_graph(data_graph(is))
+NamedGraphs.directed_graph(is::AbstractITensorNetwork) = directed_graph(data_graph(is))
 
 # Derived interface, may need to be overloaded
 function DataGraphs.underlying_graph_type(G::Type{<:AbstractITensorNetwork})
@@ -141,13 +140,6 @@ function fix_edges!(tn::AbstractITensorNetwork, v)
         end
     end
     return tn
-end
-
-function NamedGraphs.vertex_positions(tn::AbstractITensorNetwork)
-    return NamedGraphs.vertex_positions(underlying_graph(tn))
-end
-function NamedGraphs.ordered_vertices(tn::AbstractITensorNetwork)
-    return NamedGraphs.ordered_vertices(underlying_graph(tn))
 end
 
 function Adapt.adapt_structure(to, tn::AbstractITensorNetwork)
@@ -735,7 +727,8 @@ function combine_linkinds(tn::AbstractITensorNetwork, combiners)
 end
 
 function combine_linkinds(
-        tn::AbstractITensorNetwork; edges::Vector{<:Union{Pair, AbstractEdge}} = edges(tn)
+        tn::AbstractITensorNetwork;
+        edges::Vector{<:Union{Pair, AbstractEdge}} = collect(edges(tn))
     )
     combiners = linkinds_combiners(tn; edges)
     return combine_linkinds(tn, combiners)
@@ -871,10 +864,10 @@ See also: `Base.:+` for `TreeTensorNetwork`, `truncate`.
 function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
     @assert issetequal(vertices(tn1), vertices(tn2))
 
-    tn1 = combine_linkinds(tn1; edges = filter(is_multi_edge(tn1), edges(tn1)))
-    tn2 = combine_linkinds(tn2; edges = filter(is_multi_edge(tn2), edges(tn2)))
+    tn1 = combine_linkinds(tn1; edges = filter(is_multi_edge(tn1), collect(edges(tn1))))
+    tn2 = combine_linkinds(tn2; edges = filter(is_multi_edge(tn2), collect(edges(tn2))))
 
-    edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
+    edges_tn1, edges_tn2 = collect(edges(tn1)), collect(edges(tn2))
 
     if !issetequal(edges_tn1, edges_tn2)
         new_edges = union(edges_tn1, edges_tn2)
@@ -882,7 +875,7 @@ function add(tn1::AbstractITensorNetwork, tn2::AbstractITensorNetwork)
         tn2 = insert_linkinds(tn2, new_edges)
     end
 
-    edges_tn1, edges_tn2 = edges(tn1), edges(tn2)
+    edges_tn1, edges_tn2 = collect(edges(tn1)), collect(edges(tn2))
     @assert issetequal(edges_tn1, edges_tn2)
 
     tn12 = copy(tn1)
