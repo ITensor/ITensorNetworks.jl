@@ -585,25 +585,17 @@ function gauge_edge(
     return tn
 end
 
-# For ambiguity error; TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
-function gauge_walk(
-        alg::Algorithm, tn::AbstractITensorNetwork, edges::Vector{<:AbstractEdge}; kwargs...
-    )
+# TODO: decide whether to use graph mutating methods when resulting graph is unchanged?
+function gauge_walk(alg::Algorithm, tn::AbstractITensorNetwork, edges; kwargs...)
     tn = copy(tn)
     for edge in edges
-        tn = gauge_edge(alg, tn, edge; kwargs...)
+        tn = gauge_edge(alg, tn, edgetype(tn)(edge); kwargs...)
     end
     return tn
 end
 
 function gauge_walk(alg::Algorithm, tn::AbstractITensorNetwork, edge::Pair; kwargs...)
-    return gauge_edge(alg::Algorithm, tn, edgetype(tn)(edge); kwargs...)
-end
-
-function gauge_walk(
-        alg::Algorithm, tn::AbstractITensorNetwork, edges::Vector{<:Pair}; kwargs...
-    )
-    return gauge_walk(alg, tn, edgetype(tn).(edges); kwargs...)
+    return gauge_edge(alg, tn, edgetype(tn)(edge); kwargs...)
 end
 
 function tree_gauge(alg::Algorithm, ψ::AbstractITensorNetwork, region)
@@ -726,10 +718,7 @@ function combine_linkinds(tn::AbstractITensorNetwork, combiners)
     return combined_tn
 end
 
-function combine_linkinds(
-        tn::AbstractITensorNetwork;
-        edges::Vector{<:Union{Pair, AbstractEdge}} = collect(edges(tn))
-    )
+function combine_linkinds(tn::AbstractITensorNetwork; edges = edges(tn))
     combiners = linkinds_combiners(tn; edges)
     return combine_linkinds(tn, combiners)
 end
