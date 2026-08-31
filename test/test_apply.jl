@@ -3,7 +3,7 @@ using Graphs: vertices
 using ITensorNetworks: BeliefPropagationCache, apply, environment, initialize_cache,
     norm_sqr_network, siteinds, update
 using ITensors: ITensors, Algorithm, ITensor, inner, op
-using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs: named_grid
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations

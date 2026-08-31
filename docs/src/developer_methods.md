@@ -168,7 +168,7 @@
 * Tree-traversal sequence: cover `g` with a forest, then for each tree push a post-order
   DFS sweep followed by its reverse — gives a back-and-forth sequence covering every edge (`edge_sequences.jl`):
   ```julia
-  edge_sequence(::Algorithm"forest_cover", g; root_vertex = GraphsExtensions.default_root_vertex)
+  edge_sequence(::Algorithm"forest_cover", g; root_vertex = default_root_vertex)
   ```
 
 * Parallel sequence: each edge (and its reverse) as its own one-edge group, suitable

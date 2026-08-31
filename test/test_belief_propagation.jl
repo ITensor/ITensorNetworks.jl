@@ -9,8 +9,8 @@ include("utils.jl")
 using ITensors.NDTensors: array
 using ITensors: ITensors, ITensor, combiner, dag, inds, inner, prime, random_itensor
 using LinearAlgebra: eigvals, tr
-using NamedGraphs.NamedGraphGenerators: named_grid
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, quotientedges
+using NamedGraphs: named_grid
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset

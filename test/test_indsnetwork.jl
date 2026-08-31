@@ -4,7 +4,7 @@ using Graphs: edges, ne, nv, vertices
 using ITensorNetworks: IndsNetwork, union_all_inds
 using ITensors.NDTensors: dim
 using ITensors: Index
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using NamedGraphs: named_comb_tree
 using StableRNGs: StableRNG
 using Test: @test, @testset
 @testset "IndsNetwork constructors" begin

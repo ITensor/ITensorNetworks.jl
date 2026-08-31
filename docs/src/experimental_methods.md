@@ -55,13 +55,13 @@ Methods which still need to be discussed, modified, or deprecated.
 * Sweep-based truncation. The whole-TTN form orthogonalizes towards `src(e)` before
   each bond truncation; the edge form lifts `truncate` from the underlying `ITensorNetwork` (`treetensornetworks/abstracttreetensornetwork.jl`):
   ```julia
-  truncate(tn::AbstractTTN; root_vertex = GraphsExtensions.default_root_vertex(tn), kwargs...)
+  truncate(tn::AbstractTTN; root_vertex = default_root_vertex(tn), kwargs...)
   truncate(tn::AbstractTTN, edge::AbstractEdge; kwargs...)
   ```
 
 * Contract the whole tree into a single `ITensor` via a reverse post-order DFS sequence (`treetensornetworks/abstracttreetensornetwork.jl`):
   ```julia
-  contract(tn::AbstractTTN, root_vertex = GraphsExtensions.default_root_vertex(tn); kwargs...)
+  contract(tn::AbstractTTN, root_vertex = default_root_vertex(tn); kwargs...)
   ```
 
 * Inner product `⟨x|y⟩`, matrix element `⟨y|A|x⟩`, and four-network form `⟨B|y|A|x⟩`,

@@ -1,8 +1,7 @@
 using ITensors.NDTensors: @Algorithm_str, Algorithm, NDTensors, contract
 using ITensors: ITensor, scalar
 using LinearAlgebra: normalize!
-using NamedGraphs.OrdinalIndexing: th
-using NamedGraphs: NamedGraphs
+using NamedGraphs: decoded_vertex, encoded_vertex, to_graph_index
 
 function NDTensors.contract(tn::AbstractITensorNetwork; alg = "exact", kwargs...)
     return contract(Algorithm(alg), tn; kwargs...)
@@ -15,8 +14,10 @@ function NDTensors.contract(
         sequence = contraction_sequence(tn; contraction_sequence_kwargs...),
         kwargs...
     )
-    sequence_linear_index = deepmap(v -> NamedGraphs.vertex_positions(tn)[v], sequence)
-    ts = map(v -> tn[v], (1:nv(tn))th)
+    sequence_linear_index = deepmap(
+        v -> encoded_vertex(tn, to_graph_index(tn, v)), sequence
+    )
+    ts = map(code -> tn[decoded_vertex(tn, code)], 1:nv(tn))
     return contract(ts; sequence = sequence_linear_index, kwargs...)
 end
 

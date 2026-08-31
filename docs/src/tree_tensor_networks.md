@@ -37,9 +37,7 @@ using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, ortho_region, orthogon
     siteinds
 using ITensors: ITensors, Index, random_itensor
 using LinearAlgebra: norm
-using NamedGraphs: NamedGraph
-using NamedGraphs.GraphsExtensions: incident_edges
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using NamedGraphs: NamedGraph, incident_edges, named_comb_tree
 
 # Comb-tree TTN (a popular tree topology for 2D-like systems)
 g = NamedGraph(named_comb_tree((3, 2)))

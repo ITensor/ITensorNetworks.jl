@@ -1,7 +1,7 @@
 using DataGraphs: DataGraphs
 using Dictionaries: set!
 using ITensors: ITensor, hascommoninds
-using NamedGraphs.GraphsExtensions: incident_edges, is_leaf_vertex
+using NamedGraphs: incident_edges, is_leaf_vertex
 
 struct ProjOuterProdTTN{V} <: AbstractProjTTN{V}
     pos::Union{Vector{<:V}, NamedEdge{V}}
