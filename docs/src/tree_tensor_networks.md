@@ -24,7 +24,7 @@ using ITensorNetworks: ITensorNetwork, TreeTensorNetwork, mps, ortho_region, ort
     siteinds, ttn
 using ITensors: ITensors
 using LinearAlgebra: norm
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using NamedGraphs: named_comb_tree
 
 # Comb-tree TTN (a popular tree topology for 2D-like systems)
 g = named_comb_tree((3, 2))

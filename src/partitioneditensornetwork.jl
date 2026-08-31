@@ -1,7 +1,7 @@
 using Graphs: dst, src
 using ITensors: commoninds
-using NamedGraphs.GraphsExtensions: subgraph
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, QuotientEdge
+using NamedGraphs: subgraph
 
 function linkinds(pitn::PartitionedGraph, edge::QuotientEdge)
     src_e_itn = subgraph(pitn, src(edge))

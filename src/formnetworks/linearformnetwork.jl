@@ -1,7 +1,6 @@
 using Graphs: AbstractGraph
 using ITensors: ITensor, prime
-using NamedGraphs.GraphsExtensions: disjoint_union
-using NamedGraphs: similar_graph
+using NamedGraphs: disjoint_union, similar_graph
 
 default_dual_link_index_map = prime
 
@@ -37,7 +36,7 @@ end
 
 bra_vertex_suffix(lf::LinearFormNetwork) = lf.bra_vertex_suffix
 ket_vertex_suffix(lf::LinearFormNetwork) = lf.ket_vertex_suffix
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
+# TODO: Use `NamedGraphs.parent_graph`.
 tensornetwork(lf::LinearFormNetwork) = lf.tensornetwork
 
 function NamedGraphs.similar_graph(

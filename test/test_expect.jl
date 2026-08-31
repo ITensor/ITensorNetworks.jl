@@ -1,8 +1,7 @@
 using Graphs: SimpleGraph, uniform_tree
 using ITensorNetworks:
     BeliefPropagationCache, ITensorNetwork, expect, original_state_vertex, siteinds
-using NamedGraphs.NamedGraphGenerators: named_grid
-using NamedGraphs: NamedGraph, vertices
+using NamedGraphs: NamedGraph, named_grid, vertices
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations

@@ -52,7 +52,7 @@ ITensorNetwork(f, graph::AbstractNamedGraph; link_space = 1)
 # Example
 
 ```jldoctest
-julia> using NamedGraphs.NamedGraphGenerators: named_grid
+julia> using NamedGraphs: named_grid
 
 julia> g = named_grid((4,));
 
