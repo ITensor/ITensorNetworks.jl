@@ -1,7 +1,7 @@
 using Adapt: adapt
 using ITensors.NDTensors: datatype, denseblocks
 using ITensors: ITensor, Op, delta, prime, sim
-using NamedGraphs.GraphsExtensions: disjoint_union
+using NamedGraphs: disjoint_union
 
 default_dual_site_index_map = prime
 default_dual_link_index_map = sim
@@ -55,7 +55,7 @@ end
 operator_vertex_suffix(blf::BilinearFormNetwork) = blf.operator_vertex_suffix
 bra_vertex_suffix(blf::BilinearFormNetwork) = blf.bra_vertex_suffix
 ket_vertex_suffix(blf::BilinearFormNetwork) = blf.ket_vertex_suffix
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
+# TODO: Use `NamedGraphs.parent_graph`.
 tensornetwork(blf::BilinearFormNetwork) = blf.tensornetwork
 
 function Base.copy(blf::BilinearFormNetwork)

@@ -3,8 +3,7 @@ using Graphs: vertices
 using ITensorNetworks: ITensorNetwork, ProjTTN, environments, position, siteinds, ttn
 using ITensors.NDTensors: with_auto_fermion
 using ITensors: ITensor
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_path_graph
-using NamedGraphs: NamedEdge
+using NamedGraphs: NamedEdge, named_comb_tree, named_path_graph
 using Test: @test, @testset
 include("utils.jl")
 using .ModelHamiltonians: ModelHamiltonians

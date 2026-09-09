@@ -1,7 +1,7 @@
 using Graphs: vertices
 using ITensorNetworks: expect, siteinds, ttn
 using LinearAlgebra: norm
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using NamedGraphs: named_comb_tree
 using StableRNGs: StableRNG
 using Test: @test, @testset
 @testset "TTN expect" begin

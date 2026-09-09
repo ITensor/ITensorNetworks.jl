@@ -11,9 +11,7 @@ using ITensors: ITensors, ITensor, Index, Op, commonind, commoninds, contract, d
     inds, inner, itensor, onehot, order, prime, random_itensor, scalartype, sim
 using LinearAlgebra: factorize
 using NDTensors: NDTensors, dim
-using NamedGraphs.GraphsExtensions: disjoint_union, incident_edges
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
-using NamedGraphs: NamedEdge
+using NamedGraphs: NamedEdge, disjoint_union, incident_edges, named_comb_tree, named_grid
 using Random: randn!
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations

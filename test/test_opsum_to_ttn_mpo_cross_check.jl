@@ -8,8 +8,7 @@ using ITensors.NDTensors: matrix, with_auto_fermion
 using ITensors: @disable_warn_order, ITensor, Index, combinedind, combiner, contract, dag,
     inds, removeqns
 using LinearAlgebra: norm
-using NamedGraphs.GraphsExtensions: leaf_vertices, post_order_dfs_vertices
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using NamedGraphs: leaf_vertices, named_comb_tree, post_order_dfs_vertices
 using Test: @test, @test_broken, @testset
 include("utils.jl")
 using .ModelHamiltonians: ModelHamiltonians

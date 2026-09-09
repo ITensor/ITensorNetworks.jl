@@ -49,6 +49,7 @@ makedocs(;
             "Deprecated Methods" => "deprecated_methods.md",
         ],
         "API Reference" => "reference.md",
+        "Changelog" => "changelog.md",
     ]
 )
 

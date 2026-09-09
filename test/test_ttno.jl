@@ -2,7 +2,7 @@ using Graphs: vertices
 using ITensorNetworks: contract, ortho_region, siteinds, ttn, union_all_inds
 using ITensors: @disable_warn_order, prime, random_itensor
 using LinearAlgebra: norm
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using NamedGraphs: named_comb_tree
 using Random: shuffle
 using StableRNGs: StableRNG
 using Test: @test, @testset

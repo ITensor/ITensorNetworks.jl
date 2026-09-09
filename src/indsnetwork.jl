@@ -5,9 +5,8 @@ using Dictionaries: AbstractDictionary, Dictionary, Indices
 using Graphs.SimpleGraphs: AbstractSimpleGraph
 using Graphs: Graphs
 using ITensors: Index, QN, dag
-using NamedGraphs.GraphsExtensions: vertextype
-using NamedGraphs.NamedGraphGenerators: named_path_graph
-using NamedGraphs: NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph
+using NamedGraphs:
+    NamedGraphs, AbstractNamedGraph, NamedEdge, NamedGraph, named_path_graph, vertextype
 using SimpleTraits: SimpleTraits, @traitfn, Not
 
 struct IndsNetwork{V, I} <: AbstractIndsNetwork{V, I}

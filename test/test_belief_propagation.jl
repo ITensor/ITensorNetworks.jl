@@ -9,9 +9,8 @@ using ITensors.NDTensors: array
 using ITensors:
     ITensors, Algorithm, ITensor, combiner, dag, inds, inner, op, prime, random_itensor
 using LinearAlgebra: eigvals, tr
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NamedGraphs.PartitionedGraphs: quotientedges
-using NamedGraphs: NamedEdge, NamedGraph
+using NamedGraphs: NamedEdge, NamedGraph, named_comb_tree, named_grid
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations

@@ -4,9 +4,7 @@ using DataGraphs: DataGraphs, AbstractDataGraph, DataGraph, IsUnderlyingGraph, e
     set_edge_data!, set_vertex_data!, underlying_graph_type, vertex_data
 using Graphs: Graphs, AbstractEdge
 using ITensors: ITensors, unioninds
-using NamedGraphs.GraphsExtensions:
-    GraphsExtensions, directed_graph, incident_edges, rename_vertices
-using NamedGraphs: NamedGraphs
+using NamedGraphs: NamedGraphs, directed_graph, incident_edges, rename_vertices
 
 abstract type AbstractIndsNetwork{V, I} <: AbstractDataGraph{V, Vector{I}, Vector{I}} end
 
@@ -15,7 +13,7 @@ data_graph(graph::AbstractIndsNetwork) = not_implemented()
 
 # Overload if needed
 Graphs.is_directed(::Type{<:AbstractIndsNetwork}) = false
-GraphsExtensions.directed_graph(is::AbstractIndsNetwork) = directed_graph(data_graph(is))
+NamedGraphs.directed_graph(is::AbstractIndsNetwork) = directed_graph(data_graph(is))
 
 # AbstractDataGraphs overloads
 DataGraphs.underlying_graph(is::AbstractIndsNetwork) = underlying_graph(data_graph(is))

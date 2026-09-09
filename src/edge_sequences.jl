@@ -1,9 +1,8 @@
 using Graphs: IsDirected, connected_components, edges, edgetype
 using ITensors.NDTensors: @Algorithm_str, Algorithm
-using NamedGraphs.GraphsExtensions:
-    GraphsExtensions, forest_cover, subgraph, undirected_graph
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, QuotientEdge, quotient_graph
-using NamedGraphs: NamedGraphs
+using NamedGraphs:
+    NamedGraphs, default_root_vertex, forest_cover, subgraph, undirected_graph
 using SimpleTraits: SimpleTraits, @traitfn, Not
 
 default_edge_sequence_alg() = "forest_cover"
@@ -32,7 +31,7 @@ end
 @traitfn function edge_sequence(
         ::Algorithm"forest_cover",
         g::::(!IsDirected);
-        root_vertex = GraphsExtensions.default_root_vertex
+        root_vertex = default_root_vertex
     )
     forests = forest_cover(g)
     edges = edgetype(g)[]
@@ -47,5 +46,6 @@ end
 end
 
 @traitfn function edge_sequence(::Algorithm"parallel", g::::(!IsDirected))
-    return [[e] for e in vcat(edges(g), reverse.(edges(g)))]
+    es = collect(edges(g))
+    return [[e] for e in vcat(es, reverse.(es))]
 end

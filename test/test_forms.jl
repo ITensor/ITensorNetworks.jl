@@ -6,7 +6,7 @@ using ITensorNetworks: BeliefPropagationCache, BilinearFormNetwork, LinearFormNe
     tensornetwork, union_all_inds, update
 using ITensors: Index, contract, dag, inds, prime, random_itensor, sim
 using LinearAlgebra: norm
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
+using NamedGraphs: named_comb_tree, named_grid
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset

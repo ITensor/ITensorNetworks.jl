@@ -19,8 +19,7 @@ variational sweep algorithm.
 using Graphs: vertices
 using ITensorNetworks: ITensorNetwork, dmrg, dst, edges, normalize, siteinds, src, ttn
 using ITensors: Index, OpSum, random_itensor
-using NamedGraphs.GraphsExtensions: incident_edges
-using NamedGraphs.NamedGraphGenerators: named_comb_tree
+using NamedGraphs: incident_edges, named_comb_tree
 
 function random_state(g, s; link_space)
     l = Dict(e => Index(link_space, "Link") for e in edges(g))

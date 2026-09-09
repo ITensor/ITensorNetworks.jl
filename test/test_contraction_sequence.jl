@@ -1,6 +1,6 @@
 using ITensorNetworks: contraction_sequence, norm_sqr_network, siteinds
 using ITensors: ITensors, contract
-using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs: named_grid
 using OMEinsumContractionOrders: OMEinsumContractionOrders
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations

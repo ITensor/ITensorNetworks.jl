@@ -1,7 +1,7 @@
 using Graphs: vertices
 using ITensorNetworks: ITensorNetworks, OpSum, siteinds, ttn
 using ITensors.NDTensors: with_auto_fermion
-using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs: named_grid
 using Test: @test, @testset
 
 @testset "OpSum to TTN converter" begin

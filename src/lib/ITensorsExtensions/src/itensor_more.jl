@@ -1,7 +1,6 @@
 using Dictionaries: AbstractDictionary, Dictionary
 using ITensors.NDTensors: NDTensors
 using ITensors: ITensors, ITensor, Index, QN, filterinds, inds, op, replaceinds, uniqueinds
-using NamedGraphs.Keys: Key
 
 # Tensor sum: `A ⊞ B = A ⊗ Iᴮ + Iᴬ ⊗ B`
 # https://github.com/JuliaLang/julia/issues/13333#issuecomment-143825995
@@ -19,11 +18,6 @@ function tensor_sum(A::ITensor, B::ITensor)
     end
     return A + B
 end
-
-# Patch for contraction sequences with `Key`
-# leaf values.
-# TODO: Move patch to `ITensors.jl`.
-ITensors._contract(As, index::Key) = As[index]
 
 # TODO: Replace with a trait of the same name.
 const IsIndexSpace = Union{<:Integer, Vector{<:Pair{QN, <:Integer}}}

@@ -1,5 +1,5 @@
 using Graphs: dst, src
-using NamedGraphs.GraphsExtensions: default_root_vertex
+using NamedGraphs: default_root_vertex
 
 function euler_sweep(
         graph;
