@@ -2,8 +2,7 @@ using Dictionaries: AbstractDictionary
 using Graphs: SimpleGraph, uniform_tree
 using ITensorNetworks: ITensorNetwork, expect, siteinds
 using ITensors: Op
-using NamedGraphs.NamedGraphGenerators: named_grid
-using NamedGraphs: NamedGraph, vertices
+using NamedGraphs: NamedGraph, named_grid, vertices
 using SplitApplyCombine: group
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations

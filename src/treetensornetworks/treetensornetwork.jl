@@ -2,8 +2,7 @@ using DataGraphs: DataGraphs, set_vertex_data!, underlying_graph, vertex_data
 using Dictionaries: Dictionary, Indices
 using Graphs: Graphs, is_tree, rem_vertex!, vertices
 using ITensors: ITensor, Index
-using NamedGraphs.GraphsExtensions: vertextype
-using NamedGraphs: NamedGraph
+using NamedGraphs: NamedGraph, vertextype
 
 """
     TreeTensorNetwork{V} <: AbstractTreeTensorNetwork{V}

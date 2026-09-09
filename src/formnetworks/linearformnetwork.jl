@@ -1,6 +1,6 @@
 using DataGraphs: DataGraphs, set_vertex_data!
 using ITensors: ITensor, dag, prime
-using NamedGraphs.GraphsExtensions: disjoint_union
+using NamedGraphs: disjoint_union
 
 default_dual_link_index_map = prime
 
@@ -36,7 +36,7 @@ end
 
 bra_vertex_suffix(lf::LinearFormNetwork) = lf.bra_vertex_suffix
 ket_vertex_suffix(lf::LinearFormNetwork) = lf.ket_vertex_suffix
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
+# TODO: Use `NamedGraphs.parent_graph`.
 tensornetwork(lf::LinearFormNetwork) = lf.tensornetwork
 
 # Forward vertex writes to the wrapped network so reverse-index map and

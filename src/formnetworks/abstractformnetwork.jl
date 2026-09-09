@@ -1,6 +1,6 @@
 using DataGraphs: DataGraphs, underlying_graph, vertex_data
 using Graphs: induced_subgraph
-using NamedGraphs.SimilarType: SimilarType
+using NamedGraphs: NamedGraphs
 
 default_bra_vertex_suffix() = "bra"
 default_ket_vertex_suffix() = "ket"
@@ -10,18 +10,18 @@ abstract type AbstractFormNetwork{V} <: AbstractITensorNetwork{V} end
 
 #Needed for interface
 dual_index_map(f::AbstractFormNetwork) = not_implemented()
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph`.
+# TODO: Use `NamedGraphs.parent_graph`.
 tensornetwork(f::AbstractFormNetwork) = not_implemented()
 Base.copy(f::AbstractFormNetwork) = not_implemented()
 operator_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
 bra_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
 ket_vertex_suffix(f::AbstractFormNetwork) = not_implemented()
 
-function SimilarType.similar_type(f::AbstractFormNetwork)
+function NamedGraphs.similar_type(f::AbstractFormNetwork)
     return typeof(tensornetwork(f))
 end
 
-# TODO: Use `NamedGraphs.GraphsExtensions.parent_graph` / `parent_graph_type`.
+# TODO: Use `NamedGraphs.parent_graph` / `parent_graph_type`.
 DataGraphs.underlying_graph(f::AbstractFormNetwork) = underlying_graph(tensornetwork(f))
 DataGraphs.vertex_data(f::AbstractFormNetwork) = vertex_data(tensornetwork(f))
 

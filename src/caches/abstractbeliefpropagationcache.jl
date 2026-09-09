@@ -5,18 +5,16 @@ using Graphs: Graphs, IsDirected, dst, src
 using ITensors: dir
 using LinearAlgebra: diag, dot
 using NDTensors: NDTensors
-using NamedGraphs.GraphsExtensions: subgraph
 using NamedGraphs.PartitionedGraphs: PartitionedGraph, PartitionedGraphs, QuotientEdge,
     QuotientVertex, boundary_quotientedges, quotientedges, quotientvertices,
     unpartitioned_graph
-using NamedGraphs.SimilarType: SimilarType
-using NamedGraphs: to_graph_index
+using NamedGraphs: NamedGraphs, subgraph, to_graph_index
 using SimpleTraits: SimpleTraits, @traitfn, Not
 using SplitApplyCombine: group
 
 abstract type AbstractBeliefPropagationCache{V, PV} <: AbstractITensorNetwork{V} end
 
-function SimilarType.similar_type(bpc::AbstractBeliefPropagationCache)
+function NamedGraphs.similar_type(bpc::AbstractBeliefPropagationCache)
     return typeof(tensornetwork(bpc))
 end
 

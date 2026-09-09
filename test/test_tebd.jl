@@ -1,8 +1,7 @@
 using Graphs: vertices
 using ITensorNetworks: ITensorNetwork, cartesian_to_linear, dmrg, expect, siteinds, tebd
 using ITensors: ITensors
-using NamedGraphs.GraphsExtensions: rename_vertices
-using NamedGraphs.NamedGraphGenerators: named_grid
+using NamedGraphs: named_grid, rename_vertices
 using Test: @test, @test_broken, @testset
 include("utils.jl")
 using .ModelHamiltonians: ModelHamiltonians

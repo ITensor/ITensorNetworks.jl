@@ -4,9 +4,8 @@ using ITensorNetworks: BeliefPropagationCache, QuadraticFormNetwork,
     norm_sqr_network, rescale, scalartype, siteinds, vertex_scalars
 using ITensors: dag, inner, scalar
 using LinearAlgebra: normalize
-using NamedGraphs.NamedGraphGenerators: named_comb_tree, named_grid
 using NamedGraphs.PartitionedGraphs: PartitionedGraph
-using NamedGraphs: NamedGraph
+using NamedGraphs: NamedGraph, named_comb_tree, named_grid
 using StableRNGs: StableRNG
 using TensorOperations: TensorOperations
 using Test: @test, @testset
