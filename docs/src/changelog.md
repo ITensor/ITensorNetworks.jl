@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.22.0](https://github.com/ITensor/ITensorNetworks.jl/compare/v0.21.5...release-0.22) - Unreleased
+## [0.22.0](https://github.com/ITensor/ITensorNetworks.jl/compare/v0.21.5...v0.22.0) - 2026-09-09
 
 ### Breaking changes
 
